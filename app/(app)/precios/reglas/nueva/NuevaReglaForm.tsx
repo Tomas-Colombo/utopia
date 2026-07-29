@@ -1,0 +1,322 @@
+'use client'
+
+import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
+import { Button } from '@/components/ui/Button'
+import { Field } from '@/components/ui/Field'
+import { Input } from '@/components/ui/Input'
+import { NumberInput } from '@/components/ui/NumberInput'
+import { useToast } from '@/components/ui/Toast'
+import {
+  ALCANCE_LABEL,
+  FORMA_PAGO_LABEL,
+  TIPO_REGLA_LABEL,
+  type AlcanceRegla,
+  type FormaPago,
+  type TipoRegla,
+  type TipoValorRegla,
+} from '@/lib/types/precios'
+import { createReglaAction } from '../../actions'
+
+interface Ref { id: string; nombre: string; sku?: string | null }
+
+export function NuevaReglaForm({
+  categorias,
+  proveedores,
+  productos,
+}: {
+  categorias: Ref[]
+  proveedores: Ref[]
+  productos: Ref[]
+}) {
+  const router = useRouter()
+  const toast = useToast()
+  const [pending, start] = useTransition()
+
+  const [nombre, setNombre] = useState('')
+  const [tipoRegla, setTipoRegla] = useState<TipoRegla>('descuento')
+  const [tipoValor, setTipoValor] = useState<TipoValorRegla>('porcentaje')
+  const [valorPct, setValorPct] = useState('')      // input en %, ej 15 → 0.15
+  const [valorMonto, setValorMonto] = useState('')  // input directo en $
+  const [alcance, setAlcance] = useState<AlcanceRegla>('global')
+  const [idProducto, setIdProducto] = useState('')
+  const [idCategoria, setIdCategoria] = useState('')
+  const [idProveedor, setIdProveedor] = useState('')
+  const [formaPago, setFormaPago] = useState<FormaPago | ''>('')
+  const [prioridad, setPrioridad] = useState('0')
+  const [fechaInicio, setFechaInicio] = useState('')
+  const [fechaHasta, setFechaHasta] = useState('')
+  const [error, setError] = useState<string | null>(null)
+
+  // Cuando el usuario cambia tipo_regla, resetear forma_pago si dejó de ser recargo.
+  function handleTipoRegla(t: TipoRegla) {
+    setTipoRegla(t)
+    if (t !== 'recargo') setFormaPago('')
+  }
+  function handleAlcance(a: AlcanceRegla) {
+    setAlcance(a)
+    // Limpia refs que dejan de aplicar
+    if (a !== 'producto') setIdProducto('')
+    if (a !== 'categoria') setIdCategoria('')
+    if (a !== 'proveedor') setIdProveedor('')
+  }
+
+  function submit(e: React.FormEvent) {
+    e.preventDefault()
+    setError(null)
+
+    if (nombre.trim().length < 2) return setError('Ponele un nombre descriptivo (min 2 chars)')
+
+    // Validar valor
+    const valorNum =
+      tipoValor === 'porcentaje'
+        ? Number(valorPct || 0) / 100
+        : Number(valorMonto || 0)
+    if (!isFinite(valorNum) || valorNum <= 0) {
+      return setError('El valor tiene que ser mayor a 0')
+    }
+    if (tipoValor === 'porcentaje' && valorNum > 5) {
+      // > 500% suele ser typo
+      return setError('El porcentaje parece muy alto — verificalo')
+    }
+
+    // Validar referencia según alcance
+    if (alcance === 'producto' && !idProducto) return setError('Elegí un producto')
+    if (alcance === 'categoria' && !idCategoria) return setError('Elegí una categoría')
+    if (alcance === 'proveedor' && !idProveedor) return setError('Elegí un proveedor')
+
+    // forma_pago solo en recargo
+    if (tipoRegla === 'recargo' && !formaPago) {
+      return setError('Un recargo requiere forma de pago')
+    }
+
+    start(async () => {
+      const res = await createReglaAction({
+        nombre: nombre.trim(),
+        tipo_regla: tipoRegla,
+        tipo_valor: tipoValor,
+        valor: valorNum,
+        alcance,
+        id_producto: alcance === 'producto' ? idProducto : null,
+        id_categoria: alcance === 'categoria' ? idCategoria : null,
+        id_proveedor: alcance === 'proveedor' ? idProveedor : null,
+        forma_pago: tipoRegla === 'recargo' ? (formaPago || null) : null,
+        prioridad: Number(prioridad || 0),
+        fecha_inicio: fechaInicio || null,
+        fecha_hasta: fechaHasta || null,
+      })
+      if (!res.ok) return toast.error('No se pudo crear', res.reason)
+      toast.success('Regla creada')
+      router.push('/precios/reglas')
+      router.refresh()
+    })
+  }
+
+  return (
+    <form onSubmit={submit} className="space-y-4">
+      <Field htmlFor="r-nombre" label="Nombre" required>
+        <Input
+          id="r-nombre"
+          value={nombre}
+          onChange={(e) => setNombre(e.target.value)}
+          placeholder='Ej. "Recargo 3 cuotas 25%"'
+          autoFocus
+        />
+      </Field>
+
+      <div className="grid grid-cols-2 gap-4">
+        <Field htmlFor="r-tipo" label="Tipo de regla" required>
+          <select
+            id="r-tipo"
+            value={tipoRegla}
+            onChange={(e) => handleTipoRegla(e.target.value as TipoRegla)}
+            className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
+          >
+            {(['margen', 'descuento', 'recargo'] as TipoRegla[]).map((t) => (
+              <option key={t} value={t}>
+                {TIPO_REGLA_LABEL[t]}
+              </option>
+            ))}
+          </select>
+        </Field>
+
+        <Field htmlFor="r-alcance" label="Alcance" required>
+          <select
+            id="r-alcance"
+            value={alcance}
+            onChange={(e) => handleAlcance(e.target.value as AlcanceRegla)}
+            className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
+          >
+            {(['producto', 'categoria', 'proveedor', 'global'] as AlcanceRegla[]).map((a) => (
+              <option key={a} value={a}>
+                {ALCANCE_LABEL[a]}
+              </option>
+            ))}
+          </select>
+        </Field>
+      </div>
+
+      {alcance === 'producto' && (
+        <Field htmlFor="r-prod" label="Producto" required>
+          <select
+            id="r-prod"
+            value={idProducto}
+            onChange={(e) => setIdProducto(e.target.value)}
+            className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
+          >
+            <option value="">— Elegí un producto —</option>
+            {productos.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.nombre}{p.sku ? ` · ${p.sku}` : ''}
+              </option>
+            ))}
+          </select>
+        </Field>
+      )}
+
+      {alcance === 'categoria' && (
+        <Field htmlFor="r-cat" label="Categoría" required>
+          <select
+            id="r-cat"
+            value={idCategoria}
+            onChange={(e) => setIdCategoria(e.target.value)}
+            className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
+          >
+            <option value="">— Elegí una categoría —</option>
+            {categorias.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.nombre}
+              </option>
+            ))}
+          </select>
+        </Field>
+      )}
+
+      {alcance === 'proveedor' && (
+        <Field htmlFor="r-prov" label="Proveedor" required>
+          <select
+            id="r-prov"
+            value={idProveedor}
+            onChange={(e) => setIdProveedor(e.target.value)}
+            className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
+          >
+            <option value="">— Elegí un proveedor —</option>
+            {proveedores.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.nombre}
+              </option>
+            ))}
+          </select>
+        </Field>
+      )}
+
+      {tipoRegla === 'recargo' && (
+        <Field htmlFor="r-fp" label="Forma de pago" required hint="Solo aplica a recargos (RF-09)">
+          <select
+            id="r-fp"
+            value={formaPago}
+            onChange={(e) => setFormaPago(e.target.value as FormaPago | '')}
+            className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
+          >
+            <option value="">— Elegí forma de pago —</option>
+            {(['efectivo', 'cuotas_2', 'cuotas_3'] as FormaPago[]).map((fp) => (
+              <option key={fp} value={fp}>
+                {FORMA_PAGO_LABEL[fp]}
+              </option>
+            ))}
+          </select>
+        </Field>
+      )}
+
+      <div className="grid grid-cols-2 gap-4">
+        <Field htmlFor="r-tv" label="Tipo de valor" required>
+          <select
+            id="r-tv"
+            value={tipoValor}
+            onChange={(e) => setTipoValor(e.target.value as TipoValorRegla)}
+            className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
+          >
+            <option value="porcentaje">Porcentaje</option>
+            <option value="monto_fijo">Monto fijo</option>
+          </select>
+        </Field>
+
+        {tipoValor === 'porcentaje' ? (
+          <Field htmlFor="r-vpct" label="Porcentaje" required hint="Ej. 15 → 15%">
+            <div className="flex items-center gap-2">
+              <NumberInput
+                id="r-vpct"
+                min={0}
+                max={500}
+                step="0.01"
+                value={valorPct}
+                onChange={(e) => setValorPct(e.target.value)}
+              />
+              <span className="text-muted">%</span>
+            </div>
+          </Field>
+        ) : (
+          <Field htmlFor="r-vm" label="Monto (ARS)" required>
+            <NumberInput
+              id="r-vm"
+              min={0}
+              step="0.01"
+              value={valorMonto}
+              onChange={(e) => setValorMonto(e.target.value)}
+            />
+          </Field>
+        )}
+      </div>
+
+      <div className="grid grid-cols-3 gap-4">
+        <Field htmlFor="r-prio" label="Prioridad" hint="Mayor = gana">
+          <NumberInput
+            id="r-prio"
+            value={prioridad}
+            onChange={(e) => setPrioridad(e.target.value)}
+          />
+        </Field>
+        <Field htmlFor="r-fi" label="Vigente desde">
+          <Input
+            id="r-fi"
+            type="datetime-local"
+            value={fechaInicio}
+            onChange={(e) => setFechaInicio(e.target.value)}
+          />
+        </Field>
+        <Field htmlFor="r-fh" label="Vigente hasta">
+          <Input
+            id="r-fh"
+            type="datetime-local"
+            value={fechaHasta}
+            onChange={(e) => setFechaHasta(e.target.value)}
+          />
+        </Field>
+      </div>
+
+      {error && (
+        <div
+          role="alert"
+          className="rounded-md border border-pink-strong bg-pink-bg px-3 py-2 text-sm text-pink-strong"
+        >
+          {error}
+        </div>
+      )}
+
+      <div className="rounded-md border border-border bg-card-2 p-3 text-xs text-muted">
+        Recordatorio: los <b>valores</b> de una regla no se editan después
+        (solo nombre / extender vigencia / dar de baja). Si necesitás
+        cambiar un %, dá de baja esta y creá una nueva.
+      </div>
+
+      <div className="flex justify-end gap-2 pt-2">
+        <Button variant="secondary" onClick={() => router.back()} disabled={pending}>
+          Cancelar
+        </Button>
+        <Button type="submit" disabled={pending}>
+          {pending ? 'Creando…' : 'Crear regla'}
+        </Button>
+      </div>
+    </form>
+  )
+}

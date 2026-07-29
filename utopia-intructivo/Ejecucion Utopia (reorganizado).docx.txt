@@ -1,0 +1,242 @@
+﻿Prompt inicial — Utopía · Sistema de Gestión (Fase 1)
+Este documento es el prompt de arranque para el agente de código que va a implementar la Fase 1 del sistema de gestión de Utopía. Reúne los requisitos funcionales de la propuesta comercial, todas las decisiones de arquitectura tomadas durante el diseño del modelo de datos, y una lista explícita de requisitos no funcionales que no deben faltar — basada en errores concretos sufridos en un desarrollo anterior (secciones de perfil sin ajustes, falta de cambio de contraseña, ausencia de modo oscuro, tablas mal alineadas, inconsistencia en patrones de UI).
+1. Contexto y stack
+Sos un desarrollador senior full-stack. Vas a construir la Fase 1 de un sistema de gestión (inventario, ventas y finanzas) para una tienda de ropa llamada Utopía, pensado como núcleo de un producto SaaS multi-tenant que se revenderá a otras pymes con stock (no solo indumentaria).
+Stack: Next.js + TypeScript + Supabase (Postgres) + Vercel.
+Prioridad de las fuentes
+En caso de contradicción se seguirá el siguiente orden:
+1. Este documento.
+2. El diagrama de clases.
+3. Buenas prácticas del framework.
+Nunca modificar el modelo para ajustarlo a una interpretación propia. 
+1.1 Reglas de arquitectura (no negociables)
+Reglas de arquitectura ya definidas, no las cuestiones:
+* Toda tabla de dominio lleva idTenant (FK a Tenant). Aislamiento entre empresas vía Row Level Security (RLS) filtrando por idTenant.
+* Los módulos (inventario/ventas/finanzas) se habilitan por tenant según su plan, vía TenantModulo (feature flags). Los permisos son por usuario según su rol (Rol.permisos, json).
+* Toda acción del sistema debe validar doble condición: módulo habilitado para el tenant + permiso del rol del usuario. Ninguno de los dos alcanza solo.
+* El diagrama de clases completo (adjunto: Utopia_Fase1_Diagrama_v2.drawio) es la fuente de verdad del modelo de datos. No inventes tablas nuevas sin justificar por qué no se resuelve con una relación o campo existente.
+3. Requisitos funcionales
+3.1 Multi-tenant y accesos
+* Tenant: alta de tienda con nombre y subdominio único. Los datos del Tenant quedan limitados a la identificación de la empresa; las preferencias operativas y parámetros del sistema se guardan en la entidad Configuracion (pares clave/valor organizados por sección), no en un campo json del Tenant. El pricing tampoco vive acá (ver ReglaPrecio).
+* Modulo / TenantModulo: catálogo fijo de módulos (inventario, ventas, finanzas) y su habilitación por tenant.
+* Usuario / Rol: alta de usuarios por tenant, con rol asignado y permisos en json. Todo usuario debe tener una sección de Ajustes/Perfil propia (ver requisitos no funcionales) incluyendo cambio de contraseña — no asumir que se resuelve solo con el alta.
+* Middleware de resolución de tenant por subdominio, ejecutado antes de cualquier acceso a datos.
+3.2 Proveedores y productos
+* Proveedor: alta con nombre, tipo (principal/secundario — RF-06 accesorios de proveedores secundarios se cargan y gestionan igual que el principal) y telefono (un único campo de contacto).
+* Producto: modelo de producto (nombre, SKU único, categoría). El costo no vive en Producto: se historiza en la entidad CostoProducto (ver sección Costo Producto). La categoría es una entidad Categoria referenciada por Producto (idCategoria), no un enum . La modalidad de compra se determina a nivel de ingreso, en IngresoMercaderia.tipoIngreso (enum: compra | consignacion): si el ingreso fue por consignación, la tienda le debe dinero al proveedor recién al vender; si fue compra, ya pagó la mercadería por adelantado (en ese caso montoProveedor en cada venta es 0 y esos ítems nunca entran en una rendición).
+* ItemProducto: la unidad física en stock, con QR único (RF-02) y estadoItem (disponible, vendido, en_consignacion, devuelto_proveedor, baja). Un producto tiene muchos items.Cada talle/color es un productoitem independiente con su propio SKU (RF-05)
+* RF-01: subir el PDF del proveedor abre un formulario de carga con nombre/cantidad/proveedor detectados automáticamente, con previsualización editable antes de confirmar. No es necesario persistir el PDF original — una vez que el dueño corrige y confirma en la previsualización, los datos estructurados ya son la fuente de verdad. Si se decide guardar el archivo de todos modos (para debugging del parser), va a Supabase Storage, nunca a la base relacional.
+3.3 Precios: margen, descuento y recargo
+* ReglaPrecio: entidad única que resuelve margen, descuento y recargo — no repartir esta lógica en múltiples tablas ni en json de Tenant. Campos: tipoRegla (margen/descuento/recargo), tipoValor (porcentaje/monto_fijo), valor, alcance (global/categoria/producto/proveedor), formaPago (nullable, solo aplica a recargo), fechaInicio/fechaHasta (nullable, para descuentos de temporada), prioridad.
+* Cascada de resolución: gana la regla más específica (producto > categoria > proveedor > global).
+* Pipeline de dos etapas, no confundir: (1) margen se resuelve UNA VEZ al cargar el producto (RF-07) y fija Producto.precioVenta = costo × (1 + margen), tomando como costo el vigente en CostoProducto (registro con fechaHasta IS NULL); (2) descuento/recargo se resuelven en cada VENTA sobre ese precioVenta ya fijado, nunca tocan el costo, y el resultado queda snapshoteado en DetalleVenta.precioVenta sin modificar Producto.
+* RF-09 (precios por forma de pago: efectivo, 2 y 3 cuotas) se resuelve así, en el momento de la venta — no como precio fijo por producto.
+3.4 Ventas
+* Venta / DetalleVenta: RF-08, cada línea de venta separa el monto en montoProveedor, montoGasto, montoGanancia. Si el ítem fue ingresado con IngresoMercaderia.tipoIngreso = compra, montoProveedor es siempre 0. Venta.total debe ser siempre igual a la suma de los montos (precioVenta) de sus DetalleVenta; esta integridad se valida en backend dentro de la misma transacción de la venta.
+* DetalleVenta.idRendicion (FK nullable a RendicionProveedor): se completa recién cuando esa línea entra en una rendición generada — mientras es NULL, está "pendiente de rendir". Esto evita que una misma venta se cuente dos veces en dos rendiciones distintas.
+* Comprobante (factura/remito) es opcional y se genera por código a partir de los datos ya existentes en Venta/DetalleVenta en el momento en que se pide — no se persiste ningún archivo ni URL; sí se guardan los metadatos del comprobante (tipo, numero y fechaEmision), porque los datos de origen (precioVenta, montos) ya quedan congelados al crear la venta.
+3.5 Consignación (devolución al proveedor)
+* Consignacion: lote/evento de devolución a un proveedor (estado: activa/cerrada).
+* ConsignacionDetalle: cada ítem dentro del lote (estado: pendiente/devuelto/cancelado, fechaDevolucion nullable).
+* Regla de negocio no negociable: un ItemProducto no puede tener más de un ConsignacionDetalle en estado pendiente a la vez. Implementar como unique partial index en base (idItem WHERE estado='pendiente'), no solo validación de frontend.
+* MovimientoItem: bitácora inmutable de todo lo que le pasa a cada ItemProducto (tipoMovimiento: ingreso, venta, consignacion, devolucion, ajuste). Se crean dos movimientos distintos en el ciclo de devolución: uno al marcar el ítem como pendiente (consignacion), y otro al confirmar la salida real (devolucion) — no colapsar en uno solo salvo que se confirme explícitamente que no hace falta trackear la etapa intermedia.
+* Concurrencia física: dos escaneos casi simultáneos del mismo QR (por ejemplo, vender y dar de baja al mismo tiempo) deben resolverse con una transacción atómica que valide estadoItem en el momento del UPDATE, no solo en el frontend — evitar condiciones de carrera reales, no solo deshabilitar botones.
+3.6 Rendición a proveedores y gastos
+* RendicionProveedor: se genera bajo demanda (botón “Generar rendición” para un proveedor puntual), no automáticamente por venta. Al generar: query de todas las DetalleVenta de ese proveedor con idRendicion IS NULL, montoProveedor > 0 y excluidaRendicion = false; mostrar previsualización, confirmar, y en la misma transacción marcar esas líneas con el idRendicion recién creado. En la previsualización el dueño puede, mediante un selector, excluir manualmente una prenda de consignación que normalmente se rendiría: al marcarla se setea DetalleVenta.excluidaRendicion = true y esa línea no vuelve a aparecer en ninguna rendición futura, quedando distinguida de las “pendientes” (que siguen con idRendicion IS NULL). Los campos periodoDesde/periodoHasta son informativos (rango cubierto por las ventas incluidas); el criterio de selección real es idRendicion IS NULL, sin filtrar por fecha. estado (pendiente/pagada) y fechaPago trackean el pago real.
+* GastoNegocio: alquiler, marketing, publicidad, canjes, con control de porcentaje presupuestado (RF-10).
+3.7 Reportes (resueltos por query, no por tabla nueva)
+* RF-07 (ganancia): Producto.precioVenta - costo vigente en CostoProducto (registro con fechaHasta IS NULL), columna calculada o vista.
+* RF-11 (perfil de proveedor / resumen para rendición): vista que agrega Producto + ItemProducto + RendicionProveedor por idProveedor.
+* RF-12 (rotación): query que agrega DetalleVenta por idProducto y rango de fechas.
+* RF-13 (reporte financiero): vista que une Venta + DetalleVenta + GastoNegocio por período.
+4. Detalle funcional por entidad
+4.1 Producto y categorías
+Stock bajo o sin stock. existe un umbral de "mínimo deseado" por producto  stockMinimo (int, nullable) en Producto, y el filtro se resuelve comparando ese valor contra el conteo de ItemProducto en estado=disponible para ese producto.
+Se modela la categoría de producto como una entidad Categoria referenciada por Producto (idCategoria), en lugar de un enum, porque el negocio requiere que el usuario pueda crear nuevas categorías desde la aplicación. Las categorías base (REMERA, PANTALON, SHORT, CAMPERA, BUZO, ZAPATILLA, ACCESORIO) se cargan como seed inicial. Se mantiene la categoría como criterio principal de búsqueda y filtrado; si en el futuro se requiere aislarlas por tenant, ya viven en su propia entidad.
+El usuario debe poder agregar nuevas categorías desde la aplicación, las que crea necesarias; se persisten como registros de la entidad Categoria.
+4.2 ReglaPrecio
+fechaBaja es cuando coloco eliminar regla, el usuario no la ve mas pero queda en el sistema por integridad. 
+fechaInicio y fechaHasta es por cuanto tiempo aparece disponible la regla, podemos modificar esto siempre, se sobreescriben cuando se extiende la promo. son solo para saber si estan activos y durante cuanto tiempo 
+tipoRegla: margen | descuento | recargo
+tipoValor: porcentaje | monto_fijo
+alcance: global | categoria | producto | proveedor
+Cascada de resolucion (gana la mas especifica): producto > categoria > proveedor > global
+El pipeline de aplicación de precios (margen al alta; descuento y recargo en la venta) está definido en la sección Requisitos funcionales → Precios (ver RF-07); no se repite aquí para mantener una sola fuente de verdad.
+Los datos de la regla en general (ya usadas para calcular precios) no se modifican, se puede editar nombre pero no algo que afecte la integridad de datos 
+
+4.3 Costo de producto (CostoProducto)
+El costo puede cambiar en el tiempo, quien use la aplicacion puede editarlo desde un simple formulario de edicion y esto dispara internamente una nueva instancia de esta clase, es por si no lo vendi y actualizan el precio. El usuario final no se entera  
+4.4 MovimientoItem
+MovimientoItem tiene estos campos relevantes a lo que preguntás:
+* idItem : uuid (FK) → siempre presente, es la unidad física a la que le pasó algo.
+* idUsuario : uuid (FK) → siempre presente, quién ejecutó esa acción.
+* idVenta : uuid (FK, nullable) → solo se completa cuando tipoMovimiento = venta.
+* idConsignacionDetalle : uuid (FK, nullable) → solo se completa cuando tipoMovimiento = consignacion o devolucion.
+* tipoMovimiento : enum → define cuál de los anteriores aplica.
+Relación con Producto: no existe FK directa. Es el mismo criterio que hablamos con ConsignacionDetalle — se llega a Producto navegando idItem → ItemProducto → idProducto → Producto. No hace falta duplicarlo acá tampoco.
+Relación con ConsignacionDetalle: es opcional (nullable) y solo tiene sentido cuando el motivo del movimiento es parte del proceso de devolución. Se completa en dos momentos distintos del mismo ciclo: cuando se marca el ítem como pendiente de devolver (tipoMovimiento=consignacion, apuntando a ese ConsignacionDetalle recién creado en estado pendiente), y de nuevo cuando se confirma la salida real (tipoMovimiento=devolucion, apuntando al mismo ConsignacionDetalle que ahora pasó a devuelto). Un mismo ConsignacionDetalle puede entonces tener 1 o 2 MovimientoItem asociados (el "aparté" y el "salió"), o solo 1 si se canceló antes de completarse.
+Relación con Usuario: siempre obligatoria, sin excepción — todo movimiento lo dispara alguien: quien cargó el ingreso, quien vendió, quien armó la consignación, quien confirmó la salida, o quien hizo un ajuste manual. Es la trazabilidad de responsabilidad ("quién tocó este ítem y cuándo"), independiente de cuál haya sido el motivo del movimiento.
+Los 5 tipos que definimos tipoMovimieno que definimos son:
+* ingreso: el ítem se creó y entró al inventario (QR generado).
+* venta: el ítem se vendió, descontó stock. Va vinculado a idVenta.
+* consignacion: el ítem se marcó/apartó para devolución (entra a un ConsignacionDetalle en estado pendiente), pero todavía no salió físicamente. Es el "lo aparté para devolver".
+* devolucion: el ítem efectivamente salió hacia el proveedor (se escaneó la salida, ConsignacionDetalle pasó a devuelto). Es el "ya se fue".
+* ajuste: cualquier corrección manual que no encaja en los anteriores (se rompió, se perdió, error de carga, baja).
+La distinción entre consignacion y devolucion es la más sutil: son dos movimientos separados del mismo ítem dentro del mismo proceso de devolución. Cuando lo apartás, se crea un MovimientoItem tipo=consignacion (ItemProducto sigue disponible físicamente, pero ya está comprometido). Cuando lo escaneás de salida, se crea un segundo MovimientoItem tipo=devolucion (ahí sí ItemProducto pasa a devuelto_proveedor). Así el historial muestra las dos etapas por separado en vez de saltar directo de "disponible" a "devuelto" sin dejar rastro del paso intermedio.
+cualquier diferencia detectada entre el stock del sistema y el conteo real se registrará mediante MovimientoItem con el tipo ajuste_inventario, incorporando los campos cantidadSistema, cantidadContada, diferencia y observaciones. De esta forma se preserva la trazabilidad completa de cada ajuste sin introducir un proceso de inventario independiente. 
+4.5 Auditoría
+Se incorpora una entidad transversal Auditoria destinada exclusivamente al registro de cambios administrativos realizados en el sistema. A diferencia de MovimientoItem, que registra eventos del ciclo de vida de los productos físicos, Auditoria almacena quién realizó una acción, sobre qué entidad, cuándo, desde dónde y cuáles fueron los valores anteriores y nuevos. Su objetivo es garantizar trazabilidad, seguridad y capacidad de auditoría ante modificaciones de datos críticos, sin depender de relaciones específicas con las entidades del dominio.
+4.6 Reserva y Cliente
+Se incorpora la entidad Cliente como preparación para futuras funcionalidades de fidelización y seguimiento comercial. Tanto la relación con Venta como con Reserva son opcionales, ya que el sistema debe permitir vender o reservar productos sin identificar al cliente cuando el negocio así lo requiera. Cuando exista un cliente asociado, será posible consultar su historial de compras y reservas sin afectar los flujos actuales. 
+La relación entre Reserva e ítems se modela con la entidad de enlace DetalleReserva: una Reserva tiene 1..* DetalleReserva y un ItemProducto puede estar en 0..* DetalleReserva. La regla “un ItemProducto no puede estar en más de una reserva activa a la vez” se valida en backend.
+Ciclo de vida (estadoReserva): activa → cancelada (cancelación manual antes del vencimiento), activa → vencida (automática al superarse fechaVencimiento) y activa → convertida_venta (al concretarse la venta). Debe existir una acción explícita para cancelar una reserva antes de su vencimiento. Cancelar o vencer una reserva libera sus ítems: sus DetalleReserva dejan de contar como activos y el ítem vuelve a estar disponible.
+estadoItem no incluye un valor “reservado”: un ítem reservado sigue figurando como disponible; la verificación de si está reservado se resuelve consultando el DetalleReserva activo en el momento de vender (backend), con la misma lógica de concurrencia física de la sección de consignación.
+La conversión convertida_venta no registra a qué venta se convirtió: es una decisión intencional, no se guarda el vínculo Reserva → Venta.
+Cliente registra nombre, telefono y email; la asociación de un cliente a una Venta o Reserva es opcional (se permiten ventas y reservas de mostrador sin identificación).
+5. Secciones de la aplicación (navegación)
+son las secciones del sistema pero no son limitantes, no deben faltar pero si se requiere mas puedes crearlas 
+Dashboard
+Dashboard: pantalla de inicio con resumen general del negocio (KPIs rápidos: ventas del día/período, stock bajo, rendiciones pendientes) — punto de entrada, no un módulo funcional nuevo.
+Inventario
+Inventario: listado de Producto/ItemProducto con los filtros ya definidos (búsqueda, proveedor, categoría, talle/color, estado, modalidad de compra, stock bajo, antigüedad sin vender, consignación pendiente).
+Alertas de inventario
+Alerta de reposición (crítica): producto con cantidad de ItemProducto en estado=disponible por debajo de Producto.stockMinimo. Resuelto por query, sin tabla nueva.
+Alerta de rotación vencida (menos crítica): solo aplica a ítems ingresados por consignación (IngresoMercaderia.tipoIngreso=consignacion). Se dispara cuando ItemProducto.fechaIngreso supera Proveedor.diasRotacion días y el ítem sigue en estadoItem=disponible — indica que conviene evaluar la devolución al proveedor antes de que siga en stock sin venderse. Los ítems ingresados por compra (tipoIngreso=compra) o de proveedores con diasRotacion=null nunca generan esta alerta, porque no tienen plazo externo que vigilar. Resuelto por query sobre ItemProducto + Producto + Proveedor, sin tabla nueva.
+Ambas alertas se muestran en Inventario y/o Dashboard, con distinta jerarquía visual (reposición más urgente que rotación vencida).
+Ficha de producto
+Ficha de producto: vista de detalle de un Producto y sus ItemProducto asociados. Búsqueda por cámara (escaneo de QR) como método principal, con opción de búsqueda manual por código/SKU como alternativa — no depender solo de la cámara.
+Vender
+Vender: flujo de venta con escaneo de QR como método principal. Debe incluir opción de carga manual del ítem (buscar por código/nombre) para los casos en que el QR no esté disponible o falle el escaneo.
+Opcion para cargar la reserva 
+Reportes
+Reportes: pantalla que reúne las métricas necesarias para controlar el negocio completo, no solo ventas — incluye ingresos, gastos (GastoNegocio), ganancia neta separada por categoría (RF-13), y métricas de rotación (RF-12). Debe dar una vista consolidada, no reportes sueltos por separado.
+Proveedores / Rendición
+Proveedores: alta/baja de proveedores estado de cuenta. boton de wa.me para ir directo al whatsapp desde la app
+Rendición: pantalla con selector de proveedor (obligatorio elegir uno antes de generar). Al seleccionar, muestra el listado de ventas pendientes de rendir para ese proveedor (DetalleVenta con idRendicion nulo) antes de confirmar la generación.
+Gastos
+Gastos: pantalla de alta y listado de GastoNegocio (alquiler, marketing, publicidad, canjes), con el control de porcentaje presupuestado visible.
+Control de precios y ofertas
+Control de precios: pantalla de gestión de ReglaPrecio (margen, descuento, recargo), con su alcance (global/categoría/producto/proveedor) y vigencia.
+Impacto de descuentos en ganancia: esta pantalla (o el módulo de Reportes) debe mostrar el efecto real de las reglas de descuento/recargo activas sobre la ganancia total — comparando la ganancia esperada original (precio de lista, sin descuento) contra la ganancia real resultante de aplicar las reglas vigentes. Es una extensión de RF-13, no una tabla nueva: se resuelve comparando Producto.precioVenta (proyectado) contra DetalleVenta.precioVenta / montoGanancia (real) en el período.
+Gestión de categorías: la categoría de producto es una entidad Categoria (no un enum), de modo que el usuario puede crear nuevas categorías desde la aplicación. Las categorías base se cargan como seed inicial.
+Clientes
+El sistema debe generar una pantalla de gestión de clientes con alta, baja lógica, edición y consulta. Cada cliente podrá asociarse opcionalmente a una venta o a una reserva, pero ninguna venta ni reserva requerirá obligatoriamente un cliente, permitiendo ventas de mostrador sin identificación.
+La sección deberá incluir:
+* Listado de clientes.
+* Búsqueda en tiempo real por nombre o teléfono.
+* Alta, edición y baja lógica.
+* Historial de compras (Ventas asociadas).
+* Historial de reservas (Reservas asociadas).
+* Acceso desde la ficha del cliente a todas sus operaciones.
+* Filtros siguiendo exactamente el patrón global definido para el resto del sistema Indicadores rápidos como cantidad de compras, monto total comprado y fecha de última compra.
+De esta forma, el agente generará no solo la entidad, sino también el módulo completo de gestión de clientes preparado para futuras funcionalidades como programas de fidelización, promociones o ventas online.
+Administración
+Se crea un módulo independiente de Administración - NO LO VE EL NEGOCIO PRINCIPAL (UTOPIA)
+que centraliza toda la configuración del sistema y la gestión de usuarios. La información propia del Tenant quedará limitada a los datos identificatorios de la empresa, mientras que las preferencias operativas, parámetros del sistema y configuraciones funcionales se administrarán desde una vista específica de administración. Este módulo incluirá la gestión completa de usuarios (alta, edición, baja lógica, roles, permisos, activación/desactivación, restablecimiento de credenciales y auditoría de acciones), así como todas las configuraciones generales del sistema organizadas por secciones. Esta separación mejora la escalabilidad, simplifica el mantenimiento y evita sobrecargar la entidad Tenant con responsabilidades que no le corresponden. 
+6. Requisitos no funcionales (checklist obligatorio)
+Estos puntos surgen de errores concretos de un desarrollo anterior donde se dieron por sentados y terminaron faltando. Cada uno de estos debe verificarse explícitamente antes de dar por cerrada cualquier pantalla o módulo:
+6.1 Presentación y UX
+* Aplicacion Responsive: Desktop, Tablet, Mobile
+* Sección de ajustes por perfil: todo tipo de usuario/perfil del sistema (dueño, empleado, cualquier rol) debe tener su propia sección de configuración/ajustes accesible desde su perfil — no solo datos básicos de alta.
+* Cambio de contraseña: flujo funcional y accesible para cualquier usuario autenticado, sin excepción. Verificar que exista antes de cerrar el módulo de autenticación.
+* Modo oscuro y modo claro: soporte completo en TODA la aplicación, sin pantallas o componentes que se salteen el theming. Si se agrega una pantalla nueva, se prueba en ambos modos antes de darla por terminada.
+* Tablas y listados: alineación y centrado correcto de columnas, formato prolijo. Cada campo de tipo "estado" (estadoItem, Consignacion.estado, ConsignacionDetalle.estado, RendicionProveedor.estado) debe representarse con un badge/color consistente, nunca como texto plano sin jerarquía visual.
+* Consistencia de patrones de UI: si se define un patrón para un tipo de componente (formularios, tablas, filtros, selects), se reutiliza igual en todas las secciones de la app — no se reinventa por pantalla. Si el proyecto ya tiene un componente base (por ejemplo, un select de búsqueda estilizado), se reutiliza en vez de usar el <select> nativo en una sección nueva.
+siempre que se pueda los filtros deben tener este formato 
+en la sección [NOMBRE DE LA SECCIÓN, ej: "buscarproductos" ] quiero unificar el formato de los filtros con el patrón que ya usamos en la sección de postulaciones del reclutador (src/app/(reclutador)/reclutador/postulaciones/filtros-postulaciones.tsx).
+6.2 Patrón de filtros
+   * Concretamente:
+Filtros live, sin botón de "Buscar": que se apliquen al instante vía router.replace sobre los search params (con debounce en el input de texto).
+El input de búsqueda con su ícono, y un botón "Limpiar filtros" con TrashIcon que solo aparezca cuando hay filtros activos.
+Los desplegables tienen que usar el componente SearchableSelect (panel redondeado y estilizado con buscador), no el <select> nativo. Cada uno con key sobre su valor actual para re-montarse al limpiar.
+Si hay filtros dependientes (tipo provincia → localidad): el hijo solo se muestra después de elegir el padre, se resetea al cambiar el padre, y su key incluye el valor del padre.
+Revisá cómo está implementado hoy en esa sección, replicá el patrón, y corré tsc --noEmit para verificar que compila.
+6.3 Seguridad y datos
+   * RLS + tests de aislamiento: antes de considerar cualquier entrega lista, correr tests que confirmen que un tenant no puede ver ni modificar datos de otro.
+   * Doble chequeo módulo + rol: cada endpoint valida ambas condiciones, no una sola.
+   * Seed inicial: datos de partida para poder probar RLS y flujos completos (al menos 2 tenants con módulos y roles distintos).
+6.4 Estándares de todos los listados
+Exportación a Excel, CSV y PDF disponible en cualquier listado.
+Todos los listados deben tener:
+   * ✓ búsqueda
+   * ✓ filtros
+   * ✓ orden
+   * ✓ paginación
+   * ✓ columnas configurables
+   * ✓ recordar filtros
+   * ✓ exportar
+   * ✓ contador de resultados
+   * ✓ selección múltiple
+   * ✓ acciones masivas
+6.5 Accesibilidad
+Keyboard first, TAB,ESC,ENTER, Focus. No depender del mouse.
+6.6 Estados vacíos
+No puede haber tabla vacía. Debe haber  Empty State. Con CTA.
+6.7 Skeletons
+   * Nada de loaders horribles. Skeletons.
+6.8 Confirmaciones
+   * Eliminar
+   * Pagar
+   * Rendir
+   * Baja. Todo con confirmación.
+7. Principios de arquitectura obligatorios
+Ninguna regla de negocio puede quedar únicamente en el frontend; toda validación crítica debe ejecutarse también en el backend y, cuando corresponda, reforzarse mediante restricciones de base de datos.
+Todas las operaciones críticas (ventas, rendiciones, consignaciones, ajustes de inventario y cambios financieros) deben ejecutarse dentro de transacciones atómicas.
+El sistema debe ser extensible mediante módulos desacoplados, evitando lógica duplicada y dependencias circulares.
+Toda entidad debe contemplar su ciclo de vida completo (creación, modificación, archivado y consulta histórica), preservando la trazabilidad y sin pérdida de información.
+Las reglas de negocio deben centralizarse en servicios de dominio reutilizables; no deben dispersarse entre componentes de UI, endpoints o consultas SQL.
+Todo listado, formulario y flujo debe seguir patrones de UX consistentes definidos globalmente; queda prohibido implementar variantes ad hoc salvo justificación técnica.
+El diseño debe priorizar escalabilidad, mantenibilidad y extensibilidad sobre la implementación más rápida, evitando soluciones acopladas que dificulten futuras funcionalidades.
+8. Entregables de base de datos
+Entregables de código esperados para la base de datos - Migraciones SQL: generar los archivos de migración de Supabase (carpeta supabase/migrations) con el CREATE TABLE de cada entidad del diagrama, tipos de Postgres correctos (uuid, timestamptz, numeric para decimal, enums nativos de Postgres para cada campo enum), y las FK con ON DELETE que corresponda. - Políticas RLS: una policy por tabla que filtre por idTenant, más los tests de aislamiento entre tenants antes de dar por cerrada la migración. - Índices: incluir el unique partial index de ConsignacionDetalle (idItem) WHERE estado='pendiente', y cualquier índice sobre columnas usadas en foreign keys o filtros frecuentes (idTenant, idProveedor, idProducto). - Seed: script de datos iniciales con al menos 2 tenants, sus módulos y roles, para poder probar RLS de entrada 
+9. Checklist de cierre antes de entregar cualquier módulo
+Antes de marcar una funcionalidad como terminada, confirmar:
+¿Tiene su sección de ajustes si corresponde? ¿Funciona en modo oscuro y claro? ¿Las tablas están alineadas y los estados tienen formato visual? ¿Se validó RLS para esta funcionalidad puntual? ¿Se validó el doble chequeo módulo+rol si aplica? ¿Los patrones de UI usados coinciden con los ya establecidos en el resto de la app, o se está reinventando algo que ya existía?
+10. Adjuntos de referencia
+   * Utopia_v2.drawio.svg: diagrama de clases completo, fuente de verdad del modelo de datos.
+   * HTML Utopia Sitema Oficial.html 
+Diseño visual
+El diseño no debe ser el generado por defecto por shadcn/ui ni una interfaz CRUD genérica.
+Toda la aplicación deberá mantener una identidad visual consistente inspirada en el archivo HTML Utopia Sitema Oficial.html  adjunto, reutilizando:
+   * tipografías
+   * espaciados
+   * sistema de colores
+   * radios
+   * sombras
+   * componentes
+   * jerarquías visuales
+   * tarjetas
+   * tablas
+   * botones
+   * formularios
+No copiar literalmente el HTML.
+Debe utilizarse únicamente como guía visual.
+Mantener exactamente la funcionalidad definida en este documento.
+OBJETIVO DEL DESARROLLO
+El objetivo no es simplemente generar una aplicación funcional. El objetivo es generar una base de código mantenible, escalable y preparada para evolucionar durante varios años. Ante dos soluciones funcionalmente equivalentes, siempre deberá elegirse la que presente menor acoplamiento, mayor cohesión, mejor legibilidad, facilidad de testing y capacidad de extensión futura. Quedan prohibidas las soluciones rápidas que comprometan la arquitectura o la mantenibilidad. 
+Anexo — Notas de contexto (no normativo)
+Esta sección reúne los antecedentes y notas de arranque del proyecto (originalmente al inicio del documento). No forma parte de la especificación normativa; se conserva como contexto.
+Pendientes detectados del prompt anterior
+Lista de cosas que no hizo en el prompt inicial el ultimo proyecto 
+Cambiar la contraseña, gestion del perfil de usuario, filtros 
+Concurrencia física es el más importante y el que más golpea a este tipo de sistema: dos personas escaneando el mismo QR casi en simultáneo (venderlo dos veces, o marcarlo de baja mientras otro lo está vendiendo). Esto no se resuelve con una tabla nueva, sino con una validación atómica a nivel de base de datos — el UPDATE de estadoItem tiene que fallar si el estado ya cambió entre que lo leíste y lo escribiste (optimistic locking o un constraint de transición de estado), porque validarlo solo en el frontend no alcanza con dos celulares escaneando al mismo tiempo. 
+DetalleVenta y Rendición al proveedor (flujo detallado)
+
+
+Al vender (cada venta, siempre): se crea la Venta y su(s) DetalleVenta con montoProveedor ya calculado, idRendicion queda en NULL. Nada más pasa acá. No se consulta Consignación para nada — un ítem que se vendió nunca pasó por el circuito de devolución, son mundos separados. Si en algún momento un producto de ese proveedor entró en consignación y se devolvió, ese ítem específico nunca llega a generar un DetalleVenta (porque no se vendió), así que no le debés nada al proveedor por él.
+Al tocar "Generar rendición" (acción manual, cuando el dueño decide saldar cuentas con un proveedor puntual): ahí sí se dispara todo. La app busca todas las DetalleVenta de ese proveedor con idRendicion IS NULL — es decir, todo lo vendido que todavía no entró en ninguna rendición anterior, sin importar la fecha. Te muestra ese listado en una previsualización (mismo patrón que usamos para el PDF del proveedor: mostrar antes de confirmar).
+Al confirmar: se crea el RendicionProveedor con el monto total sumado, y en la misma transacción se actualiza cada una de esas DetalleVenta seteando su idRendicion al id de la rendición recién creada. A partir de ahí, esas ventas quedan "cerradas" para el próximo cálculo — la próxima vez que generes una rendición para ese proveedor, la query de idRendicion IS NULL automáticamente las excluye, y solo trae lo vendido después de la última rendición.
+Qué pedir explícitamente al agente
+1. RLS multi-tenant (lo más crítico). El DC muestra idTenant en cada tabla, pero el aislamiento es lógica de base, no de modelo. Al promptear, exigí explícitamente: políticas RLS en Postgres/Supabase para cada tabla que filtren por idTenant, activadas desde la primera migración, más tests de aislamiento que prueben que un tenant no ve datos de otro. Si no lo pedís, el generador te va a dar tablas sin RLS y tenés el agujero de seguridad.
+2. Resolución del tenant por request. El middleware que extrae el idTenant del subdominio (o del usuario logueado) y lo inyecta en el contexto de cada query. Es el patrón que vimos en la referencia de Pronto. No es una clase; es infraestructura que hay que pedir aparte.
+3. Doble chequeo módulo + rol. La lógica de "este usuario ve esta funcionalidad solo si su tenant tiene el módulo habilitado Y su rol tiene permiso". El DC tiene las tablas (TenantModulo, Rol) pero la verificación combinada es lógica de aplicación que hay que especificar como guard/middleware.
+4. Parseo del PDF del proveedor + previsualización editable (RF-01). CargaProveedor guarda el evento, pero el cómo se detecta producto/cantidad/precio del PDF y se muestra la preview editable antes de confirmar es lógica pura. Definí en el prompt: qué librería de extracción, y que la confirmación es un paso explícito del usuario (nada se carga a ciegas, como dice tu propuesta).
+5. Generación del QR por ItemProducto. El campo codigoQR está, pero generar el QR, imprimirlo, y el flujo de escaneo (ingreso/venta/devolución) es lógica + UI. Especificá la librería de QR y los tres flujos de escaneo.
+6. Cálculos automáticos (RF-07/08/09). El DC tiene los campos resultado (precioVenta, montoProveedor, montoGanancia), pero las fórmulas no se modelan. Definí antes de promptear: la fórmula exacta de recargo por cuotas y el margen objetivo (justo lo que tu propuesta lista en “Próximos pasos” como pendiente de definir con el cliente). Sin esas fórmulas, el generador inventa.
+7. Regla de negocio: una sola consignación activa por ítem. Estaba como nota en tu DC previo. Es una restricción (constraint/validación), no un campo. Pedila explícita.
+8. Máquina de estados de estadoItem. Las transiciones válidas (disponible→vendido, disponible→en_consignacion→devuelto, etc.) son lógica. El enum está en el DC; las transiciones permitidas hay que especificarlas para que no se pueda, por ejemplo, vender un ítem ya devuelto.
+9. Configuración por tenant de fórmulas y márgenes. Mencionaste que cada empresa puede tener su propia fórmula de recargo. Eso implica que las fórmulas del punto 6 no son constantes globales sino config guardada por tenant. Decidí si va en Tenant (como JSON de config) o en una tabla aparte — lo dejé fuera del DC a propósito para que lo definas vos según cómo lo quieras versionar.
+10. Seed de datos inicial. Módulos base (inventario/ventas/finanzas), roles base (dueño/vendedor), y para Utopía el tenant inicial + su proveedor principal (Ficción). No es modelo, es data de arranque que el generador necesita saber que existe.
+
+hay muchos modulos que se activan segun cliente 
+consignaciones es una logica aparte

@@ -1,26 +1,78 @@
 @import "tailwindcss";
 
+/* Light theme — verbatim hex from design §8.2 */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #F7F5F1;
+  --text: #141210;
+  --topbar: rgba(247, 245, 241, 0.85);
+  --border: #EAE5DE;
+  --border-2: #E7E2DA;
+  --card: #FCF6F0;
+  --card-2: #FBFAF7;
+  --card-3: #F0ECE6;
+  --card-4: #EFEAE2;
+  --sidebar-bg: #131312;
+  --accent-pink: #E9A6BC;
+  --pink-bg: #F7E4EA;
+  --pink-strong: #C2607F;
+  --terracota: #B87A5A;
+  --success: #3E8E5A;
+  --muted: #5A5652;
+  --muted-2: #8A837A;
 }
 
+/* Dark theme — verbatim hex from design §8.3. --sidebar-bg is intentionally
+   identical to the light block (REQ-DS-07: sidebar stays dark in both themes). */
+:root[data-theme="dark"] {
+  --bg: #1A1815;
+  --text: #EDE9E3;
+  --topbar: rgba(26, 24, 21, 0.85);
+  --border: #33302B;
+  --border-2: #3B372F;
+  --card: #232019;
+  --card-2: #26221B;
+  --card-3: #2B2720;
+  --card-4: #2E2A22;
+  --sidebar-bg: #131312;
+  --accent-pink: #E9A6BC;
+  --pink-bg: #3A2630;
+  --pink-strong: #E58AA6;
+  --terracota: #D89A78;
+  --success: #4FB574;
+  --muted: #B3ACA1;
+  --muted-2: #938C82;
+}
+
+/* Tailwind 4 CSS-first theme mapping. `inline` is required (not plain
+   `@theme`) because these values reference custom properties that change
+   at runtime via the `data-theme` attribute — a static `@theme` would bake
+   in only the :root (light) values at build time. */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-bg: var(--bg);
+  --color-text: var(--text);
+  --color-topbar: var(--topbar);
+  --color-border: var(--border);
+  --color-border-2: var(--border-2);
+  --color-card: var(--card);
+  --color-card-2: var(--card-2);
+  --color-card-3: var(--card-3);
+  --color-card-4: var(--card-4);
+  --color-sidebar: var(--sidebar-bg);
+  --color-accent-pink: var(--accent-pink);
+  --color-pink-bg: var(--pink-bg);
+  --color-pink-strong: var(--pink-strong);
+  --color-terracota: var(--terracota);
+  --color-success: var(--success);
+  --color-muted: var(--muted);
+  --color-muted-2: var(--muted-2);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+  --font-mono: var(--font-mono);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body), system-ui, sans-serif;
 }

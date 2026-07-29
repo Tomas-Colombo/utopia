@@ -1,0 +1,94 @@
+import 'server-only'
+import { createServerClient } from '@/lib/dal/supabase'
+import type {
+  EstadoItem,
+  ItemConProducto,
+  ItemProductoRow,
+  MovimientoItemRow,
+} from '@/lib/types/inventario'
+
+/**
+ * Buscar item por QR (flujo de escaneo — anexo §5, punto 5). RLS scope-ea
+ * automáticamente al tenant actual. Devuelve null si no existe o si existe
+ * pero pertenece a otro tenant (RLS lo oculta).
+ */
+export async function findItemByQr(qr: string): Promise<ItemProductoRow | null> {
+  const supabase = await createServerClient()
+  const { data, error } = await supabase
+    .from('item_producto').select('*').eq('qr_code', qr).maybeSingle()
+  if (error) throw new Error(`findItemByQr: ${error.message}`)
+  return (data ?? null) as ItemProductoRow | null
+}
+
+/**
+ * Ficha de item + producto + categoría + proveedor + movimientos
+ * (Planificacion.txt Etapa 3 §69 "Ficha de producto con escaneo").
+ */
+export async function getItemConDetalle(idItem: string): Promise<ItemConProducto | null> {
+  const supabase = await createServerClient()
+  const { data, error } = await supabase
+    .from('item_producto')
+    .select(`
+      *,
+      producto:producto(id_producto, nombre, sku,
+        categoria:categoria(id_categoria, nombre)),
+      ingreso:ingreso_mercaderia(
+        proveedor:proveedor(id_proveedor, nombre, telefono))
+    `)
+    .eq('id_item', idItem)
+    .maybeSingle()
+
+  if (error) throw new Error(`getItemConDetalle: ${error.message}`)
+  if (!data) return null
+
+  const { data: movs, error: movErr } = await supabase
+    .from('movimiento_item')
+    .select('*')
+    .eq('id_item', idItem)
+    .order('ts', { ascending: false })
+  if (movErr) throw new Error(`getItemConDetalle movs: ${movErr.message}`)
+
+  const proveedor = (data as { ingreso: { proveedor: ItemConProducto['proveedor'] } | null })
+    .ingreso?.proveedor ?? null
+
+  return {
+    ...(data as ItemProductoRow),
+    producto: (data as unknown as { producto: ItemConProducto['producto'] }).producto,
+    proveedor,
+    movimientos: (movs ?? []) as MovimientoItemRow[],
+  }
+}
+
+export async function listItemsByProducto(idProducto: string): Promise<ItemProductoRow[]> {
+  const supabase = await createServerClient()
+  const { data, error } = await supabase
+    .from('item_producto')
+    .select('*')
+    .eq('id_producto', idProducto)
+    .order('fecha_ingreso', { ascending: false })
+  if (error) throw new Error(`listItemsByProducto: ${error.message}`)
+  return (data ?? []) as ItemProductoRow[]
+}
+
+/**
+ * Transición de estado — ÚNICO punto de entrada. Llama al RPC que valida
+ * la máquina de estados en DB (is_transicion_item_valida). Cualquier
+ * UPDATE directo de `estado_item` desde la app es un bug.
+ */
+export async function spTransicionItem(input: {
+  idItem: string
+  estadoHasta: EstadoItem
+  tipoMovimiento: string
+  referenciaId?: string | null
+  referenciaTipo?: string | null
+}): Promise<void> {
+  const supabase = await createServerClient()
+  const { error } = await supabase.rpc('sp_transicion_item_producto', {
+    p_id_item: input.idItem,
+    p_estado_hasta: input.estadoHasta,
+    p_tipo_movimiento: input.tipoMovimiento,
+    p_referencia_id: input.referenciaId ?? null,
+    p_referencia_tipo: input.referenciaTipo ?? null,
+  })
+  if (error) throw new Error(`sp_transicion_item_producto: ${error.message}`)
+}

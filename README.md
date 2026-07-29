@@ -1,5 +1,14 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Local Setup
+
+1. Create two Supabase cloud projects on the free tier: [`utopia-dev` and `utopia-test`](https://supabase.com).
+2. Copy each project's URL, anon key, and service role key from **Project Settings → API**.
+3. Copy `.env.example` to `.env.local` and fill in the 6 keys (3 per project) plus the 2 root-domain values.
+4. Run `npm install` (already done if you're running this after Slice 1 apply).
+5. Run `npm test` — the smoke test should pass.
+6. Migrations land starting in Slice 4 of `foundations-multitenant`. When they do, apply them via the Supabase dashboard SQL Editor as documented in `supabase/README.md`.
+
 ## Getting Started
 
 First, run the development server:

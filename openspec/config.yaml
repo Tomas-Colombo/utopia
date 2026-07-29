@@ -1,0 +1,79 @@
+# SDD OpenSpec Configuration — utopia
+# Generated: 2026-07-23
+
+project:
+  name: "utopia"
+  version: "0.1.0"
+  description: "Multi-tenant SaaS management system (inventory, sales, finance) for clothing store"
+
+stack:
+  runtime:
+    platform: "Node.js"
+    frontend: "Next.js 16.2.10 (breaking changes — MUST read node_modules/next/dist/docs/ before coding)"
+    backend: "Supabase (Postgres) + Vercel [planned, not yet integrated]"
+  
+  core_dependencies:
+    - "React 19.2.4"
+    - "TypeScript 5"
+    - "Tailwind CSS 4"
+  
+  dev_tools:
+    linter: "ESLint 9"
+    type_checker: "TypeScript"
+    formatter: "Not yet configured"
+  
+  database:
+    engine: "PostgreSQL (Supabase)"
+    orm: "[planned — no ORM installed yet]"
+    migrations: "[planned]"
+
+testing:
+  strict_tdd: false
+  test_runner: null
+  test_command: null
+  
+  # KNOWN GAP: No test framework currently installed
+  # Project brief REQUIRES:
+  #   - RLS isolation tests (Row Level Security)
+  #   - Concurrency tests (optimistic locking at DB level)
+  #   - Integration tests for atomic transactions
+  # Status: Will be added in early phase (blocking SDD change work)
+  
+  coverage_target: null
+  test_location: "tests/" # placeholder
+
+conventions:
+  # HARD PROJECT CONVENTION (from AGENTS.md)
+  next_js_compatibility: |
+    This Next.js 16.2.10 has breaking changes. Before writing ANY code:
+    1. Read the relevant guide in node_modules/next/dist/docs/
+    2. Check for deprecation notices
+    3. Do not assume training-data patterns apply
+  
+  # Project non-negotiables (from brief)
+  multi_tenant:
+    - "Every domain table carries idTenant with Row Level Security"
+    - "Modules enabled per tenant via feature flags"
+    - "Double-check module + role on every action"
+  
+  data_integrity:
+    - "Atomic transactions for critical operations"
+    - "Physical concurrency handled with optimistic locking at DB level"
+  
+  ui_requirements:
+    - "Full dark/light theming"
+    - "Unified filter pattern across all lists"
+    - "Export to Excel/CSV/PDF on every list"
+  
+  source_of_truth:
+    - "utopia-intructivo/DiagramaDeClases.drawio → data model"
+    - "utopia-intructivo/Utopía Sistema Oficial .html → visual identity"
+
+persistence:
+  mode: "openspec"
+  store_root: "./openspec"
+  also_persists_to: "Engram (topic_key: sdd-init/utopia)"
+
+delivery:
+  strategy: "force-chained (stacked/chained PRs)"
+  review_budget: "400 changed lines per PR"

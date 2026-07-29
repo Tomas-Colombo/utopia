@@ -1,0 +1,69 @@
+import { describe, expect, it } from 'vitest'
+import { darkTokens } from './dark'
+import { lightTokens } from './tokens'
+
+/**
+ * WCAG 2.1 relative-luminance / contrast-ratio helpers, written directly in
+ * this test file per the Slice 2 instructions (axe-core does not expose a
+ * pure ratio function usable outside a rendered DOM tree).
+ */
+function hexToRgb(hex: string): [number, number, number] {
+  const clean = hex.replace('#', '')
+  const r = parseInt(clean.slice(0, 2), 16)
+  const g = parseInt(clean.slice(2, 4), 16)
+  const b = parseInt(clean.slice(4, 6), 16)
+  return [r, g, b]
+}
+
+function channelToLinear(channel255: number): number {
+  const srgb = channel255 / 255
+  return srgb <= 0.04045 ? srgb / 12.92 : ((srgb + 0.055) / 1.055) ** 2.4
+}
+
+function relativeLuminance(hex: string): number {
+  const [r, g, b] = hexToRgb(hex)
+  return 0.2126 * channelToLinear(r) + 0.7152 * channelToLinear(g) + 0.0722 * channelToLinear(b)
+}
+
+function contrastRatio(hexA: string, hexB: string): number {
+  const luminanceA = relativeLuminance(hexA)
+  const luminanceB = relativeLuminance(hexB)
+  const lighter = Math.max(luminanceA, luminanceB)
+  const darker = Math.min(luminanceA, luminanceB)
+  return (lighter + 0.05) / (darker + 0.05)
+}
+
+describe('darkTokens', () => {
+  it('defines the exact hex values from design §8.3', () => {
+    expect(darkTokens.bg).toBe('#1A1815')
+    expect(darkTokens.text).toBe('#EDE9E3')
+    expect(darkTokens.sidebarBg).toBe('#131312')
+    expect(darkTokens.accentPink).toBe('#E9A6BC')
+    expect(darkTokens.pinkStrong).toBe('#E58AA6')
+    expect(darkTokens.terracota).toBe('#D89A78')
+    expect(darkTokens.success).toBe('#4FB574')
+  })
+
+  it('exposes the same token shape as lightTokens', () => {
+    expect(Object.keys(darkTokens).sort()).toEqual(Object.keys(lightTokens).sort())
+  })
+
+  it('keeps the sidebar dark constant identical across themes (REQ-DS-07)', () => {
+    expect(darkTokens.sidebarBg).toBe(lightTokens.sidebarBg)
+    expect(darkTokens.sidebarBg).toBe('#131312')
+  })
+
+  describe('WCAG 2.1 AA contrast against --bg (≥4.5:1 body text)', () => {
+    it('text vs bg meets AA', () => {
+      expect(contrastRatio(darkTokens.text, darkTokens.bg)).toBeGreaterThanOrEqual(4.5)
+    })
+
+    it('terracota vs bg meets AA', () => {
+      expect(contrastRatio(darkTokens.terracota, darkTokens.bg)).toBeGreaterThanOrEqual(4.5)
+    })
+
+    it('success vs bg meets AA', () => {
+      expect(contrastRatio(darkTokens.success, darkTokens.bg)).toBeGreaterThanOrEqual(4.5)
+    })
+  })
+})
