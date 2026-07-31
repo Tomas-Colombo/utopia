@@ -44,7 +44,7 @@ export function ModulosView({ initial }: { initial: Mod[] }) {
         acceder — el guard falla con <code>module-disabled</code>.
       </div>
 
-      <div className="rounded-lg border border-border bg-card overflow-hidden">
+      <div className="rounded-lg border border-border bg-card overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border text-left">

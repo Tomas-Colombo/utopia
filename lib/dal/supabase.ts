@@ -39,7 +39,13 @@ export async function createServerClient() {
     cookies: {
       getAll: () => cookieStore.getAll(),
       setAll: (items) => {
-        items.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
+        try {
+          items.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
+        } catch {
+          // `setAll` was called from a Server Component, where cookies are
+          // read-only. Safe to ignore: session refresh is handled by proxy.ts
+          // / Server Actions, which CAN write cookies.
+        }
       },
     },
   })

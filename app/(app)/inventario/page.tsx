@@ -1,44 +1,59 @@
 import Link from 'next/link'
 import { Topbar } from '@/components/shell/Topbar'
 import { Badge } from '@/components/ui/Badge'
+import { Button } from '@/components/ui/Button'
 import { verifySession } from '@/lib/dal/session'
-import { listProductosConDetalle } from '@/lib/dal/inventario/producto'
-import { listProveedoresActivos } from '@/lib/dal/inventario/proveedor'
+import {
+  getInventarioResumen,
+  listProductosConDetallePaginado,
+  PRODUCTOS_PAGE_SIZE,
+} from '@/lib/dal/inventario/producto'
+import { countProveedoresActivos } from '@/lib/dal/inventario/proveedor'
 import { listCategoriasActivas } from '@/lib/dal/inventario/categoria'
 import {
   listAlertaReposicion,
   listAlertaRotacionVencida,
 } from '@/lib/dal/reportes/reportes'
+import { ProductosTableClient } from './productos/ProductosTableClient'
 
 /**
- * Home del módulo Inventario. Cifras rápidas + alertas (§L105) + accesos
- * directos a sub-módulos.
+ * Home del módulo Inventario. Muestra el listado de productos directamente
+ * (con un buscador único + filtros y paginación), más alertas (§L105),
+ * cifras rápidas y accesos directos a los demás sub-módulos.
  */
-export default async function InventarioHome() {
+export default async function InventarioHome(props: {
+  searchParams: Promise<{ q?: string; cat?: string; page?: string }>
+}) {
   const session = await verifySession()
-  const [productos, proveedores, categorias, alertasRepo, alertasRot] = await Promise.all([
-    listProductosConDetalle({ soloActivos: true }),
-    listProveedoresActivos(),
-    listCategoriasActivas(),
-    listAlertaReposicion(),
-    listAlertaRotacionVencida(),
-  ])
+  const searchParams = await props.searchParams
+  const page = Math.max(1, Number.parseInt(searchParams.page ?? '1', 10) || 1)
 
-  const stockDisponibleTotal = productos.reduce((a, p) => a + p.stock_disponible, 0)
-  const productosBajoMinimo = productos.filter(
-    (p) => p.stock_disponible < p.stock_minimo,
-  ).length
-
-  const cards = [
-    { href: '/inventario/productos', label: 'Productos', value: productos.length },
-    { href: '/inventario/categorias', label: 'Categorías', value: categorias.length },
-    { href: '/inventario/proveedores', label: 'Proveedores', value: proveedores.length },
-    { href: '/inventario/ingresos', label: 'Ingresos', value: 'Ver' },
-  ]
+  const [{ rows: productosPagina, total }, resumen, proveedoresActivos, categorias, alertasRepo, alertasRot] =
+    await Promise.all([
+      listProductosConDetallePaginado({
+        search: searchParams.q,
+        idCategoria: searchParams.cat,
+        page,
+        pageSize: PRODUCTOS_PAGE_SIZE,
+      }),
+      getInventarioResumen(),
+      countProveedoresActivos(),
+      listCategoriasActivas(),
+      listAlertaReposicion(),
+      listAlertaRotacionVencida(),
+    ])
 
   return (
     <>
-      <Topbar title="Inventario" session={session} />
+      <Topbar
+        title="Inventario"
+        session={session}
+        actions={
+          <Link href="/inventario/productos/nuevo">
+            <Button size="sm">Nuevo producto</Button>
+          </Link>
+        }
+      />
       <main className="flex-1 p-6 space-y-6">
         {/* Alertas — jerarquía visual §L105 */}
         {alertasRepo.length > 0 && (
@@ -55,7 +70,7 @@ export default async function InventarioHome() {
               {alertasRepo.slice(0, 8).map((a) => (
                 <Link
                   key={a.id_producto}
-                  href={`/inventario/productos?q=${encodeURIComponent(a.nombre)}`}
+                  href={`/inventario?q=${encodeURIComponent(a.nombre)}`}
                   className="flex items-center justify-between rounded-md bg-card px-3 py-2 hover:bg-card-2 text-sm"
                 >
                   <div className="min-w-0">
@@ -115,36 +130,39 @@ export default async function InventarioHome() {
           </section>
         )}
 
+        {/* Métricas */}
         <section className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          <Kpi label="Stock disponible" value={stockDisponibleTotal.toLocaleString('es-AR')} />
-          <Kpi label="Productos activos" value={productos.length.toString()} />
+          <Kpi label="Stock disponible" value={resumen.stockDisponibleTotal.toLocaleString('es-AR')} />
+          <Kpi label="Productos activos" value={resumen.productosActivos.toString()} />
           <Kpi
             label="Bajo mínimo"
-            value={productosBajoMinimo.toString()}
-            variant={productosBajoMinimo > 0 ? 'alert' : 'default'}
+            value={resumen.productosBajoMinimo.toString()}
+            variant={resumen.productosBajoMinimo > 0 ? 'alert' : 'default'}
           />
-          <Kpi label="Proveedores" value={proveedores.length.toString()} />
+          <Kpi label="Proveedores" value={proveedoresActivos.toString()} />
         </section>
 
-        <section className="grid grid-cols-1 gap-3 md:grid-cols-4">
-          {cards.map((c) => (
-            <Link
-              key={c.href}
-              href={c.href}
-              className="rounded-lg border border-border bg-card p-5 hover:bg-card-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
-            >
-              <div className="text-sm text-muted">{c.label}</div>
-              <div className="mt-1 font-display text-2xl">{c.value}</div>
-            </Link>
-          ))}
+        {/* Accesos a los demás sub-módulos — justo debajo de las métricas */}
+        <section className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <NavCard href="/inventario/categorias" label="Categorías" value={categorias.length} />
+          <NavCard href="/inventario/proveedores" label="Proveedores" value={proveedoresActivos} />
+          <NavCard href="/inventario/ingresos" label="Ingresos" value="Ver" />
         </section>
 
-        <section className="rounded-lg border border-border bg-card p-6">
-          <h3 className="font-display text-lg mb-2">Escanear QR</h3>
-          <p className="text-sm text-muted mb-3">
-            Buscá un ítem por su código QR o ingresá el código manualmente.
-          </p>
-          <QuickScanLink />
+        {/* Productos — buscador único (escáner + SKU) + tabla */}
+        <section className="space-y-3">
+          <h3 className="font-display text-lg">Productos</h3>
+          <ProductosTableClient
+            rows={productosPagina}
+            categorias={categorias}
+            initialSearch={searchParams.q ?? ''}
+            initialCategoria={searchParams.cat ?? ''}
+            page={page}
+            pageSize={PRODUCTOS_PAGE_SIZE}
+            total={total}
+            basePath="/inventario"
+            scanHref="/inventario/ficha"
+          />
         </section>
       </main>
     </>
@@ -174,13 +192,22 @@ function Kpi({
   )
 }
 
-function QuickScanLink() {
+function NavCard({
+  href,
+  label,
+  value,
+}: {
+  href: string
+  label: string
+  value: string | number
+}) {
   return (
     <Link
-      href="/inventario/ficha"
-      className="inline-flex items-center gap-2 rounded-md bg-accent-pink px-4 py-2 text-sm font-semibold text-sidebar"
+      href={href}
+      className="rounded-lg border border-border bg-card p-5 hover:bg-card-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
     >
-      Abrir escaneo
+      <div className="text-sm text-muted">{label}</div>
+      <div className="mt-1 font-display text-2xl">{value}</div>
     </Link>
   )
 }

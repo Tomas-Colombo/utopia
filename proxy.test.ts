@@ -3,6 +3,15 @@ import { unstable_doesMiddlewareMatch } from 'next/experimental/testing/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { config, proxy } from './proxy'
 
+// The proxy now refreshes the Supabase session (calls `auth.getUser()`).
+// Stub the SSR client so tenant-resolution tests stay pure — no network,
+// no real JWT. These tests only assert tenant header behavior.
+vi.mock('@supabase/ssr', () => ({
+  createServerClient: () => ({
+    auth: { getUser: vi.fn().mockResolvedValue({ data: { user: null }, error: null }) },
+  }),
+}))
+
 function requestWithHost(host: string, pathname = '/') {
   return new NextRequest(`http://placeholder.invalid${pathname}`, {
     headers: { host },
@@ -15,39 +24,42 @@ beforeEach(() => {
   process.env = { ...ORIGINAL_ENV }
   delete process.env.UTOPIA_ROOT_DOMAIN
   delete process.env.UTOPIA_ROOT_DOMAIN_DEV
+  // requireEnv() guards these before the client is built.
+  process.env.NEXT_PUBLIC_SUPABASE_URL = 'http://supabase.invalid'
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'anon-test-key'
 })
 
 describe('proxy — tenant resolution (design §6, spec tenant-resolution.md)', () => {
   it.each(['www', 'admin', 'api', 'app'])(
     'routes reserved subdomain "%s" to landing without injecting a tenant header (REQ-TR-09)',
-    (reserved) => {
-      const response = proxy(requestWithHost(`${reserved}.utopia.app`))
+    async (reserved) => {
+      const response = await proxy(requestWithHost(`${reserved}.utopia.app`))
 
       expect(response.headers.get('x-middleware-override-headers')).toBeNull()
       expect(response.headers.get('x-middleware-request-x-utopia-tenant-subdomain')).toBeNull()
     },
   )
 
-  it('routes a missing subdomain (bare production root domain) to landing (REQ-TR-11)', () => {
-    const response = proxy(requestWithHost('utopia.app'))
+  it('routes a missing subdomain (bare production root domain) to landing (REQ-TR-11)', async () => {
+    const response = await proxy(requestWithHost('utopia.app'))
 
     expect(response.headers.get('x-middleware-request-x-utopia-tenant-subdomain')).toBeNull()
   })
 
-  it('routes a missing subdomain (bare dev root domain, with port) to landing', () => {
-    const response = proxy(requestWithHost('localhost:3000'))
+  it('routes a missing subdomain (bare dev root domain, with port) to landing', async () => {
+    const response = await proxy(requestWithHost('localhost:3000'))
 
     expect(response.headers.get('x-middleware-request-x-utopia-tenant-subdomain')).toBeNull()
   })
 
-  it('sets x-utopia-tenant-subdomain for a valid production subdomain (REQ-TR-04)', () => {
-    const response = proxy(requestWithHost('acme.utopia.app'))
+  it('sets x-utopia-tenant-subdomain for a valid production subdomain (REQ-TR-04)', async () => {
+    const response = await proxy(requestWithHost('acme.utopia.app'))
 
     expect(response.headers.get('x-middleware-request-x-utopia-tenant-subdomain')).toBe('acme')
   })
 
-  it('sets x-utopia-tenant-subdomain for a valid *.localhost dev subdomain without /etc/hosts edits (REQ-TR-08)', () => {
-    const response = proxy(requestWithHost('acme.localhost:3000'))
+  it('sets x-utopia-tenant-subdomain for a valid *.localhost dev subdomain without /etc/hosts edits (REQ-TR-08)', async () => {
+    const response = await proxy(requestWithHost('acme.localhost:3000'))
 
     expect(response.headers.get('x-middleware-request-x-utopia-tenant-subdomain')).toBe('acme')
   })
@@ -60,7 +72,7 @@ describe('proxy — tenant resolution (design §6, spec tenant-resolution.md)', 
     vi.resetModules()
     const { proxy: proxyWithCustomRoot } = await import('./proxy')
 
-    const response = proxyWithCustomRoot(requestWithHost('acme.utopia-custom.app'))
+    const response = await proxyWithCustomRoot(requestWithHost('acme.utopia-custom.app'))
 
     expect(response.headers.get('x-middleware-request-x-utopia-tenant-subdomain')).toBe('acme')
   })

@@ -15,7 +15,7 @@ export default async function NuevaVentaPage(props: {
   ])
   return (
     <>
-      <Topbar title="Nueva venta" session={session} />
+      <Topbar title="Nueva venta" session={session} backHref="/ventas" />
       <main className="flex-1 p-6">
         <NuevaVentaView
           clientes={clientes.map((c) => ({

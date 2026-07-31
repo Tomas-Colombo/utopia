@@ -10,26 +10,51 @@ import { Modal } from '@/components/ui/Modal'
 import { Table, type Column } from '@/components/ui/Table'
 import { Textarea } from '@/components/ui/Textarea'
 import { useToast } from '@/components/ui/Toast'
+import { TallesEditor } from '@/components/inventario/TallesEditor'
 import type { CategoriaRow } from '@/lib/types/inventario'
 import {
   createCategoriaAction,
   toggleCategoriaActivaAction,
+  updateCategoriaAction,
 } from '../actions'
 
 export function CategoriasView({ initial }: { initial: CategoriaRow[] }) {
   const [rows, setRows] = useState<CategoriaRow[]>(initial)
   const [open, setOpen] = useState(false)
+  const [editId, setEditId] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
   const toast = useToast()
 
   const [nombre, setNombre] = useState('')
   const [descripcion, setDescripcion] = useState('')
+  const [talles, setTalles] = useState<string[]>([])
   const [errNombre, setErrNombre] = useState<string | null>(null)
 
   function reset() {
     setNombre('')
     setDescripcion('')
+    setTalles([])
     setErrNombre(null)
+    setEditId(null)
+  }
+
+  function abrirNueva() {
+    reset()
+    setOpen(true)
+  }
+
+  function abrirEditar(row: CategoriaRow) {
+    setEditId(row.id_categoria)
+    setNombre(row.nombre)
+    setDescripcion(row.descripcion ?? '')
+    setTalles(row.talles ?? [])
+    setErrNombre(null)
+    setOpen(true)
+  }
+
+  function cerrar() {
+    setOpen(false)
+    reset()
   }
 
   function submit() {
@@ -38,17 +63,32 @@ export function CategoriasView({ initial }: { initial: CategoriaRow[] }) {
       return
     }
     startTransition(async () => {
+      if (editId) {
+        const res = await updateCategoriaAction(editId, {
+          nombre,
+          descripcion: descripcion || null,
+          talles,
+        })
+        if (!res.ok) return toast.error('No se pudo guardar', res.reason)
+        toast.success('Categoría actualizada')
+        setRows((r) =>
+          r.map((c) =>
+            c.id_categoria === editId
+              ? { ...c, nombre: nombre.trim(), descripcion: descripcion.trim() || null, talles }
+              : c,
+          ),
+        )
+        cerrar()
+        return
+      }
+
       const res = await createCategoriaAction({
         nombre,
         descripcion: descripcion || null,
+        talles,
       })
-      if (!res.ok) {
-        toast.error('No se pudo crear', res.reason)
-        return
-      }
+      if (!res.ok) return toast.error('No se pudo crear', res.reason)
       toast.success('Categoría creada')
-      // Optimistic: agrego una fila temporal; el revalidatePath en el server la
-      // reemplazará en el próximo render de datos frescos.
       const now = new Date().toISOString()
       setRows((r) => [
         ...r,
@@ -58,12 +98,12 @@ export function CategoriasView({ initial }: { initial: CategoriaRow[] }) {
           nombre: nombre.trim(),
           descripcion: descripcion.trim() || null,
           activa: true,
+          talles,
           created_at: now,
           updated_at: now,
         } as CategoriaRow,
       ])
-      setOpen(false)
-      reset()
+      cerrar()
     })
   }
 
@@ -83,9 +123,20 @@ export function CategoriasView({ initial }: { initial: CategoriaRow[] }) {
   const columns: Column<CategoriaRow>[] = [
     { key: 'nombre', label: 'Nombre' },
     {
-      key: 'descripcion',
-      label: 'Descripción',
-      render: (r) => r.descripcion || <span className="text-muted-2">—</span>,
+      key: 'talles',
+      label: 'Talles',
+      render: (r) =>
+        r.talles && r.talles.length > 0 ? (
+          <div className="flex flex-wrap gap-1">
+            {r.talles.map((t) => (
+              <span key={t} className="rounded-full border border-border bg-card-2 px-2 py-0.5 text-xs">
+                {t}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <span className="text-muted-2">—</span>
+        ),
     },
     {
       key: 'activa',
@@ -101,9 +152,14 @@ export function CategoriasView({ initial }: { initial: CategoriaRow[] }) {
       label: '',
       align: 'right',
       render: (r) => (
-        <Button size="sm" variant="ghost" onClick={() => toggle(r)} disabled={pending}>
-          {r.activa ? 'Desactivar' : 'Activar'}
-        </Button>
+        <div className="flex justify-end gap-1">
+          <Button size="sm" variant="ghost" onClick={() => abrirEditar(r)} disabled={pending}>
+            Editar
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => toggle(r)} disabled={pending}>
+            {r.activa ? 'Desactivar' : 'Activar'}
+          </Button>
+        </div>
       ),
     },
   ]
@@ -111,39 +167,32 @@ export function CategoriasView({ initial }: { initial: CategoriaRow[] }) {
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
-        <Button onClick={() => setOpen(true)}>Nueva categoría</Button>
+        <Button onClick={abrirNueva}>Nueva categoría</Button>
       </div>
 
       {rows.length === 0 ? (
         <EmptyState
           title="Sin categorías todavía"
           description="Creá la primera categoría para clasificar tus productos."
-          cta={{ label: 'Nueva categoría', onClick: () => setOpen(true) }}
+          cta={{ label: 'Nueva categoría', onClick: abrirNueva }}
         />
       ) : (
-        <div className="rounded-lg border border-border bg-card overflow-hidden">
-          <Table
-            columns={columns}
-            data={rows}
-            getRowId={(r) => r.id_categoria}
-          />
+        <div className="rounded-lg border border-border bg-card overflow-x-auto">
+          <Table columns={columns} data={rows} getRowId={(r) => r.id_categoria} />
         </div>
       )}
 
       <Modal
         open={open}
-        title="Nueva categoría"
-        onClose={() => {
-          setOpen(false)
-          reset()
-        }}
+        title={editId ? 'Editar categoría' : 'Nueva categoría'}
+        onClose={cerrar}
         footer={
           <>
-            <Button variant="secondary" onClick={() => setOpen(false)} disabled={pending}>
+            <Button variant="secondary" onClick={cerrar} disabled={pending}>
               Cancelar
             </Button>
             <Button onClick={submit} disabled={pending}>
-              {pending ? 'Guardando…' : 'Crear'}
+              {pending ? 'Guardando…' : editId ? 'Guardar' : 'Crear'}
             </Button>
           </>
         }
@@ -161,10 +210,13 @@ export function CategoriasView({ initial }: { initial: CategoriaRow[] }) {
           <Field htmlFor="cat-desc" label="Descripción">
             <Textarea
               id="cat-desc"
-              rows={3}
+              rows={2}
               value={descripcion}
               onChange={(e) => setDescripcion(e.target.value)}
             />
+          </Field>
+          <Field htmlFor="cat-talles" label="Talles" hint="Los talles/medidas de esta categoría (ej: S, M, L). Se usan al cargar productos e ingresos.">
+            <TallesEditor value={talles} onChange={setTalles} disabled={pending} />
           </Field>
         </div>
       </Modal>

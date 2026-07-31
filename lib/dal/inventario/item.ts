@@ -71,6 +71,30 @@ export async function listItemsByProducto(idProducto: string): Promise<ItemProdu
 }
 
 /**
+ * Unidades `disponible` de un producto (opcionalmente de un talle), ordenadas
+ * FIFO (más viejo primero). Se usa al cargar una venta por SKU: un SKU apunta
+ * al producto/variante, no a una unidad, así que hay que elegir una unidad
+ * concreta. El talle se compara case-insensitive (ilike sin comodines).
+ */
+export async function listItemsDisponibles(
+  idProducto: string,
+  talle?: string | null,
+): Promise<ItemProductoRow[]> {
+  const supabase = await createServerClient()
+  let query = supabase
+    .from('item_producto')
+    .select('*')
+    .eq('id_producto', idProducto)
+    .eq('estado_item', 'disponible')
+    .order('fecha_ingreso', { ascending: true })
+    .limit(25)
+  if (talle) query = query.ilike('talle', talle)
+  const { data, error } = await query
+  if (error) throw new Error(`listItemsDisponibles: ${error.message}`)
+  return (data ?? []) as ItemProductoRow[]
+}
+
+/**
  * Transición de estado — ÚNICO punto de entrada. Llama al RPC que valida
  * la máquina de estados en DB (is_transicion_item_valida). Cualquier
  * UPDATE directo de `estado_item` desde la app es un bug.

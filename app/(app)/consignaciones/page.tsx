@@ -60,7 +60,7 @@ export default async function ConsignacionesPage() {
             </Link>
           </div>
         ) : (
-          <div className="rounded-lg border border-border bg-card overflow-hidden">
+          <div className="rounded-lg border border-border bg-card overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border text-left">

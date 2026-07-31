@@ -18,6 +18,17 @@ export async function listProveedoresActivos(): Promise<ProveedorRow[]> {
   return (data ?? []) as ProveedorRow[]
 }
 
+/** Conteo de proveedores activos sin traer las filas (KPI de la home). */
+export async function countProveedoresActivos(): Promise<number> {
+  const supabase = await createServerClient()
+  const { count, error } = await supabase
+    .from('proveedor')
+    .select('id_proveedor', { count: 'exact', head: true })
+    .eq('activo', true)
+  if (error) throw new Error(`countProveedoresActivos: ${error.message}`)
+  return count ?? 0
+}
+
 export async function getProveedor(id: string): Promise<ProveedorRow | null> {
   const supabase = await createServerClient()
   const { data, error } = await supabase
@@ -42,16 +53,4 @@ export async function updateProveedor(
   const { error } = await supabase
     .from('proveedor').update(patch).eq('id_proveedor', id)
   if (error) throw new Error(`updateProveedor: ${error.message}`)
-}
-
-/**
- * Construye el link wa.me (Planificacion.txt Etapa 3 §66 "botón wa.me").
- * Devuelve null si no hay teléfono. NO valida formato — el proveedor
- * puede tener número raro y wa.me igual funciona.
- */
-export function waMeLink(telefono: string | null | undefined): string | null {
-  if (!telefono) return null
-  const digits = telefono.replace(/\D/g, '')
-  if (digits.length < 6) return null
-  return `https://wa.me/${digits}`
 }

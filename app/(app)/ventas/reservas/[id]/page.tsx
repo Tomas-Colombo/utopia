@@ -31,6 +31,7 @@ export default async function ReservaDetallePage(props: {
       <Topbar
         title={`Reserva ${new Date(reserva.fecha).toLocaleDateString('es-AR')}`}
         session={session}
+        backHref="/ventas/reservas"
         actions={
           <Badge variant={VARIANT[reserva.estado_reserva]}>
             {ESTADO_RESERVA_LABEL[reserva.estado_reserva]}
@@ -63,7 +64,7 @@ export default async function ReservaDetallePage(props: {
           </div>
         </div>
 
-        <div className="rounded-lg border border-border bg-card overflow-hidden">
+        <div className="rounded-lg border border-border bg-card overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border text-left">

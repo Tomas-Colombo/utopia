@@ -14,6 +14,7 @@ export default async function ReservasPage() {
       <Topbar
         title="Reservas"
         session={session}
+        backHref="/ventas"
         actions={
           <Link href="/ventas/reservas/nueva">
             <Button size="sm">Nueva reserva</Button>

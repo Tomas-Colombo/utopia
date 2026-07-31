@@ -8,7 +8,7 @@ export default async function ModulosAdminPage() {
   const modulos = await listModulosTenant()
   return (
     <>
-      <Topbar title="Módulos del tenant" session={session} />
+      <Topbar title="Módulos del tenant" session={session} backHref="/administracion" />
       <main className="flex-1 p-6">
         <ModulosView
           initial={modulos.map((m) => ({

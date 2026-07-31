@@ -67,7 +67,7 @@ export function NuevoProveedorForm() {
         />
       </Field>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field htmlFor="p-tipo" label="Tipo" required>
           <select
             id="p-tipo"
@@ -96,7 +96,7 @@ export function NuevoProveedorForm() {
         </Field>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field htmlFor="p-tel" label="Teléfono" hint="Se usa para link WhatsApp">
           <Input
             id="p-tel"

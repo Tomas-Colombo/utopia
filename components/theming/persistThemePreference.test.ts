@@ -40,9 +40,8 @@ describe('persistThemePreference — half-wire real DAL call (task 4.7, mocked S
       tenantId: 'tenant-1',
     })
 
-    const { persistThemePreference, buildThemeConfiguracionPayload } = await import(
-      './persistThemePreference'
-    )
+    const { persistThemePreference } = await import('./persistThemePreference')
+    const { buildThemeConfiguracionPayload } = await import('./themeConfiguracionPayload')
 
     const result = await persistThemePreference('dark')
 

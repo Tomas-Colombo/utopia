@@ -8,7 +8,7 @@ export default async function PresupuestosPage() {
   const cats = await listCategoriasGasto()
   return (
     <>
-      <Topbar title="Presupuestos por categoría" session={session} />
+      <Topbar title="Presupuestos por categoría" session={session} backHref="/gastos" />
       <main className="flex-1 p-6">
         <PresupuestosView
           initial={cats.map((c) => ({

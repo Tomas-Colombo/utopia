@@ -9,6 +9,7 @@ import { Field } from '@/components/ui/Field'
 import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
 import { useToast } from '@/components/ui/Toast'
+import { QrScanner } from '@/components/inventario/QrScanner'
 import { FORMA_PAGO_LABEL, type FormaPago } from '@/lib/types/precios'
 import type { LineaCarrito } from '@/lib/types/ventas'
 import { registrarVentaAction } from '../actions'
@@ -55,6 +56,7 @@ export function NuevaVentaView({
   const [qrInput, setQrInput] = useState('')
   const [buscando, setBuscando] = useState(false)
   const [errorBusqueda, setErrorBusqueda] = useState<string | null>(null)
+  const [camaraOpen, setCamaraOpen] = useState(false)
 
   const [lineas, setLineas] = useState<LineaCarrito[]>([])
   const [confirmarOpen, setConfirmarOpen] = useState(false)
@@ -92,19 +94,21 @@ export function NuevaVentaView({
     [lineas],
   )
 
-  async function agregarLinea(e?: React.FormEvent) {
+  function agregarLinea(e?: React.FormEvent) {
     e?.preventDefault()
-    const qr = qrInput.trim()
-    if (!qr) return
-    if (lineas.some((l) => l.qr_code === qr)) {
-      setErrorBusqueda('Ese ítem ya está en el carrito')
-      return
-    }
+    void agregarPorCodigo(qrInput)
+  }
+
+  // Carga una línea a partir de un código (QR exacto o SKU con talle). Lo usan
+  // tanto el input manual como el escaneo por cámara.
+  async function agregarPorCodigo(rawCode: string) {
+    const codigo = rawCode.trim()
+    if (!codigo || buscando) return
     setBuscando(true)
     setErrorBusqueda(null)
     try {
       const r = await fetch(
-        `/api/ventas/lookup-item?qr=${encodeURIComponent(qr)}&forma_pago=${formaPago}${
+        `/api/ventas/lookup-item?code=${encodeURIComponent(codigo)}&forma_pago=${formaPago}${
           idReserva ? `&id_reserva=${encodeURIComponent(idReserva)}` : ''
         }`,
       )
@@ -113,8 +117,17 @@ export function NuevaVentaView({
         setErrorBusqueda(traducirReason(data.reason, data))
         return
       }
-      setLineas((ls) => [...ls, data.linea as LineaCarrito])
-      setQrInput('')
+      const nueva = data.linea as LineaCarrito
+      let duplicado = false
+      setLineas((ls) => {
+        if (ls.some((l) => l.qr_code === nueva.qr_code)) {
+          duplicado = true
+          return ls
+        }
+        return [...ls, nueva]
+      })
+      if (duplicado) setErrorBusqueda('Ese ítem ya está en el carrito')
+      else setQrInput('')
     } catch (e) {
       setErrorBusqueda((e as Error).message)
     } finally {
@@ -156,34 +169,49 @@ export function NuevaVentaView({
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px]">
       {/* Carrito */}
       <section className="space-y-4">
-        <form
-          onSubmit={agregarLinea}
-          className="rounded-lg border border-border bg-card p-4"
-        >
-          <Field
-            htmlFor="qr-input"
-            label="Escanear o tipear QR"
-            error={errorBusqueda ?? undefined}
-            hint="Enter para agregar al carrito"
-          >
-            <div className="flex gap-2">
-              <Input
-                id="qr-input"
-                autoFocus
-                value={qrInput}
-                onChange={(e) => setQrInput(e.target.value)}
-                placeholder="Código QR del ítem"
-                invalid={!!errorBusqueda}
-                disabled={buscando}
-              />
-              <Button type="submit" disabled={buscando || !qrInput.trim()}>
-                {buscando ? 'Buscando…' : 'Agregar'}
-              </Button>
-            </div>
-          </Field>
-        </form>
+        <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+          <form onSubmit={agregarLinea}>
+            <Field
+              htmlFor="qr-input"
+              label="Escanear o tipear código"
+              error={errorBusqueda ?? undefined}
+              hint="QR del ítem o SKU del producto (ej: REM-0007-M). Enter para agregar."
+            >
+              <div className="flex gap-2">
+                <Input
+                  id="qr-input"
+                  autoFocus
+                  value={qrInput}
+                  onChange={(e) => setQrInput(e.target.value)}
+                  placeholder="QR o SKU"
+                  invalid={!!errorBusqueda}
+                  disabled={buscando}
+                />
+                <Button type="submit" disabled={buscando || !qrInput.trim()}>
+                  {buscando ? 'Buscando…' : 'Agregar'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setCamaraOpen((v) => !v)}
+                >
+                  {camaraOpen ? 'Cerrar' : '📷 Cámara'}
+                </Button>
+              </div>
+            </Field>
+          </form>
 
-        <div className="rounded-lg border border-border bg-card overflow-hidden">
+          {camaraOpen && (
+            <div className="mx-auto max-w-xs">
+              <QrScanner
+                onDetected={(text) => void agregarPorCodigo(text)}
+                onClose={() => setCamaraOpen(false)}
+              />
+            </div>
+          )}
+        </div>
+
+        <div className="rounded-lg border border-border bg-card overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border text-left">
@@ -355,6 +383,8 @@ function traducirReason(reason: string, extra?: Record<string, unknown>): string
   if (reason.startsWith('item-en-reserva')) return 'El ítem está reservado por otra reserva. Cargá esa reserva o cancelala primero.'
   if (reason.startsWith('item-en-otra-reserva')) return 'El ítem pertenece a otra reserva distinta a la que cargaste.'
   if (reason.startsWith('item-ya-reservado')) return 'El ítem ya está en una reserva activa.'
+  if (reason === 'sku-sin-stock') return 'Ese SKU no tiene unidades disponibles en stock.'
+  if (reason === 'sku-sin-stock-libre') return 'Las unidades de ese SKU están reservadas. Cargá la reserva o escaneá el QR de una unidad libre.'
   if (reason === 'sin-precio-lista') return 'El producto no tiene precio de venta. Fijalo en Precios → Control de precios.'
   if (reason === 'reserva-no-activa') return 'La reserva ya no está activa (fue cancelada, vencida o convertida).'
   if (reason === 'lineas-vacias') return 'Agregá al menos un ítem al carrito.'

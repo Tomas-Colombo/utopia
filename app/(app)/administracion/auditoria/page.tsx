@@ -25,7 +25,7 @@ export default async function AuditoriaPage(props: {
 
   return (
     <>
-      <Topbar title="Auditoría" session={session} />
+      <Topbar title="Auditoría" session={session} backHref="/administracion" />
       <main className="flex-1 p-6">
         <AuditoriaView
           rows={rows}

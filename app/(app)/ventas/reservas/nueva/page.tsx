@@ -8,7 +8,7 @@ export default async function NuevaReservaPage() {
   const clientes = await listClientes({ soloActivos: true })
   return (
     <>
-      <Topbar title="Nueva reserva" session={session} />
+      <Topbar title="Nueva reserva" session={session} backHref="/ventas/reservas" />
       <main className="flex-1 p-6">
         <NuevaReservaView
           clientes={clientes.map((c) => ({

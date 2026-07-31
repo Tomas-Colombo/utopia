@@ -10,7 +10,7 @@ export default async function NuevaConsignacionPage() {
   const consignatarios = proveedores.filter((p) => p.tipo === 'consignatario')
   return (
     <>
-      <Topbar title="Nueva consignación" session={session} />
+      <Topbar title="Nueva consignación" session={session} backHref="/consignaciones" />
       <main className="flex-1 p-6">
         <div className="max-w-xl rounded-lg border border-border bg-card p-6">
           <NuevaConsignacionForm

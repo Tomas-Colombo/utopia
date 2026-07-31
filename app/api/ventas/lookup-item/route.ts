@@ -2,26 +2,31 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { AuthorizationError } from '@/lib/dal/errors'
 import { requireModuleRole } from '@/lib/dal/guard'
 import { verifySession } from '@/lib/dal/session'
-import { findItemByQr } from '@/lib/dal/inventario/item'
+import { findItemByQr, listItemsDisponibles } from '@/lib/dal/inventario/item'
+import { findProductoBySku } from '@/lib/dal/inventario/producto'
 import { calcularSnapshotPrecio } from '@/lib/dal/precios/resolucion'
 import { createServerClient } from '@/lib/dal/supabase'
 import type { FormaPago } from '@/lib/types/precios'
+import type { ItemProductoRow } from '@/lib/types/inventario'
 import type { LineaCarrito } from '@/lib/types/ventas'
 
 /**
- * GET /api/ventas/lookup-item?qr=<code>&forma_pago=<fp>
+ * GET /api/ventas/lookup-item?code=<qr-o-sku>&forma_pago=<fp>
  *
- * Endpoint interno usado por el carrito de venta cuando el operador
- * escanea o tipea un QR. Devuelve una `LineaCarrito` lista para
- * agregar, o `{ ok: false, reason }`.
+ * Endpoint interno del carrito de venta. Acepta:
+ *   - `code`: QR exacto del ítem, o SKU del producto (`REM-0007` /
+ *     `REM-0007-M`). El QR resuelve la unidad exacta; el SKU elige una
+ *     unidad disponible (FIFO) del producto/talle, saltando las reservadas.
+ *   - `qr` (legacy): sólo QR exacto (lo usa el refresco de precios).
  *
- * Este endpoint es de READ ONLY — NO reserva el item ni cambia estado.
- * La transacción real ocurre al confirmar la venta con sp_registrar_venta.
+ * READ ONLY — NO reserva el item ni cambia estado. La transacción real
+ * ocurre al confirmar la venta con sp_registrar_venta.
  *
  * Retorna:
  *   200 { ok:true, linea: LineaCarrito }
  *   200 { ok:false, reason: 'item-not-found'|'item-no-disponible'|
- *                            'item-en-reserva'|'sin-precio-lista' }
+ *          'item-en-reserva'|'sin-precio-lista'|'sku-sin-stock'|
+ *          'sku-sin-stock-libre' }
  *   401 unauthorized
  */
 export async function GET(req: NextRequest) {
@@ -35,46 +40,80 @@ export async function GET(req: NextRequest) {
     throw e
   }
 
-  const qr = req.nextUrl.searchParams.get('qr')?.trim()
-  const formaPago = (req.nextUrl.searchParams.get('forma_pago') as FormaPago | null) ?? 'efectivo'
-  const idReservaCtx = req.nextUrl.searchParams.get('id_reserva')?.trim() ?? null
+  const params = req.nextUrl.searchParams
+  const code = params.get('code')?.trim()
+  const qrLegacy = params.get('qr')?.trim()
+  const input = code || qrLegacy
+  const formaPago = (params.get('forma_pago') as FormaPago | null) ?? 'efectivo'
+  const idReservaCtx = params.get('id_reserva')?.trim() ?? null
 
-  if (!qr) return NextResponse.json({ ok: false, reason: 'qr-vacio' }, { status: 400 })
+  if (!input) return NextResponse.json({ ok: false, reason: 'qr-vacio' }, { status: 400 })
 
-  const item = await findItemByQr(qr)
-  if (!item) {
-    return NextResponse.json({ ok: false, reason: 'item-not-found' })
-  }
-  if (item.estado_item !== 'disponible') {
-    return NextResponse.json({
-      ok: false,
-      reason: 'item-no-disponible',
-      estado: item.estado_item,
-    })
-  }
-
-  // Chequeo de reserva activa
   const supabase = await createServerClient()
-  const { data: dr } = await supabase
-    .from('detalle_reserva')
-    .select('id_detalle_reserva, id_reserva')
-    .eq('id_item', item.id_item)
-    .eq('estado', 'activa')
-    .maybeSingle()
 
+  // Reserva activa de un ítem: devuelve el id_reserva que lo tiene, o null.
+  async function reservaActiva(idItem: string): Promise<string | null> {
+    const { data } = await supabase
+      .from('detalle_reserva')
+      .select('id_reserva')
+      .eq('id_item', idItem)
+      .eq('estado', 'activa')
+      .maybeSingle()
+    return (data as { id_reserva: string } | null)?.id_reserva ?? null
+  }
+
+  let item: ItemProductoRow | null = null
   let advertencia: string | null = null
-  if (dr) {
-    const dr_id_reserva = (dr as { id_reserva: string }).id_reserva
-    if (idReservaCtx && dr_id_reserva === idReservaCtx) {
-      advertencia = 'Item de esta reserva'
-    } else {
+
+  // 1) QR exacto.
+  const porQr = await findItemByQr(input)
+  if (porQr) {
+    if (porQr.estado_item !== 'disponible') {
       return NextResponse.json({
         ok: false,
-        reason: 'item-en-reserva',
-        id_reserva: dr_id_reserva,
+        reason: 'item-no-disponible',
+        estado: porQr.estado_item,
       })
     }
+    const rid = await reservaActiva(porQr.id_item)
+    if (rid) {
+      if (idReservaCtx && rid === idReservaCtx) advertencia = 'Item de esta reserva'
+      else return NextResponse.json({ ok: false, reason: 'item-en-reserva', id_reserva: rid })
+    }
+    item = porQr
+  } else if (code) {
+    // 2) SKU con talle opcional (sólo por `code`; el path `qr` legacy es estricto).
+    const upper = input.toUpperCase()
+    const m = upper.match(/^([A-Z]+-\d+)(?:-(.+))?$/)
+    const baseSku = m?.[1] ?? upper
+    const talle = m?.[2] ?? null
+
+    const producto = await findProductoBySku(baseSku)
+    if (!producto) return NextResponse.json({ ok: false, reason: 'item-not-found' })
+
+    const candidatos = await listItemsDisponibles(producto.id_producto, talle)
+    for (const c of candidatos) {
+      const rid = await reservaActiva(c.id_item)
+      if (!rid) { item = c; break }
+      if (idReservaCtx && rid === idReservaCtx) {
+        item = c
+        advertencia = 'Item de esta reserva'
+        break
+      }
+    }
+    if (!item) {
+      return NextResponse.json({
+        ok: false,
+        reason: candidatos.length > 0 ? 'sku-sin-stock-libre' : 'sku-sin-stock',
+        sku: baseSku,
+        talle,
+      })
+    }
+  } else {
+    return NextResponse.json({ ok: false, reason: 'item-not-found' })
   }
+
+  if (!item) return NextResponse.json({ ok: false, reason: 'item-not-found' })
 
   // Producto + categoría
   const { data: producto } = await supabase

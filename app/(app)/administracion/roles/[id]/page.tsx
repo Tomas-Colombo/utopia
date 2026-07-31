@@ -13,7 +13,7 @@ export default async function EditarRolPage(props: {
   if (!rol) notFound()
   return (
     <>
-      <Topbar title={`Editar rol: ${rol.nombre}`} session={session} />
+      <Topbar title={`Editar rol: ${rol.nombre}`} session={session} backHref="/administracion/roles" />
       <main className="flex-1 p-6">
         <div className="max-w-3xl">
           <EditarRolForm

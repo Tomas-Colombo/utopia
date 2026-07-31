@@ -4,22 +4,7 @@ import { AuthorizationError } from '@/lib/dal/errors'
 import { verifySession } from '@/lib/dal/session'
 import { createServerClient } from '@/lib/dal/supabase'
 import type { Theme } from './ThemeProvider'
-
-export interface ThemeConfiguracionPayload {
-  seccion: 'perfil'
-  clave: 'theme'
-  valor: Theme
-}
-
-/**
- * Builds the exact payload shape the `configuracion` DAL write consumes:
- * `configuracion(seccion='perfil', clave='theme', valor=theme)`
- * (design §8.6, REQ-DS-06). Pure and DB-free so the contract stays
- * unit-testable independent of the Supabase round-trip below.
- */
-export function buildThemeConfiguracionPayload(theme: Theme): ThemeConfiguracionPayload {
-  return { seccion: 'perfil', clave: 'theme', valor: theme }
-}
+import { buildThemeConfiguracionPayload } from './themeConfiguracionPayload'
 
 export type PersistThemeResult = { ok: true } | { ok: false; reason: string }
 

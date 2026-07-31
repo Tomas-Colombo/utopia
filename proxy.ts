@@ -1,40 +1,86 @@
+import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 /**
- * Tenant Resolution — proxy.ts (Next.js 16 file convention; replaces the
- * deprecated `middleware.ts`). Design §6 / spec `tenant-resolution.md`
- * REQ-TR-01 through REQ-TR-11.
+ * proxy.ts (Next.js 16 file convention; replaces the deprecated
+ * `middleware.ts`). Two responsibilities run here on every page request:
  *
- * This is an OPTIMISTIC, non-authoritative step (REQ-TR-03): it never
- * queries the database. It only parses the `host` header and, for a
- * plausible tenant subdomain, injects an UNVERIFIED hint header
- * (`x-utopia-tenant-subdomain`) for the DAL to re-verify. The DAL's
- * `verifyTenantMatch()` (lib/dal/tenant.ts) is the authoritative check —
- * Next.js 16 Server Actions can bypass the proxy matcher entirely, so
- * isolation is enforced at the DAL, not here (design §6 execution-order
- * note).
+ *  1. Tenant Resolution — design §6 / spec `tenant-resolution.md`
+ *     REQ-TR-01..11. Optimistic, non-authoritative (REQ-TR-03): never
+ *     queries the DB, only injects an UNVERIFIED `x-utopia-tenant-subdomain`
+ *     hint for the DAL's authoritative `verifyTenantMatch()`.
+ *
+ *  2. Supabase session refresh — the proxy is a Route-Handler-like context
+ *     where writing cookies IS allowed, so this is where the refreshed
+ *     session token gets persisted. Server Components can read the session
+ *     but cannot write cookies, so without this step the token would be
+ *     re-refreshed on every request that hits an expired JWT (and, before
+ *     the DAL swallowed it, throw "Cookies can only be modified in a Server
+ *     Action or Route Handler").
+ *
+ * Per the Next.js proxy docs, this file stays self-contained (no shared DAL
+ * import): the proxy may be deployed separately from the app runtime.
  */
 
 const RESERVED = new Set(['www', 'admin', 'api', 'app'])
 const ROOT_PROD = process.env.UTOPIA_ROOT_DOMAIN ?? 'utopia.app'
 const ROOT_DEV = process.env.UTOPIA_ROOT_DOMAIN_DEV ?? 'localhost'
 
-export function proxy(request: NextRequest) {
+function requireEnv(name: string): string {
+  const value = process.env[name]
+  if (!value) {
+    throw new Error(`Missing ${name} — set it in .env.local before starting the app`)
+  }
+  return value
+}
+
+export async function proxy(request: NextRequest) {
+  // --- 1. Tenant resolution (REQ-TR-04/09/11) ---
   const host = (request.headers.get('host') ?? '').split(':')[0] // strip port
   const root = host.endsWith(ROOT_DEV) ? ROOT_DEV : ROOT_PROD
   const sub = host.endsWith('.' + root) ? host.slice(0, -(root.length + 1)) : ''
 
-  // Bare root domain or a reserved subdomain → landing, NOT a tenant
-  // (REQ-TR-09/11). No header injected: downstream code must never treat
-  // this request as tenant-scoped.
-  if (!sub || RESERVED.has(sub)) {
-    return NextResponse.next()
-  }
+  // Only a valid-looking subdomain gets the UNVERIFIED hint header injected.
+  // Bare root / reserved subdomains keep the request untouched (REQ-TR-09/11),
+  // exactly as before — the DAL is the authoritative tenant check.
+  const isTenant = Boolean(sub) && !RESERVED.has(sub)
+  const nextOptions = isTenant
+    ? (() => {
+        const requestHeaders = new Headers(request.headers)
+        requestHeaders.set('x-utopia-tenant-subdomain', sub)
+        return { request: { headers: requestHeaders } }
+      })()
+    : undefined
 
-  // Valid-looking subdomain → inject the UNVERIFIED hint header (REQ-TR-04).
-  const headers = new Headers(request.headers)
-  headers.set('x-utopia-tenant-subdomain', sub)
-  return NextResponse.next({ request: { headers } })
+  // --- 2. Supabase session refresh ---
+  // `response` is rebuilt inside setAll so the refreshed Set-Cookie headers
+  // ride along with the (tenant) request headers. Do NOT run other logic
+  // between createServerClient and getUser().
+  let response = NextResponse.next(nextOptions)
+
+  const supabase = createServerClient(
+    requireEnv('NEXT_PUBLIC_SUPABASE_URL'),
+    requireEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY'),
+    {
+      cookies: {
+        getAll: () => request.cookies.getAll(),
+        setAll: (items) => {
+          items.forEach(({ name, value }) => request.cookies.set(name, value))
+          response = NextResponse.next(nextOptions)
+          items.forEach(({ name, value, options }) =>
+            response.cookies.set(name, value, options),
+          )
+        },
+      },
+    },
+  )
+
+  // Revalidates the JWT and, when near expiry, refreshes it — emitting the
+  // Set-Cookie headers captured above. This is the one place that write is
+  // legal, which is what keeps the Server Component render from throwing.
+  await supabase.auth.getUser()
+
+  return response
 }
 
 export const config = {

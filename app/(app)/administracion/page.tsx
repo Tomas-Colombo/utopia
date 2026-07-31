@@ -42,7 +42,7 @@ export default async function AdministracionHome() {
           ))}
         </section>
 
-        <section className="rounded-lg border border-border bg-card overflow-hidden">
+        <section className="rounded-lg border border-border bg-card overflow-x-auto">
           <div className="border-b border-border px-4 py-3 flex items-center justify-between">
             <h3 className="font-display text-lg">Últimas acciones auditadas</h3>
             <Link href="/administracion/auditoria" className="text-sm text-pink-strong hover:underline">

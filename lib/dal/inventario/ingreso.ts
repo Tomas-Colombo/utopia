@@ -9,24 +9,41 @@ import type {
   TipoIngreso,
 } from '@/lib/types/inventario'
 
+/** Default page size for the paginated ingresos listing. */
+export const INGRESOS_PAGE_SIZE = 50
+
 /**
  * Listado de ingresos con resumen agregado (proveedor + totales).
  * Ordenado por fecha desc. Query única: cabecera + join proveedor +
  * aggregation de detalle en memoria (cantidad y costo).
+ *
+ * Pagina siempre: devuelve la página pedida (`page`, 1-based) + el total de
+ * ingresos, para no traer todo el historial de una a la vista de lista.
  */
-export async function listIngresosConResumen(): Promise<IngresoConResumen[]> {
+export async function listIngresosConResumen(opts?: {
+  page?: number
+  pageSize?: number
+}): Promise<{ rows: IngresoConResumen[]; total: number }> {
   const supabase = await createServerClient()
-  const { data, error } = await supabase
+  const page = Math.max(1, opts?.page ?? 1)
+  const pageSize = opts?.pageSize ?? INGRESOS_PAGE_SIZE
+  const from = (page - 1) * pageSize
+
+  const { data, error, count } = await supabase
     .from('ingreso_mercaderia')
-    .select(`
+    .select(
+      `
       *,
       proveedor:proveedor(id_proveedor, nombre),
       detalle:ingreso_mercaderia_detalle(cantidad, costo_unitario)
-    `)
+    `,
+      { count: 'exact' },
+    )
     .order('fecha', { ascending: false })
+    .range(from, from + pageSize - 1)
   if (error) throw new Error(`listIngresosConResumen: ${error.message}`)
 
-  return ((data ?? []) as Array<
+  const rows = ((data ?? []) as Array<
     IngresoMercaderiaRow & {
       proveedor: Pick<ProveedorRow, 'id_proveedor' | 'nombre'> | null
       detalle: Array<{ cantidad: number; costo_unitario: number }>
@@ -47,6 +64,8 @@ export async function listIngresosConResumen(): Promise<IngresoConResumen[]> {
       total_costo,
     }
   })
+
+  return { rows, total: count ?? 0 }
 }
 
 export async function getIngreso(id: string): Promise<
@@ -78,7 +97,7 @@ export async function getIngreso(id: string): Promise<
  */
 export async function createIngresoBorrador(input: {
   tenantId: string
-  idProveedor: string
+  idProveedor: string | null
   tipoIngreso: TipoIngreso
   numeroRemito?: string | null
   observaciones?: string | null
@@ -88,7 +107,7 @@ export async function createIngresoBorrador(input: {
   const supabase = await createServerClient()
   const payload: IngresoMercaderiaInsert = {
     id_tenant: input.tenantId,
-    id_proveedor: input.idProveedor,
+    id_proveedor: input.idProveedor ?? null,
     tipo_ingreso: input.tipoIngreso,
     numero_remito: input.numeroRemito ?? null,
     observaciones: input.observaciones ?? null,
@@ -107,6 +126,7 @@ export async function addIngresoDetalle(input: {
   idProducto: string
   cantidad: number
   costoUnitario: number
+  talle?: string | null
 }): Promise<string> {
   const supabase = await createServerClient()
   const { data, error } = await supabase
@@ -117,11 +137,77 @@ export async function addIngresoDetalle(input: {
       id_producto: input.idProducto,
       cantidad: input.cantidad,
       costo_unitario: input.costoUnitario,
+      talle: input.talle ?? null,
     })
     .select('id_detalle')
     .single()
   if (error) throw new Error(`addIngresoDetalle: ${error.message}`)
   return (data as { id_detalle: string }).id_detalle
+}
+
+export type DetalleImportado = {
+  id_detalle: string
+  id_producto: string
+  nombre: string
+  cantidad: number
+  costo_unitario: number
+  talle: string | null
+}
+
+/**
+ * Import masivo de un remito en UNA transacción (sp_importar_remito):
+ * crea productos + costos + detalle, o vincula existentes. Atómico y en
+ * un solo round-trip. Devuelve los detalles creados para el optimista.
+ */
+export async function spImportarRemito(input: {
+  idIngreso: string
+  moneda?: string
+  lineas: Array<{
+    esNuevo: boolean
+    idProducto: string | null
+    idCategoria: string | null
+    nombre: string
+    costoUnitario: number
+    partes: Array<{ talle: string | null; cantidad: number }>
+  }>
+}): Promise<{ creados: number; vinculados: number; detalles: DetalleImportado[] }> {
+  const supabase = await createServerClient()
+  const { data, error } = await supabase.rpc('sp_importar_remito', {
+    p_id_ingreso: input.idIngreso,
+    p_moneda: input.moneda ?? 'ARS',
+    p_lineas: input.lineas,
+  })
+  if (error) throw new Error(`sp_importar_remito: ${error.message}`)
+  const r = (data ?? {}) as {
+    creados?: number
+    vinculados?: number
+    detalles?: DetalleImportado[]
+  }
+  return {
+    creados: r.creados ?? 0,
+    vinculados: r.vinculados ?? 0,
+    detalles: r.detalles ?? [],
+  }
+}
+
+/**
+ * Cancela/revierte un ingreso (sp_cancelar_ingreso, atómico):
+ *  - Borrador → elimina cabecera + detalle.
+ *  - Confirmado → solo si todos los ítems siguen 'disponible'; los da de
+ *    baja y marca el ingreso como cancelado. Falla si alguno se movió.
+ */
+export async function spCancelarIngreso(input: {
+  idIngreso: string
+  motivo?: string | null
+}): Promise<{ modo: 'borrador' | 'confirmado'; items_baja: number }> {
+  const supabase = await createServerClient()
+  const { data, error } = await supabase.rpc('sp_cancelar_ingreso', {
+    p_id_ingreso: input.idIngreso,
+    p_motivo: input.motivo ?? null,
+  })
+  if (error) throw new Error(`sp_cancelar_ingreso: ${error.message}`)
+  const r = (data ?? {}) as { modo?: 'borrador' | 'confirmado'; items_baja?: number }
+  return { modo: r.modo ?? 'confirmado', items_baja: r.items_baja ?? 0 }
 }
 
 export async function removeIngresoDetalle(idDetalle: string): Promise<void> {

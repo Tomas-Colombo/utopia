@@ -7,22 +7,29 @@ import { verifySession } from '@/lib/dal/session'
 import {
   createCategoria,
   toggleCategoriaActiva,
+  updateCategoria,
 } from '@/lib/dal/inventario/categoria'
 import {
   createProveedor,
   updateProveedor,
 } from '@/lib/dal/inventario/proveedor'
 import {
+  spCrearStockDirecto,
   spCreateProducto,
   spSetCostoProducto,
+  updateProducto,
 } from '@/lib/dal/inventario/producto'
 import { spTransicionItem } from '@/lib/dal/inventario/item'
 import {
   addIngresoDetalle,
   createIngresoBorrador,
   removeIngresoDetalle,
+  spCancelarIngreso,
   spConfirmarIngreso,
+  spImportarRemito,
 } from '@/lib/dal/inventario/ingreso'
+import { extraerRemitoDesdePdf } from '@/lib/inventario/remito-pdf.server'
+import type { ParsedRemito } from '@/lib/inventario/remito-pdf'
 import type { EstadoItem, TipoIngreso, TipoProveedor } from '@/lib/types/inventario'
 
 /**
@@ -49,9 +56,26 @@ async function guarded(accion: string): Promise<{ tenantId: string; userId: stri
 
 // ─── Categorías ──────────────────────────────────────────────────────
 
+/** Normaliza talles: trim, saca vacíos y duplicados (case-insensitive). */
+function normalizarTalles(talles?: string[] | null): string[] {
+  if (!talles) return []
+  const vistos = new Set<string>()
+  const out: string[] = []
+  for (const t of talles) {
+    const v = t.trim()
+    if (!v) continue
+    const k = v.toLowerCase()
+    if (vistos.has(k)) continue
+    vistos.add(k)
+    out.push(v)
+  }
+  return out
+}
+
 export async function createCategoriaAction(input: {
   nombre: string
   descripcion?: string | null
+  talles?: string[]
 }): Promise<ActionResult<{ id: string }>> {
   const g = await guarded('crear')
   if ('error' in g) return { ok: false, reason: g.error }
@@ -61,10 +85,35 @@ export async function createCategoriaAction(input: {
       tenantId: g.tenantId,
       nombre: input.nombre.trim(),
       descripcion: input.descripcion?.trim() || null,
+      talles: normalizarTalles(input.talles),
     })
     revalidatePath('/inventario/categorias')
     revalidatePath('/inventario')
     return { ok: true, data: { id: row.id_categoria } }
+  } catch (e) {
+    return { ok: false, reason: (e as Error).message }
+  }
+}
+
+export async function updateCategoriaAction(
+  id: string,
+  patch: {
+    nombre?: string
+    descripcion?: string | null
+    talles?: string[]
+  },
+): Promise<ActionResult> {
+  const g = await guarded('editar')
+  if ('error' in g) return { ok: false, reason: g.error }
+  try {
+    await updateCategoria(id, {
+      ...(patch.nombre !== undefined ? { nombre: patch.nombre.trim() } : {}),
+      ...(patch.descripcion !== undefined ? { descripcion: patch.descripcion?.trim() || null } : {}),
+      ...(patch.talles !== undefined ? { talles: normalizarTalles(patch.talles) } : {}),
+    })
+    revalidatePath('/inventario/categorias')
+    revalidatePath('/inventario')
+    return { ok: true }
   } catch (e) {
     return { ok: false, reason: (e as Error).message }
   }
@@ -150,7 +199,14 @@ export async function createProductoAction(input: {
   descripcion?: string | null
   costoInicial?: number | null
   moneda?: string
-}): Promise<ActionResult<{ id: string }>> {
+  // Proveedor opcional: si viene, el stock inicial se carga como un ingreso
+  // dinámico de tipo "compra" vinculado a ese proveedor (igual que un ingreso
+  // de mercadería). Si va vacío, el stock se crea con alta directa.
+  idProveedor?: string | null
+  // Stock inicial opcional: crea items físicos por talle. Si va vacío, el
+  // producto se crea sin unidades (comportamiento anterior).
+  stock?: Array<{ talle: string | null; cantidad: number }>
+}): Promise<ActionResult<{ id: string; itemsCreados: number }>> {
   const g = await guarded('crear')
   if ('error' in g) return { ok: false, reason: g.error }
   try {
@@ -169,9 +225,66 @@ export async function createProductoAction(input: {
         motivo: 'costo inicial',
       })
     }
-    revalidatePath('/inventario/productos')
+    let itemsCreados = 0
+    const stock = (input.stock ?? []).filter((s) => s.cantidad > 0)
+    if (stock.length > 0) {
+      if (input.idProveedor) {
+        // Ingreso "compra" dinámico: crea el borrador, agrega una línea por
+        // talle y lo confirma para generar los ítems físicos vinculados al
+        // proveedor. Mismo circuito que /inventario/ingresos.
+        const idIngreso = await createIngresoBorrador({
+          tenantId: g.tenantId,
+          idProveedor: input.idProveedor,
+          tipoIngreso: 'compra',
+          observaciones: 'Ingreso automático al alta del producto',
+          idUsuarioAlta: g.userId,
+        })
+        for (const s of stock) {
+          await addIngresoDetalle({
+            tenantId: g.tenantId,
+            idIngreso,
+            idProducto: id,
+            cantidad: s.cantidad,
+            costoUnitario: input.costoInicial ?? 0,
+            talle: s.talle,
+          })
+        }
+        itemsCreados = await spConfirmarIngreso(idIngreso)
+        revalidatePath('/inventario/ingresos')
+      } else {
+        itemsCreados = await spCrearStockDirecto({
+          idProducto: id,
+          costo: input.costoInicial ?? 0,
+          items: stock,
+        })
+      }
+    }
     revalidatePath('/inventario')
-    return { ok: true, data: { id } }
+    revalidatePath('/inventario')
+    return { ok: true, data: { id, itemsCreados } }
+  } catch (e) {
+    return { ok: false, reason: (e as Error).message }
+  }
+}
+
+export async function updateProductoAction(
+  id: string,
+  patch: {
+    nombre?: string
+    sku?: string | null
+    descripcion?: string | null
+    stock_minimo?: number
+    id_categoria?: string
+    activo?: boolean
+  },
+): Promise<ActionResult> {
+  const g = await guarded('editar')
+  if ('error' in g) return { ok: false, reason: g.error }
+  try {
+    await updateProducto(id, patch)
+    revalidatePath('/inventario')
+    revalidatePath('/inventario')
+    return { ok: true }
   } catch (e) {
     return { ok: false, reason: (e as Error).message }
   }
@@ -192,7 +305,7 @@ export async function setCostoProductoAction(input: {
       moneda: input.moneda ?? 'ARS',
       motivo: input.motivo ?? null,
     })
-    revalidatePath('/inventario/productos')
+    revalidatePath('/inventario')
     return { ok: true }
   } catch (e) {
     return { ok: false, reason: (e as Error).message }
@@ -222,7 +335,7 @@ export async function transicionItemAction(input: {
 // ─── Ingresos ────────────────────────────────────────────────────────
 
 export async function createIngresoAction(input: {
-  idProveedor: string
+  idProveedor: string | null
   tipoIngreso: TipoIngreso
   numeroRemito?: string | null
   observaciones?: string | null
@@ -233,7 +346,7 @@ export async function createIngresoAction(input: {
   try {
     const id = await createIngresoBorrador({
       tenantId: g.tenantId,
-      idProveedor: input.idProveedor,
+      idProveedor: input.idProveedor || null,
       tipoIngreso: input.tipoIngreso,
       numeroRemito: input.numeroRemito?.trim() || null,
       observaciones: input.observaciones?.trim() || null,
@@ -252,6 +365,7 @@ export async function addIngresoDetalleAction(input: {
   idProducto: string
   cantidad: number
   costoUnitario: number
+  talle?: string | null
 }): Promise<ActionResult<{ id: string }>> {
   const g = await guarded('crear')
   if ('error' in g) return { ok: false, reason: g.error }
@@ -262,6 +376,7 @@ export async function addIngresoDetalleAction(input: {
       idProducto: input.idProducto,
       cantidad: input.cantidad,
       costoUnitario: input.costoUnitario,
+      talle: input.talle ?? null,
     })
     revalidatePath(`/inventario/ingresos/${input.idIngreso}`)
     return { ok: true, data: { id } }
@@ -286,6 +401,27 @@ export async function removeIngresoDetalleAction(input: {
 }
 
 /**
+ * Cancela/revierte un ingreso. Borrador → se elimina; confirmado → da de
+ * baja los ítems (solo si ninguno se movió) y lo marca cancelado.
+ */
+export async function cancelarIngresoAction(input: {
+  idIngreso: string
+  motivo?: string | null
+}): Promise<ActionResult<{ modo: 'borrador' | 'confirmado'; itemsBaja: number }>> {
+  const g = await guarded('eliminar')
+  if ('error' in g) return { ok: false, reason: g.error }
+  try {
+    const r = await spCancelarIngreso({ idIngreso: input.idIngreso, motivo: input.motivo ?? null })
+    revalidatePath('/inventario/ingresos')
+    revalidatePath('/inventario')
+    revalidatePath('/inventario')
+    return { ok: true, data: { modo: r.modo, itemsBaja: r.items_baja } }
+  } catch (e) {
+    return { ok: false, reason: (e as Error).message }
+  }
+}
+
+/**
  * Confirmar ingreso = generar items físicos con QR único.
  * Idempotente en DB (sp_confirmar_ingreso devuelve 0 si ya está confirmado).
  */
@@ -297,9 +433,118 @@ export async function confirmarIngresoAction(input: {
   try {
     const count = await spConfirmarIngreso(input.idIngreso)
     revalidatePath('/inventario/ingresos')
-    revalidatePath('/inventario/productos')
+    revalidatePath('/inventario')
     revalidatePath('/inventario')
     return { ok: true, data: { itemsGenerados: count } }
+  } catch (e) {
+    return { ok: false, reason: (e as Error).message }
+  }
+}
+
+// ─── Import de remito PDF ─────────────────────────────────────────────
+
+/**
+ * Parsea un remito PDF (en memoria; NO se guarda el archivo) y devuelve
+ * las líneas detectadas para precargarlas en la planilla de import.
+ */
+export async function parseRemitoPdfAction(
+  form: FormData,
+): Promise<ActionResult<ParsedRemito>> {
+  const g = await guarded('crear')
+  if ('error' in g) return { ok: false, reason: g.error }
+  try {
+    const file = form.get('file')
+    if (!(file instanceof File)) return { ok: false, reason: 'archivo-invalido' }
+    if (file.type && file.type !== 'application/pdf') return { ok: false, reason: 'no-es-pdf' }
+    const bytes = new Uint8Array(await file.arrayBuffer())
+    const parsed = await extraerRemitoDesdePdf(bytes)
+    return { ok: true, data: parsed }
+  } catch (e) {
+    return { ok: false, reason: (e as Error).message }
+  }
+}
+
+type DetalleCreado = {
+  id_detalle: string
+  id_producto: string
+  nombre: string
+  cantidad: number
+  costo_unitario: number
+  talle: string | null
+}
+
+/**
+ * Import masivo desde la planilla de precarga. Por cada línea:
+ *  - `esNuevo` → crea el producto (marcado es_nuevo=true) + costo inicial.
+ *  - si no, usa el `idProducto` vinculado a un producto existente.
+ * Luego agrega la línea de detalle al ingreso borrador.
+ */
+export async function importarRemitoAction(input: {
+  idIngreso: string
+  moneda?: string
+  lineas: Array<{
+    esNuevo: boolean
+    idProducto: string | null
+    // Categoría del producto nuevo (requerida si esNuevo). Es por línea:
+    // cada producto puede ir a una categoría distinta.
+    idCategoria: string | null
+    nombre: string
+    cantidad: number
+    costoUnitario: number
+    // Desglose por talle opcional; si va, crea una línea de detalle por talle.
+    talles?: Array<{ talle: string | null; cantidad: number }>
+  }>
+}): Promise<ActionResult<{ creados: number; vinculados: number; detalles: DetalleCreado[] }>> {
+  const g = await guarded('crear')
+  if ('error' in g) return { ok: false, reason: g.error }
+
+  if (input.lineas.length === 0) return { ok: false, reason: 'sin-lineas' }
+
+  // Validación + cómputo de partes en TS (mensajes claros antes de la DB).
+  // La cantidad de la línea manda: el desglose por talle distribuye esas
+  // unidades y lo no asignado queda "sin talle".
+  const lineasSp = []
+  for (const l of input.lineas) {
+    const nombre = l.nombre.trim()
+    if (!nombre) return { ok: false, reason: 'hay una línea sin nombre de producto' }
+    if (l.cantidad <= 0) return { ok: false, reason: `cantidad inválida en "${nombre}"` }
+    if (l.esNuevo && !l.idCategoria) return { ok: false, reason: `falta categoría para "${nombre}"` }
+    if (!l.esNuevo && !l.idProducto) return { ok: false, reason: `falta elegir producto para "${nombre}"` }
+
+    const breakdown = (l.talles ?? []).filter((t) => t.cantidad > 0)
+    const asignado = breakdown.reduce((a, t) => a + t.cantidad, 0)
+    if (asignado > l.cantidad) {
+      return { ok: false, reason: `los talles superan la cantidad en "${nombre}"` }
+    }
+    const resto = l.cantidad - asignado
+    const partes =
+      breakdown.length > 0
+        ? [...breakdown, ...(resto > 0 ? [{ talle: null as string | null, cantidad: resto }] : [])]
+        : [{ talle: null as string | null, cantidad: l.cantidad }]
+
+    lineasSp.push({
+      esNuevo: l.esNuevo,
+      idProducto: l.esNuevo ? null : l.idProducto,
+      idCategoria: l.esNuevo ? l.idCategoria : null,
+      nombre,
+      costoUnitario: l.costoUnitario,
+      partes,
+    })
+  }
+
+  try {
+    const res = await spImportarRemito({
+      idIngreso: input.idIngreso,
+      moneda: input.moneda,
+      lineas: lineasSp,
+    })
+    revalidatePath(`/inventario/ingresos/${input.idIngreso}`)
+    revalidatePath('/inventario')
+    revalidatePath('/inventario')
+    return {
+      ok: true,
+      data: { creados: res.creados, vinculados: res.vinculados, detalles: res.detalles },
+    }
   } catch (e) {
     return { ok: false, reason: (e as Error).message }
   }

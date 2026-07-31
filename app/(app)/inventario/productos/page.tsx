@@ -1,43 +1,18 @@
-import Link from 'next/link'
-import { Topbar } from '@/components/shell/Topbar'
-import { Button } from '@/components/ui/Button'
-import { verifySession } from '@/lib/dal/session'
-import { listCategoriasActivas } from '@/lib/dal/inventario/categoria'
-import { listProductosConDetalle } from '@/lib/dal/inventario/producto'
-import { ProductosTableClient } from './ProductosTableClient'
+import { redirect } from 'next/navigation'
 
+/**
+ * El listado de productos ahora vive en la home del módulo (`/inventario`),
+ * junto con sus filtros. Esta ruta se conserva para no romper enlaces
+ * existentes y redirige, preservando los query params (q, cat, page).
+ */
 export default async function ProductosPage(props: {
-  searchParams: Promise<{ q?: string; cat?: string }>
+  searchParams: Promise<{ q?: string; cat?: string; page?: string }>
 }) {
-  const session = await verifySession()
   const searchParams = await props.searchParams
-  const [productos, categorias] = await Promise.all([
-    listProductosConDetalle({
-      search: searchParams.q,
-      idCategoria: searchParams.cat,
-    }),
-    listCategoriasActivas(),
-  ])
-
-  return (
-    <>
-      <Topbar
-        title="Productos"
-        session={session}
-        actions={
-          <Link href="/inventario/productos/nuevo">
-            <Button size="sm">Nuevo producto</Button>
-          </Link>
-        }
-      />
-      <main className="flex-1 p-6">
-        <ProductosTableClient
-          rows={productos}
-          categorias={categorias}
-          initialSearch={searchParams.q ?? ''}
-          initialCategoria={searchParams.cat ?? ''}
-        />
-      </main>
-    </>
-  )
+  const params = new URLSearchParams()
+  if (searchParams.q) params.set('q', searchParams.q)
+  if (searchParams.cat) params.set('cat', searchParams.cat)
+  if (searchParams.page) params.set('page', searchParams.page)
+  const qs = params.toString()
+  redirect(qs ? `/inventario?${qs}` : '/inventario')
 }

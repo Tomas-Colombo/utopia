@@ -130,7 +130,7 @@ export function NuevaRendicionView({
         </div>
       ) : (
         <>
-          <div className="rounded-lg border border-border bg-card overflow-hidden">
+          <div className="rounded-lg border border-border bg-card overflow-x-auto">
             <div className="border-b border-border px-4 py-3 flex items-center justify-between">
               <h3 className="font-display text-lg">Ventas pendientes de rendir</h3>
               <span className="text-sm text-muted">

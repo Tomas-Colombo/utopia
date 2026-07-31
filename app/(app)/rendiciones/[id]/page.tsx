@@ -29,6 +29,7 @@ export default async function RendicionDetallePage(props: {
       <Topbar
         title={`Rendición ${new Date(rendicion.fecha_generacion).toLocaleDateString('es-AR')}`}
         session={session}
+        backHref="/rendiciones"
         actions={
           <Badge variant={VARIANT[rendicion.estado]}>
             {ESTADO_RENDICION_LABEL[rendicion.estado]}
@@ -71,7 +72,7 @@ export default async function RendicionDetallePage(props: {
           </div>
         </div>
 
-        <div className="rounded-lg border border-border bg-card overflow-hidden">
+        <div className="rounded-lg border border-border bg-card overflow-x-auto">
           <div className="border-b border-border px-4 py-3">
             <h3 className="font-display text-lg">Líneas rendidas</h3>
           </div>

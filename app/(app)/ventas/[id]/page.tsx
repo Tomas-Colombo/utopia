@@ -18,6 +18,7 @@ export default async function VentaDetallePage(props: {
       <Topbar
         title={`Venta ${new Date(venta.fecha).toLocaleString('es-AR')}`}
         session={session}
+        backHref="/ventas"
         actions={
           <Badge variant={venta.estado_venta === 'anulada' ? 'danger' : 'success'}>
             {venta.estado_venta === 'anulada' ? 'Anulada' : 'Registrada'}

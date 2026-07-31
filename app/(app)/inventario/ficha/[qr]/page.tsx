@@ -38,7 +38,7 @@ export default async function FichaItemPage(props: {
   if (!base) {
     return (
       <>
-        <Topbar title="Ítem no encontrado" session={session} />
+        <Topbar title="Ítem no encontrado" session={session} backHref="/inventario/ficha" />
         <main className="flex-1 p-6">
           <div className="mx-auto max-w-md rounded-lg border border-border bg-card p-6 text-center">
             <p className="font-display text-lg mb-2">QR no reconocido</p>
@@ -63,7 +63,7 @@ export default async function FichaItemPage(props: {
 
   return (
     <>
-      <Topbar title="Ficha de ítem" session={session} />
+      <Topbar title="Ficha de ítem" session={session} backHref="/inventario/ficha" />
       <main className="flex-1 p-6">
         <div className="mx-auto grid max-w-4xl gap-6 md:grid-cols-[280px_1fr]">
           {/* QR + estado */}

@@ -6,7 +6,7 @@ export default async function NuevoRolPage() {
   const session = await verifySession()
   return (
     <>
-      <Topbar title="Nuevo rol" session={session} />
+      <Topbar title="Nuevo rol" session={session} backHref="/administracion/roles" />
       <main className="flex-1 p-6">
         <div className="max-w-3xl">
           <NuevoRolForm />

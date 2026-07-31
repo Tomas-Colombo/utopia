@@ -83,7 +83,7 @@ export default async function VentasHome() {
           </Link>
         </section>
 
-        <section className="rounded-lg border border-border bg-card overflow-hidden">
+        <section className="rounded-lg border border-border bg-card overflow-x-auto">
           <div className="border-b border-border px-4 py-3 flex items-center justify-between">
             <h3 className="font-display text-lg">Últimas ventas</h3>
             <Link href="/ventas" className="text-sm text-pink-strong hover:underline">

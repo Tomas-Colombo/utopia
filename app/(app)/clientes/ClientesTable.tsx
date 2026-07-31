@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { FilterBar } from '@/components/ui/FilterBar'
 import { useToast } from '@/components/ui/Toast'
-import { waMeLink } from '@/lib/dal/inventario/proveedor'
+import { waMeLink } from '@/lib/utils/waMeLink'
 import type { ClienteRow } from '@/lib/types/ventas'
 import { toggleClienteActivoAction } from '../ventas/actions'
 
@@ -55,7 +55,7 @@ export function ClientesTable({
           Sin resultados.
         </div>
       ) : (
-        <div className="rounded-lg border border-border bg-card overflow-hidden">
+        <div className="rounded-lg border border-border bg-card overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border text-left">

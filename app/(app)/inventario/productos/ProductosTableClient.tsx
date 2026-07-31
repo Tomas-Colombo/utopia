@@ -2,9 +2,10 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
 import { Badge } from '@/components/ui/Badge'
 import { FilterBar } from '@/components/ui/FilterBar'
+import { Pagination } from '@/components/ui/Pagination'
 import { Table, type Column } from '@/components/ui/Table'
 import type { CategoriaRow, ProductoConDetalle } from '@/lib/types/inventario'
 
@@ -13,22 +14,52 @@ export function ProductosTableClient({
   categorias,
   initialSearch,
   initialCategoria,
+  page,
+  pageSize,
+  total,
+  basePath = '/inventario/productos',
+  scanHref,
 }: {
   rows: ProductoConDetalle[]
   categorias: CategoriaRow[]
   initialSearch: string
   initialCategoria: string
+  page: number
+  pageSize: number
+  total: number
+  /** Ruta a la que se sincronizan los filtros. La home de inventario reusa
+   *  esta tabla, así que el listado vive en `/inventario`, no en `/inventario/productos`. */
+  basePath?: string
+  /** Si se pasa, muestra un botón de cámara (escaneo) en la barra de búsqueda. */
+  scanHref?: string
 }) {
   const router = useRouter()
   const [q, setQ] = useState(initialSearch)
   const [cat, setCat] = useState(initialCategoria)
+  const [pending, startTransition] = useTransition()
 
+  function navigate(params: URLSearchParams) {
+    const qs = params.toString()
+    startTransition(() => {
+      router.push(qs ? `${basePath}?${qs}` : basePath)
+    })
+  }
+
+  // Cambiar filtros vuelve a la página 1: el `page` actual dejaría de tener
+  // sentido con un conjunto de resultados distinto.
   function applyFilters(nextQ = q, nextCat = cat) {
     const params = new URLSearchParams()
     if (nextQ.trim()) params.set('q', nextQ.trim())
     if (nextCat) params.set('cat', nextCat)
-    const qs = params.toString()
-    router.push(qs ? `/inventario/productos?${qs}` : '/inventario/productos')
+    navigate(params)
+  }
+
+  function goToPage(nextPage: number) {
+    const params = new URLSearchParams()
+    if (q.trim()) params.set('q', q.trim())
+    if (cat) params.set('cat', cat)
+    if (nextPage > 1) params.set('page', String(nextPage))
+    navigate(params)
   }
 
   const columns: Column<ProductoConDetalle>[] = [
@@ -89,18 +120,29 @@ export function ProductosTableClient({
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <div className="flex-1">
-          <FilterBar
-            value={q}
-            onChange={(v) => {
-              setQ(v)
-              // Aplico filtros al pedir Enter o cambiar categoría; FilterBar
-              // dispara por keystroke pero para no golpear el server en cada
-              // tecla, sincronizo con URL solo al blur/submit.
-            }}
-            placeholder="Buscar por nombre o SKU"
-          />
+      {/* Buscador único, compacto, en una sola línea. Enter aplica (form
+          submit); FilterBar reporta cada tecla pero sincronizamos con la URL
+          solo al enviar, para no golpear el server en cada tecla. */}
+      <form
+        onSubmit={(e) => {
+          e.preventDefault()
+          applyFilters()
+        }}
+        className="flex flex-wrap items-center gap-2"
+      >
+        {scanHref && (
+          <Link
+            href={scanHref}
+            aria-label="Escanear con cámara"
+            title="Escanear con cámara"
+            className="inline-flex shrink-0 items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm text-text hover:bg-card-2"
+          >
+            <span aria-hidden>📷</span>
+            <span className="hidden sm:inline">Escanear</span>
+          </Link>
+        )}
+        <div className="min-w-[12rem] flex-1">
+          <FilterBar value={q} onChange={setQ} placeholder="Buscar por nombre o SKU" />
         </div>
         <select
           value={cat}
@@ -118,22 +160,30 @@ export function ProductosTableClient({
           ))}
         </select>
         <button
-          type="button"
-          onClick={() => applyFilters()}
-          className="rounded-md border border-border bg-card px-4 py-2 text-sm text-text hover:bg-card-2"
+          type="submit"
+          className="shrink-0 rounded-md border border-border bg-card px-4 py-2 text-sm text-text hover:bg-card-2"
         >
           Aplicar
         </button>
-      </div>
+      </form>
 
-      <div className="rounded-lg border border-border bg-card overflow-hidden">
+      <div className="rounded-lg border border-border bg-card overflow-x-auto">
         <Table
           columns={columns}
           data={rows}
+          loading={pending}
           getRowId={(r) => r.id_producto}
           emptyState="Sin productos que coincidan con los filtros"
         />
       </div>
+
+      <Pagination
+        page={page}
+        pageSize={pageSize}
+        total={total}
+        onPageChange={goToPage}
+        disabled={pending}
+      />
     </div>
   )
 }

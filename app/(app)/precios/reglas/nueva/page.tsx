@@ -14,7 +14,7 @@ export default async function NuevaReglaPage() {
   ])
   return (
     <>
-      <Topbar title="Nueva regla de precio" session={session} />
+      <Topbar title="Nueva regla de precio" session={session} backHref="/precios/reglas" />
       <main className="flex-1 p-6">
         <div className="max-w-2xl rounded-lg border border-border bg-card p-6">
           <NuevaReglaForm

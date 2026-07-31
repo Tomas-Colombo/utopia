@@ -134,7 +134,7 @@ export default async function ReportesPage(props: {
         </section>
 
         {/* ─── Rotación (RF-12) ─────────────────────────────────────── */}
-        <section className="rounded-lg border border-border bg-card overflow-hidden">
+        <section className="rounded-lg border border-border bg-card overflow-x-auto">
           <div className="border-b border-border px-4 py-3">
             <h2 className="font-display text-lg">Rotación por producto (período)</h2>
           </div>
@@ -184,7 +184,7 @@ export default async function ReportesPage(props: {
         </section>
 
         {/* ─── Perfil proveedor (RF-11) ─────────────────────────────── */}
-        <section className="rounded-lg border border-border bg-card overflow-hidden">
+        <section className="rounded-lg border border-border bg-card overflow-x-auto">
           <div className="border-b border-border px-4 py-3">
             <h2 className="font-display text-lg">Perfil de proveedores</h2>
           </div>
@@ -249,7 +249,7 @@ export default async function ReportesPage(props: {
         </section>
 
         {/* ─── Ganancia por producto (RF-07) ────────────────────────── */}
-        <section className="rounded-lg border border-border bg-card overflow-hidden">
+        <section className="rounded-lg border border-border bg-card overflow-x-auto">
           <div className="border-b border-border px-4 py-3">
             <h2 className="font-display text-lg">Ganancia proyectada por producto (RF-07)</h2>
           </div>

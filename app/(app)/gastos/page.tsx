@@ -66,7 +66,7 @@ export default async function GastosPage() {
         </section>
 
         {/* Presupuestos por categoría */}
-        <section className="rounded-lg border border-border bg-card overflow-hidden">
+        <section className="rounded-lg border border-border bg-card overflow-x-auto">
           <div className="border-b border-border px-4 py-3 flex items-center justify-between">
             <h3 className="font-display text-lg">Presupuesto del mes (RF-10)</h3>
             <Link href="/gastos/presupuestos" className="text-sm text-pink-strong hover:underline">
@@ -143,7 +143,7 @@ export default async function GastosPage() {
         </section>
 
         {/* Últimos gastos */}
-        <section className="rounded-lg border border-border bg-card overflow-hidden">
+        <section className="rounded-lg border border-border bg-card overflow-x-auto">
           <div className="border-b border-border px-4 py-3">
             <h3 className="font-display text-lg">Últimos gastos registrados</h3>
           </div>

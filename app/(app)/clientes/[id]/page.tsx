@@ -39,6 +39,7 @@ export default async function ClienteDetallePage(props: {
       <Topbar
         title={cliente.nombre}
         session={session}
+        backHref="/clientes"
         actions={
           <Badge variant={cliente.activo ? 'success' : 'neutral'}>
             {cliente.activo ? 'Activo' : 'Inactivo'}
@@ -75,7 +76,7 @@ export default async function ClienteDetallePage(props: {
         </section>
 
         {/* Historial ventas */}
-        <section className="rounded-lg border border-border bg-card overflow-hidden">
+        <section className="rounded-lg border border-border bg-card overflow-x-auto">
           <div className="border-b border-border px-4 py-3">
             <h3 className="font-display text-lg">Historial de compras</h3>
           </div>
@@ -123,7 +124,7 @@ export default async function ClienteDetallePage(props: {
         </section>
 
         {/* Historial reservas */}
-        <section className="rounded-lg border border-border bg-card overflow-hidden">
+        <section className="rounded-lg border border-border bg-card overflow-x-auto">
           <div className="border-b border-border px-4 py-3">
             <h3 className="font-display text-lg">Historial de reservas</h3>
           </div>

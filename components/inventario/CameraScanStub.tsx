@@ -22,12 +22,13 @@ export function CameraScanStub() {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     const trimmed = qr.trim()
-    if (trimmed.length < 4) {
-      setError('El código debe tener al menos 4 caracteres')
+    if (trimmed.length < 3) {
+      setError('El código debe tener al menos 3 caracteres')
       return
     }
     setError(null)
-    router.push(`/inventario/ficha/${encodeURIComponent(trimmed)}`)
+    // Resolver único: intenta QR exacto y, si no, lo trata como SKU.
+    router.push(`/inventario/buscar/${encodeURIComponent(trimmed)}`)
   }
 
   return (
@@ -48,13 +49,14 @@ export function CameraScanStub() {
         <Field
           htmlFor="qr-manual"
           label="Ingresar código manualmente"
+          hint="Código QR del ítem, o SKU del producto (ej: REM-0007 o REM-0007-M)"
           error={error ?? undefined}
         >
           <Input
             id="qr-manual"
             value={qr}
             onChange={(e) => setQr(e.target.value)}
-            placeholder="Pegá o tipeá el código QR"
+            placeholder="QR o SKU (ej: REM-0007-M)"
             autoFocus
             invalid={!!error}
           />

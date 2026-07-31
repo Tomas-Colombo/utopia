@@ -4,7 +4,8 @@ import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { verifySession } from '@/lib/dal/session'
-import { listProveedores, waMeLink } from '@/lib/dal/inventario/proveedor'
+import { listProveedores } from '@/lib/dal/inventario/proveedor'
+import { waMeLink } from '@/lib/utils/waMeLink'
 import { ProveedoresTableClient } from './ProveedoresTableClient'
 
 export default async function ProveedoresPage() {
@@ -17,6 +18,7 @@ export default async function ProveedoresPage() {
       <Topbar
         title="Proveedores"
         session={session}
+        backHref="/inventario"
         actions={
           <Link href="/inventario/proveedores/nuevo">
             <Button size="sm">Nuevo proveedor</Button>
@@ -27,7 +29,7 @@ export default async function ProveedoresPage() {
         {rows.length === 0 ? (
           <EmptyStateWrapper />
         ) : (
-          <div className="rounded-lg border border-border bg-card overflow-hidden">
+          <div className="rounded-lg border border-border bg-card overflow-x-auto">
             <ProveedoresTableClient rows={enriched} />
           </div>
         )}

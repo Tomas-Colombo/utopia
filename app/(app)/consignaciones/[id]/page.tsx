@@ -27,6 +27,7 @@ export default async function ConsignacionDetallePage(props: {
       <Topbar
         title={`Consignación ${new Date(cons.fecha).toLocaleDateString('es-AR')}`}
         session={session}
+        backHref="/consignaciones"
         actions={
           <Badge variant={VARIANT[cons.estado]}>{ESTADO_CONSIGNACION_LABEL[cons.estado]}</Badge>
         }

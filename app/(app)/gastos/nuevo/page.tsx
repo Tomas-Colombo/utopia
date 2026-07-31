@@ -10,7 +10,7 @@ export default async function NuevoGastoPage() {
   if (cats.length === 0) redirect('/gastos/presupuestos?e=needs-categorias')
   return (
     <>
-      <Topbar title="Nuevo gasto" session={session} />
+      <Topbar title="Nuevo gasto" session={session} backHref="/gastos" />
       <main className="flex-1 p-6">
         <div className="max-w-xl rounded-lg border border-border bg-card p-6">
           <NuevoGastoForm

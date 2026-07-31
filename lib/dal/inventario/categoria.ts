@@ -48,6 +48,7 @@ export async function createCategoria(input: {
   tenantId: string
   nombre: string
   descripcion?: string | null
+  talles?: string[]
 }): Promise<CategoriaRow> {
   const supabase = await createServerClient()
   const { data, error } = await supabase
@@ -56,12 +57,29 @@ export async function createCategoria(input: {
       id_tenant: input.tenantId,
       nombre: input.nombre,
       descripcion: input.descripcion ?? null,
+      talles: input.talles ?? [],
     })
     .select('*')
     .single()
 
   if (error) throw new Error(`createCategoria: ${error.message}`)
   return data as CategoriaRow
+}
+
+/** Update de metadatos de la categoría (nombre, descripción, talles, activa). */
+export async function updateCategoria(
+  id: string,
+  patch: {
+    nombre?: string
+    descripcion?: string | null
+    talles?: string[]
+    activa?: boolean
+  },
+): Promise<void> {
+  const supabase = await createServerClient()
+  const { error } = await supabase
+    .from('categoria').update(patch).eq('id_categoria', id)
+  if (error) throw new Error(`updateCategoria: ${error.message}`)
 }
 
 export async function toggleCategoriaActiva(

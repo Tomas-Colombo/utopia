@@ -14,6 +14,7 @@ export default async function ReglasPage() {
       <Topbar
         title="Reglas de precios"
         session={session}
+        backHref="/precios"
         actions={
           <Link href="/precios/reglas/nueva">
             <Button size="sm">Nueva regla</Button>

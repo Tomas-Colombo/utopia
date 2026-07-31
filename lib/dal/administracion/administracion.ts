@@ -1,5 +1,5 @@
 import 'server-only'
-import { createServerClient } from '@/lib/dal/supabase'
+import { createServerClient, createServiceClient } from '@/lib/dal/supabase'
 import type {
   AuditoriaConActor,
   ModuloRow,
@@ -46,6 +46,61 @@ export async function spAsignarRol(idUsuario: string, idRol: string, nombreCompl
     p_id_rol: idRol,
   })
   if (error) throw new Error(`sp_update_usuario: ${error.message}`)
+}
+
+/**
+ * Alta de un usuario (invitation flow). Requires the service_role key —
+ * the Auth Admin API (`auth.admin.createUser`) is privileged and MUST NOT
+ * run under a user session.
+ *
+ * Two steps, in order, because `usuario.id_usuario` is a FK to
+ * `auth.users(id)` (00006):
+ *   1. Create the auth user with a temporary password (email pre-confirmed
+ *      so they can sign in immediately).
+ *   2. Insert the `usuario` profile row linking that auth id to the tenant
+ *      and role.
+ *
+ * `tenantId` comes from the caller's verified session — NEVER from client
+ * input — because the service client bypasses RLS. If step 2 fails we
+ * delete the orphaned auth user so the email can be retried.
+ */
+export async function inviteUsuario(input: {
+  tenantId: string
+  email: string
+  nombreCompleto: string
+  idRol: string
+  password: string
+}): Promise<{ id: string }> {
+  const admin = createServiceClient()
+
+  const { data: created, error: authError } = await admin.auth.admin.createUser({
+    email: input.email,
+    password: input.password,
+    email_confirm: true,
+    user_metadata: { nombre_completo: input.nombreCompleto },
+    app_metadata: { tenant_id: input.tenantId },
+  })
+  if (authError || !created.user) {
+    throw new Error(`inviteUsuario auth: ${authError?.message ?? 'no user returned'}`)
+  }
+
+  const authId = created.user.id
+
+  const { error: rowError } = await admin.from('usuario').insert({
+    id_usuario: authId,
+    id_tenant: input.tenantId,
+    email: input.email,
+    nombre_completo: input.nombreCompleto,
+    id_rol: input.idRol,
+    estado_usuario: 'invitado',
+  })
+  if (rowError) {
+    // Roll back the orphan auth user so a retry can reuse the email.
+    await admin.auth.admin.deleteUser(authId)
+    throw new Error(`inviteUsuario row: ${rowError.message}`)
+  }
+
+  return { id: authId }
 }
 
 // ─── Roles ───────────────────────────────────────────────────────────

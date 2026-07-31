@@ -85,7 +85,7 @@ export function AuditoriaView({
         </div>
       </form>
 
-      <div className="rounded-lg border border-border bg-card overflow-hidden">
+      <div className="rounded-lg border border-border bg-card overflow-x-auto">
         {rows.length === 0 ? (
           <div className="p-6 text-center text-sm text-muted">
             Sin registros para estos filtros.
@@ -138,7 +138,7 @@ export function AuditoriaView({
       >
         {detalle && (
           <div className="space-y-3 text-sm">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Meta label="Entidad" value={detalle.entidad} />
               <Meta label="Acción" value={detalle.accion} />
               <Meta label="ID entidad" value={detalle.entidad_id ?? '—'} mono />

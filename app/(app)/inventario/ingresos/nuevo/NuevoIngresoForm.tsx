@@ -7,39 +7,49 @@ import { Field } from '@/components/ui/Field'
 import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
 import { useToast } from '@/components/ui/Toast'
-import { PdfUploadStub } from '@/components/inventario/PdfUploadStub'
 import type { ProveedorRow, TipoIngreso } from '@/lib/types/inventario'
 import { createIngresoAction } from '../../actions'
+import { NuevoProveedorModal } from './NuevoProveedorModal'
 
 const TIPOS: { value: TipoIngreso; label: string }[] = [
   { value: 'compra', label: 'Compra (paga al ingresar)' },
   { value: 'consignacion', label: 'Consignación (paga al vender)' },
 ]
 
-export function NuevoIngresoForm({ proveedores }: { proveedores: ProveedorRow[] }) {
+export function NuevoIngresoForm({
+  proveedores: proveedoresIniciales,
+}: {
+  proveedores: ProveedorRow[]
+}) {
   const router = useRouter()
   const toast = useToast()
   const [pending, start] = useTransition()
 
-  const [idProveedor, setIdProveedor] = useState(proveedores[0]?.id_proveedor ?? '')
+  const [proveedores, setProveedores] = useState(proveedoresIniciales)
+  // Vacío = ingreso sin proveedor (producción propia, oferta, ajuste).
+  const [idProveedor, setIdProveedor] = useState(proveedoresIniciales[0]?.id_proveedor ?? '')
   const [tipoIngreso, setTipoIngreso] = useState<TipoIngreso>('compra')
   const [numeroRemito, setNumeroRemito] = useState('')
   const [observaciones, setObservaciones] = useState('')
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null)
+  const [modalOpen, setModalOpen] = useState(false)
+
+  function onProveedorCreado(nuevo: ProveedorRow) {
+    setProveedores((prev) =>
+      [...prev, nuevo].sort((a, b) => a.nombre.localeCompare(b.nombre)),
+    )
+    setIdProveedor(nuevo.id_proveedor)
+    setModalOpen(false)
+  }
 
   function submit(e: React.FormEvent) {
     e.preventDefault()
-    if (!idProveedor) {
-      toast.error('Falta proveedor')
-      return
-    }
     start(async () => {
       const res = await createIngresoAction({
-        idProveedor,
+        idProveedor: idProveedor || null,
         tipoIngreso,
         numeroRemito: numeroRemito || null,
         observaciones: observaciones || null,
-        pdfUrl,
+        pdfUrl: null,
       })
       if (!res.ok) return toast.error('No se pudo crear', res.reason)
       toast.success('Ingreso creado como borrador')
@@ -49,20 +59,36 @@ export function NuevoIngresoForm({ proveedores }: { proveedores: ProveedorRow[] 
   }
 
   return (
+    <>
     <form onSubmit={submit} className="space-y-4">
-      <Field htmlFor="i-prov" label="Proveedor" required>
-        <select
-          id="i-prov"
-          value={idProveedor}
-          onChange={(e) => setIdProveedor(e.target.value)}
-          className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
-        >
-          {proveedores.map((p) => (
-            <option key={p.id_proveedor} value={p.id_proveedor}>
-              {p.nombre} · {p.tipo}
-            </option>
-          ))}
-        </select>
+      <Field
+        htmlFor="i-prov"
+        label="Proveedor"
+        hint="Opcional: dejá «Sin proveedor» para producción propia, ofertas o ajustes."
+      >
+        <div className="flex gap-2">
+          <select
+            id="i-prov"
+            value={idProveedor}
+            onChange={(e) => setIdProveedor(e.target.value)}
+            className="min-w-0 flex-1 rounded-md border border-border bg-card px-3 py-2 text-sm text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
+          >
+            <option value="">— Sin proveedor —</option>
+            {proveedores.map((p) => (
+              <option key={p.id_proveedor} value={p.id_proveedor}>
+                {p.nombre} · {p.tipo}
+              </option>
+            ))}
+          </select>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setModalOpen(true)}
+            disabled={pending}
+          >
+            + Nuevo
+          </Button>
+        </div>
       </Field>
 
       <Field htmlFor="i-tipo" label="Tipo de ingreso" required>
@@ -97,12 +123,10 @@ export function NuevoIngresoForm({ proveedores }: { proveedores: ProveedorRow[] 
         />
       </Field>
 
-      <PdfUploadStub onChange={setPdfUrl} />
-
       <div className="rounded-md border border-border bg-card-2 p-3 text-xs text-muted">
-        Al crear se abre como <b>borrador</b>. Vas a agregar las líneas
-        (producto + cantidad + costo) y luego confirmar para generar los
-        ítems físicos con QR único.
+        Al crear se abre como <b>borrador</b>. En el siguiente paso podés
+        <b> importar el PDF del proveedor</b> (o cargar las líneas a mano) y
+        luego confirmar para generar los ítems físicos con QR único.
       </div>
 
       <div className="flex justify-end gap-2 pt-2">
@@ -114,5 +138,12 @@ export function NuevoIngresoForm({ proveedores }: { proveedores: ProveedorRow[] 
         </Button>
       </div>
     </form>
+
+    <NuevoProveedorModal
+      open={modalOpen}
+      onClose={() => setModalOpen(false)}
+      onCreated={onProveedorCreado}
+    />
+    </>
   )
 }

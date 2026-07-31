@@ -41,6 +41,8 @@ export interface CategoriaRow {
   nombre: string
   descripcion: string | null
   activa: boolean
+  // 00032: talles/medidas propios de la categoría (ej: ['S','M','L','XL']).
+  talles: string[]
   created_at: string
   updated_at: string
 }
@@ -69,6 +71,8 @@ export interface ProductoRow {
   descripcion: string | null
   stock_minimo: number
   activo: boolean
+  // 00031: creado automáticamente desde import de remito PDF (revisar).
+  es_nuevo: boolean
   // Etapa 4: precio de venta fijado por sp_recalcular_precio_venta.
   precio_venta: number | null
   id_regla_margen_aplicada: string | null
@@ -94,13 +98,17 @@ export interface CostoProductoRow {
 export interface IngresoMercaderiaRow {
   id_ingreso: string
   id_tenant: string
-  id_proveedor: string
+  // 00037: opcional — null = ingreso sin proveedor (producción propia, oferta).
+  id_proveedor: string | null
   tipo_ingreso: TipoIngreso
   fecha: string
   numero_remito: string | null
   pdf_url: string | null
   observaciones: string | null
   confirmado: boolean
+  // 00035: cancelación/reversión del ingreso (null = vigente).
+  cancelado_at: string | null
+  motivo_cancelacion: string | null
   id_usuario_alta: string | null
   created_at: string
   updated_at: string
@@ -113,6 +121,8 @@ export interface IngresoMercaderiaDetalleRow {
   id_producto: string
   cantidad: number
   costo_unitario: number
+  // 00032: talle de la línea; se copia a cada item al confirmar.
+  talle: string | null
   created_at: string
 }
 
@@ -124,6 +134,8 @@ export interface ItemProductoRow {
   id_ingreso_detalle: string | null
   qr_code: string
   estado_item: EstadoItem
+  // 00032: talle de la unidad; null = producto sin talle.
+  talle: string | null
   costo_ingreso: number
   tipo_ingreso: TipoIngreso
   fecha_ingreso: string
@@ -154,6 +166,7 @@ export interface CategoriaInsert {
   nombre: string
   descripcion?: string | null
   activa?: boolean
+  talles?: string[]
 }
 
 export interface ProveedorInsert {
@@ -170,7 +183,8 @@ export interface ProveedorInsert {
 
 export interface IngresoMercaderiaInsert {
   id_tenant: string
-  id_proveedor: string
+  // 00037: opcional — null = ingreso sin proveedor.
+  id_proveedor?: string | null
   tipo_ingreso: TipoIngreso
   fecha?: string
   numero_remito?: string | null
@@ -185,6 +199,7 @@ export interface IngresoMercaderiaDetalleInsert {
   id_producto: string
   cantidad: number
   costo_unitario: number
+  talle?: string | null
 }
 
 // ─── Domain view models (agregados que la UI necesita frecuentemente) ─

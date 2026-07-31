@@ -13,6 +13,7 @@ export default async function RolesPage() {
       <Topbar
         title="Roles y permisos"
         session={session}
+        backHref="/administracion"
         actions={
           <Link href="/administracion/roles/nuevo">
             <Button size="sm">Nuevo rol</Button>

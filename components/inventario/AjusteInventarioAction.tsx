@@ -85,7 +85,7 @@ export function AjusteInventarioAction({
             Queda como movimiento tipo <span className="font-mono">ajuste_inventario</span> en el historial.
           </p>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <Field htmlFor="ai-cs" label="Cantidad en sistema" required>
               <NumberInput
                 id="ai-cs"

@@ -124,7 +124,7 @@ export function NuevaReglaForm({
         />
       </Field>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field htmlFor="r-tipo" label="Tipo de regla" required>
           <select
             id="r-tipo"
@@ -228,7 +228,7 @@ export function NuevaReglaForm({
         </Field>
       )}
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field htmlFor="r-tv" label="Tipo de valor" required>
           <select
             id="r-tv"
@@ -268,7 +268,7 @@ export function NuevaReglaForm({
         )}
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Field htmlFor="r-prio" label="Prioridad" hint="Mayor = gana">
           <NumberInput
             id="r-prio"

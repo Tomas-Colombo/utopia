@@ -8,7 +8,7 @@ export default async function CategoriasPage() {
   const categorias = await listCategorias()
   return (
     <>
-      <Topbar title="Categorías" session={session} />
+      <Topbar title="Categorías" session={session} backHref="/inventario" />
       <main className="flex-1 p-6">
         <CategoriasView initial={categorias} />
       </main>

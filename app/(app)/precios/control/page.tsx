@@ -8,7 +8,7 @@ export default async function ControlDePreciosPage() {
   const rows = await listControlDePrecios()
   return (
     <>
-      <Topbar title="Control de precios" session={session} />
+      <Topbar title="Control de precios" session={session} backHref="/precios" />
       <main className="flex-1 p-6">
         <ControlDePreciosView initial={rows} />
       </main>

@@ -78,7 +78,7 @@ export function ReglasView({ initial }: { initial: ReglaPrecioRow[] }) {
                 {grupo.length} regla{grupo.length === 1 ? '' : 's'}
               </span>
             </div>
-            <div className="rounded-lg border border-border bg-card overflow-hidden">
+            <div className="rounded-lg border border-border bg-card overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border text-left">

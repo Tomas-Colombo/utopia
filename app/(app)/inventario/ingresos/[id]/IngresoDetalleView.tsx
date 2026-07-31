@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
@@ -8,16 +8,23 @@ import { Field } from '@/components/ui/Field'
 import { NumberInput } from '@/components/ui/NumberInput'
 import { useToast } from '@/components/ui/Toast'
 import type {
+  CategoriaRow,
   IngresoMercaderiaDetalleRow,
   IngresoMercaderiaRow,
   ProductoConDetalle,
   ProveedorRow,
 } from '@/lib/types/inventario'
 import {
-  addIngresoDetalleAction,
   confirmarIngresoAction,
+  importarRemitoAction,
   removeIngresoDetalleAction,
 } from '../../actions'
+import { RemitoImportPanel, type DetalleImportado } from './RemitoImportPanel'
+import {
+  ProductoNombreCombobox,
+  type ProductoNombreValue,
+} from '@/components/inventario/ProductoNombreCombobox'
+import { buscarMatchNombre, indexarPorNombre } from '@/lib/inventario/producto-match'
 
 type Ingreso = IngresoMercaderiaRow & {
   proveedor: Pick<ProveedorRow, 'id_proveedor' | 'nombre' | 'telefono'> | null
@@ -27,19 +34,47 @@ type Ingreso = IngresoMercaderiaRow & {
 export function IngresoDetalleView({
   ingreso,
   productos,
+  categorias,
 }: {
   ingreso: Ingreso
   productos: ProductoConDetalle[]
+  categorias: CategoriaRow[]
 }) {
   const router = useRouter()
   const toast = useToast()
   const [pending, start] = useTransition()
 
   const [detalles, setDetalles] = useState(ingreso.detalle)
-  const [idProducto, setIdProducto] = useState(productos[0]?.id_producto ?? '')
+  // Nombres de productos creados en esta sesión (import PDF) que aún no están
+  // en `productos` (viene del server), para resolver el nombre en la tabla.
+  const [nombresImportados, setNombresImportados] = useState<Record<string, string>>({})
+  // Línea a agregar a mano: nombre + vínculo (esNuevo/idProducto). El nombre se
+  // escribe libremente; si matchea un producto existente se vincula solo.
+  const [linea, setLinea] = useState<ProductoNombreValue>({
+    nombre: '',
+    idProducto: '',
+    esNuevo: true,
+  })
+  const catInicial = categorias[0]?.id_categoria ?? ''
+  const [idCategoriaAdd, setIdCategoriaAdd] = useState(catInicial)
   const [cantidad, setCantidad] = useState('1')
   const [costoUnitario, setCostoUnitario] = useState('')
+  const [talleAdd, setTalleAdd] = useState('')
   const [confirmOpen, setConfirmOpen] = useState(false)
+
+  const index = useMemo(() => indexarPorNombre(productos), [productos])
+  // Match vivo del nombre escrito: sirve para el aviso "ya existe" y para
+  // bloquear "es nuevo" sobre un nombre que ya está en el inventario.
+  const matchLinea = buscarMatchNombre(index, linea.nombre)
+
+  // Talles disponibles para la línea: si es nuevo, según su categoría elegida;
+  // si está vinculado, según la categoría del producto existente.
+  const tallesAdd = (() => {
+    const catId = linea.esNuevo
+      ? idCategoriaAdd
+      : productos.find((p) => p.id_producto === linea.idProducto)?.categoria?.id_categoria
+    return categorias.find((c) => c.id_categoria === catId)?.talles ?? []
+  })()
 
   const totalCantidad = detalles.reduce((a, d) => a + d.cantidad, 0)
   const totalCosto = detalles.reduce((a, d) => a + d.cantidad * d.costo_unitario, 0)
@@ -47,36 +82,43 @@ export function IngresoDetalleView({
 
   function addLinea(e: React.FormEvent) {
     e.preventDefault()
-    if (!idProducto) return toast.error('Falta producto')
+    const nombre = linea.nombre.trim()
+    if (!nombre) return toast.error('Escribí el producto')
+    // Invariante: es nuevo → nombre único; no es nuevo → producto seleccionado.
+    if (linea.esNuevo && matchLinea) {
+      return toast.error('Ese nombre ya existe', 'Cambiá el nombre o desmarcá "es nuevo" para vincularlo')
+    }
+    if (linea.esNuevo && !idCategoriaAdd) return toast.error('Elegí la categoría del producto nuevo')
+    if (!linea.esNuevo && !linea.idProducto) {
+      return toast.error('Elegí un producto del inventario', 'O marcá "es nuevo" si no existe')
+    }
     const cant = Number(cantidad || 0)
     const costo = Number(costoUnitario || 0)
     if (cant <= 0) return toast.error('Cantidad inválida')
     if (costo < 0) return toast.error('Costo inválido')
 
     start(async () => {
-      const res = await addIngresoDetalleAction({
+      const res = await importarRemitoAction({
         idIngreso: ingreso.id_ingreso,
-        idProducto,
-        cantidad: cant,
-        costoUnitario: costo,
+        lineas: [
+          {
+            esNuevo: linea.esNuevo,
+            idProducto: linea.esNuevo ? null : linea.idProducto || null,
+            idCategoria: linea.esNuevo ? idCategoriaAdd || null : null,
+            nombre,
+            cantidad: cant,
+            costoUnitario: costo,
+            talles: talleAdd ? [{ talle: talleAdd, cantidad: cant }] : undefined,
+          },
+        ],
       })
       if (!res.ok) return toast.error('No se pudo agregar', res.reason)
-      // Optimistic: agrego una fila; router.refresh() traerá la real.
-      setDetalles((d) => [
-        ...d,
-        {
-          id_detalle: res.data!.id,
-          id_tenant: ingreso.id_tenant,
-          id_ingreso: ingreso.id_ingreso,
-          id_producto: idProducto,
-          cantidad: cant,
-          costo_unitario: costo,
-          created_at: new Date().toISOString(),
-        },
-      ])
+      onImported(res.data!.detalles)
+      setLinea({ nombre: '', idProducto: '', esNuevo: true })
+      setIdCategoriaAdd(catInicial)
       setCantidad('1')
       setCostoUnitario('')
-      router.refresh()
+      setTalleAdd('')
     })
   }
 
@@ -102,7 +144,29 @@ export function IngresoDetalleView({
   }
 
   const productoNombre = (id: string) =>
-    productos.find((p) => p.id_producto === id)?.nombre ?? id
+    productos.find((p) => p.id_producto === id)?.nombre ?? nombresImportados[id] ?? id
+
+  function onImported(nuevos: DetalleImportado[]) {
+    setDetalles((d) => [
+      ...d,
+      ...nuevos.map((n) => ({
+        id_detalle: n.id_detalle,
+        id_tenant: ingreso.id_tenant,
+        id_ingreso: ingreso.id_ingreso,
+        id_producto: n.id_producto,
+        cantidad: n.cantidad,
+        costo_unitario: n.costo_unitario,
+        talle: n.talle,
+        created_at: new Date().toISOString(),
+      })),
+    ])
+    setNombresImportados((m) => {
+      const next = { ...m }
+      for (const n of nuevos) next[n.id_producto] = n.nombre
+      return next
+    })
+    router.refresh()
+  }
 
   return (
     <div className="space-y-6">
@@ -127,11 +191,12 @@ export function IngresoDetalleView({
       </div>
 
       {/* Líneas */}
-      <div className="rounded-lg border border-border bg-card overflow-hidden">
+      <div className="rounded-lg border border-border bg-card overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border text-left">
               <th className="px-4 py-3">Producto</th>
+              <th className="px-4 py-3">Talle</th>
               <th className="px-4 py-3 text-right">Cantidad</th>
               <th className="px-4 py-3 text-right">Costo unit.</th>
               <th className="px-4 py-3 text-right">Subtotal</th>
@@ -141,7 +206,7 @@ export function IngresoDetalleView({
           <tbody>
             {detalles.length === 0 ? (
               <tr>
-                <td colSpan={readonly ? 4 : 5} className="px-4 py-6 text-center text-muted">
+                <td colSpan={readonly ? 5 : 6} className="px-4 py-6 text-center text-muted">
                   Sin líneas. Agregá al menos una antes de confirmar.
                 </td>
               </tr>
@@ -149,6 +214,7 @@ export function IngresoDetalleView({
               detalles.map((d) => (
                 <tr key={d.id_detalle} className="border-b border-border-2">
                   <td className="px-4 py-3">{productoNombre(d.id_producto)}</td>
+                  <td className="px-4 py-3">{d.talle ?? <span className="text-muted-2">—</span>}</td>
                   <td className="px-4 py-3 text-right font-mono">{d.cantidad}</td>
                   <td className="px-4 py-3 text-right font-mono">
                     $ {Number(d.costo_unitario).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
@@ -169,7 +235,7 @@ export function IngresoDetalleView({
           </tbody>
           <tfoot>
             <tr className="border-t border-border bg-card-2">
-              <td className="px-4 py-3 font-semibold">Total</td>
+              <td className="px-4 py-3 font-semibold" colSpan={2}>Total</td>
               <td className="px-4 py-3 text-right font-mono font-semibold">{totalCantidad}</td>
               <td className="px-4 py-3"></td>
               <td className="px-4 py-3 text-right font-mono font-semibold">
@@ -181,47 +247,140 @@ export function IngresoDetalleView({
         </table>
       </div>
 
+      {/* Import desde PDF (planilla de precarga) */}
+      {!readonly && (
+        <RemitoImportPanel
+          idIngreso={ingreso.id_ingreso}
+          productos={productos}
+          categorias={categorias}
+          onImported={onImported}
+        />
+      )}
+
       {/* Add line form */}
       {!readonly && (
-        <form
-          onSubmit={addLinea}
-          className="rounded-lg border border-border bg-card p-4 grid grid-cols-1 gap-3 md:grid-cols-4 md:items-end"
-        >
-          <Field htmlFor="l-prod" label="Producto">
-            <select
-              id="l-prod"
-              value={idProducto}
-              onChange={(e) => setIdProducto(e.target.value)}
-              className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
-            >
-              {productos.map((p) => (
-                <option key={p.id_producto} value={p.id_producto}>
-                  {p.nombre}
-                  {p.sku ? ` · ${p.sku}` : ''}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field htmlFor="l-cant" label="Cantidad">
-            <NumberInput
-              id="l-cant"
-              min={1}
-              value={cantidad}
-              onChange={(e) => setCantidad(e.target.value)}
-            />
-          </Field>
-          <Field htmlFor="l-costo" label="Costo unitario">
-            <NumberInput
-              id="l-costo"
-              min={0}
-              step="0.01"
-              value={costoUnitario}
-              onChange={(e) => setCostoUnitario(e.target.value)}
-            />
-          </Field>
-          <Button type="submit" disabled={pending}>
-            {pending ? 'Agregando…' : 'Agregar línea'}
-          </Button>
+        <form onSubmit={addLinea} className="rounded-lg border border-border bg-card p-4 space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="text-sm font-semibold">Agregar producto a mano</h3>
+            {/* Toggle Nuevo/Vincular: doble verificación del nombre. */}
+            <div className="inline-flex shrink-0 overflow-hidden rounded-md border border-border text-xs">
+              <button
+                type="button"
+                onClick={() => {
+                  setLinea((l) => ({ ...l, esNuevo: true, idProducto: '' }))
+                  setTalleAdd('')
+                }}
+                className={`px-3 py-1.5 font-medium transition-colors ${
+                  linea.esNuevo ? 'bg-accent-pink text-sidebar' : 'text-muted hover:bg-card-2'
+                }`}
+              >
+                Es nuevo
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  // Vincular: si el nombre matchea uno existente, lo dejamos
+                  // enganchado; si no, queda a la espera de elegir del listado.
+                  setLinea((l) => ({
+                    ...l,
+                    esNuevo: false,
+                    idProducto: matchLinea?.id_producto ?? l.idProducto,
+                  }))
+                  setTalleAdd('')
+                }}
+                className={`px-3 py-1.5 font-medium transition-colors ${
+                  !linea.esNuevo ? 'bg-accent-pink text-sidebar' : 'text-muted hover:bg-card-2'
+                }`}
+              >
+                Del inventario
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-6 md:items-end">
+            <div className="md:col-span-2">
+              <Field htmlFor="l-prod" label="Producto">
+                <ProductoNombreCombobox
+                  productos={productos}
+                  value={linea}
+                  onChange={(next) => {
+                    setLinea(next)
+                    setTalleAdd('') // los talles dependen de la categoría/producto
+                  }}
+                />
+              </Field>
+            </div>
+
+            {linea.esNuevo && (
+              <Field htmlFor="l-cat" label="Categoría (nuevo)">
+                <select
+                  id="l-cat"
+                  value={idCategoriaAdd}
+                  onChange={(e) => {
+                    setIdCategoriaAdd(e.target.value)
+                    setTalleAdd('')
+                  }}
+                  className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
+                >
+                  {categorias.map((c) => (
+                    <option key={c.id_categoria} value={c.id_categoria}>
+                      {c.nombre}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            )}
+
+            <Field htmlFor="l-talle" label="Talle">
+              <select
+                id="l-talle"
+                value={talleAdd}
+                onChange={(e) => setTalleAdd(e.target.value)}
+                disabled={tallesAdd.length === 0}
+                className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink disabled:opacity-50"
+              >
+                <option value="">Sin talle</option>
+                {tallesAdd.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+            </Field>
+
+            <Field htmlFor="l-cant" label="Cantidad">
+              <NumberInput
+                id="l-cant"
+                min={1}
+                value={cantidad}
+                onChange={(e) => setCantidad(e.target.value)}
+              />
+            </Field>
+            <Field htmlFor="l-costo" label="Costo unitario">
+              <NumberInput
+                id="l-costo"
+                min={0}
+                step="0.01"
+                value={costoUnitario}
+                onChange={(e) => setCostoUnitario(e.target.value)}
+              />
+            </Field>
+            <Button type="submit" disabled={pending}>
+              {pending ? 'Agregando…' : 'Agregar línea'}
+            </Button>
+          </div>
+
+          {/* Aviso del invariante, según el estado del nombre. */}
+          {linea.esNuevo && matchLinea && (
+            <p className="text-xs text-pink-strong">
+              Ya existe un producto con este nombre. Cambiá el nombre o usá «Del inventario» para vincularlo.
+            </p>
+          )}
+          {!linea.esNuevo && linea.nombre.trim() && !linea.idProducto && (
+            <p className="text-xs text-muted">
+              Ese producto no está en tu inventario. Elegí uno del listado o marcá «Es nuevo» para crearlo.
+            </p>
+          )}
         </form>
       )}
 
