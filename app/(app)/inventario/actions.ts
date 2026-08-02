@@ -24,6 +24,7 @@ import {
   addIngresoDetalle,
   createIngresoBorrador,
   removeIngresoDetalle,
+  remitoDuplicado,
   spCancelarIngreso,
   spConfirmarIngreso,
   spImportarRemito,
@@ -334,32 +335,6 @@ export async function transicionItemAction(input: {
 
 // ─── Ingresos ────────────────────────────────────────────────────────
 
-export async function createIngresoAction(input: {
-  idProveedor: string | null
-  tipoIngreso: TipoIngreso
-  numeroRemito?: string | null
-  observaciones?: string | null
-  pdfUrl?: string | null
-}): Promise<ActionResult<{ id: string }>> {
-  const g = await guarded('crear')
-  if ('error' in g) return { ok: false, reason: g.error }
-  try {
-    const id = await createIngresoBorrador({
-      tenantId: g.tenantId,
-      idProveedor: input.idProveedor || null,
-      tipoIngreso: input.tipoIngreso,
-      numeroRemito: input.numeroRemito?.trim() || null,
-      observaciones: input.observaciones?.trim() || null,
-      pdfUrl: input.pdfUrl?.trim() || null,
-      idUsuarioAlta: g.userId,
-    })
-    revalidatePath('/inventario/ingresos')
-    return { ok: true, data: { id } }
-  } catch (e) {
-    return { ok: false, reason: (e as Error).message }
-  }
-}
-
 export async function addIngresoDetalleAction(input: {
   idIngreso: string
   idProducto: string
@@ -407,15 +382,17 @@ export async function removeIngresoDetalleAction(input: {
 export async function cancelarIngresoAction(input: {
   idIngreso: string
   motivo?: string | null
-}): Promise<ActionResult<{ modo: 'borrador' | 'confirmado'; itemsBaja: number }>> {
+}): Promise<ActionResult<{ modo: 'borrador' | 'confirmado'; itemsBaja: number; productosEliminados: number }>> {
   const g = await guarded('eliminar')
   if ('error' in g) return { ok: false, reason: g.error }
   try {
     const r = await spCancelarIngreso({ idIngreso: input.idIngreso, motivo: input.motivo ?? null })
     revalidatePath('/inventario/ingresos')
     revalidatePath('/inventario')
-    revalidatePath('/inventario')
-    return { ok: true, data: { modo: r.modo, itemsBaja: r.items_baja } }
+    return {
+      ok: true,
+      data: { modo: r.modo, itemsBaja: r.items_baja, productosEliminados: r.productos_eliminados },
+    }
   } catch (e) {
     return { ok: false, reason: (e as Error).message }
   }
@@ -473,38 +450,43 @@ type DetalleCreado = {
   talle: string | null
 }
 
+/** Línea de remito tal como la manda la UI (cantidad + desglose por talle). */
+type LineaRemitoInput = {
+  esNuevo: boolean
+  idProducto: string | null
+  // Categoría del producto nuevo (requerida si esNuevo). Es por línea:
+  // cada producto puede ir a una categoría distinta.
+  idCategoria: string | null
+  nombre: string
+  cantidad: number
+  costoUnitario: number
+  // Desglose por talle opcional; si va, crea una línea de detalle por talle.
+  talles?: Array<{ talle: string | null; cantidad: number }>
+}
+
+/** Línea normalizada para sp_importar_remito (partes = una línea por talle). */
+type LineaRemitoSp = {
+  esNuevo: boolean
+  idProducto: string | null
+  idCategoria: string | null
+  nombre: string
+  costoUnitario: number
+  partes: Array<{ talle: string | null; cantidad: number }>
+}
+
 /**
- * Import masivo desde la planilla de precarga. Por cada línea:
- *  - `esNuevo` → crea el producto (marcado es_nuevo=true) + costo inicial.
- *  - si no, usa el `idProducto` vinculado a un producto existente.
- * Luego agrega la línea de detalle al ingreso borrador.
+ * Valida y normaliza las líneas a la forma que espera sp_importar_remito.
+ * La cantidad de la línea manda: el desglose por talle distribuye esas
+ * unidades y lo no asignado queda "sin talle". Devuelve un mensaje claro
+ * (en TS, antes de tocar la DB) o las líneas listas para el SP.
  */
-export async function importarRemitoAction(input: {
-  idIngreso: string
-  moneda?: string
-  lineas: Array<{
-    esNuevo: boolean
-    idProducto: string | null
-    // Categoría del producto nuevo (requerida si esNuevo). Es por línea:
-    // cada producto puede ir a una categoría distinta.
-    idCategoria: string | null
-    nombre: string
-    cantidad: number
-    costoUnitario: number
-    // Desglose por talle opcional; si va, crea una línea de detalle por talle.
-    talles?: Array<{ talle: string | null; cantidad: number }>
-  }>
-}): Promise<ActionResult<{ creados: number; vinculados: number; detalles: DetalleCreado[] }>> {
-  const g = await guarded('crear')
-  if ('error' in g) return { ok: false, reason: g.error }
+function normalizarLineasRemito(
+  lineas: LineaRemitoInput[],
+): { ok: true; lineas: LineaRemitoSp[] } | { ok: false; reason: string } {
+  if (lineas.length === 0) return { ok: false, reason: 'sin-lineas' }
 
-  if (input.lineas.length === 0) return { ok: false, reason: 'sin-lineas' }
-
-  // Validación + cómputo de partes en TS (mensajes claros antes de la DB).
-  // La cantidad de la línea manda: el desglose por talle distribuye esas
-  // unidades y lo no asignado queda "sin talle".
-  const lineasSp = []
-  for (const l of input.lineas) {
+  const out: LineaRemitoSp[] = []
+  for (const l of lineas) {
     const nombre = l.nombre.trim()
     if (!nombre) return { ok: false, reason: 'hay una línea sin nombre de producto' }
     if (l.cantidad <= 0) return { ok: false, reason: `cantidad inválida en "${nombre}"` }
@@ -522,7 +504,7 @@ export async function importarRemitoAction(input: {
         ? [...breakdown, ...(resto > 0 ? [{ talle: null as string | null, cantidad: resto }] : [])]
         : [{ talle: null as string | null, cantidad: l.cantidad }]
 
-    lineasSp.push({
+    out.push({
       esNuevo: l.esNuevo,
       idProducto: l.esNuevo ? null : l.idProducto,
       idCategoria: l.esNuevo ? l.idCategoria : null,
@@ -531,12 +513,31 @@ export async function importarRemitoAction(input: {
       partes,
     })
   }
+  return { ok: true, lineas: out }
+}
+
+/**
+ * Import masivo desde la planilla de precarga. Por cada línea:
+ *  - `esNuevo` → crea el producto (marcado es_nuevo=true) + costo inicial.
+ *  - si no, usa el `idProducto` vinculado a un producto existente.
+ * Luego agrega la línea de detalle al ingreso borrador.
+ */
+export async function importarRemitoAction(input: {
+  idIngreso: string
+  moneda?: string
+  lineas: LineaRemitoInput[]
+}): Promise<ActionResult<{ creados: number; vinculados: number; detalles: DetalleCreado[] }>> {
+  const g = await guarded('crear')
+  if ('error' in g) return { ok: false, reason: g.error }
+
+  const norm = normalizarLineasRemito(input.lineas)
+  if (!norm.ok) return norm
 
   try {
     const res = await spImportarRemito({
       idIngreso: input.idIngreso,
       moneda: input.moneda,
-      lineas: lineasSp,
+      lineas: norm.lineas,
     })
     revalidatePath(`/inventario/ingresos/${input.idIngreso}`)
     revalidatePath('/inventario')
@@ -546,6 +547,87 @@ export async function importarRemitoAction(input: {
       data: { creados: res.creados, vinculados: res.vinculados, detalles: res.detalles },
     }
   } catch (e) {
+    return { ok: false, reason: (e as Error).message }
+  }
+}
+
+/**
+ * Alta de ingreso en UNA sola pantalla: crea la cabecera, importa todas las
+ * líneas y lo confirma (genera los ítems físicos con QR) en un solo flujo.
+ * No deja borradores: si el import o la confirmación fallan, se elimina la
+ * cabecera recién creada para no dejar basura.
+ *
+ * El número de remito es opcional pero único por proveedor (índice 00038):
+ * lo chequeamos antes para dar un mensaje claro.
+ */
+export async function crearIngresoCompletoAction(input: {
+  idProveedor: string | null
+  tipoIngreso: TipoIngreso
+  numeroRemito?: string | null
+  observaciones?: string | null
+  moneda?: string
+  lineas: LineaRemitoInput[]
+}): Promise<ActionResult<{ id: string; itemsGenerados: number }>> {
+  const g = await guarded('crear')
+  if ('error' in g) return { ok: false, reason: g.error }
+
+  const norm = normalizarLineasRemito(input.lineas)
+  if (!norm.ok) return norm
+
+  const numeroRemito = input.numeroRemito?.trim() || null
+  const idProveedor = input.idProveedor || null
+
+  if (numeroRemito) {
+    try {
+      const dup = await remitoDuplicado({ idProveedor, numeroRemito })
+      if (dup) {
+        return {
+          ok: false,
+          reason: `Ya existe un ingreso con el remito "${numeroRemito}" para este proveedor.`,
+        }
+      }
+    } catch (e) {
+      return { ok: false, reason: (e as Error).message }
+    }
+  }
+
+  let idIngreso: string
+  try {
+    idIngreso = await createIngresoBorrador({
+      tenantId: g.tenantId,
+      idProveedor,
+      tipoIngreso: input.tipoIngreso,
+      numeroRemito,
+      observaciones: input.observaciones?.trim() || null,
+      idUsuarioAlta: g.userId,
+    })
+  } catch (e) {
+    // Backstop del índice único: si dos cargas compiten, una recibe la
+    // violación de unicidad. La traducimos a un mensaje de negocio.
+    const msg = (e as Error).message
+    if (/ingreso_mercaderia_remito_uniq|duplicate key/i.test(msg)) {
+      return {
+        ok: false,
+        reason: `Ya existe un ingreso con el remito "${numeroRemito}" para este proveedor.`,
+      }
+    }
+    return { ok: false, reason: msg }
+  }
+
+  try {
+    await spImportarRemito({ idIngreso, moneda: input.moneda, lineas: norm.lineas })
+    const itemsGenerados = await spConfirmarIngreso(idIngreso)
+    revalidatePath('/inventario/ingresos')
+    revalidatePath('/inventario')
+    return { ok: true, data: { id: idIngreso, itemsGenerados } }
+  } catch (e) {
+    // Rollback pragmático: el ingreso quedó como borrador sin confirmar (o a
+    // medias). Lo borramos para no dejar un ingreso huérfano.
+    try {
+      await spCancelarIngreso({ idIngreso, motivo: 'alta fallida' })
+    } catch {
+      // Si la limpieza falla, priorizamos reportar el error original.
+    }
     return { ok: false, reason: (e as Error).message }
   }
 }

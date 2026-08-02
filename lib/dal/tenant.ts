@@ -1,7 +1,6 @@
 import { cache } from 'react'
 import { headers } from 'next/headers'
 import { AuthorizationError } from './errors'
-import { createServerClient } from './supabase'
 import { verifySession } from './session'
 
 /**
@@ -27,8 +26,14 @@ export async function getTenantSubdomainFromHeaders(): Promise<string | null> {
  * `AuthorizationError('tenant-mismatch')` (spec tenant-resolution.md 3.4,
  * threat-matrix "subdomain spoofing").
  *
+ * La confirmación contra la DB ya viene resuelta en `verifySession()`
+ * (`sp_session_context`, 00041): `subdominioOk` es true solo si existe un
+ * tenant con ESE subdominio cuyo id coincide con el `tenant_id` del JWT —
+ * la misma condición que se comparaba acá con un query aparte. Esta función
+ * ya no pega a la DB; el chequeo no se debilitó, se movió.
+ *
  * Wrapped in React's `cache()` so repeated calls within the same request
- * render pass share one verified result instead of re-querying the DB.
+ * render pass share one verified result.
  */
 export const verifyTenantMatch = cache(
   async (subdomainFromHeader: string | null): Promise<void> => {
@@ -36,15 +41,8 @@ export const verifyTenantMatch = cache(
       throw new AuthorizationError('tenant-mismatch')
     }
 
-    const { tenantId } = await verifySession()
-    const supabase = await createServerClient()
-    const { data } = await supabase
-      .from('tenant')
-      .select('id_tenant')
-      .eq('subdominio', subdomainFromHeader)
-      .single()
-
-    if (!data || data.id_tenant !== tenantId) {
+    const { subdominioOk } = await verifySession()
+    if (!subdominioOk) {
       throw new AuthorizationError('tenant-mismatch')
     }
   },

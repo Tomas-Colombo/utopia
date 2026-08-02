@@ -1,8 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { verifySessionMock, createServerClientMock, headersMock } = vi.hoisted(() => ({
+const { verifySessionMock, headersMock } = vi.hoisted(() => ({
   verifySessionMock: vi.fn(),
-  createServerClientMock: vi.fn(),
   headersMock: vi.fn(),
 }))
 
@@ -10,21 +9,26 @@ vi.mock('./session', () => ({
   verifySession: verifySessionMock,
 }))
 
-vi.mock('./supabase', () => ({
-  createServerClient: createServerClientMock,
-}))
-
 vi.mock('next/headers', () => ({
   headers: headersMock,
 }))
 
-/** Builds a mocked `.from('tenant').select().eq().single()` chain. */
-function tenantQueryResult(data: { id_tenant: string } | null) {
-  const single = vi.fn().mockResolvedValue({ data, error: null })
-  const eq = vi.fn().mockReturnValue({ single })
-  const select = vi.fn().mockReturnValue({ eq })
-  const from = vi.fn().mockReturnValue({ select })
-  return { from, select, eq, single }
+/**
+ * Since 00041 the subdomain→tenant confirmation happens inside
+ * `sp_session_context` and arrives on the session as `subdominioOk`
+ * (see lib/dal/session.ts). `verifyTenantMatch` no longer queries the
+ * `tenant` table itself — it enforces the already-verified flag.
+ */
+function sessionWith(subdominioOk: boolean) {
+  return {
+    user: { id: 'u1', email: 'a@b.com' },
+    tenantId: 'tenant-a',
+    rolId: null,
+    rolNombre: null,
+    permisos: {},
+    modulosHabilitados: [],
+    subdominioOk,
+  }
 }
 
 beforeEach(() => {
@@ -53,31 +57,30 @@ describe('verifyTenantMatch (design §7, REQ-TR-05, spec tenant-resolution.md 3.
   })
 
   it('throws tenant-mismatch when no tenant matches the subdomain', async () => {
-    verifySessionMock.mockResolvedValue({ user: { id: 'u1', email: 'a@b.com' }, tenantId: 'tenant-a' })
-    const query = tenantQueryResult(null)
-    createServerClientMock.mockResolvedValue({ from: query.from })
+    verifySessionMock.mockResolvedValue(sessionWith(false))
 
     const { verifyTenantMatch } = await import('./tenant')
 
-    await expect(verifyTenantMatch('unknown-sub')).rejects.toMatchObject({ reason: 'tenant-mismatch' })
-    expect(query.from).toHaveBeenCalledWith('tenant')
-    expect(query.eq).toHaveBeenCalledWith('subdominio', 'unknown-sub')
+    await expect(verifyTenantMatch('unknown-sub')).rejects.toMatchObject({
+      reason: 'tenant-mismatch',
+    })
   })
 
   it('throws tenant-mismatch when the resolved tenant does not match the session tenantId (spoofing, spec 3.4)', async () => {
-    verifySessionMock.mockResolvedValue({ user: { id: 'u1', email: 'a@b.com' }, tenantId: 'tenant-a' })
-    const query = tenantQueryResult({ id_tenant: 'tenant-b' })
-    createServerClientMock.mockResolvedValue({ from: query.from })
+    // A subdomain belonging to ANOTHER tenant never sets `subdominioOk`:
+    // sp_session_context only returns true when the tenant row matching the
+    // subdomain is the SAME tenant as the JWT claim.
+    verifySessionMock.mockResolvedValue(sessionWith(false))
 
     const { verifyTenantMatch } = await import('./tenant')
 
-    await expect(verifyTenantMatch('other-tenant-sub')).rejects.toMatchObject({ reason: 'tenant-mismatch' })
+    await expect(verifyTenantMatch('other-tenant-sub')).rejects.toMatchObject({
+      reason: 'tenant-mismatch',
+    })
   })
 
   it('passes (resolves void) when the resolved tenant matches the session tenantId', async () => {
-    verifySessionMock.mockResolvedValue({ user: { id: 'u1', email: 'a@b.com' }, tenantId: 'tenant-a' })
-    const query = tenantQueryResult({ id_tenant: 'tenant-a' })
-    createServerClientMock.mockResolvedValue({ from: query.from })
+    verifySessionMock.mockResolvedValue(sessionWith(true))
 
     const { verifyTenantMatch } = await import('./tenant')
 
@@ -87,7 +90,9 @@ describe('verifyTenantMatch (design §7, REQ-TR-05, spec tenant-resolution.md 3.
 
 describe('getTenantSubdomainFromHeaders', () => {
   it('returns the x-utopia-tenant-subdomain header value when present', async () => {
-    headersMock.mockResolvedValue({ get: (key: string) => (key === 'x-utopia-tenant-subdomain' ? 'acme' : null) })
+    headersMock.mockResolvedValue({
+      get: (key: string) => (key === 'x-utopia-tenant-subdomain' ? 'acme' : null),
+    })
 
     const { getTenantSubdomainFromHeaders } = await import('./tenant')
     await expect(getTenantSubdomainFromHeaders()).resolves.toBe('acme')

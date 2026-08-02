@@ -2,6 +2,7 @@ import 'server-only'
 import { createServerClient } from '@/lib/dal/supabase'
 import type {
   FormaPago,
+  PreciosResumen,
   ProductoConPrecioStatus,
   SnapshotPrecio,
 } from '@/lib/types/precios'
@@ -40,138 +41,101 @@ export async function spRecalcularPrecioVenta(idProducto: string): Promise<numbe
 }
 
 /**
- * Aplica sp_recalcular_precio_venta a múltiples productos en serie.
- * Devuelve mapa id → precio nuevo (null si no se pudo). Sin paralelismo:
- * queremos audit ordenado y RLS por-request estable.
+ * Recalcula múltiples productos en UN round-trip (`sp_recalcular_precios_batch`,
+ * 00040). Devuelve mapa id → precio nuevo (null si no se pudo).
+ *
+ * El loop vive ahora en Postgres: recorre `p_ids` en orden (la auditoría
+ * sigue quedando ordenada, que era el motivo del loop serial original) y
+ * aísla cada producto en su propio subbloque, así un fallo devuelve null
+ * para ese id sin abortar el resto. Antes esto era un round-trip por id:
+ * 35 productos = ~10s.
  */
 export async function spRecalcularBatch(ids: string[]): Promise<Record<string, number | null>> {
+  if (ids.length === 0) return {}
+
+  const supabase = await createServerClient()
+  const { data, error } = await supabase.rpc('sp_recalcular_precios_batch', {
+    p_ids: ids,
+  })
+  if (error) throw new Error(`sp_recalcular_precios_batch: ${error.message}`)
+
   const out: Record<string, number | null> = {}
-  for (const id of ids) {
-    try {
-      out[id] = await spRecalcularPrecioVenta(id)
-    } catch {
-      out[id] = null
-    }
+  for (const row of (data ?? []) as Array<{ id_producto: string; precio: number | null }>) {
+    out[row.id_producto] = row.precio == null ? null : Number(row.precio)
   }
   return out
 }
+
+/** Forma cruda que devuelve `sp_control_de_precios` (numerics como number|string). */
+interface ControlDePreciosRpcRow {
+  id_producto: string
+  nombre: string
+  sku: string | null
+  categoria_nombre: string | null
+  costo_vigente: number | string | null
+  precio_venta: number | string | null
+  precio_venta_resuelto_at: string | null
+  precio_venta_desactualizado: boolean
+  regla_margen_nombre: string | null
+  precio_proyectado: number | string | null
+  diferencia_pct: number | string | null
+}
+
+/** PostgREST puede serializar `numeric` como string para preservar precisión. */
+const num = (v: number | string | null): number | null => (v == null ? null : Number(v))
 
 /**
  * Vista "Control de precios": listado de productos activos con costo,
  * precio actual, regla de margen aplicable, y precio proyectado (preview
  * de qué pasaría si se recalcula ahora).
  *
- * Estrategia: 1 query de productos + 1 query de costos vigentes + 1 query
- * de reglas de margen relevantes; resolver en memoria en TS (más simple
- * que una CTE gigante y suficiente para volúmenes de un tenant de retail).
+ * TODO el trabajo pasa en `sp_control_de_precios` (00040): un round-trip.
+ * La versión anterior resolvía la cascada de margen desde TS con un
+ * `await resolver_regla_margen` POR PRODUCTO — 35 productos activos eran
+ * 35 round-trips secuenciales (~10s medidos). El LATERAL de la RPC hace
+ * lo mismo en una sola pasada del planner.
  */
 export async function listControlDePrecios(): Promise<ProductoConPrecioStatus[]> {
   const supabase = await createServerClient()
+  const { data, error } = await supabase.rpc('sp_control_de_precios')
+  if (error) throw new Error(`listControlDePrecios: ${error.message}`)
 
-  const { data: productos, error: e1 } = await supabase
-    .from('producto')
-    .select(`
-      id_producto, id_categoria, nombre, sku, activo,
-      precio_venta, precio_venta_resuelto_at, precio_venta_desactualizado,
-      id_regla_margen_aplicada,
-      categoria:categoria(id_categoria, nombre)
-    `)
-    .eq('activo', true)
-    .order('nombre', { ascending: true })
-  if (e1) throw new Error(`listControlDePrecios prod: ${e1.message}`)
+  return ((data ?? []) as ControlDePreciosRpcRow[]).map((r) => ({
+    id_producto: r.id_producto,
+    nombre: r.nombre,
+    sku: r.sku,
+    categoria_nombre: r.categoria_nombre,
+    costo_vigente: num(r.costo_vigente),
+    precio_venta: num(r.precio_venta),
+    precio_venta_resuelto_at: r.precio_venta_resuelto_at,
+    precio_venta_desactualizado: r.precio_venta_desactualizado,
+    regla_margen_nombre: r.regla_margen_nombre,
+    precio_proyectado: num(r.precio_proyectado),
+    diferencia_pct: num(r.diferencia_pct),
+  }))
+}
 
-  // Supabase's generated TS shape treats FK joins as arrays by default;
-  // in practice `categoria` is a single object (one categoria per producto).
-  // Route through `unknown` to opt out of the wider inferred shape.
-  const rows = (productos ?? []) as unknown as Array<{
-    id_producto: string
-    id_categoria: string
-    nombre: string
-    sku: string | null
-    precio_venta: number | null
-    precio_venta_resuelto_at: string | null
-    precio_venta_desactualizado: boolean
-    id_regla_margen_aplicada: string | null
-    categoria: { id_categoria: string; nombre: string } | null
-  }>
-  if (rows.length === 0) return []
+/**
+ * Contadores del home de Precios. El home NO usa `precio_proyectado`, así
+ * que no tiene por qué pagar la proyección de todo el catálogo: una
+ * agregación (`sp_precios_resumen`, 00040) alcanza y sale en un round-trip.
+ */
+export async function getPreciosResumen(): Promise<PreciosResumen> {
+  const supabase = await createServerClient()
+  const { data, error } = await supabase
+    .rpc('sp_precios_resumen')
+    .single<{
+      productos_activos: number
+      desactualizados: number
+      sin_precio: number
+      con_regla: number
+    }>()
+  if (error) throw new Error(`getPreciosResumen: ${error.message}`)
 
-  const ids = rows.map((r) => r.id_producto)
-
-  // Costos vigentes en un solo query.
-  const { data: costos, error: e2 } = await supabase
-    .from('costo_producto')
-    .select('id_producto, costo')
-    .in('id_producto', ids)
-    .is('vigente_hasta', null)
-  if (e2) throw new Error(`listControlDePrecios costos: ${e2.message}`)
-  const costoMap = new Map<string, number>()
-  for (const c of costos ?? []) costoMap.set(c.id_producto as string, Number(c.costo))
-
-  // Reglas de margen aplicadas (nombre) — para mostrar cuál.
-  const reglasIds = rows.map((r) => r.id_regla_margen_aplicada).filter(Boolean) as string[]
-  const reglaNombreMap = new Map<string, string>()
-  if (reglasIds.length > 0) {
-    const { data: reglas } = await supabase
-      .from('regla_precio')
-      .select('id_regla, nombre')
-      .in('id_regla', reglasIds)
-    for (const r of reglas ?? []) {
-      reglaNombreMap.set(r.id_regla as string, r.nombre as string)
-    }
+  return {
+    productosActivos: data?.productos_activos ?? 0,
+    desactualizados: data?.desactualizados ?? 0,
+    sinPrecio: data?.sin_precio ?? 0,
+    conRegla: data?.con_regla ?? 0,
   }
-
-  // Proyección: llamamos al resolver_regla_margen por producto (una RPC
-  // por producto es cara si hay 5000 productos; para retail chico va).
-  // Optimización futura: mover a una vista SQL o materializar en batch.
-  const proyecciones: Array<{ id: string; precio_proyectado: number | null }> = []
-  for (const r of rows) {
-    const costo = costoMap.get(r.id_producto) ?? null
-    if (costo == null) {
-      proyecciones.push({ id: r.id_producto, precio_proyectado: null })
-      continue
-    }
-    const { data: regla } = await supabase.rpc('resolver_regla_margen', {
-      p_id_producto: r.id_producto,
-    })
-    // resolver_regla_margen retorna un regla_precio row o null.
-    const reglaRow = (regla ?? null) as
-      | { tipo_valor: 'porcentaje' | 'monto_fijo'; valor: number }
-      | null
-    let proyectado: number
-    if (!reglaRow || reglaRow.valor == null) {
-      proyectado = costo
-    } else if (reglaRow.tipo_valor === 'porcentaje') {
-      proyectado = costo * (1 + Number(reglaRow.valor))
-    } else {
-      proyectado = costo + Number(reglaRow.valor)
-    }
-    proyecciones.push({ id: r.id_producto, precio_proyectado: Number(proyectado.toFixed(2)) })
-  }
-  const proyMap = new Map(proyecciones.map((p) => [p.id, p.precio_proyectado]))
-
-  return rows.map((r) => {
-    const costo = costoMap.get(r.id_producto) ?? null
-    const proyectado = proyMap.get(r.id_producto) ?? null
-    const diferencia_pct =
-      r.precio_venta != null && proyectado != null && r.precio_venta > 0
-        ? Number((((proyectado - r.precio_venta) / r.precio_venta) * 100).toFixed(2))
-        : null
-    return {
-      id_producto: r.id_producto,
-      nombre: r.nombre,
-      sku: r.sku,
-      categoria_nombre: r.categoria?.nombre ?? null,
-      costo_vigente: costo,
-      precio_venta: r.precio_venta,
-      precio_venta_resuelto_at: r.precio_venta_resuelto_at,
-      precio_venta_desactualizado: r.precio_venta_desactualizado,
-      regla_margen_nombre:
-        r.id_regla_margen_aplicada != null
-          ? reglaNombreMap.get(r.id_regla_margen_aplicada) ?? null
-          : null,
-      precio_proyectado: proyectado,
-      diferencia_pct,
-    }
-  })
 }

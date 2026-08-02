@@ -36,5 +36,6 @@ export async function loginAction(
     return { ok: false, error: 'Invalid credentials' }
   }
 
-  redirect('/')
+  // El vendedor arranca en su módulo de trabajo, no en un dashboard.
+  redirect('/ventas')
 }

@@ -10,9 +10,15 @@ import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
 import { useToast } from '@/components/ui/Toast'
 import { QrScanner } from '@/components/inventario/QrScanner'
+import {
+  buscarMatchNombre,
+  indexarPorNombre,
+  normalizar,
+} from '@/lib/inventario/producto-match'
 import { FORMA_PAGO_LABEL, type FormaPago } from '@/lib/types/precios'
+import type { ProductoConDetalle } from '@/lib/types/inventario'
 import type { LineaCarrito } from '@/lib/types/ventas'
-import { registrarVentaAction } from '../actions'
+import { registrarVentaAction, crearClienteAction } from '../actions'
 
 interface ClienteOption { id: string; nombre: string; telefono: string | null }
 interface ReservaOption {
@@ -36,20 +42,30 @@ interface ReservaOption {
  * vendió el mismo item), la tx falla y el usuario ve el error.
  */
 export function NuevaVentaView({
-  clientes,
+  clientes: clientesIniciales,
   reservasActivas,
+  productos,
   idReservaPreseleccionada,
 }: {
   clientes: ClienteOption[]
   reservasActivas: ReservaOption[]
+  productos: ProductoConDetalle[]
   idReservaPreseleccionada: string | null
 }) {
   const router = useRouter()
   const toast = useToast()
   const [pending, start] = useTransition()
 
+  const [clientes, setClientes] = useState<ClienteOption[]>(clientesIniciales)
   const [formaPago, setFormaPago] = useState<FormaPago>('efectivo')
   const [idCliente, setIdCliente] = useState<string>('')
+
+  // Alta rápida de cliente en línea
+  const [creandoCliente, setCreandoCliente] = useState(false)
+  const [guardandoCliente, startCliente] = useTransition()
+  const [nuevoNombre, setNuevoNombre] = useState('')
+  const [nuevoTelefono, setNuevoTelefono] = useState('')
+  const [errorCliente, setErrorCliente] = useState<string | null>(null)
   const [idReserva, setIdReserva] = useState<string>(idReservaPreseleccionada ?? '')
   const [observaciones, setObservaciones] = useState('')
 
@@ -57,6 +73,20 @@ export function NuevaVentaView({
   const [buscando, setBuscando] = useState(false)
   const [errorBusqueda, setErrorBusqueda] = useState<string | null>(null)
   const [camaraOpen, setCamaraOpen] = useState(false)
+
+  // Buscador unificado: el mismo input acepta QR, SKU o nombre. Reusamos el
+  // índice de nombres normalizado del inventario para sugerir y resolver el
+  // producto cuando lo que se tipeó no es un código.
+  const [sugerenciasOpen, setSugerenciasOpen] = useState(false)
+  const [resaltado, setResaltado] = useState(0)
+  const [tallesPendientes, setTallesPendientes] = useState<string[] | null>(null)
+  const [productoPendiente, setProductoPendiente] = useState<string | null>(null)
+  const indexNombres = useMemo(() => indexarPorNombre(productos), [productos])
+  const sugerencias = useMemo(() => {
+    const q = normalizar(qrInput)
+    if (!q) return []
+    return productos.filter((p) => normalizar(p.nombre).includes(q)).slice(0, 8)
+  }, [productos, qrInput])
 
   const [lineas, setLineas] = useState<LineaCarrito[]>([])
   const [confirmarOpen, setConfirmarOpen] = useState(false)
@@ -94,9 +124,42 @@ export function NuevaVentaView({
     [lineas],
   )
 
+  // Submit del buscador (botón Agregar). Con sugerencias de nombre abiertas,
+  // elegimos la resaltada — NUNCA caemos al path de código, para no agregar por
+  // SKU un ítem equivocado. Sin sugerencias, tratamos el texto como código
+  // (QR/SKU) o nombre exacto.
   function agregarLinea(e?: React.FormEvent) {
     e?.preventDefault()
-    void agregarPorCodigo(qrInput)
+    if (sugerenciasOpen && sugerencias.length > 0) {
+      elegirSugerencia(sugerencias[Math.min(resaltado, sugerencias.length - 1)])
+      return
+    }
+    const texto = qrInput.trim()
+    if (!texto) return
+    const match = buscarMatchNombre(indexNombres, texto)
+    if (match) void agregarPorProducto(match.id_producto)
+    else void agregarPorCodigo(texto)
+  }
+
+  // Navegación por teclado del desplegable de nombres.
+  function onBuscadorKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (!sugerenciasOpen || sugerencias.length === 0) return
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setResaltado((i) => Math.min(sugerencias.length - 1, i + 1))
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setResaltado((i) => Math.max(0, i - 1))
+    } else if (e.key === 'Escape') {
+      setSugerenciasOpen(false)
+    }
+  }
+
+  // Selección directa desde el desplegable de sugerencias.
+  function elegirSugerencia(p: ProductoConDetalle) {
+    setSugerenciasOpen(false)
+    setQrInput(p.nombre)
+    void agregarPorProducto(p.id_producto)
   }
 
   // Carga una línea a partir de un código (QR exacto o SKU con talle). Lo usan
@@ -118,16 +181,61 @@ export function NuevaVentaView({
         return
       }
       const nueva = data.linea as LineaCarrito
-      let duplicado = false
-      setLineas((ls) => {
-        if (ls.some((l) => l.qr_code === nueva.qr_code)) {
-          duplicado = true
-          return ls
-        }
-        return [...ls, nueva]
-      })
-      if (duplicado) setErrorBusqueda('Ese ítem ya está en el carrito')
+      if (pushLinea(nueva)) setErrorBusqueda('Ese ítem ya está en el carrito')
       else setQrInput('')
+    } catch (e) {
+      setErrorBusqueda((e as Error).message)
+    } finally {
+      setBuscando(false)
+    }
+  }
+
+  // Agrega una línea al carrito evitando duplicados por QR. Devuelve true si el
+  // ítem ya estaba (no se agrega de nuevo).
+  function pushLinea(nueva: LineaCarrito): boolean {
+    let duplicado = false
+    setLineas((ls) => {
+      if (ls.some((l) => l.qr_code === nueva.qr_code)) {
+        duplicado = true
+        return ls
+      }
+      return [...ls, nueva]
+    })
+    return duplicado
+  }
+
+  // Agrega por producto (búsqueda por nombre). Sin talle, si el producto usa
+  // talles y hay varios con stock, el server responde 'elegir-talle' y
+  // mostramos los chips para desambiguar.
+  async function agregarPorProducto(idProducto: string, talle?: string) {
+    if (!idProducto || buscando) return
+    setBuscando(true)
+    setErrorBusqueda(null)
+    try {
+      const r = await fetch(
+        `/api/ventas/lookup-item?id_producto=${encodeURIComponent(idProducto)}` +
+          `&forma_pago=${formaPago}` +
+          (talle ? `&talle=${encodeURIComponent(talle)}` : '') +
+          (idReserva ? `&id_reserva=${encodeURIComponent(idReserva)}` : ''),
+      )
+      const data = await r.json()
+      if (!data.ok) {
+        if (data.reason === 'elegir-talle') {
+          setTallesPendientes(data.talles as string[])
+          setProductoPendiente(idProducto)
+          return
+        }
+        setErrorBusqueda(traducirReason(data.reason, data))
+        return
+      }
+      const nueva = data.linea as LineaCarrito
+      if (pushLinea(nueva)) {
+        setErrorBusqueda('Ese ítem ya está en el carrito')
+      } else {
+        setQrInput('')
+        setTallesPendientes(null)
+        setProductoPendiente(null)
+      }
     } catch (e) {
       setErrorBusqueda((e as Error).message)
     } finally {
@@ -137,6 +245,30 @@ export function NuevaVentaView({
 
   function quitarLinea(qr: string) {
     setLineas((ls) => ls.filter((l) => l.qr_code !== qr))
+  }
+
+  function crearCliente() {
+    const nombre = nuevoNombre.trim()
+    if (nombre.length < 2) return setErrorCliente('Nombre muy corto')
+    setErrorCliente(null)
+    startCliente(async () => {
+      const res = await crearClienteAction({
+        nombre,
+        telefono: nuevoTelefono.trim() || null,
+      })
+      if (!res.ok) return setErrorCliente(res.reason)
+      const nuevo: ClienteOption = {
+        id: res.data!.id,
+        nombre,
+        telefono: nuevoTelefono.trim() || null,
+      }
+      setClientes((xs) => [...xs, nuevo].sort((a, b) => a.nombre.localeCompare(b.nombre)))
+      setIdCliente(nuevo.id)
+      setNuevoNombre('')
+      setNuevoTelefono('')
+      setCreandoCliente(false)
+      toast.success('Cliente creado', nombre)
+    })
   }
 
   function confirmar() {
@@ -158,6 +290,7 @@ export function NuevaVentaView({
 
   const clientesFiltrados = idReserva
     ? clientes.filter((c) => {
+        if (c.id === idCliente) return true // no ocultar al cliente ya seleccionado
         const r = reservasActivas.find((x) => x.id === idReserva)
         return !r?.cliente_nombre || r.cliente_nombre === c.nombre
       })
@@ -173,20 +306,65 @@ export function NuevaVentaView({
           <form onSubmit={agregarLinea}>
             <Field
               htmlFor="qr-input"
-              label="Escanear o tipear código"
+              label="Escanear, tipear código o buscar por nombre"
               error={errorBusqueda ?? undefined}
-              hint="QR del ítem o SKU del producto (ej: REM-0007-M). Enter para agregar."
+              hint="QR, SKU (ej: REM-0007-M) o nombre del producto. Enter para agregar."
             >
               <div className="flex gap-2">
-                <Input
-                  id="qr-input"
-                  autoFocus
-                  value={qrInput}
-                  onChange={(e) => setQrInput(e.target.value)}
-                  placeholder="QR o SKU"
-                  invalid={!!errorBusqueda}
-                  disabled={buscando}
-                />
+                <div className="relative flex-1">
+                  <Input
+                    id="qr-input"
+                    autoFocus
+                    value={qrInput}
+                    onChange={(e) => {
+                      setQrInput(e.target.value)
+                      setSugerenciasOpen(true)
+                      setResaltado(0)
+                      setTallesPendientes(null)
+                      setProductoPendiente(null)
+                    }}
+                    onFocus={() => setSugerenciasOpen(true)}
+                    onBlur={() => setTimeout(() => setSugerenciasOpen(false), 120)}
+                    onKeyDown={onBuscadorKeyDown}
+                    placeholder="QR, SKU o nombre"
+                    invalid={!!errorBusqueda}
+                    disabled={buscando}
+                    role="combobox"
+                    aria-expanded={sugerenciasOpen && sugerencias.length > 0}
+                    aria-autocomplete="list"
+                  />
+                  {sugerenciasOpen && sugerencias.length > 0 && (
+                    <ul
+                      role="listbox"
+                      className="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md border border-border bg-card-2 shadow"
+                    >
+                      {sugerencias.map((p, i) => {
+                        const activo = i === Math.min(resaltado, sugerencias.length - 1)
+                        return (
+                          <li
+                            key={p.id_producto}
+                            role="option"
+                            aria-selected={activo}
+                            // onMouseDown para seleccionar antes del blur del input.
+                            onMouseDown={(e) => {
+                              e.preventDefault()
+                              elegirSugerencia(p)
+                            }}
+                            onMouseEnter={() => setResaltado(i)}
+                            className={`flex cursor-pointer items-center justify-between gap-2 px-3 py-2 text-sm ${
+                              activo ? 'bg-pink-bg text-text' : 'text-text'
+                            }`}
+                          >
+                            <span>{p.nombre}</span>
+                            <span className="shrink-0 font-mono text-xs text-muted">
+                              {p.stock_disponible} u.
+                            </span>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  )}
+                </div>
                 <Button type="submit" disabled={buscando || !qrInput.trim()}>
                   {buscando ? 'Buscando…' : 'Agregar'}
                 </Button>
@@ -200,6 +378,24 @@ export function NuevaVentaView({
               </div>
             </Field>
           </form>
+
+          {tallesPendientes && productoPendiente && (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs text-muted">Elegí talle:</span>
+              {tallesPendientes.map((t) => (
+                <Button
+                  key={t}
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  disabled={buscando}
+                  onClick={() => void agregarPorProducto(productoPendiente, t)}
+                >
+                  {t}
+                </Button>
+              ))}
+            </div>
+          )}
 
           {camaraOpen && (
             <div className="mx-auto max-w-xs">
@@ -319,21 +515,78 @@ export function NuevaVentaView({
           </Field>
 
           <Field htmlFor="v-cli" label="Cliente (opcional)">
-            <select
-              id="v-cli"
-              value={idCliente}
-              onChange={(e) => setIdCliente(e.target.value)}
-              className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
-            >
-              <option value="">— Mostrador —</option>
-              {clientesFiltrados.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nombre}
-                  {c.telefono ? ` · ${c.telefono}` : ''}
-                </option>
-              ))}
-            </select>
+            <div className="flex gap-2">
+              <select
+                id="v-cli"
+                value={idCliente}
+                onChange={(e) => setIdCliente(e.target.value)}
+                className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
+              >
+                <option value="">— Mostrador —</option>
+                {clientesFiltrados.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.nombre}
+                    {c.telefono ? ` · ${c.telefono}` : ''}
+                  </option>
+                ))}
+              </select>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  setCreandoCliente((v) => !v)
+                  setErrorCliente(null)
+                }}
+                aria-expanded={creandoCliente}
+              >
+                {creandoCliente ? 'Cerrar' : '+ Nuevo'}
+              </Button>
+            </div>
           </Field>
+
+          {creandoCliente && (
+            <div className="rounded-md border border-border bg-card-2 p-3 space-y-3">
+              <Field htmlFor="v-nc-nombre" label="Nombre" required error={errorCliente ?? undefined}>
+                <Input
+                  id="v-nc-nombre"
+                  autoFocus
+                  value={nuevoNombre}
+                  onChange={(e) => setNuevoNombre(e.target.value)}
+                  placeholder="Nombre y apellido"
+                  invalid={!!errorCliente}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      crearCliente()
+                    }
+                  }}
+                />
+              </Field>
+              <Field htmlFor="v-nc-tel" label="Teléfono" hint="Se usa para link WhatsApp">
+                <Input
+                  id="v-nc-tel"
+                  value={nuevoTelefono}
+                  onChange={(e) => setNuevoTelefono(e.target.value)}
+                  placeholder="+54 9 11 ..."
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      crearCliente()
+                    }
+                  }}
+                />
+              </Field>
+              <Button
+                type="button"
+                size="sm"
+                className="w-full"
+                onClick={crearCliente}
+                disabled={guardandoCliente || nuevoNombre.trim().length < 2}
+              >
+                {guardandoCliente ? 'Creando…' : 'Crear y seleccionar'}
+              </Button>
+            </div>
+          )}
 
           <Field htmlFor="v-obs" label="Observaciones">
             <Textarea
@@ -388,5 +641,6 @@ function traducirReason(reason: string, extra?: Record<string, unknown>): string
   if (reason === 'sin-precio-lista') return 'El producto no tiene precio de venta. Fijalo en Precios → Control de precios.'
   if (reason === 'reserva-no-activa') return 'La reserva ya no está activa (fue cancelada, vencida o convertida).'
   if (reason === 'lineas-vacias') return 'Agregá al menos un ítem al carrito.'
+  if (reason === 'elegir-talle') return 'Elegí un talle disponible.'
   return reason
 }

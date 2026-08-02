@@ -1,7 +1,5 @@
-import { cache } from 'react'
 import { AuthorizationError } from './errors'
 import type { Session } from './session'
-import { createServerClient } from './supabase'
 
 /**
  * Double-check gate required by spec REQ-AG-03 / REQ-AG-06:
@@ -16,10 +14,13 @@ import { createServerClient } from './supabase'
  * MUST be called on every tenant-scoped route/handler/server-action BEFORE
  * any read or write. RLS is a defense in depth, not a substitute.
  *
- * Cached per (tenantId, moduloCodigo) so multiple guards in the same render
- * pass share the DB round-trip. `accion` is checked in-memory from the
- * already-loaded session permisos, so it doesn't invalidate the cache.
+ * Ambos chequeos son EN MEMORIA: `session.modulosHabilitados` y
+ * `session.permisos` vienen cargados por `verifySession()` en el mismo
+ * round-trip (`sp_session_context`, 00041). Antes el chequeo de módulo
+ * habilitado era un query propio por cada layout de módulo.
  */
+// Se mantiene `async` aunque ya no toque la DB: los ~35 call sites la
+// esperan con `await` y no hay razón para tocarlos.
 export async function requireModuleRole(
   session: Session,
   moduloCodigo: string,
@@ -32,8 +33,7 @@ export async function requireModuleRole(
     throw new AuthorizationError('no-session')
   }
 
-  const habilitado = await isModuloHabilitado(session.tenantId, moduloCodigo)
-  if (!habilitado) {
+  if (!session.modulosHabilitados.includes(moduloCodigo)) {
     throw new AuthorizationError('module-disabled')
   }
 
@@ -42,25 +42,6 @@ export async function requireModuleRole(
     throw new AuthorizationError('no-permission')
   }
 }
-
-/**
- * Cached per (tenantId, moduloCodigo). RLS on `tenant_modulo` scopes the
- * query to the current tenant automatically; we still filter explicitly
- * as belt-and-suspenders.
- */
-const isModuloHabilitado = cache(
-  async (tenantId: string, moduloCodigo: string): Promise<boolean> => {
-    const supabase = await createServerClient()
-    const { data } = await supabase
-      .from('tenant_modulo')
-      .select('habilitado, modulo:modulo!inner(codigo)')
-      .eq('id_tenant', tenantId)
-      .eq('modulo.codigo', moduloCodigo)
-      .maybeSingle<{ habilitado: boolean; modulo: { codigo: string } }>()
-
-    return data?.habilitado === true
-  },
-)
 
 /**
  * Convenience helper for UI layers that need to gate a button/link

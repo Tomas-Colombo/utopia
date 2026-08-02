@@ -1,46 +1,116 @@
 @import "tailwindcss";
 
-/* Light theme — verbatim hex from design §8.2 */
+/* ============================================================================
+   Utopía — design system v2 (streetwear / urbano)
+   Source of truth: "Utopia Sistema.dc.html" (Claude Design project).
+
+   Naming: the canonical token names come from the design file itself
+   (--panel, --line, --ink, --rosa, ...). The previous generation of names
+   (--card, --border, --text, --accent-pink, ...) is kept as ALIASES pointing
+   at the new values so the ~100 existing components keep working while the
+   palette changes underneath them. Prefer the canonical names in new code.
+   ========================================================================= */
+
+/* ---- Light ---------------------------------------------------------------- */
 :root {
+  /* Surfaces */
   --bg: #F7F5F1;
-  --text: #141210;
-  --topbar: rgba(247, 245, 241, 0.85);
-  --border: #EAE5DE;
-  --border-2: #E7E2DA;
-  --card: #FCF6F0;
-  --card-2: #FBFAF7;
-  --card-3: #F0ECE6;
-  --card-4: #EFEAE2;
-  --sidebar-bg: #131312;
-  --accent-pink: #E9A6BC;
-  --pink-bg: #F7E4EA;
-  --pink-strong: #C2607F;
-  --terracota: #B87A5A;
-  --success: #3E8E5A;
+  --panel: #FFFFFF;
+  --panel-2: #FBFAF7;
+  --line: #EAE5DE;
+  --line-2: #E1DAD0;
+
+  /* Text */
+  --ink: #141210;
   --muted: #5A5652;
   --muted-2: #8A837A;
+  --dim: #A29A8F;
+
+  /* Contrast block — inverts between themes (ink in light, bone in dark) */
+  --block: #131312;
+  --block-ink: #FAF8F4;
+  --block-dim: #8F8B84;
+
+  /* Navigation rail — dark in both themes, darker still in dark mode */
+  --sidebar: #131312;
+
+  /* Accents */
+  --rosa: #E9A6BC;
+  --terra: #B87A5A;
+  --ok: #3E8E5A;
+
+  /* Striped image placeholders */
+  --sw1: #F0ECE6;
+  --sw2: #E4DED5;
+
+  /* Derived accents. color-mix keeps them in step when --rosa is themed. */
+  --rosa-bg: color-mix(in oklab, var(--rosa) 32%, var(--bg));
+  --rosa-ink: color-mix(in oklab, var(--rosa) 70%, #3a1420);
+  --ok-bg: color-mix(in oklab, var(--ok) 15%, var(--bg));
+  --terra-bg: color-mix(in oklab, var(--terra) 17%, var(--bg));
+  --hover: color-mix(in oklab, var(--rosa) 7%, var(--panel));
+
+  /* Chevron stroke for native <select>. A data: URI cannot read currentColor,
+     so the colour is baked per theme. */
+  --select-arrow: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'><path d='M1 1.5 6 6.5 11 1.5' stroke='%23A29A8F' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+
+  /* Density / rhythm */
+  --rowpad: 17px;
+  --cardpad: 24px;
+
+  /* ---- Legacy aliases (do not use in new code) ---- */
+  --text: var(--ink);
+  --topbar: color-mix(in srgb, var(--bg) 85%, transparent);
+  --border: var(--line);
+  --border-2: var(--line-2);
+  --card: var(--panel);
+  --card-2: var(--panel-2);
+  --card-3: var(--sw1);
+  --card-4: var(--sw2);
+  --sidebar-bg: var(--sidebar);
+  --accent-pink: var(--rosa);
+  --pink-bg: var(--rosa-bg);
+  --pink-strong: var(--rosa-ink);
+  --terracota: var(--terra);
+  --success: var(--ok);
 }
 
-/* Dark theme — verbatim hex from design §8.3. --sidebar-bg is intentionally
-   identical to the light block (REQ-DS-07: sidebar stays dark in both themes). */
+/* ---- Dark ----------------------------------------------------------------
+   Not an inversion: the base shifts to warm asphalt and the contrast block
+   flips from ink to bone. --sidebar goes DARKER than light mode (#0E0D0C),
+   it is not held constant. */
 :root[data-theme="dark"] {
-  --bg: #1A1815;
-  --text: #EDE9E3;
-  --topbar: rgba(26, 24, 21, 0.85);
-  --border: #33302B;
-  --border-2: #3B372F;
-  --card: #232019;
-  --card-2: #26221B;
-  --card-3: #2B2720;
-  --card-4: #2E2A22;
-  --sidebar-bg: #131312;
-  --accent-pink: #E9A6BC;
-  --pink-bg: #3A2630;
-  --pink-strong: #E58AA6;
-  --terracota: #D89A78;
-  --success: #4FB574;
+  --bg: #121110;
+  --panel: #1A1917;
+  --panel-2: #201E1B;
+  --line: #2C2A26;
+  --line-2: #3A3733;
+
+  --ink: #F2EFE9;
   --muted: #B3ACA1;
-  --muted-2: #938C82;
+  --muted-2: #8E877E;
+  --dim: #7C766E;
+
+  --block: #EDE8E0;
+  --block-ink: #17150F;
+  --block-dim: #6F6A62;
+
+  --sidebar: #0E0D0C;
+
+  --rosa: #F0AEC4;
+  --terra: #D89A78;
+  --ok: #5FBF83;
+
+  --sw1: #26241F;
+  --sw2: #302D27;
+
+  --rosa-bg: color-mix(in oklab, var(--rosa) 20%, var(--bg));
+  --rosa-ink: color-mix(in oklab, var(--rosa) 84%, #ffffff);
+  --ok-bg: color-mix(in oklab, var(--ok) 16%, var(--bg));
+  --terra-bg: color-mix(in oklab, var(--terra) 16%, var(--bg));
+  --hover: color-mix(in oklab, var(--rosa) 9%, var(--panel));
+
+  --select-arrow: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'><path d='M1 1.5 6 6.5 11 1.5' stroke='%237C766E' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/></svg>");
 }
 
 /* Tailwind 4 CSS-first theme mapping. `inline` is required (not plain
@@ -48,7 +118,29 @@
    at runtime via the `data-theme` attribute — a static `@theme` would bake
    in only the :root (light) values at build time. */
 @theme inline {
+  /* Canonical */
   --color-bg: var(--bg);
+  --color-panel: var(--panel);
+  --color-panel-2: var(--panel-2);
+  --color-line: var(--line);
+  --color-line-2: var(--line-2);
+  --color-ink: var(--ink);
+  --color-dim: var(--dim);
+  --color-block: var(--block);
+  --color-block-ink: var(--block-ink);
+  --color-block-dim: var(--block-dim);
+  --color-rosa: var(--rosa);
+  --color-rosa-bg: var(--rosa-bg);
+  --color-rosa-ink: var(--rosa-ink);
+  --color-terra: var(--terra);
+  --color-terra-bg: var(--terra-bg);
+  --color-ok: var(--ok);
+  --color-ok-bg: var(--ok-bg);
+  --color-sw1: var(--sw1);
+  --color-sw2: var(--sw2);
+  --color-hover: var(--hover);
+
+  /* Legacy aliases */
   --color-text: var(--text);
   --color-topbar: var(--topbar);
   --color-border: var(--border);
@@ -71,8 +163,116 @@
   --font-mono: var(--font-mono);
 }
 
-body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--font-body), system-ui, sans-serif;
+@layer base {
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-body), system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a {
+    color: var(--terra);
+  }
+  a:hover {
+    color: var(--rosa-ink);
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--line-2);
+    border-radius: 6px;
+    border: 3px solid var(--bg);
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  /* --- Native dropdowns ---------------------------------------------------
+     Every <select> in the app picks up the design treatment here so a plain
+     `<select>` is never unstyled, no matter which screen it lives on. The
+     closed control is fully ours; the popup list is the platform's, but
+     option/optgroup colours are honoured by Chromium and Firefox on
+     Windows/Linux, which is where this app runs.
+
+     Colours live in @layer base so Tailwind utilities (bg-panel, text-ink, …)
+     still win when a caller wants to override them. Only the right padding
+     that reserves room for the chevron is unlayered — see below. */
+  select {
+    appearance: none;
+    -webkit-appearance: none;
+    background-color: var(--panel);
+    background-image: var(--select-arrow);
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 12px 8px;
+    border: 1px solid var(--line-2);
+    border-radius: 6px;
+    color: var(--ink);
+    font-family: var(--font-body), system-ui, sans-serif;
+    font-size: 13.5px;
+    cursor: pointer;
+    transition: border-color 0.15s, background-color 0.15s;
+  }
+  select:hover:not(:disabled) {
+    border-color: var(--rosa);
+  }
+  select:focus-visible {
+    outline: none;
+    border-color: var(--rosa);
+    box-shadow: 0 0 0 2px var(--rosa-bg);
+  }
+  select:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  select[multiple],
+  select[size]:not([size="1"]) {
+    background-image: none;
+    padding-right: 0.75rem;
+  }
+
+  select option {
+    background-color: var(--panel);
+    color: var(--ink);
+    padding: 8px 12px;
+  }
+  select option:checked {
+    background-color: var(--rosa);
+    color: #131312;
+    font-weight: 600;
+  }
+  select option:disabled {
+    color: var(--dim);
+  }
+  select optgroup {
+    background-color: var(--panel-2);
+    color: var(--dim);
+    font-family: var(--font-mono), ui-monospace, monospace;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  @keyframes fadeUp {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}
+
+/* Unlayered on purpose: unlayered declarations outrank every Tailwind layer,
+   including utilities. The chevron sits in the right 2rem of the control, so
+   an inherited `px-3` from an existing call site must NOT win here or the
+   longest option label would run underneath the arrow. */
+select:not([multiple]):not([size]) {
+  padding-right: 2.25rem;
 }

@@ -75,10 +75,16 @@ export async function proxy(request: NextRequest) {
     },
   )
 
-  // Revalidates the JWT and, when near expiry, refreshes it — emitting the
+  // Verifies the JWT and, when near expiry, refreshes it — emitting the
   // Set-Cookie headers captured above. This is the one place that write is
   // legal, which is what keeps the Server Component render from throwing.
-  await supabase.auth.getUser()
+  //
+  // `getClaims()` and NOT `getUser()`: this project signs with an asymmetric
+  // key (ES256), so verification happens locally via WebCrypto against a
+  // cached JWKS instead of a round-trip to the Auth API on EVERY request
+  // (~260ms measured here). Same guarantee — full signature verification —
+  // and it is what the Supabase Next.js proxy example uses.
+  await supabase.auth.getClaims()
 
   return response
 }

@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
 import { useToast } from '@/components/ui/Toast'
 import type { LineaCarrito } from '@/lib/types/ventas'
-import { crearReservaAction } from '../../actions'
+import { crearReservaAction, crearClienteAction } from '../../actions'
 
 interface Cliente { id: string; nombre: string; telefono: string | null }
 
@@ -17,12 +17,20 @@ interface Cliente { id: string; nombre: string; telefono: string | null }
  * se recalcula al vender) + cliente + fecha vencimiento.
  * Reutiliza el endpoint /api/ventas/lookup-item.
  */
-export function NuevaReservaView({ clientes }: { clientes: Cliente[] }) {
+export function NuevaReservaView({ clientes: clientesIniciales }: { clientes: Cliente[] }) {
   const router = useRouter()
   const toast = useToast()
   const [pending, start] = useTransition()
 
+  const [clientes, setClientes] = useState<Cliente[]>(clientesIniciales)
   const [idCliente, setIdCliente] = useState('')
+
+  // Alta rápida de cliente en línea
+  const [creandoCliente, setCreandoCliente] = useState(false)
+  const [guardandoCliente, startCliente] = useTransition()
+  const [nuevoNombre, setNuevoNombre] = useState('')
+  const [nuevoTelefono, setNuevoTelefono] = useState('')
+  const [errorCliente, setErrorCliente] = useState<string | null>(null)
   const [fechaVenc, setFechaVenc] = useState(() => {
     const d = new Date()
     d.setDate(d.getDate() + 3) // default: +3 días
@@ -63,6 +71,26 @@ export function NuevaReservaView({ clientes }: { clientes: Cliente[] }) {
 
   function quitar(qr: string) {
     setItems((xs) => xs.filter((x) => x.qr_code !== qr))
+  }
+
+  function crearCliente() {
+    const nombre = nuevoNombre.trim()
+    if (nombre.length < 2) return setErrorCliente('Nombre muy corto')
+    setErrorCliente(null)
+    startCliente(async () => {
+      const res = await crearClienteAction({
+        nombre,
+        telefono: nuevoTelefono.trim() || null,
+      })
+      if (!res.ok) return setErrorCliente(res.reason)
+      const nuevo: Cliente = { id: res.data!.id, nombre, telefono: nuevoTelefono.trim() || null }
+      setClientes((xs) => [...xs, nuevo].sort((a, b) => a.nombre.localeCompare(b.nombre)))
+      setIdCliente(nuevo.id)
+      setNuevoNombre('')
+      setNuevoTelefono('')
+      setCreandoCliente(false)
+      toast.success('Cliente creado', nombre)
+    })
   }
 
   function submit() {
@@ -158,21 +186,78 @@ export function NuevaReservaView({ clientes }: { clientes: Cliente[] }) {
       <aside className="space-y-4">
         <div className="rounded-lg border border-border bg-card p-4 space-y-4">
           <Field htmlFor="r-cli" label="Cliente (opcional)">
-            <select
-              id="r-cli"
-              value={idCliente}
-              onChange={(e) => setIdCliente(e.target.value)}
-              className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
-            >
-              <option value="">— Mostrador —</option>
-              {clientes.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nombre}
-                  {c.telefono ? ` · ${c.telefono}` : ''}
-                </option>
-              ))}
-            </select>
+            <div className="flex gap-2">
+              <select
+                id="r-cli"
+                value={idCliente}
+                onChange={(e) => setIdCliente(e.target.value)}
+                className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
+              >
+                <option value="">— Mostrador —</option>
+                {clientes.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.nombre}
+                    {c.telefono ? ` · ${c.telefono}` : ''}
+                  </option>
+                ))}
+              </select>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  setCreandoCliente((v) => !v)
+                  setErrorCliente(null)
+                }}
+                aria-expanded={creandoCliente}
+              >
+                {creandoCliente ? 'Cerrar' : '+ Nuevo'}
+              </Button>
+            </div>
           </Field>
+
+          {creandoCliente && (
+            <div className="rounded-md border border-border bg-card-2 p-3 space-y-3">
+              <Field htmlFor="r-nc-nombre" label="Nombre" required error={errorCliente ?? undefined}>
+                <Input
+                  id="r-nc-nombre"
+                  autoFocus
+                  value={nuevoNombre}
+                  onChange={(e) => setNuevoNombre(e.target.value)}
+                  placeholder="Nombre y apellido"
+                  invalid={!!errorCliente}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      crearCliente()
+                    }
+                  }}
+                />
+              </Field>
+              <Field htmlFor="r-nc-tel" label="Teléfono" hint="Se usa para link WhatsApp">
+                <Input
+                  id="r-nc-tel"
+                  value={nuevoTelefono}
+                  onChange={(e) => setNuevoTelefono(e.target.value)}
+                  placeholder="+54 9 11 ..."
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      crearCliente()
+                    }
+                  }}
+                />
+              </Field>
+              <Button
+                type="button"
+                size="sm"
+                className="w-full"
+                onClick={crearCliente}
+                disabled={guardandoCliente || nuevoNombre.trim().length < 2}
+              >
+                {guardandoCliente ? 'Creando…' : 'Crear y seleccionar'}
+              </Button>
+            </div>
+          )}
           <Field htmlFor="r-fv" label="Vence" required>
             <Input
               id="r-fv"

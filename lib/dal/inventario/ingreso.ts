@@ -39,6 +39,9 @@ export async function listIngresosConResumen(opts?: {
     `,
       { count: 'exact' },
     )
+    // Los cancelados se borran de verdad (00039); este filtro oculta cualquier
+    // registro viejo que todavía tenga cancelado_at.
+    .is('cancelado_at', null)
     .order('fecha', { ascending: false })
     .range(from, from + pageSize - 1)
   if (error) throw new Error(`listIngresosConResumen: ${error.message}`)
@@ -120,6 +123,31 @@ export async function createIngresoBorrador(input: {
   return (data as { id_ingreso: string }).id_ingreso
 }
 
+/**
+ * ¿Ya existe un ingreso con este número de remito para el mismo proveedor?
+ * Espeja el índice único parcial (00038): el remito es opcional y puede
+ * repetirse entre proveedores distintos, pero no dentro del mismo. Los
+ * ingresos sin proveedor se agrupan entre sí (id_proveedor null). Sirve para
+ * dar un mensaje claro antes de insertar; el índice queda como backstop
+ * anti-carrera.
+ */
+export async function remitoDuplicado(input: {
+  idProveedor: string | null
+  numeroRemito: string
+}): Promise<boolean> {
+  const supabase = await createServerClient()
+  let query = supabase
+    .from('ingreso_mercaderia')
+    .select('id_ingreso', { count: 'exact', head: true })
+    .eq('numero_remito', input.numeroRemito)
+  query = input.idProveedor
+    ? query.eq('id_proveedor', input.idProveedor)
+    : query.is('id_proveedor', null)
+  const { count, error } = await query
+  if (error) throw new Error(`remitoDuplicado: ${error.message}`)
+  return (count ?? 0) > 0
+}
+
 export async function addIngresoDetalle(input: {
   tenantId: string
   idIngreso: string
@@ -199,15 +227,23 @@ export async function spImportarRemito(input: {
 export async function spCancelarIngreso(input: {
   idIngreso: string
   motivo?: string | null
-}): Promise<{ modo: 'borrador' | 'confirmado'; items_baja: number }> {
+}): Promise<{ modo: 'borrador' | 'confirmado'; items_baja: number; productos_eliminados: number }> {
   const supabase = await createServerClient()
   const { data, error } = await supabase.rpc('sp_cancelar_ingreso', {
     p_id_ingreso: input.idIngreso,
     p_motivo: input.motivo ?? null,
   })
   if (error) throw new Error(`sp_cancelar_ingreso: ${error.message}`)
-  const r = (data ?? {}) as { modo?: 'borrador' | 'confirmado'; items_baja?: number }
-  return { modo: r.modo ?? 'confirmado', items_baja: r.items_baja ?? 0 }
+  const r = (data ?? {}) as {
+    modo?: 'borrador' | 'confirmado'
+    items_baja?: number
+    productos_eliminados?: number
+  }
+  return {
+    modo: r.modo ?? 'confirmado',
+    items_baja: r.items_baja ?? 0,
+    productos_eliminados: r.productos_eliminados ?? 0,
+  }
 }
 
 export async function removeIngresoDetalle(idDetalle: string): Promise<void> {

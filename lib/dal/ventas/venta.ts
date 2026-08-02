@@ -8,8 +8,15 @@ import type {
 } from '@/lib/types/ventas'
 
 export async function listVentas(opts?: {
+  /** Instante inicial INCLUSIVO (ISO). Usar `inicioDelDia()` de `lib/fechas`. */
   desde?: string
-  hasta?: string
+  /**
+   * Instante final EXCLUSIVO (ISO). Exclusivo a propósito: `fecha` es
+   * `timestamptz` (00021), así que un tope inclusivo con un día sin hora
+   * (`<= '2026-08-31'`) se resuelve como `<= 2026-08-31T00:00:00` y deja
+   * afuera TODAS las ventas de ese día. Usar `inicioDelDiaSiguiente()`.
+   */
+  hastaExclusivo?: string
   limit?: number
 }): Promise<Array<VentaRow & { cliente: { id_cliente: string; nombre: string } | null; lineas_count: number }>> {
   const supabase = await createServerClient()
@@ -23,7 +30,7 @@ export async function listVentas(opts?: {
     .order('fecha', { ascending: false })
     .limit(opts?.limit ?? 100)
   if (opts?.desde) q = q.gte('fecha', opts.desde)
-  if (opts?.hasta) q = q.lte('fecha', opts.hasta)
+  if (opts?.hastaExclusivo) q = q.lt('fecha', opts.hastaExclusivo)
   const { data, error } = await q
   if (error) throw new Error(`listVentas: ${error.message}`)
   return ((data ?? []) as unknown as Array<

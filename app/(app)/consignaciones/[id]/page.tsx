@@ -2,7 +2,10 @@ import { notFound } from 'next/navigation'
 import { Topbar } from '@/components/shell/Topbar'
 import { Badge } from '@/components/ui/Badge'
 import { verifySession } from '@/lib/dal/session'
-import { getConsignacionConDetalle } from '@/lib/dal/consignaciones/consignacion'
+import {
+  getConsignacionConDetalle,
+  listItemsElegiblesConsignacion,
+} from '@/lib/dal/consignaciones/consignacion'
 import {
   ESTADO_CONSIGNACION_LABEL,
   type EstadoConsignacion,
@@ -22,6 +25,13 @@ export default async function ConsignacionDetallePage(props: {
   const cons = await getConsignacionConDetalle(id)
   if (!cons) notFound()
 
+  // Ítems que se pueden apartar en este lote — alimentan el buscador con
+  // sugerencias por nombre/SKU/QR. Solo hace falta con el lote abierto.
+  const itemsElegibles =
+    cons.estado === 'cerrada' || !cons.proveedor
+      ? []
+      : await listItemsElegiblesConsignacion(cons.proveedor.id_proveedor)
+
   return (
     <>
       <Topbar
@@ -33,7 +43,7 @@ export default async function ConsignacionDetallePage(props: {
         }
       />
       <main className="flex-1 p-6">
-        <ConsignacionDetalleView cons={cons} />
+        <ConsignacionDetalleView cons={cons} itemsElegibles={itemsElegibles} />
       </main>
     </>
   )

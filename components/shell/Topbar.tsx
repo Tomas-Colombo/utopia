@@ -1,12 +1,17 @@
 import Link from 'next/link'
 import type { Session } from '@/lib/dal/session'
+import { FechaChip } from './FechaChip'
 
 /**
  * Sticky topbar for the (app) group. Semi-transparent background per
  * design tokens (`--topbar`). Left slot = optional back link + page title
- * (passed in as `title`), right slot = user chip / actions (theme toggle
- * lives in root layout — REQ-DS-06 says it must be reachable from every
- * route).
+ * (passed in as `title`), right slot = actions + the current date (theme
+ * toggle lives in root layout — REQ-DS-06 says it must be reachable from
+ * every route).
+ *
+ * The user identity chip is NOT here: design system v2 moves it to the
+ * bottom-left of the navigation rail (`SidebarClient`). `session` stays on
+ * the props so call sites don't churn and the slot can be used again later.
  *
  * `backHref` renders a "volver" link to the parent section. It uses an
  * explicit href (not `router.back()`) so it always lands on the parent
@@ -21,10 +26,10 @@ interface TopbarProps {
   backLabel?: string
 }
 
-export function Topbar({ title, session, actions, backHref, backLabel }: TopbarProps) {
+export function Topbar({ title, actions, backHref, backLabel }: TopbarProps) {
   return (
     <header
-      className="sticky top-0 z-10 flex items-center justify-between gap-4 border-b border-border bg-topbar px-6 py-3 pl-16 pr-16 backdrop-blur md:pl-6"
+      className="sticky top-0 z-10 flex items-center justify-between gap-4 border-b border-line bg-topbar px-6 py-3 pl-16 pr-24 backdrop-blur md:pl-6"
       aria-label="Barra superior"
     >
       <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -33,7 +38,7 @@ export function Topbar({ title, session, actions, backHref, backLabel }: TopbarP
             href={backHref}
             aria-label={backLabel ?? 'Volver'}
             title={backLabel ?? 'Volver'}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-card-2 hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-panel-2 hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-rosa"
           >
             <svg
               width="18"
@@ -51,13 +56,13 @@ export function Topbar({ title, session, actions, backHref, backLabel }: TopbarP
             </svg>
           </Link>
         )}
-        <h1 className="truncate font-display text-lg text-text">{title}</h1>
+        <h1 className="truncate font-display text-lg uppercase tracking-[-0.01em] text-ink">
+          {title}
+        </h1>
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3.5">
         {actions}
-        <span className="hidden text-xs text-muted md:inline">
-          {session.user.email}
-        </span>
+        <FechaChip />
       </div>
     </header>
   )

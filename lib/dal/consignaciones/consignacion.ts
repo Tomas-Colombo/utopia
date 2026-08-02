@@ -68,6 +68,80 @@ export async function getConsignacionConDetalle(
   return (data ?? null) as unknown as ConsignacionConDetalle | null
 }
 
+/** Unidad elegible para apartar en un lote de consignación (buscador). */
+export interface ItemElegibleConsignacion {
+  id_item: string
+  qr_code: string
+  producto_nombre: string
+  sku: string | null
+  talle: string | null
+}
+
+/**
+ * Unidades que se pueden apartar en un lote del proveedor dado: `disponible`,
+ * `tipo_ingreso='consignacion'` y del proveedor (vía su ingreso). Excluye las
+ * que ya están en una consignación pendiente o en una reserva activa — las
+ * mismas reglas que valida `/api/consignaciones/lookup-item` unidad por unidad.
+ *
+ * Alimenta el buscador con sugerencias por nombre/SKU/QR. Es un snapshot: el
+ * server revalida al apartar (sp_agregar_item_consignacion), así que una lista
+ * un poco desactualizada no compromete la integridad.
+ */
+export async function listItemsElegiblesConsignacion(
+  idProveedor: string,
+): Promise<ItemElegibleConsignacion[]> {
+  const supabase = await createServerClient()
+
+  const { data, error } = await supabase
+    .from('item_producto')
+    .select(
+      'id_item, qr_code, talle, producto:producto(nombre, sku), ingreso:ingreso_mercaderia!inner(id_proveedor)',
+    )
+    .eq('estado_item', 'disponible')
+    .eq('tipo_ingreso', 'consignacion')
+    .eq('ingreso.id_proveedor', idProveedor)
+    .order('fecha_ingreso', { ascending: true })
+    .limit(500)
+  if (error) throw new Error(`listItemsElegiblesConsignacion: ${error.message}`)
+
+  const rows = (data ?? []) as unknown as Array<{
+    id_item: string
+    qr_code: string
+    talle: string | null
+    producto: { nombre: string; sku: string | null } | null
+  }>
+  if (rows.length === 0) return []
+
+  const ids = rows.map((r) => r.id_item)
+  const [{ data: pendientes }, { data: reservados }] = await Promise.all([
+    supabase
+      .from('consignacion_detalle')
+      .select('id_item')
+      .in('id_item', ids)
+      .eq('estado', 'pendiente'),
+    supabase
+      .from('detalle_reserva')
+      .select('id_item')
+      .in('id_item', ids)
+      .eq('estado', 'activa'),
+  ])
+
+  const excluidos = new Set<string>([
+    ...((pendientes ?? []).map((x) => x.id_item as string)),
+    ...((reservados ?? []).map((x) => x.id_item as string)),
+  ])
+
+  return rows
+    .filter((r) => !excluidos.has(r.id_item))
+    .map((r) => ({
+      id_item: r.id_item,
+      qr_code: r.qr_code,
+      producto_nombre: r.producto?.nombre ?? '(sin nombre)',
+      sku: r.producto?.sku ?? null,
+      talle: r.talle,
+    }))
+}
+
 // ─── RPCs ────────────────────────────────────────────────────────────
 
 export async function spCrearConsignacion(input: {

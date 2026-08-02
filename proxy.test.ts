@@ -3,12 +3,13 @@ import { unstable_doesMiddlewareMatch } from 'next/experimental/testing/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { config, proxy } from './proxy'
 
-// The proxy now refreshes the Supabase session (calls `auth.getUser()`).
+// The proxy verifies + refreshes the Supabase session (calls
+// `auth.getClaims()`, which validates the JWT locally against a cached JWKS).
 // Stub the SSR client so tenant-resolution tests stay pure — no network,
 // no real JWT. These tests only assert tenant header behavior.
 vi.mock('@supabase/ssr', () => ({
   createServerClient: () => ({
-    auth: { getUser: vi.fn().mockResolvedValue({ data: { user: null }, error: null }) },
+    auth: { getClaims: vi.fn().mockResolvedValue({ data: null, error: null }) },
   }),
 }))
 

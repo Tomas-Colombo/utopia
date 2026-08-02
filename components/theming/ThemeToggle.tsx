@@ -6,8 +6,14 @@ import { persistThemePreference } from './persistThemePreference'
 /**
  * Global theme switch (REQ-DS-06 — reachable from every route). Fixed to the
  * top-right corner so it floats above whatever route is mounted, including
- * the auth screens that have no Topbar. Shows a moon in light mode (click →
- * dark) and a sun in dark mode (click → light).
+ * the auth screens that have no Topbar.
+ *
+ * Design system v2 renders it as a mono pill labelled with the theme it
+ * switches TO — "OSCURO" while light, "CLARO" while dark. The icon stays as a
+ * non-text cue; the label is what makes the action unambiguous.
+ *
+ * The (app) topbar reserves `pr-24` on its right edge for this pill; widening
+ * the label means widening that reservation too.
  */
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme()
@@ -26,9 +32,10 @@ export function ThemeToggle() {
       onClick={handleClick}
       aria-label={isDark ? 'Activar modo claro' : 'Activar modo oscuro'}
       title={isDark ? 'Modo claro' : 'Modo oscuro'}
-      className="fixed right-3 top-3 z-50 inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-card text-text shadow-sm transition-colors hover:bg-card-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
+      className="fixed right-3 top-3 z-50 inline-flex items-center gap-1.5 rounded-full border border-line-2 bg-panel px-3.5 py-[7px] font-mono text-[10px] uppercase tracking-[0.12em] text-muted shadow-sm transition-colors hover:border-rosa hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-rosa"
     >
       {isDark ? <SunIcon /> : <MoonIcon />}
+      <span>{isDark ? 'Claro' : 'Oscuro'}</span>
     </button>
   )
 }
@@ -36,8 +43,8 @@ export function ThemeToggle() {
 function MoonIcon() {
   return (
     <svg
-      width="18"
-      height="18"
+      width="13"
+      height="13"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -54,8 +61,8 @@ function MoonIcon() {
 function SunIcon() {
   return (
     <svg
-      width="18"
-      height="18"
+      width="13"
+      height="13"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"

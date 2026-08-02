@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState, type ReactNode } from 'react'
 import { logoutAction } from '@/app/(app)/actions'
+import { Logo } from './Logo'
 
 export interface SidebarNavItem {
   href: string
@@ -11,11 +12,17 @@ export interface SidebarNavItem {
   icon: string
 }
 
+export interface SidebarNavGroup {
+  /** Mono, letter-spaced section heading (GENERAL, OPERACIONES, …). */
+  label: string
+  items: SidebarNavItem[]
+}
+
 const STORAGE_KEY = 'utopia-sidebar-collapsed'
 
 /**
  * Presentational shell of the primary navigation. Receives the ALREADY
- * permission-filtered nav items from the server `Sidebar` — it never imports
+ * permission-filtered nav groups from the server `Sidebar` — it never imports
  * the guard (which pulls `next/headers`) so this stays a clean client
  * component.
  *
@@ -25,11 +32,11 @@ const STORAGE_KEY = 'utopia-sidebar-collapsed'
  *     since the rail is hidden on small screens.
  */
 export function SidebarClient({
-  items,
+  groups,
   email,
   rolNombre,
 }: {
-  items: SidebarNavItem[]
+  groups: SidebarNavGroup[]
   email: string
   rolNombre: string | null
 }) {
@@ -75,34 +82,30 @@ export function SidebarClient({
     <>
       {/* Desktop rail */}
       <aside
-        className={`hidden md:flex md:shrink-0 md:flex-col md:sticky md:top-0 h-screen bg-sidebar text-[color:var(--card)] transition-[width] duration-200 ${
-          collapsed ? 'md:w-16' : 'md:w-60'
+        className={`hidden h-screen bg-sidebar text-[#8b8681] transition-[width] duration-200 md:sticky md:top-0 md:flex md:shrink-0 md:flex-col ${
+          collapsed ? 'md:w-[72px]' : 'md:w-[252px]'
         }`}
         aria-label="Navegación principal"
       >
         <div
-          className={`flex items-center gap-2 border-b border-white/10 py-6 ${
-            collapsed ? 'justify-center px-2' : 'px-6'
+          className={`flex items-center gap-2 px-5 pb-5 pt-[22px] ${
+            collapsed ? 'flex-col justify-center px-2' : ''
           }`}
         >
-          {!collapsed && (
-            <span className="flex-1 font-display text-xl tracking-tight" aria-label="Utopia">
-              UTOPIA
-            </span>
-          )}
+          <Logo compact={collapsed} />
           <button
             type="button"
             onClick={toggleCollapsed}
             aria-label={collapsed ? 'Expandir barra lateral' : 'Minimizar barra lateral'}
             aria-expanded={!collapsed}
             title={collapsed ? 'Expandir' : 'Minimizar'}
-            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-white/70 hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
+            className="ml-auto inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[#6f6c67] transition-colors hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-rosa md:ml-auto"
           >
             <ChevronIcon direction={collapsed ? 'right' : 'left'} />
           </button>
         </div>
         <NavContent
-          items={items}
+          groups={groups}
           pathname={pathname}
           collapsed={collapsed}
           email={email}
@@ -117,7 +120,7 @@ export function SidebarClient({
         aria-label="Abrir menú"
         aria-expanded={mobileOpen}
         aria-controls="mobile-nav-drawer"
-        className="fixed left-3 top-3 z-40 inline-flex h-9 w-9 items-center justify-center rounded-md border border-border bg-card text-text shadow-sm hover:bg-card-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink md:hidden"
+        className="fixed left-3 top-3 z-40 inline-flex h-9 w-9 items-center justify-center rounded-md border border-line-2 bg-panel text-ink shadow-sm hover:bg-panel-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-rosa md:hidden"
       >
         <MenuIcon />
       </button>
@@ -136,23 +139,21 @@ export function SidebarClient({
             role="dialog"
             aria-modal="true"
             aria-label="Navegación"
-            className="absolute inset-y-0 left-0 flex w-64 max-w-[80%] flex-col bg-sidebar text-[color:var(--card)] shadow-xl"
+            className="absolute inset-y-0 left-0 flex w-[252px] max-w-[80%] flex-col bg-sidebar text-[#8b8681] shadow-xl"
           >
-            <div className="flex items-center gap-2 border-b border-white/10 px-6 py-6">
-              <span className="flex-1 font-display text-xl tracking-tight" aria-label="Utopia">
-                UTOPIA
-              </span>
+            <div className="flex items-center gap-2 px-5 pb-5 pt-[22px]">
+              <Logo />
               <button
                 type="button"
                 onClick={() => setMobileOpen(false)}
                 aria-label="Cerrar menú"
-                className="inline-flex h-8 w-8 items-center justify-center rounded-md text-white/70 hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
+                className="ml-auto inline-flex h-8 w-8 items-center justify-center rounded-md text-[#6f6c67] transition-colors hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-rosa"
               >
                 <CloseIcon />
               </button>
             </div>
             <NavContent
-              items={items}
+              groups={groups}
               pathname={pathname}
               collapsed={false}
               email={email}
@@ -166,68 +167,99 @@ export function SidebarClient({
   )
 }
 
-/** Shared nav list + footer (email/rol + logout), used by both surfaces. */
+/** Shared nav list + footer (user chip + logout), used by both surfaces. */
 function NavContent({
-  items,
+  groups,
   pathname,
   collapsed,
   email,
   rolNombre,
   onNavigate,
 }: {
-  items: SidebarNavItem[]
+  groups: SidebarNavGroup[]
   pathname: string
   collapsed: boolean
   email: string
   rolNombre: string | null
   onNavigate?: () => void
 }) {
+  const isEmpty = groups.every((group) => group.items.length === 0)
+
   return (
     <>
-      <nav className="flex-1 min-h-0 overflow-y-auto px-2 py-4">
-        <ul className="flex flex-col gap-1">
-          {items.map((item) => {
-            const active =
-              pathname === item.href || pathname.startsWith(`${item.href}/`)
-            return (
-              <li key={item.href}>
-                <Link
-                  href={item.href}
-                  onClick={onNavigate}
-                  title={collapsed ? item.label : undefined}
-                  aria-label={item.label}
-                  className={`flex items-center gap-3 rounded-md py-2 text-sm font-medium hover:bg-white/5 focus:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink ${
-                    active ? 'bg-white/10' : ''
-                  } ${collapsed ? 'justify-center px-0' : 'px-3'}`}
-                >
-                  <span className="shrink-0" aria-hidden>
-                    <NavIcon name={item.icon} />
-                  </span>
-                  {!collapsed && <span className="truncate">{item.label}</span>}
-                </Link>
-              </li>
-            )
-          })}
-          {items.length === 0 && !collapsed && (
-            <li className="px-3 py-2 text-xs text-white/60">Sin módulos habilitados</li>
-          )}
-        </ul>
+      <nav className="min-h-0 flex-1 overflow-y-auto px-3 pb-4 pt-0.5">
+        {groups.map((group) => (
+          <div key={group.label}>
+            {collapsed ? (
+              // A letter-spaced heading is unreadable at 72px, so the collapsed
+              // rail keeps the grouping as a hairline rule instead of dropping it.
+              <div className="mx-2 my-3 h-px bg-white/10" aria-hidden />
+            ) : (
+              <div className="px-3 pb-[7px] pt-4 font-mono text-[9.5px] tracking-[0.2em] text-[#5c5a56]">
+                {group.label}
+              </div>
+            )}
+            <ul className="flex flex-col gap-0.5">
+              {group.items.map((item) => {
+                const active =
+                  pathname === item.href || pathname.startsWith(`${item.href}/`)
+                return (
+                  <li key={item.href}>
+                    <Link
+                      href={item.href}
+                      onClick={onNavigate}
+                      aria-current={active ? 'page' : undefined}
+                      title={collapsed ? item.label : undefined}
+                      aria-label={item.label}
+                      className={`flex items-center gap-[11px] rounded-md py-2.5 text-[13.5px] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-rosa ${
+                        active
+                          ? 'bg-rosa font-semibold text-[#131312]'
+                          : 'font-medium text-[#8b8681] hover:bg-white/5 hover:text-[#e8e3db]'
+                      } ${collapsed ? 'justify-center px-0' : 'px-[13px]'}`}
+                    >
+                      <span className="shrink-0" aria-hidden>
+                        <NavIcon name={item.icon} />
+                      </span>
+                      {!collapsed && <span className="truncate">{item.label}</span>}
+                    </Link>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+        ))}
+        {isEmpty && !collapsed && (
+          <p className="px-3 py-2 text-xs text-[#6f6c67]">Sin módulos habilitados</p>
+        )}
       </nav>
 
-      <div className="border-t border-white/10 px-2 py-4 text-xs">
-        {!collapsed && (
-          <div className="space-y-1 px-3 py-2">
-            <div className="truncate text-white/80">{email}</div>
-            <div className="text-white/50">{rolNombre ?? 'Sin rol asignado'}</div>
-          </div>
-        )}
+      <div className="border-t border-[#262523] px-3 py-3.5">
+        <div className={`flex items-center gap-[11px] ${collapsed ? 'justify-center' : ''}`}>
+          <span
+            aria-hidden
+            className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full font-display text-[13px] text-[#131312]"
+            style={{ background: 'linear-gradient(135deg,#E9A6BC,#c97e97)' }}
+          >
+            {initialOf(email)}
+          </span>
+          {!collapsed && (
+            <span className="min-w-0 leading-[1.25]">
+              <span className="block truncate text-[12.5px] font-semibold text-[#efeae2]">
+                {email}
+              </span>
+              <span className="block truncate font-mono text-[9.5px] uppercase text-[#6f6c67]">
+                {rolNombre ?? 'Sin rol asignado'}
+              </span>
+            </span>
+          )}
+        </div>
         <form action={logoutAction}>
           <button
             type="submit"
             title={collapsed ? 'Cerrar sesión' : undefined}
             aria-label="Cerrar sesión"
-            className={`mt-1 flex w-full items-center gap-3 rounded-md py-2 text-sm font-medium text-white/80 hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink ${
-              collapsed ? 'justify-center px-0' : 'px-3'
+            className={`mt-2.5 flex w-full items-center gap-[11px] rounded-md py-2 text-[13px] font-medium text-[#8b8681] transition-colors hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-rosa ${
+              collapsed ? 'justify-center px-0' : 'px-[13px]'
             }`}
           >
             <span className="shrink-0" aria-hidden>
@@ -239,6 +271,11 @@ function NavContent({
       </div>
     </>
   )
+}
+
+/** First letter of the local part of the email, uppercased. */
+function initialOf(email: string): string {
+  return (email.trim()[0] ?? '?').toUpperCase()
 }
 
 // ─── Icons (inline SVG, no external dependency) ──────────────────────
@@ -269,7 +306,7 @@ function ChevronIcon({ direction }: { direction: 'left' | 'right' }) {
 
 function LogoutIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
       <path d="M16 17l5-5-5-5" />
       <path d="M21 12H9" />
@@ -344,7 +381,7 @@ const NAV_ICONS: Record<string, ReactNode> = {
 
 function NavIcon({ name }: { name: string }) {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       {NAV_ICONS[name] ?? null}
     </svg>
   )

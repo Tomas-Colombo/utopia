@@ -90,6 +90,17 @@ export interface DesgloseItem {
 }
 
 /**
+ * Contadores del home de Precios. Se resuelven con una agregación
+ * (`sp_precios_resumen`) en vez de traer el catálogo entero.
+ */
+export interface PreciosResumen {
+  productosActivos: number
+  desactualizados: number
+  sinPrecio: number
+  conRegla: number
+}
+
+/**
  * Estado del producto respecto a su precio (Control de precios).
  */
 export interface ProductoConPrecioStatus {

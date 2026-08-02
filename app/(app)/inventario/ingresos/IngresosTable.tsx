@@ -52,16 +52,16 @@ export function IngresosTable({
     start(async () => {
       const res = await cancelarIngresoAction({ idIngreso: row.id_ingreso })
       if (!res.ok) return toast.error('No se pudo cancelar', explicar(res.reason))
+      // Cancelar borra el ingreso de verdad: sale de la lista en ambos casos.
+      setRows((rs) => rs.filter((r) => r.id_ingreso !== row.id_ingreso))
       if (res.data?.modo === 'borrador') {
-        setRows((rs) => rs.filter((r) => r.id_ingreso !== row.id_ingreso))
         toast.success('Borrador eliminado')
       } else {
-        setRows((rs) =>
-          rs.map((r) =>
-            r.id_ingreso === row.id_ingreso ? { ...r, cancelado_at: new Date().toISOString() } : r,
-          ),
-        )
-        toast.success('Ingreso cancelado', `${res.data?.itemsBaja ?? 0} ítem(s) dados de baja`)
+        const partes = [`${res.data?.itemsBaja ?? 0} ítem(s)`]
+        if ((res.data?.productosEliminados ?? 0) > 0) {
+          partes.push(`${res.data!.productosEliminados} producto(s) nuevo(s)`)
+        }
+        toast.success('Ingreso cancelado', `Se eliminaron ${partes.join(' y ')} del inventario`)
       }
       router.refresh()
     })
@@ -166,7 +166,7 @@ export function IngresosTable({
         title={target?.confirmado ? 'Cancelar ingreso' : 'Eliminar borrador'}
         description={
           target?.confirmado
-            ? 'Esto da de baja TODOS los ítems de este ingreso y lo marca como cancelado. Solo funciona si ningún ítem se vendió, reservó o apartó. No se puede deshacer.'
+            ? 'Esto ELIMINA del inventario los ítems y los productos que se crearon en este ingreso, y borra el ingreso de la lista. Solo funciona si ningún ítem se vendió, reservó o apartó. No se puede deshacer.'
             : 'Se elimina este borrador y sus líneas. No genera stock, así que no afecta al inventario.'
         }
         confirmLabel={target?.confirmado ? 'Cancelar ingreso' : 'Eliminar'}

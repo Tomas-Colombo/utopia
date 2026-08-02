@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
@@ -21,11 +21,30 @@ const TIPO_VARIANT: Record<TipoRegla, 'success' | 'info' | 'warning'> = {
   recargo: 'warning',
 }
 
+type OrdenPrioridad = 'desc' | 'asc'
+
+/**
+ * Ordena por prioridad según la dirección elegida. Desempate estable por
+ * updated_at DESC (la más reciente primero), igual que el motor de precios.
+ */
+function ordenarPorPrioridad(
+  grupo: ReglaPrecioRow[],
+  orden: OrdenPrioridad,
+): ReglaPrecioRow[] {
+  return [...grupo].sort((a, b) => {
+    if (a.prioridad !== b.prioridad) {
+      return orden === 'desc' ? b.prioridad - a.prioridad : a.prioridad - b.prioridad
+    }
+    return b.updated_at.localeCompare(a.updated_at)
+  })
+}
+
 export function ReglasView({ initial }: { initial: ReglaPrecioRow[] }) {
   const router = useRouter()
   const toast = useToast()
   const [rows, setRows] = useState(initial)
   const [confirm, setConfirm] = useState<ReglaPrecioRow | null>(null)
+  const [orden, setOrden] = useState<OrdenPrioridad>('desc')
   const [pending, start] = useTransition()
 
   function ejecutarBaja() {
@@ -54,7 +73,7 @@ export function ReglasView({ initial }: { initial: ReglaPrecioRow[] }) {
     return `${desde} → ${hasta}`
   }
 
-  const grupos = groupBy(rows, (r) => r.tipo_regla)
+  const grupos = useMemo(() => groupBy(rows, (r) => r.tipo_regla), [rows])
 
   return (
     <div className="space-y-6">
@@ -67,9 +86,30 @@ export function ReglasView({ initial }: { initial: ReglaPrecioRow[] }) {
         </div>
       )}
 
+      {rows.length > 0 && (
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-muted">
+            Ordenadas por prioridad dentro de cada tipo. La primera de cada grupo es la de
+            mayor prioridad — la que gana ante reglas del mismo alcance.
+          </p>
+          <label className="flex items-center gap-2 text-sm">
+            <span className="text-muted">Prioridad</span>
+            <select
+              value={orden}
+              onChange={(e) => setOrden(e.target.value as OrdenPrioridad)}
+              className="rounded-md border border-border bg-card px-3 py-2 text-sm text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
+            >
+              <option value="desc">Mayor a menor</option>
+              <option value="asc">Menor a mayor</option>
+            </select>
+          </label>
+        </div>
+      )}
+
       {(['margen', 'descuento', 'recargo'] as TipoRegla[]).map((tipo) => {
         const grupo = grupos.get(tipo) ?? []
         if (grupo.length === 0) return null
+        const ordenado = ordenarPorPrioridad(grupo, orden)
         return (
           <section key={tipo}>
             <div className="mb-3 flex items-center gap-2">
@@ -79,7 +119,16 @@ export function ReglasView({ initial }: { initial: ReglaPrecioRow[] }) {
               </span>
             </div>
             <div className="rounded-lg border border-border bg-card overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full min-w-[900px] table-fixed text-sm">
+                <colgroup>
+                  <col className="w-[24%]" />
+                  <col className="w-[13%]" />
+                  <col className="w-[13%]" />
+                  <col className="w-[12%]" />
+                  <col className="w-[11%]" />
+                  <col className="w-[16%]" />
+                  <col className="w-[11%]" />
+                </colgroup>
                 <thead>
                   <tr className="border-b border-border text-left">
                     <th className="px-4 py-3">Nombre</th>
@@ -92,9 +141,13 @@ export function ReglasView({ initial }: { initial: ReglaPrecioRow[] }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {grupo.map((r) => (
+                  {ordenado.map((r) => (
                     <tr key={r.id_regla} className="border-b border-border-2">
-                      <td className="px-4 py-3">{r.nombre}</td>
+                      <td className="px-4 py-3">
+                        <div className="truncate" title={r.nombre}>
+                          {r.nombre}
+                        </div>
+                      </td>
                       <td className="px-4 py-3">{ALCANCE_LABEL[r.alcance]}</td>
                       <td className="px-4 py-3">
                         {r.forma_pago ? FORMA_PAGO_LABEL[r.forma_pago] : <span className="text-muted-2">—</span>}

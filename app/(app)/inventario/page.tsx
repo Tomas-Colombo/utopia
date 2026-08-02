@@ -6,6 +6,7 @@ import { verifySession } from '@/lib/dal/session'
 import {
   getInventarioResumen,
   listProductosConDetallePaginado,
+  listProductosParaBuscador,
   PRODUCTOS_PAGE_SIZE,
 } from '@/lib/dal/inventario/producto'
 import { countProveedoresActivos } from '@/lib/dal/inventario/proveedor'
@@ -28,7 +29,7 @@ export default async function InventarioHome(props: {
   const searchParams = await props.searchParams
   const page = Math.max(1, Number.parseInt(searchParams.page ?? '1', 10) || 1)
 
-  const [{ rows: productosPagina, total }, resumen, proveedoresActivos, categorias, alertasRepo, alertasRot] =
+  const [{ rows: productosPagina, total }, catalogoBuscador, resumen, proveedoresActivos, categorias, alertasRepo, alertasRot] =
     await Promise.all([
       listProductosConDetallePaginado({
         search: searchParams.q,
@@ -36,6 +37,7 @@ export default async function InventarioHome(props: {
         page,
         pageSize: PRODUCTOS_PAGE_SIZE,
       }),
+      listProductosParaBuscador(),
       getInventarioResumen(),
       countProveedoresActivos(),
       listCategoriasActivas(),
@@ -154,6 +156,7 @@ export default async function InventarioHome(props: {
           <h3 className="font-display text-lg">Productos</h3>
           <ProductosTableClient
             rows={productosPagina}
+            catalogo={catalogoBuscador}
             categorias={categorias}
             initialSearch={searchParams.q ?? ''}
             initialCategoria={searchParams.cat ?? ''}

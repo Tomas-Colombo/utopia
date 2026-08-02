@@ -18,6 +18,9 @@ import type { LineaCarrito } from '@/lib/types/ventas'
  *     `REM-0007-M`). El QR resuelve la unidad exacta; el SKU elige una
  *     unidad disponible (FIFO) del producto/talle, saltando las reservadas.
  *   - `qr` (legacy): sólo QR exacto (lo usa el refresco de precios).
+ *   - `id_producto` (+ `talle` opcional): búsqueda por nombre desde la UI
+ *     (venta sin lector QR). Elige una unidad disponible del producto; si la
+ *     categoría usa talles y hay varios con stock, responde `elegir-talle`.
  *
  * READ ONLY — NO reserva el item ni cambia estado. La transacción real
  * ocurre al confirmar la venta con sp_registrar_venta.
@@ -26,7 +29,8 @@ import type { LineaCarrito } from '@/lib/types/ventas'
  *   200 { ok:true, linea: LineaCarrito }
  *   200 { ok:false, reason: 'item-not-found'|'item-no-disponible'|
  *          'item-en-reserva'|'sin-precio-lista'|'sku-sin-stock'|
- *          'sku-sin-stock-libre' }
+ *          'sku-sin-stock-libre'|'elegir-talle' }
+ *   200 { ok:false, reason:'elegir-talle', talles: string[] }
  *   401 unauthorized
  */
 export async function GET(req: NextRequest) {
@@ -44,10 +48,13 @@ export async function GET(req: NextRequest) {
   const code = params.get('code')?.trim()
   const qrLegacy = params.get('qr')?.trim()
   const input = code || qrLegacy
+  const idProductoParam = params.get('id_producto')?.trim()
+  const talleParam = params.get('talle')?.trim() || null
   const formaPago = (params.get('forma_pago') as FormaPago | null) ?? 'efectivo'
   const idReservaCtx = params.get('id_reserva')?.trim() ?? null
 
-  if (!input) return NextResponse.json({ ok: false, reason: 'qr-vacio' }, { status: 400 })
+  if (!input && !idProductoParam)
+    return NextResponse.json({ ok: false, reason: 'qr-vacio' }, { status: 400 })
 
   const supabase = await createServerClient()
 
@@ -65,50 +72,90 @@ export async function GET(req: NextRequest) {
   let item: ItemProductoRow | null = null
   let advertencia: string | null = null
 
-  // 1) QR exacto.
-  const porQr = await findItemByQr(input)
-  if (porQr) {
-    if (porQr.estado_item !== 'disponible') {
-      return NextResponse.json({
-        ok: false,
-        reason: 'item-no-disponible',
-        estado: porQr.estado_item,
-      })
-    }
-    const rid = await reservaActiva(porQr.id_item)
-    if (rid) {
-      if (idReservaCtx && rid === idReservaCtx) advertencia = 'Item de esta reserva'
-      else return NextResponse.json({ ok: false, reason: 'item-en-reserva', id_reserva: rid })
-    }
-    item = porQr
-  } else if (code) {
-    // 2) SKU con talle opcional (sólo por `code`; el path `qr` legacy es estricto).
-    const upper = input.toUpperCase()
-    const m = upper.match(/^([A-Z]+-\d+)(?:-(.+))?$/)
-    const baseSku = m?.[1] ?? upper
-    const talle = m?.[2] ?? null
+  if (input) {
+    // 1) QR exacto.
+    const porQr = await findItemByQr(input)
+    if (porQr) {
+      if (porQr.estado_item !== 'disponible') {
+        return NextResponse.json({
+          ok: false,
+          reason: 'item-no-disponible',
+          estado: porQr.estado_item,
+        })
+      }
+      const rid = await reservaActiva(porQr.id_item)
+      if (rid) {
+        if (idReservaCtx && rid === idReservaCtx) advertencia = 'Item de esta reserva'
+        else return NextResponse.json({ ok: false, reason: 'item-en-reserva', id_reserva: rid })
+      }
+      item = porQr
+    } else if (code) {
+      // 2) SKU con talle opcional (sólo por `code`; el path `qr` legacy es estricto).
+      const upper = input.toUpperCase()
+      const m = upper.match(/^([A-Z]+-\d+)(?:-(.+))?$/)
+      const baseSku = m?.[1] ?? upper
+      const talle = m?.[2] ?? null
 
-    const producto = await findProductoBySku(baseSku)
-    if (!producto) return NextResponse.json({ ok: false, reason: 'item-not-found' })
+      const producto = await findProductoBySku(baseSku)
+      if (!producto) return NextResponse.json({ ok: false, reason: 'item-not-found' })
 
-    const candidatos = await listItemsDisponibles(producto.id_producto, talle)
+      const candidatos = await listItemsDisponibles(producto.id_producto, talle)
+      for (const c of candidatos) {
+        const rid = await reservaActiva(c.id_item)
+        if (!rid) { item = c; break }
+        if (idReservaCtx && rid === idReservaCtx) {
+          item = c
+          advertencia = 'Item de esta reserva'
+          break
+        }
+      }
+      if (!item) {
+        return NextResponse.json({
+          ok: false,
+          reason: candidatos.length > 0 ? 'sku-sin-stock-libre' : 'sku-sin-stock',
+          sku: baseSku,
+          talle,
+        })
+      }
+    } else {
+      return NextResponse.json({ ok: false, reason: 'item-not-found' })
+    }
+  } else if (idProductoParam) {
+    // 3) Búsqueda por producto (venta sin lector QR): elige una unidad
+    //    disponible del producto. Si la categoría usa talles y hay más de uno
+    //    con stock libre, pide desambiguar (reason: 'elegir-talle').
+    const { data: prod } = await supabase
+      .from('producto')
+      .select('id_producto, categoria:categoria(talles)')
+      .eq('id_producto', idProductoParam)
+      .maybeSingle<{ id_producto: string; categoria: { talles: string[] } | null }>()
+    if (!prod) return NextResponse.json({ ok: false, reason: 'item-not-found' })
+    const usaTalles = (prod.categoria?.talles?.length ?? 0) > 0
+
+    const candidatos = await listItemsDisponibles(idProductoParam, talleParam)
+    const usables: { c: ItemProductoRow; adv: string | null }[] = []
     for (const c of candidatos) {
       const rid = await reservaActiva(c.id_item)
-      if (!rid) { item = c; break }
-      if (idReservaCtx && rid === idReservaCtx) {
-        item = c
-        advertencia = 'Item de esta reserva'
-        break
-      }
+      if (!rid) usables.push({ c, adv: null })
+      else if (idReservaCtx && rid === idReservaCtx) usables.push({ c, adv: 'Item de esta reserva' })
     }
-    if (!item) {
+    if (usables.length === 0) {
       return NextResponse.json({
         ok: false,
         reason: candidatos.length > 0 ? 'sku-sin-stock-libre' : 'sku-sin-stock',
-        sku: baseSku,
-        talle,
+        talle: talleParam,
       })
     }
+    if (usaTalles && !talleParam) {
+      const talles = [
+        ...new Set(usables.map((u) => u.c.talle).filter((t): t is string => !!t)),
+      ].sort()
+      if (talles.length > 1) {
+        return NextResponse.json({ ok: false, reason: 'elegir-talle', talles })
+      }
+    }
+    item = usables[0].c
+    advertencia = usables[0].adv
   } else {
     return NextResponse.json({ ok: false, reason: 'item-not-found' })
   }

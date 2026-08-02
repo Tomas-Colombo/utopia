@@ -4,25 +4,58 @@ import { Button } from '@/components/ui/Button'
 import { verifySession } from '@/lib/dal/session'
 import { listVentas } from '@/lib/dal/ventas/venta'
 import { listReservas } from '@/lib/dal/reservas/reserva'
+import {
+  esFechaValida,
+  inicioDelDia,
+  inicioDelDiaSiguiente,
+  mesActual,
+} from '@/lib/fechas'
+import { VentasFiltros } from './VentasFiltros'
 
-export default async function VentasHome() {
+/**
+ * Home del módulo Ventas: punto de entrada del vendedor al iniciar sesión.
+ *
+ * El listado se filtra por período vía URL (`?desde=&hasta=`, días calendario
+ * inclusivos). Sin params, muestra el MES EN CURSO — es lo que un vendedor
+ * quiere ver al entrar, y además acota la query en vez de traer las últimas
+ * 500 ventas de toda la historia.
+ *
+ * Los KPIs siguen al filtro (no son fijos de "hoy"): un contador que ignora el
+ * período activo confunde más de lo que informa. `Reservas activas` es la
+ * excepción — no depende del rango, son las que están vivas ahora.
+ */
+export default async function VentasHome(props: {
+  searchParams: Promise<{ desde?: string; hasta?: string }>
+}) {
   const session = await verifySession()
+  const searchParams = await props.searchParams
+
+  // Params inválidos o incompletos → mes en curso. Nunca reventar por una URL
+  // tipeada a mano.
+  const porDefecto = mesActual()
+  const desde = esFechaValida(searchParams.desde) ? searchParams.desde : porDefecto.desde
+  const hastaCrudo = esFechaValida(searchParams.hasta) ? searchParams.hasta : porDefecto.hasta
+  const hasta = hastaCrudo < desde ? desde : hastaCrudo
+
   const [ventas, reservasActivas] = await Promise.all([
-    listVentas({ limit: 500 }),
+    listVentas({
+      desde: inicioDelDia(desde),
+      hastaExclusivo: inicioDelDiaSiguiente(hasta),
+      limit: 500,
+    }),
     listReservas({ estado: 'activa' }),
   ])
 
-  const hoy = new Date()
-  hoy.setHours(0, 0, 0, 0)
-  const ventasHoy = ventas.filter(
-    (v) => v.estado_venta === 'registrada' && new Date(v.fecha) >= hoy,
-  )
-  const totalHoy = ventasHoy.reduce((a, v) => a + Number(v.total), 0)
+  const registradas = ventas.filter((v) => v.estado_venta === 'registrada')
+  const facturado = registradas.reduce((a, v) => a + Number(v.total), 0)
+  const anuladas = ventas.length - registradas.length
 
   const proximasVencer = reservasActivas.filter((r) => {
     const d = new Date(r.fecha_vencimiento).getTime() - Date.now()
     return d > 0 && d < 1000 * 60 * 60 * 48 // < 48h
   }).length
+
+  const fmtDia = (f: string) => new Date(`${f}T12:00:00`).toLocaleDateString('es-AR')
 
   return (
     <>
@@ -36,11 +69,13 @@ export default async function VentasHome() {
         }
       />
       <main className="flex-1 p-6 space-y-6">
+        <VentasFiltros desde={desde} hasta={hasta} />
+
         <section className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          <Kpi label="Ventas hoy" value={ventasHoy.length.toString()} />
+          <Kpi label="Ventas del período" value={registradas.length.toString()} />
           <Kpi
-            label="Facturado hoy"
-            value={`$ ${totalHoy.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`}
+            label="Facturado en el período"
+            value={`$ ${facturado.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`}
           />
           <Kpi label="Reservas activas" value={reservasActivas.length.toString()} />
           <Kpi
@@ -50,7 +85,7 @@ export default async function VentasHome() {
           />
         </section>
 
-        <section className="grid grid-cols-1 gap-3 md:grid-cols-3">
+        <section className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <Link
             href="/ventas/nueva"
             className="rounded-lg border border-border bg-card p-5 hover:bg-card-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
@@ -71,27 +106,20 @@ export default async function VentasHome() {
               Ver reservas activas, cancelar, convertir en venta.
             </p>
           </Link>
-          <Link
-            href="/clientes"
-            className="rounded-lg border border-border bg-card p-5 hover:bg-card-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
-          >
-            <div className="text-sm text-muted">Base</div>
-            <div className="mt-1 font-display text-xl">Clientes</div>
-            <p className="mt-2 text-sm text-muted">
-              Alta, edición, historial de compras y reservas por cliente.
-            </p>
-          </Link>
         </section>
 
         <section className="rounded-lg border border-border bg-card overflow-x-auto">
-          <div className="border-b border-border px-4 py-3 flex items-center justify-between">
-            <h3 className="font-display text-lg">Últimas ventas</h3>
-            <Link href="/ventas" className="text-sm text-pink-strong hover:underline">
-              Ver todas
-            </Link>
+          <div className="border-b border-border px-4 py-3 flex flex-wrap items-center justify-between gap-2">
+            <h3 className="font-display text-lg">Ventas del período</h3>
+            <span className="text-xs text-muted">
+              {fmtDia(desde)} → {fmtDia(hasta)}
+              {anuladas > 0 && ` · ${anuladas} anulada${anuladas === 1 ? '' : 's'}`}
+            </span>
           </div>
           {ventas.length === 0 ? (
-            <div className="p-6 text-center text-sm text-muted">Sin ventas registradas todavía.</div>
+            <div className="p-6 text-center text-sm text-muted">
+              No hay ventas en el período seleccionado.
+            </div>
           ) : (
             <table className="w-full text-sm">
               <thead>
@@ -105,7 +133,7 @@ export default async function VentasHome() {
                 </tr>
               </thead>
               <tbody>
-                {ventas.slice(0, 10).map((v) => (
+                {ventas.map((v) => (
                   <tr key={v.id_venta} className="border-b border-border-2">
                     <td className="px-4 py-3">{new Date(v.fecha).toLocaleString('es-AR')}</td>
                     <td className="px-4 py-3">{v.cliente?.nombre ?? 'Mostrador'}</td>

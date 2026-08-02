@@ -2,18 +2,19 @@ import Link from 'next/link'
 import { Topbar } from '@/components/shell/Topbar'
 import { verifySession } from '@/lib/dal/session'
 import { listReglasPrecio } from '@/lib/dal/precios/regla'
-import { listControlDePrecios } from '@/lib/dal/precios/resolucion'
+import { getPreciosResumen } from '@/lib/dal/precios/resolucion'
 
 export default async function PreciosHome() {
   const session = await verifySession()
-  const [reglas, control] = await Promise.all([
+  // El home solo muestra contadores. Antes llamaba a `listControlDePrecios()`,
+  // que proyectaba el precio de cada producto (un round-trip por producto)
+  // para después descartar la proyección entera acá.
+  const [reglas, resumen] = await Promise.all([
     listReglasPrecio(),
-    listControlDePrecios(),
+    getPreciosResumen(),
   ])
 
-  const desactualizados = control.filter((p) => p.precio_venta_desactualizado).length
-  const sinPrecio = control.filter((p) => p.precio_venta == null).length
-  const conRegla = control.filter((p) => p.regla_margen_nombre != null).length
+  const { desactualizados, sinPrecio, conRegla } = resumen
 
   return (
     <>

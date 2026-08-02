@@ -1,4 +1,5 @@
 import { cache } from 'react'
+import { headers } from 'next/headers'
 import { AuthorizationError } from './errors'
 import { createServerClient } from './supabase'
 
@@ -20,99 +21,101 @@ export interface Session {
   rolNombre: string | null
   /** `rol.permisos` JSONB, normalized to an object. Empty object if role has none. */
   permisos: RolePermissions
+  /**
+   * Códigos de módulo habilitados para el tenant (`tenant_modulo.habilitado`).
+   * Se cargan junto con la sesión para que `requireModuleRole` resuelva en
+   * memoria en vez de pagar un round-trip por módulo.
+   */
+  modulosHabilitados: string[]
+  /**
+   * `true` si el subdominio que inyectó el proxy pertenece al tenant de esta
+   * sesión. `false` cuando no hay header (dev/localhost, Server Action fuera
+   * del matcher) o cuando el subdominio resuelve a OTRO tenant.
+   * `verifyTenantMatch` es quien decide qué hacer con esto.
+   */
+  subdominioOk: boolean
+}
+
+/** Claims que nos interesan del access token verificado. */
+interface VerifiedClaims {
+  sub?: string
+  email?: string
+  /** Puesto por el Auth Hook (`00008_auth_hook_tenant_id.sql`) como claim top-level. */
+  tenant_id?: string
+  app_metadata?: { tenant_id?: string }
 }
 
 /**
- * Decodes the middle (payload) segment of a JWT and returns its claims.
- * No `jose` dependency is available and this slice may not add new deps
- * (per Slice 5 apply instructions), so this is a plain base64url decode —
- * sufficient here because `getUser()` (below) already re-validated the
- * token against Supabase server-side before this ever runs; this function
- * only needs to READ the already-trusted `tenant_id` claim, not verify a
- * signature.
- */
-function decodeJwtClaims(jwt: string): Record<string, unknown> {
-  const payload = jwt.split('.')[1]
-  if (!payload) return {}
-  try {
-    const json = Buffer.from(payload, 'base64url').toString('utf8')
-    return JSON.parse(json) as Record<string, unknown>
-  } catch {
-    return {}
-  }
-}
-
-/**
- * Slice 5 version (design §5). The Auth Hook (`00008_auth_hook_tenant_id.sql`)
- * sets `tenant_id` as a top-level JWT CLAIM, not `app_metadata` — so the
- * primary path decodes the session's access token. `user.app_metadata?.tenant_id`
- * is kept as a backward-compat fallback (e.g. stale cached sessions issued
- * before this slice); if BOTH are missing, fail closed via
- * `AuthorizationError('no-session')` (REQ-AUTH-10) — callers decide whether
- * to redirect or degrade gracefully.
+ * Design §5. El Auth Hook (`00008_auth_hook_tenant_id.sql`) pone `tenant_id`
+ * como CLAIM top-level del JWT; `app_metadata.tenant_id` queda como fallback
+ * de compatibilidad (sesiones viejas emitidas antes de ese hook). Si faltan
+ * las dos, falla cerrado con `AuthorizationError('no-session')` (REQ-AUTH-10).
+ *
+ * Usa `getClaims()` y NO `getUser()`. El proyecto firma con clave asimétrica
+ * (ES256 — ver `/auth/v1/.well-known/jwks.json`), así que `getClaims()`
+ * verifica la firma LOCALMENTE con WebCrypto contra un JWKS cacheado: cero
+ * round-trips, verificación criptográfica completa. `getUser()` pegaba a la
+ * Auth API en cada request (~260ms medidos). La doc de Supabase es explícita:
+ * "Prefer this method over getUser which always sends a request to the Auth
+ * server for each JWT" — `getUser` queda para cuando hace falta el registro
+ * de usuario fresco del servidor, no para proteger páginas.
+ *
+ * Esto además ENDURECE lo que había: antes se leía `tenant_id` decodificando
+ * el JWT en base64 sin verificar firma. Ahora los claims vienen de un token
+ * verificado.
  *
  * Wrapped in React's `cache()` so multiple Server Components/Actions in the
- * same request render pass share one verified session instead of hitting
- * Supabase auth repeatedly.
+ * same request render pass share one verified session.
  */
 export const verifySession = cache(async (): Promise<Session> => {
   const supabase = await createServerClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const { data: claimsData } = await supabase.auth.getClaims()
 
-  if (!user) {
+  const claims = (claimsData?.claims ?? null) as VerifiedClaims | null
+  if (!claims?.sub) {
     throw new AuthorizationError('no-session')
   }
 
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-
-  const claimTenantId = session?.access_token
-    ? (decodeJwtClaims(session.access_token).tenant_id as string | undefined)
-    : undefined
-
-  const tenantId = claimTenantId ?? (user.app_metadata?.tenant_id as string | undefined)
+  const tenantId = claims.tenant_id ?? claims.app_metadata?.tenant_id
   if (!tenantId) {
     throw new AuthorizationError('no-session')
   }
 
-  // Load role + permissions in the same session-verification pass so the
-  // guard (`requireModuleRole`) never needs a second round-trip. RLS on
-  // `usuario` + `rol` scopes this to the current tenant automatically.
+  // Rol + permisos + módulos habilitados + verificación de subdominio, TODO
+  // en un round-trip (`sp_session_context`, 00041). Antes eran tres queries
+  // secuenciales repartidos entre este archivo, `tenant.ts` y `guard.ts`;
+  // los layouts anidados que los disparaban no los podían paralelizar.
   //
-  // If the user row is missing or has no role, we DO NOT fail here — the
-  // session is valid, just unprivileged. The guard fails-closed later when
-  // any protected action is attempted.
-  let rolId: string | null = null
-  let rolNombre: string | null = null
-  let permisos: RolePermissions = {}
+  // Si la fila de `usuario` no existe o no tiene rol, NO fallamos acá — la
+  // sesión es válida, solo que sin privilegios. El guard falla cerrado
+  // después, cuando se intenta una acción protegida.
+  const subdominio = (await headers()).get('x-utopia-tenant-subdomain')
 
-  const { data: usuarioRow } = await supabase
-    .from('usuario')
-    .select('id_rol, rol:rol(id_rol, nombre, permisos)')
-    .eq('id_usuario', user.id)
-    .maybeSingle<{
-      id_rol: string | null
-      rol: { id_rol: string; nombre: string; permisos: RolePermissions | null } | null
-    }>()
-
-  if (usuarioRow?.rol) {
-    rolId = usuarioRow.rol.id_rol
-    rolNombre = usuarioRow.rol.nombre
-    permisos = usuarioRow.rol.permisos ?? {}
-  } else if (usuarioRow?.id_rol) {
-    // Row exists but the join returned null (RLS on `rol` denied it?).
-    // Record the id but treat as no permissions.
-    rolId = usuarioRow.id_rol
-  }
+  const { data } = await supabase.rpc('sp_session_context', {
+    p_subdominio: subdominio,
+  })
+  const ctx = (data ?? null) as SessionContextRpc | null
 
   return {
-    user: { id: user.id, email: user.email ?? '' },
+    user: { id: claims.sub, email: claims.email ?? '' },
     tenantId,
-    rolId,
-    rolNombre,
-    permisos,
+    rolId: ctx?.ok ? ctx.rol_id : null,
+    rolNombre: ctx?.ok ? ctx.rol_nombre : null,
+    permisos: ctx?.ok ? ctx.permisos ?? {} : {},
+    modulosHabilitados: ctx?.ok ? ctx.modulos_habilitados ?? [] : [],
+    subdominioOk: ctx?.ok ? ctx.subdominio_ok : false,
   }
 })
+
+/** Payload de `sp_session_context` (00041). */
+type SessionContextRpc =
+  | {
+      ok: true
+      tenant_id: string
+      rol_id: string | null
+      rol_nombre: string | null
+      permisos: RolePermissions | null
+      subdominio_ok: boolean
+      modulos_habilitados: string[] | null
+    }
+  | { ok: false; reason: 'no-session' }

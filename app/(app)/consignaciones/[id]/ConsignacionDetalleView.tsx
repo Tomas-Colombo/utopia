@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
@@ -8,6 +8,9 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Field } from '@/components/ui/Field'
 import { Input } from '@/components/ui/Input'
 import { useToast } from '@/components/ui/Toast'
+import { BuscadorProductos, type SugerenciaProducto } from '@/components/inventario/BuscadorProductos'
+import { normalizar } from '@/lib/inventario/producto-match'
+import type { ItemElegibleConsignacion } from '@/lib/dal/consignaciones/consignacion'
 import {
   ESTADO_DETALLE_LABEL,
   type ConsignacionConDetalle,
@@ -41,7 +44,13 @@ interface LookupOk {
 interface LookupFail { ok: false; reason: string; estado?: string }
 type LookupResp = LookupOk | LookupFail
 
-export function ConsignacionDetalleView({ cons }: { cons: ConsignacionConDetalle }) {
+export function ConsignacionDetalleView({
+  cons,
+  itemsElegibles,
+}: {
+  cons: ConsignacionConDetalle
+  itemsElegibles: ItemElegibleConsignacion[]
+}) {
   const router = useRouter()
   const toast = useToast()
   const [pending, start] = useTransition()
@@ -59,9 +68,28 @@ export function ConsignacionDetalleView({ cons }: { cons: ConsignacionConDetalle
   const pendientes = cons.detalles.filter((d) => d.estado === 'pendiente').length
   const devueltos = cons.detalles.filter((d) => d.estado === 'devuelto').length
 
-  async function agregarItem(e?: React.FormEvent) {
-    e?.preventDefault()
-    const qr = qrInput.trim()
+  // Sugerencias por nombre / SKU / QR sobre los ítems elegibles del proveedor.
+  const sugerencias = useMemo<SugerenciaProducto[]>(() => {
+    const term = normalizar(qrInput)
+    if (!term) return []
+    return itemsElegibles
+      .filter(
+        (it) =>
+          normalizar(it.producto_nombre).includes(term) ||
+          (it.sku ? normalizar(it.sku).includes(term) : false) ||
+          normalizar(it.qr_code).includes(term),
+      )
+      .slice(0, 8)
+      .map((it) => ({
+        id: it.id_item,
+        nombre: it.producto_nombre,
+        sku: it.sku,
+        detalle: it.talle ? `${it.talle} · ${it.qr_code}` : it.qr_code,
+      }))
+  }, [itemsElegibles, qrInput])
+
+  async function agregarPorQr(rawQr: string) {
+    const qr = rawQr.trim()
     if (!qr) return
     if (!cons.proveedor) return setErrorBusqueda('Consignación sin proveedor')
     setBuscando(true)
@@ -178,32 +206,30 @@ export function ConsignacionDetalleView({ cons }: { cons: ConsignacionConDetalle
 
       {/* Agregar item */}
       {!readonly && (
-        <form
-          onSubmit={agregarItem}
-          className="rounded-lg border border-border bg-card p-4 space-y-3"
-        >
+        <div className="rounded-lg border border-border bg-card p-4 space-y-3">
           <h3 className="font-display text-lg">Apartar ítem</h3>
-          <Field
-            htmlFor="qr-c"
-            label="QR del ítem"
+          <BuscadorProductos
+            id="qr-c"
+            label="Buscar ítem"
             error={errorBusqueda ?? undefined}
-            hint="Solo ítems del proveedor de este lote, con tipo_ingreso=consignacion y estado=disponible"
-          >
-            <div className="flex gap-2">
-              <Input
-                id="qr-c"
-                autoFocus
-                value={qrInput}
-                onChange={(e) => setQrInput(e.target.value)}
-                placeholder="Escaneá o tipeá"
-                invalid={!!errorBusqueda}
-                disabled={buscando || pending}
-              />
+            hint="Nombre, SKU o QR. Solo ítems de consignación disponibles de este proveedor."
+            placeholder="Escaneá, tipeá el QR o buscá por nombre"
+            value={qrInput}
+            onChange={setQrInput}
+            sugerencias={sugerencias}
+            onElegir={(s) => {
+              const it = itemsElegibles.find((x) => x.id_item === s.id)
+              if (it) void agregarPorQr(it.qr_code)
+            }}
+            onSubmit={(texto) => void agregarPorQr(texto)}
+            disabled={buscando || pending}
+            autoFocus
+            actions={
               <Button type="submit" disabled={buscando || pending || !qrInput.trim()}>
                 {buscando ? 'Buscando…' : pending ? 'Apartando…' : 'Apartar'}
               </Button>
-            </div>
-          </Field>
+            }
+          />
           <Field htmlFor="mot-c" label="Motivo (aplica al próximo)" hint="Opcional; se guarda por línea">
             <Input
               id="mot-c"
@@ -212,7 +238,7 @@ export function ConsignacionDetalleView({ cons }: { cons: ConsignacionConDetalle
               placeholder="Ej: sin rotación, defecto de fábrica"
             />
           </Field>
-        </form>
+        </div>
       )}
 
       {/* Tabla de items */}
