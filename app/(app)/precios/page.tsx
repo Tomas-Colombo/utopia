@@ -3,18 +3,44 @@ import { Topbar } from '@/components/shell/Topbar'
 import { verifySession } from '@/lib/dal/session'
 import { listReglasPrecio } from '@/lib/dal/precios/regla'
 import { getPreciosResumen } from '@/lib/dal/precios/resolucion'
+import { listGananciaPorProducto } from '@/lib/dal/reportes/reportes'
+import { listCategoriasActivas } from '@/lib/dal/inventario/categoria'
+import { listProductosParaBuscador } from '@/lib/dal/inventario/producto'
+import { normalizar } from '@/lib/inventario/producto-match'
+import { GananciaProyectadaClient } from './GananciaProyectadaClient'
 
-export default async function PreciosHome() {
+const GANANCIA_PAGE_SIZE = 20
+
+export default async function PreciosHome(props: {
+  searchParams: Promise<{ gq?: string; gcat?: string; gpage?: string }>
+}) {
   const session = await verifySession()
-  // El home solo muestra contadores. Antes llamaba a `listControlDePrecios()`,
-  // que proyectaba el precio de cada producto (un round-trip por producto)
-  // para después descartar la proyección entera acá.
-  const [reglas, resumen] = await Promise.all([
+  const sp = await props.searchParams
+  const page = Math.max(1, Number.parseInt(sp.gpage ?? '1', 10) || 1)
+
+  const [reglas, resumen, ganancia, categorias, catalogo] = await Promise.all([
     listReglasPrecio(),
     getPreciosResumen(),
+    listGananciaPorProducto(),
+    listCategoriasActivas(),
+    listProductosParaBuscador(),
   ])
 
   const { desactualizados, sinPrecio, conRegla } = resumen
+
+  const term = normalizar(sp.gq ?? '')
+  const filtradas = ganancia.filter((g) => {
+    if (sp.gcat && g.id_categoria !== sp.gcat) return false
+    if (term) {
+      const okNombre = normalizar(g.nombre).includes(term)
+      const okSku = g.sku ? normalizar(g.sku).includes(term) : false
+      if (!okNombre && !okSku) return false
+    }
+    return true
+  })
+  const total = filtradas.length
+  const from = (page - 1) * GANANCIA_PAGE_SIZE
+  const pageRows = filtradas.slice(from, from + GANANCIA_PAGE_SIZE)
 
   return (
     <>
@@ -56,6 +82,20 @@ export default async function PreciosHome() {
               Ver productos desactualizados y aplicar recálculo (individual o masivo).
             </p>
           </Link>
+        </section>
+
+        <section className="space-y-3">
+          <h2 className="font-display text-lg">Ganancia proyectada por producto</h2>
+          <GananciaProyectadaClient
+            rows={pageRows}
+            catalogo={catalogo}
+            categorias={categorias}
+            initialSearch={sp.gq ?? ''}
+            initialCategoria={sp.gcat ?? ''}
+            page={page}
+            pageSize={GANANCIA_PAGE_SIZE}
+            total={total}
+          />
         </section>
       </main>
     </>

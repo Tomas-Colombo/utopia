@@ -56,7 +56,7 @@ export function ProveedoresTableClient({ rows }: { rows: Row[] }) {
       align: 'right',
       render: (r) => (
         <Link
-          href={`/inventario/proveedores/${r.id_proveedor}`}
+          href={`/proveedores/${r.id_proveedor}`}
           className="text-sm text-pink-strong hover:underline"
         >
           Ver

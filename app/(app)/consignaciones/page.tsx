@@ -23,11 +23,11 @@ export default async function ConsignacionesPage() {
   return (
     <>
       <Topbar
-        title="Consignaciones"
+        title="Devoluciones a proveedor"
         session={session}
         actions={
           <Link href="/consignaciones/nueva">
-            <Button size="sm">Nueva consignación</Button>
+            <Button size="sm">Nueva devolución</Button>
           </Link>
         }
       />
@@ -56,7 +56,7 @@ export default async function ConsignacionesPage() {
               href="/consignaciones/nueva"
               className="inline-flex items-center rounded-md bg-accent-pink px-4 py-2 text-sm font-semibold text-sidebar"
             >
-              Nueva consignación
+              Nueva devolución
             </Link>
           </div>
         ) : (

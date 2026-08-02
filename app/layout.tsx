@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Archivo, Archivo_Black, Space_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/theming/ThemeProvider";
-import { ThemeToggle } from "@/components/theming/ThemeToggle";
 import "./globals.css";
 
 // Display — headings/hero numerals (design §8.4). Archivo Black only ships
@@ -48,7 +47,6 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <ThemeProvider>
-          <ThemeToggle />
           {children}
         </ThemeProvider>
       </body>

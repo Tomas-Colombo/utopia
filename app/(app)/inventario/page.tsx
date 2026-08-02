@@ -145,9 +145,8 @@ export default async function InventarioHome(props: {
         </section>
 
         {/* Accesos a los demás sub-módulos — justo debajo de las métricas */}
-        <section className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <section className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <NavCard href="/inventario/categorias" label="Categorías" value={categorias.length} />
-          <NavCard href="/inventario/proveedores" label="Proveedores" value={proveedoresActivos} />
           <NavCard href="/inventario/ingresos" label="Ingresos" value="Ver" />
         </section>
 

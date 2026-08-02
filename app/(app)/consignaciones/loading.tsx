@@ -3,7 +3,7 @@ import { SkeletonKpis, SkeletonTable, SkeletonTopbar } from '@/components/shell/
 export default function LoadingConsignaciones() {
   return (
     <>
-      <SkeletonTopbar title="Consignaciones" />
+      <SkeletonTopbar title="Devoluciones a proveedor" />
       <main className="flex-1 p-6 space-y-6" aria-busy="true">
         <SkeletonKpis />
         <SkeletonTable rows={8} />

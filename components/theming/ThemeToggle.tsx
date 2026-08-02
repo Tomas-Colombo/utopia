@@ -4,38 +4,36 @@ import { useTheme } from './ThemeProvider'
 import { persistThemePreference } from './persistThemePreference'
 
 /**
- * Global theme switch (REQ-DS-06 — reachable from every route). Fixed to the
- * top-right corner so it floats above whatever route is mounted, including
- * the auth screens that have no Topbar.
- *
- * Design system v2 renders it as a mono pill labelled with the theme it
- * switches TO — "OSCURO" while light, "CLARO" while dark. The icon stays as a
- * non-text cue; the label is what makes the action unambiguous.
- *
- * The (app) topbar reserves `pr-24` on its right edge for this pill; widening
- * the label means widening that reservation too.
+ * Sidebar theme switch (REQ-DS-06). Rendered inline inside the sidebar
+ * footer — matches the logout button styling and collapses to icon-only
+ * when the rail is collapsed.
  */
-export function ThemeToggle() {
+export function ThemeToggle({ collapsed = false }: { collapsed?: boolean }) {
   const { theme, setTheme } = useTheme()
   const isDark = theme === 'dark'
 
   function handleClick() {
     const next = isDark ? 'light' : 'dark'
     setTheme(next)
-    // Fire-and-forget: survives device changes (REQ-DS-06).
     void persistThemePreference(next)
   }
+
+  const label = isDark ? 'Modo claro' : 'Modo oscuro'
 
   return (
     <button
       type="button"
       onClick={handleClick}
-      aria-label={isDark ? 'Activar modo claro' : 'Activar modo oscuro'}
-      title={isDark ? 'Modo claro' : 'Modo oscuro'}
-      className="fixed right-3 top-3 z-50 inline-flex items-center gap-1.5 rounded-full border border-line-2 bg-panel px-3.5 py-[7px] font-mono text-[10px] uppercase tracking-[0.12em] text-muted shadow-sm transition-colors hover:border-rosa hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-rosa"
+      title={collapsed ? label : undefined}
+      aria-label={label}
+      className={`mt-2.5 flex w-full items-center gap-[11px] rounded-md py-2 text-[13px] font-medium text-[#8b8681] transition-colors hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-rosa ${
+        collapsed ? 'justify-center px-0' : 'px-[13px]'
+      }`}
     >
-      {isDark ? <SunIcon /> : <MoonIcon />}
-      <span>{isDark ? 'Claro' : 'Oscuro'}</span>
+      <span className="shrink-0" aria-hidden>
+        {isDark ? <SunIcon /> : <MoonIcon />}
+      </span>
+      {!collapsed && <span>{label}</span>}
     </button>
   )
 }
@@ -43,12 +41,12 @@ export function ThemeToggle() {
 function MoonIcon() {
   return (
     <svg
-      width="13"
-      height="13"
+      width="18"
+      height="18"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.8"
+      strokeWidth="1.6"
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden
@@ -61,12 +59,12 @@ function MoonIcon() {
 function SunIcon() {
   return (
     <svg
-      width="13"
-      height="13"
+      width="18"
+      height="18"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.8"
+      strokeWidth="1.6"
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden

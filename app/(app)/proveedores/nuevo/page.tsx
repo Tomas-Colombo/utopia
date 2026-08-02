@@ -6,7 +6,7 @@ export default async function NuevoProveedorPage() {
   const session = await verifySession()
   return (
     <>
-      <Topbar title="Nuevo proveedor" session={session} backHref="/inventario/proveedores" />
+      <Topbar title="Nuevo proveedor" session={session} backHref="/proveedores" />
       <main className="flex-1 p-6">
         <div className="max-w-2xl rounded-lg border border-border bg-card p-6">
           <NuevoProveedorForm />

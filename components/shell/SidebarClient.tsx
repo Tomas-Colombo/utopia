@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState, type ReactNode } from 'react'
 import { logoutAction } from '@/app/(app)/actions'
+import { ThemeToggle } from '@/components/theming/ThemeToggle'
 import { Logo } from './Logo'
 
 export interface SidebarNavItem {
@@ -253,12 +254,13 @@ function NavContent({
             </span>
           )}
         </div>
+        <ThemeToggle collapsed={collapsed} />
         <form action={logoutAction}>
           <button
             type="submit"
             title={collapsed ? 'Cerrar sesión' : undefined}
             aria-label="Cerrar sesión"
-            className={`mt-2.5 flex w-full items-center gap-[11px] rounded-md py-2 text-[13px] font-medium text-[#8b8681] transition-colors hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-rosa ${
+            className={`mt-1 flex w-full items-center gap-[11px] rounded-md py-2 text-[13px] font-medium text-[#8b8681] transition-colors hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-rosa ${
               collapsed ? 'justify-center px-0' : 'px-[13px]'
             }`}
           >
@@ -339,6 +341,14 @@ const NAV_ICONS: Record<string, ReactNode> = {
     <>
       <circle cx="12" cy="8" r="4" />
       <path d="M4 21a8 8 0 0116 0" />
+    </>
+  ),
+  proveedores: (
+    <>
+      <path d="M3 7h13l3 4h2v6h-2" />
+      <path d="M3 7v10h2" />
+      <circle cx="8" cy="18" r="2" />
+      <circle cx="17" cy="18" r="2" />
     </>
   ),
   consignaciones: (

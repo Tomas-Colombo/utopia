@@ -159,7 +159,7 @@ export async function createProveedorAction(input: {
       dias_rotacion: input.dias_rotacion ?? null,
       notas: input.notas?.trim() || null,
     })
-    revalidatePath('/inventario/proveedores')
+    revalidatePath('/proveedores')
     return { ok: true, data: { id: row.id_proveedor } }
   } catch (e) {
     return { ok: false, reason: (e as Error).message }
@@ -183,7 +183,7 @@ export async function updateProveedorAction(
   if ('error' in g) return { ok: false, reason: g.error }
   try {
     await updateProveedor(id, patch)
-    revalidatePath('/inventario/proveedores')
+    revalidatePath('/proveedores')
     return { ok: true }
   } catch (e) {
     return { ok: false, reason: (e as Error).message }

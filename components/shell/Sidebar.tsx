@@ -36,7 +36,12 @@ const NAV_ITEMS: readonly NavItem[] = [
   { href: '/ventas', label: 'Ventas', icon: 'ventas', moduloCodigo: 'ventas', group: 'OPERACIONES' },
   // Clientes vive bajo el módulo 'ventas' (mismo permiso) — es sub-módulo funcional.
   { href: '/clientes', label: 'Clientes', icon: 'clientes', moduloCodigo: 'ventas', group: 'OPERACIONES' },
-  { href: '/consignaciones', label: 'Consignaciones', icon: 'consignaciones', moduloCodigo: 'consignaciones', group: 'OPERACIONES' },
+  // Proveedores vive bajo el módulo 'inventario' (mismo permiso) — es sub-módulo funcional.
+  { href: '/proveedores', label: 'Proveedores', icon: 'proveedores', moduloCodigo: 'inventario', group: 'OPERACIONES' },
+  // Módulo `consignaciones` en DB, pero UI-visible como "Devoluciones a
+  // proveedor" — es lo que la sección hace (lote de devolución). Label
+  // abreviado para que entre en el rail sin truncar.
+  { href: '/consignaciones', label: 'Devoluciones prov.', icon: 'consignaciones', moduloCodigo: 'consignaciones', group: 'OPERACIONES' },
   // Gastos vive bajo el módulo 'rendiciones' (mismo permiso).
   { href: '/gastos', label: 'Gastos', icon: 'gastos', moduloCodigo: 'rendiciones', group: 'FINANZAS' },
   { href: '/rendiciones', label: 'Rendiciones', icon: 'rendiciones', moduloCodigo: 'rendiciones', group: 'FINANZAS' },

@@ -2,7 +2,6 @@ import Link from 'next/link'
 import { Topbar } from '@/components/shell/Topbar'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
-import { EmptyState } from '@/components/ui/EmptyState'
 import { verifySession } from '@/lib/dal/session'
 import { listProveedores } from '@/lib/dal/inventario/proveedor'
 import { waMeLink } from '@/lib/utils/waMeLink'
@@ -18,9 +17,8 @@ export default async function ProveedoresPage() {
       <Topbar
         title="Proveedores"
         session={session}
-        backHref="/inventario"
         actions={
-          <Link href="/inventario/proveedores/nuevo">
+          <Link href="/proveedores/nuevo">
             <Button size="sm">Nuevo proveedor</Button>
           </Link>
         }
@@ -39,7 +37,6 @@ export default async function ProveedoresPage() {
 }
 
 function EmptyStateWrapper() {
-  // EmptyState requires client CTA — wrap it in a plain link fallback.
   return (
     <div className="rounded-lg border border-dashed border-border bg-card p-10 text-center">
       <p className="font-display text-lg mb-2">Sin proveedores todavía</p>
@@ -47,7 +44,7 @@ function EmptyStateWrapper() {
         Agregá el primer proveedor para poder registrar ingresos.
       </p>
       <Link
-        href="/inventario/proveedores/nuevo"
+        href="/proveedores/nuevo"
         className="inline-flex items-center rounded-md bg-accent-pink px-4 py-2 text-sm font-semibold text-sidebar"
       >
         Nuevo proveedor

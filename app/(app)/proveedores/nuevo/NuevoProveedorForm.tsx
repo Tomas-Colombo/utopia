@@ -9,7 +9,7 @@ import { NumberInput } from '@/components/ui/NumberInput'
 import { Textarea } from '@/components/ui/Textarea'
 import { useToast } from '@/components/ui/Toast'
 import type { TipoProveedor } from '@/lib/types/inventario'
-import { createProveedorAction } from '../../actions'
+import { createProveedorAction } from '@/app/(app)/inventario/actions'
 
 const TIPOS: { value: TipoProveedor; label: string }[] = [
   { value: 'mayorista', label: 'Mayorista' },
@@ -50,7 +50,7 @@ export function NuevoProveedorForm() {
       })
       if (!res.ok) return toast.error('No se pudo crear', res.reason)
       toast.success('Proveedor creado')
-      router.push('/inventario/proveedores')
+      router.push('/proveedores')
       router.refresh()
     })
   }

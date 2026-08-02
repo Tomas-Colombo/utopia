@@ -71,6 +71,53 @@ export async function listIngresosConResumen(opts?: {
   return { rows, total: count ?? 0 }
 }
 
+/**
+ * Ingresos de UN proveedor, con resumen de cantidad/costo. No pagina — la
+ * usa el perfil del proveedor y ahí conviene ver el histórico completo
+ * (la lista general sí pagina). Excluye cancelados por consistencia con
+ * `listIngresosConResumen`.
+ */
+export async function listIngresosDeProveedor(
+  idProveedor: string,
+): Promise<IngresoConResumen[]> {
+  const supabase = await createServerClient()
+  const { data, error } = await supabase
+    .from('ingreso_mercaderia')
+    .select(
+      `
+      *,
+      proveedor:proveedor(id_proveedor, nombre),
+      detalle:ingreso_mercaderia_detalle(cantidad, costo_unitario)
+    `,
+    )
+    .eq('id_proveedor', idProveedor)
+    .is('cancelado_at', null)
+    .order('fecha', { ascending: false })
+  if (error) throw new Error(`listIngresosDeProveedor: ${error.message}`)
+
+  return ((data ?? []) as Array<
+    IngresoMercaderiaRow & {
+      proveedor: Pick<ProveedorRow, 'id_proveedor' | 'nombre'> | null
+      detalle: Array<{ cantidad: number; costo_unitario: number }>
+    }
+  >).map((row) => {
+    const detalle = row.detalle ?? []
+    const total_cantidad = detalle.reduce((acc, d) => acc + Number(d.cantidad), 0)
+    const total_costo = detalle.reduce(
+      (acc, d) => acc + Number(d.cantidad) * Number(d.costo_unitario),
+      0,
+    )
+    const { detalle: _drop, ...rest } = row
+    void _drop
+    return {
+      ...rest,
+      total_lineas: detalle.length,
+      total_cantidad,
+      total_costo,
+    }
+  })
+}
+
 export async function getIngreso(id: string): Promise<
   | (IngresoMercaderiaRow & {
       proveedor: Pick<ProveedorRow, 'id_proveedor' | 'nombre' | 'telefono'> | null

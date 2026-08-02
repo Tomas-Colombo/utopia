@@ -19,7 +19,7 @@ const TIPOS: { value: TipoProveedor; label: string }[] = [
 
 /**
  * Alta rápida de proveedor desde el formulario de ingreso, sin abandonar la
- * carga en curso. Mismos campos que /inventario/proveedores/nuevo. Al crear,
+ * carga en curso. Mismos campos que /proveedores/nuevo. Al crear,
  * devuelve la fila (parcial) por `onCreated` para preseleccionarla en el
  * select del ingreso; el listado maestro se revalida vía la server action.
  */

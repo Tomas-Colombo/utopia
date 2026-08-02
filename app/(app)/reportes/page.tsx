@@ -4,7 +4,6 @@ import { verifySession } from '@/lib/dal/session'
 import {
   getReporteFinanciero,
   getRotacion,
-  listGananciaPorProducto,
   listPerfilProveedor,
 } from '@/lib/dal/reportes/reportes'
 import { ReportesPeriodoForm } from './ReportesPeriodoForm'
@@ -15,7 +14,8 @@ import { ReportesPeriodoForm } from './ReportesPeriodoForm'
  *  - RF-13 financiero por período + impacto de descuentos (§L120)
  *  - RF-12 rotación por producto
  *  - RF-11 perfil de proveedores
- *  - RF-07 ganancia por producto
+ *
+ * RF-07 (ganancia proyectada por producto) vive ahora en /precios.
  */
 export default async function ReportesPage(props: {
   searchParams: Promise<{ desde?: string; hasta?: string }>
@@ -33,11 +33,10 @@ export default async function ReportesPage(props: {
     ? new Date(new Date(sp.hasta).setHours(23, 59, 59, 999)).toISOString()
     : finMes.toISOString()
 
-  const [financiero, rotacion, proveedores, ganancia] = await Promise.all([
+  const [financiero, rotacion, proveedores] = await Promise.all([
     getReporteFinanciero({ desde: desdeISO, hasta: hastaISO }),
     getRotacion({ desde: desdeISO, hasta: hastaISO }),
     listPerfilProveedor(),
-    listGananciaPorProducto(),
   ])
 
   const impacto = financiero.impacto_descuentos
@@ -248,51 +247,6 @@ export default async function ReportesPage(props: {
           )}
         </section>
 
-        {/* ─── Ganancia por producto (RF-07) ────────────────────────── */}
-        <section className="rounded-lg border border-border bg-card overflow-x-auto">
-          <div className="border-b border-border px-4 py-3">
-            <h2 className="font-display text-lg">Ganancia proyectada por producto (RF-07)</h2>
-          </div>
-          {ganancia.length === 0 ? (
-            <div className="p-6 text-center text-sm text-muted">Sin productos activos.</div>
-          ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border text-left">
-                  <th className="px-4 py-3">Producto</th>
-                  <th className="px-4 py-3">Categoría</th>
-                  <th className="px-4 py-3 text-right">Costo</th>
-                  <th className="px-4 py-3 text-right">Precio venta</th>
-                  <th className="px-4 py-3 text-right">Ganancia u.</th>
-                  <th className="px-4 py-3 text-right">Margen</th>
-                </tr>
-              </thead>
-              <tbody>
-                {ganancia.slice(0, 50).map((g) => (
-                  <tr key={g.id_producto} className="border-b border-border-2">
-                    <td className="px-4 py-3">
-                      <div className="font-medium">{g.nombre}</div>
-                      {g.sku && <div className="text-xs font-mono text-muted">{g.sku}</div>}
-                    </td>
-                    <td className="px-4 py-3">{g.categoria_nombre ?? '—'}</td>
-                    <td className="px-4 py-3 text-right font-mono text-muted">
-                      {g.costo_vigente != null ? fmtMoney(g.costo_vigente) : '—'}
-                    </td>
-                    <td className="px-4 py-3 text-right font-mono">
-                      {g.precio_venta != null ? fmtMoney(g.precio_venta) : '—'}
-                    </td>
-                    <td className="px-4 py-3 text-right font-mono">
-                      {g.ganancia_unitaria != null ? fmtMoney(g.ganancia_unitaria) : '—'}
-                    </td>
-                    <td className="px-4 py-3 text-right font-mono">
-                      {g.margen_pct != null ? `${g.margen_pct}%` : '—'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </section>
       </main>
     </>
   )
