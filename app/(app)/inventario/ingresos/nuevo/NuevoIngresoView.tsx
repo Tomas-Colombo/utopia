@@ -59,7 +59,14 @@ export function NuevoIngresoView({
   categorias: CategoriaRow[]
   /** Modo restock: llega desde /inventario/ingresos/nuevo?producto=<id> y
    *  bloquea el proveedor + agrega una línea vinculada al producto. */
-  prefill?: { idProducto: string; idProveedor: string | null } | null
+  prefill?: {
+    idProducto: string
+    idProveedor: string | null
+    /** Tipo del último ingreso — default del select, editable. */
+    tipoIngreso: TipoIngreso
+    /** Costo del último ingreso — default del input, editable. */
+    costoUnitario: number | null
+  } | null
 }) {
   const router = useRouter()
   const toast = useToast()
@@ -74,7 +81,7 @@ export function NuevoIngresoView({
   // bloqueado (regla de negocio: cada producto es mono-proveedor).
   const [idProveedor, setIdProveedor] = useState(prefill?.idProveedor ?? '')
   const proveedorBloqueado = !!prefill?.idProveedor
-  const [tipoIngreso, setTipoIngreso] = useState<TipoIngreso>('compra')
+  const [tipoIngreso, setTipoIngreso] = useState<TipoIngreso>(prefill?.tipoIngreso ?? 'compra')
   const [numeroRemito, setNumeroRemito] = useState('')
   const [observaciones, setObservaciones] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
@@ -91,7 +98,7 @@ export function NuevoIngresoView({
       {
         nombre: prod.nombre,
         cantidad: '1',
-        costoUnitario: '',
+        costoUnitario: prefill.costoUnitario != null ? String(prefill.costoUnitario) : '',
         esNuevo: false,
         idProducto: prod.id_producto,
         idCategoria: '',

@@ -3,7 +3,8 @@ import { verifySession } from '@/lib/dal/session'
 import { listProveedoresActivos } from '@/lib/dal/inventario/proveedor'
 import { listCategoriasActivas } from '@/lib/dal/inventario/categoria'
 import { getProducto, listProductosConDetalle } from '@/lib/dal/inventario/producto'
-import { getProveedorHabitualDeProducto } from '@/lib/dal/inventario/item'
+import { getUltimoContextoIngresoProducto } from '@/lib/dal/inventario/item'
+import type { TipoIngreso } from '@/lib/types/inventario'
 import { NuevoIngresoView } from './NuevoIngresoView'
 
 /** Whitelist para el ?from — evita open-redirect: solo rutas internas del app. */
@@ -30,16 +31,25 @@ export default async function NuevoIngresoPage(props: {
 
   // Modo restock: si viene ?producto=<id>, prefiliamos la línea con ese
   // producto vinculado y bloqueamos el proveedor (mono-proveedor por producto).
-  let prefill: { idProducto: string; idProveedor: string | null } | null = null
+  // Además arrastramos el tipo de ingreso (consignación/compra) y el costo
+  // del último ingreso; ambos son editables si el nuevo lote llega distinto.
+  let prefill: {
+    idProducto: string
+    idProveedor: string | null
+    tipoIngreso: TipoIngreso
+    costoUnitario: number | null
+  } | null = null
   if (idProductoParam) {
-    const [prod, proveedorHabitual] = await Promise.all([
+    const [prod, ultimo] = await Promise.all([
       getProducto(idProductoParam),
-      getProveedorHabitualDeProducto(idProductoParam),
+      getUltimoContextoIngresoProducto(idProductoParam),
     ])
     if (prod) {
       prefill = {
         idProducto: prod.id_producto,
-        idProveedor: proveedorHabitual?.id_proveedor ?? null,
+        idProveedor: ultimo?.proveedor?.id_proveedor ?? null,
+        tipoIngreso: ultimo?.tipoIngreso ?? 'compra',
+        costoUnitario: ultimo?.costoUnitario ?? null,
       }
     }
   }

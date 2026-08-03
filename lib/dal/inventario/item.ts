@@ -83,6 +83,44 @@ export async function getProveedorHabitualDeProducto(
 }
 
 /**
+ * Contexto del último ingreso de un producto: proveedor, tipo (compra o
+ * consignación) y costo unitario. Se usa para prefilear el restock — la
+ * regla de negocio es que cada producto es mono-proveedor y suele repetir
+ * modo de ingreso; el costo se anticipa con el histórico y el usuario lo
+ * corrige si cambió. Devuelve null si el producto no tiene ítems.
+ */
+export async function getUltimoContextoIngresoProducto(
+  idProducto: string,
+): Promise<{
+  proveedor: { id_proveedor: string; nombre: string } | null
+  tipoIngreso: 'compra' | 'consignacion'
+  costoUnitario: number
+} | null> {
+  const supabase = await createServerClient()
+  const { data, error } = await supabase
+    .from('item_producto')
+    .select(
+      'tipo_ingreso, costo_ingreso, ingreso:ingreso_mercaderia!inner(proveedor:proveedor(id_proveedor, nombre))',
+    )
+    .eq('id_producto', idProducto)
+    .order('fecha_ingreso', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (error) throw new Error(`getUltimoContextoIngresoProducto: ${error.message}`)
+  if (!data) return null
+  const row = data as {
+    tipo_ingreso: 'compra' | 'consignacion'
+    costo_ingreso: number | string
+    ingreso: { proveedor: { id_proveedor: string; nombre: string } | null } | null
+  }
+  return {
+    proveedor: row.ingreso?.proveedor ?? null,
+    tipoIngreso: row.tipo_ingreso,
+    costoUnitario: Number(row.costo_ingreso),
+  }
+}
+
+/**
  * Asigna talles retroactivamente a ítems que se ingresaron sin talle y siguen
  * disponibles. Delega al RPC `sp_asignar_talles_a_producto` (migration 00044):
  * ese RPC valida el cupo, respeta FIFO, y registra ajuste + auditoría.
