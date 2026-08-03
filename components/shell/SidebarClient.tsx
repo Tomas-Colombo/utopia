@@ -186,6 +186,17 @@ function NavContent({
 }) {
   const isEmpty = groups.every((group) => group.items.length === 0)
 
+  // Nested items ('/inventario/ingresos') prefix-match their parent
+  // ('/inventario'), so both would light up. Only the longest matching href
+  // wins — the most specific item is the one the user is actually on.
+  const activeHref = groups
+    .flatMap((group) => group.items)
+    .filter((item) => pathname === item.href || pathname.startsWith(`${item.href}/`))
+    .reduce<string | null>(
+      (best, item) => (best === null || item.href.length > best.length ? item.href : best),
+      null,
+    )
+
   return (
     <>
       <nav className="min-h-0 flex-1 overflow-y-auto px-3 pb-4 pt-0.5">
@@ -202,8 +213,7 @@ function NavContent({
             )}
             <ul className="flex flex-col gap-0.5">
               {group.items.map((item) => {
-                const active =
-                  pathname === item.href || pathname.startsWith(`${item.href}/`)
+                const active = activeHref === item.href
                 return (
                   <li key={item.href}>
                     <Link
@@ -322,6 +332,13 @@ const NAV_ICONS: Record<string, ReactNode> = {
       <rect x="3" y="4" width="18" height="4" rx="1" />
       <path d="M5 8v11a1 1 0 001 1h12a1 1 0 001-1V8" />
       <path d="M10 12h4" />
+    </>
+  ),
+  ingresos: (
+    <>
+      <path d="M12 3v9" />
+      <path d="M8.5 8.5L12 12l3.5-3.5" />
+      <path d="M4 15v4a1 1 0 001 1h14a1 1 0 001-1v-4" />
     </>
   ),
   precios: (

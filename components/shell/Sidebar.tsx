@@ -31,9 +31,12 @@ const GROUP_ORDER: readonly NavGroup[] = ['OPERACIONES', 'FINANZAS', 'SISTEMA'] 
 // `gastos` currently lives under `rendiciones` per Etapa 7 grouping;
 // promote to its own module later if needed.
 const NAV_ITEMS: readonly NavItem[] = [
-  { href: '/inventario', label: 'Inventario', icon: 'inventario', moduloCodigo: 'inventario', group: 'OPERACIONES' },
-  { href: '/precios', label: 'Precios', icon: 'precios', moduloCodigo: 'precios', group: 'OPERACIONES' },
   { href: '/ventas', label: 'Ventas', icon: 'ventas', moduloCodigo: 'ventas', group: 'OPERACIONES' },
+  { href: '/inventario', label: 'Inventario', icon: 'inventario', moduloCodigo: 'inventario', group: 'OPERACIONES' },
+  // Ingresos vive bajo el módulo 'inventario' (mismo permiso) — es sub-módulo
+  // funcional: historial de ingresos + alta de un ingreso nuevo.
+  { href: '/inventario/ingresos', label: 'Ingresos', icon: 'ingresos', moduloCodigo: 'inventario', group: 'OPERACIONES' },
+  { href: '/precios', label: 'Precios', icon: 'precios', moduloCodigo: 'precios', group: 'OPERACIONES' },
   // Clientes vive bajo el módulo 'ventas' (mismo permiso) — es sub-módulo funcional.
   { href: '/clientes', label: 'Clientes', icon: 'clientes', moduloCodigo: 'ventas', group: 'OPERACIONES' },
   // Proveedores vive bajo el módulo 'inventario' (mismo permiso) — es sub-módulo funcional.
