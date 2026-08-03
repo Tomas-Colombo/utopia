@@ -108,7 +108,7 @@ export async function getUltimoContextoIngresoProducto(
     .maybeSingle()
   if (error) throw new Error(`getUltimoContextoIngresoProducto: ${error.message}`)
   if (!data) return null
-  const row = data as {
+  const row = data as unknown as {
     tipo_ingreso: 'compra' | 'consignacion'
     costo_ingreso: number | string
     ingreso: { proveedor: { id_proveedor: string; nombre: string } | null } | null
