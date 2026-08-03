@@ -16,7 +16,12 @@ import {
   indexarPorNombre,
   normalizar,
 } from '@/lib/inventario/producto-match'
-import { FORMA_PAGO_LABEL, type FormaPago } from '@/lib/types/precios'
+import {
+  FORMA_PAGO_LABEL,
+  type DescuentoDisponible,
+  type DesgloseVenta,
+  type FormaPago,
+} from '@/lib/types/precios'
 import type { ProductoConDetalle } from '@/lib/types/inventario'
 import type { LineaCarrito } from '@/lib/types/ventas'
 import { registrarVentaAction, crearClienteAction } from '../actions'
@@ -36,6 +41,8 @@ interface Grupo {
   precio_final: number | null
   desactualizado: boolean
   advertencia: string | null
+  /** Desglose del prototipo del grupo (todas las unidades comparten precio). */
+  desglose: DesgloseVenta
   qrs: string[]
   cantidad: number
   subtotal: number
@@ -43,12 +50,17 @@ interface Grupo {
 interface SelectorTalle {
   idProducto: string
   productoNombre: string
-  /** null = agregar líneas nuevas; si tiene valor, es la key del grupo a reemplazar. */
+  /** null = agregar líneas nuevas; si tiene valor, es la key del grupo a reestructurar. */
   grupoKey: string | null
   opciones: TalleOpcion[]
   /** Unidades disponibles SIN talle asignado — se ofrecen aparte. */
   sinTalle: number
+  /** Cantidad por talle elegida por el vendedor. Clave = talle o '__sin__'. */
+  cantidades: Record<string, number>
 }
+const SIN_TALLE_KEY = '__sin__'
+/** Set vacío estable — evita recrear uno por render en las filas sin selección. */
+const EMPTY_SET: Set<string> = new Set()
 interface ReservaOption {
   id: string
   fecha: string
@@ -128,7 +140,58 @@ export function NuevaVentaView({
   const [lineas, setLineas] = useState<LineaCarrito[]>([])
   const [confirmarOpen, setConfirmarOpen] = useState(false)
 
-  // Cuando cambia forma_pago o reserva ⇒ recalculo precios de cada línea.
+  // Tope físico de unidades por grupo (producto+talle). Evita que el vendedor
+  // suba la cantidad de una fila más allá del stock real. Clave = grupo.key.
+  const [stockPorGrupo, setStockPorGrupo] = useState<Record<string, number>>({})
+
+  // Descuentos. Ninguno se aplica solo: el vendedor los elige.
+  //   - `descuentosDisponibles`: catálogo aplicable a los productos del carrito
+  //     (una fila por producto+descuento), refrescado cuando cambia el carrito.
+  //   - `descuentosPanel`: ids de descuentos global/categoría/proveedor tildados
+  //     en el panel lateral (aplican a toda la venta según su alcance).
+  //   - `descuentosProducto`: ids de descuentos de alcance=producto tildados en
+  //     la fila, indexado por id_producto.
+  const [descuentosDisponibles, setDescuentosDisponibles] = useState<DescuentoDisponible[]>([])
+  const [descuentosPanel, setDescuentosPanel] = useState<Set<string>>(new Set())
+  const [descuentosProducto, setDescuentosProducto] = useState<Record<string, Set<string>>>({})
+
+  // La unión de TODO lo elegido. Se manda entera a cada lookup y al registrar:
+  // el server valida cada id contra el producto e ignora los que no aplican.
+  const descuentosUnion = useMemo(() => {
+    const s = new Set<string>(descuentosPanel)
+    for (const set of Object.values(descuentosProducto)) for (const id of set) s.add(id)
+    return [...s].sort()
+  }, [descuentosPanel, descuentosProducto])
+  const descuentosKey = descuentosUnion.join(',')
+
+  // Descuentos de alcance=producto, agrupados por producto (para la fila).
+  const descProducto = useMemo(() => {
+    const m = new Map<string, DescuentoDisponible[]>()
+    for (const d of descuentosDisponibles) {
+      if (d.alcance !== 'producto') continue
+      const arr = m.get(d.id_producto) ?? []
+      arr.push(d)
+      m.set(d.id_producto, arr)
+    }
+    return m
+  }, [descuentosDisponibles])
+
+  // Descuentos global/categoría/proveedor, distintos por regla (para el panel).
+  // `productos` = qué productos del carrito cubre cada uno (para visualizar).
+  const descPanel = useMemo(() => {
+    const m = new Map<string, { d: DescuentoDisponible; productos: Set<string> }>()
+    for (const d of descuentosDisponibles) {
+      if (d.alcance === 'producto') continue
+      const e = m.get(d.id_regla)
+      if (e) e.productos.add(d.id_producto)
+      else m.set(d.id_regla, { d, productos: new Set([d.id_producto]) })
+    }
+    return [...m.values()]
+  }, [descuentosDisponibles])
+
+  // Cuando cambia forma_pago, reserva o la selección de descuentos ⇒
+  // recalculo precios de cada línea. Se manda la unión de descuentos; el
+  // server decide cuáles aplican a cada producto.
   useEffect(() => {
     if (lineas.length === 0) return
     let cancelled = false
@@ -139,7 +202,7 @@ export function NuevaVentaView({
           const r = await fetch(
             `/api/ventas/lookup-item?qr=${encodeURIComponent(l.qr_code)}&forma_pago=${formaPago}${
               idReserva ? `&id_reserva=${encodeURIComponent(idReserva)}` : ''
-            }`,
+            }${descuentosKey ? `&descuentos=${encodeURIComponent(descuentosKey)}` : ''}`,
           )
           const data = await r.json()
           if (data.ok) refreshed.push(data.linea as LineaCarrito)
@@ -154,7 +217,77 @@ export function NuevaVentaView({
       cancelled = true
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formaPago, idReserva])
+  }, [formaPago, idReserva, descuentosKey])
+
+  // Descuentos disponibles para los productos del carrito. Se refresca cuando
+  // cambia el SET de productos (no en cada unidad): agregar otra unidad del
+  // mismo producto no toca la lista.
+  const productosEnCarrito = useMemo(
+    () => [...new Set(lineas.map((l) => l.id_producto))].sort().join(','),
+    [lineas],
+  )
+  const productosEnCarritoCount = productosEnCarrito ? productosEnCarrito.split(',').length : 0
+  useEffect(() => {
+    if (!productosEnCarrito) {
+      setDescuentosDisponibles([])
+      return
+    }
+    let cancelled = false
+    ;(async () => {
+      try {
+        const r = await fetch(
+          `/api/ventas/descuentos-disponibles?productos=${encodeURIComponent(productosEnCarrito)}`,
+        )
+        const data = await r.json()
+        if (!cancelled && data.ok) {
+          setDescuentosDisponibles(data.descuentos as DescuentoDisponible[])
+        }
+      } catch {
+        /* si falla, no ofrecemos descuentos — la venta sigue a precio de lista */
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [productosEnCarrito])
+
+  // Tope de unidades por producto+talle. Se refresca con el SET de productos
+  // y con la reserva (cambia qué unidades reservadas cuentan como libres). No
+  // depende de la cantidad del carrito: el tope es el stock físico, que no
+  // cambia por cargar/descargar (los ítems del carrito siguen 'disponible').
+  useEffect(() => {
+    if (!productosEnCarrito) {
+      setStockPorGrupo({})
+      return
+    }
+    let cancelled = false
+    ;(async () => {
+      try {
+        const r = await fetch(
+          `/api/ventas/stock-disponible?productos=${encodeURIComponent(productosEnCarrito)}${
+            idReserva ? `&id_reserva=${encodeURIComponent(idReserva)}` : ''
+          }`,
+        )
+        const data = await r.json()
+        if (!cancelled && data.ok) {
+          const m: Record<string, number> = {}
+          for (const s of data.stock as Array<{
+            id_producto: string
+            talle: string | null
+            disponibles: number
+          }>) {
+            m[`${s.id_producto}|${s.talle ?? '__nula__'}`] = s.disponibles
+          }
+          setStockPorGrupo(m)
+        }
+      } catch {
+        /* si falla, no topeamos — el server igual rebota si falta stock */
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [productosEnCarrito, idReserva])
 
   const total = useMemo(
     () => lineas.reduce((a, l) => a + (l.precio_final ?? 0), 0),
@@ -186,6 +319,7 @@ export function NuevaVentaView({
           precio_final: l.precio_final,
           desactualizado: l.desactualizado,
           advertencia: l.advertencia,
+          desglose: l.desglose,
           qrs: [l.qr_code],
           cantidad: 1,
           subtotal: l.precio_final ?? 0,
@@ -194,6 +328,42 @@ export function NuevaVentaView({
     }
     return [...map.values()]
   }, [lineas])
+
+  // Descuentos aplicados en TODO el carrito, agregados por regla (nombre +
+  // impacto total = monto por unidad × cantidad del grupo). Alimenta el
+  // resumen arriba del Total.
+  const resumenDescuentos = useMemo(() => {
+    const m = new Map<string, { nombre: string; alcance: string; total: number }>()
+    for (const g of grupos) {
+      for (const d of g.desglose.descuentos) {
+        const add = d.monto * g.cantidad
+        const e = m.get(d.id_regla)
+        if (e) e.total += add
+        else m.set(d.id_regla, { nombre: d.nombre, alcance: d.alcance, total: add })
+      }
+    }
+    return [...m.values()]
+  }, [grupos])
+  const totalDescuentos = useMemo(
+    () => resumenDescuentos.reduce((a, r) => a + r.total, 0),
+    [resumenDescuentos],
+  )
+
+  // Subtotal a precio de lista (antes de descuentos y recargo) y recargo total
+  // por forma de pago. El recargo ya está dentro de precio_final; acá lo
+  // extraemos del desglose sólo para mostrarlo desagregado en el resumen.
+  const subtotalLista = useMemo(
+    () => grupos.reduce((a, g) => a + (g.precio_lista ?? 0) * g.cantidad, 0),
+    [grupos],
+  )
+  const totalRecargo = useMemo(
+    () =>
+      grupos.reduce(
+        (a, g) => a + (g.desglose.recargo_forma_pago?.monto ?? 0) * g.cantidad,
+        0,
+      ),
+    [grupos],
+  )
 
   // Submit del buscador (botón Agregar). Con sugerencias de nombre abiertas,
   // elegimos la resaltada — NUNCA caemos al path de código, para no agregar por
@@ -246,6 +416,8 @@ export function NuevaVentaView({
     qs.set('forma_pago', formaPago)
     if (idReserva) qs.set('id_reserva', idReserva)
     if (excluir.length > 0) qs.set('excluir', excluir.join(','))
+    // Descuentos elegidos: se mandan todos; el server filtra por producto.
+    if (descuentosKey) qs.set('descuentos', descuentosKey)
     return `/api/ventas/lookup-item?${qs.toString()}`
   }
 
@@ -304,11 +476,13 @@ export function NuevaVentaView({
     idProducto: string,
     talle?: string | null,
     extraExcluidos: string[] = [],
+    excluirBase?: string[],
   ): Promise<LineaCarrito | null> {
     if (!idProducto || buscando) return null
     setBuscando(true)
     setErrorBusqueda(null)
     try {
+      const base = excluirBase ?? itemsEnCarrito()
       const r = await fetch(
         lookupUrl(
           {
@@ -316,7 +490,7 @@ export function NuevaVentaView({
             talle: talle ?? undefined,
             sin_talle: talle === null ? '1' : undefined,
           },
-          [...itemsEnCarrito(), ...extraExcluidos],
+          [...base, ...extraExcluidos],
         ),
       )
       const data = await r.json()
@@ -328,6 +502,7 @@ export function NuevaVentaView({
             grupoKey: null,
             opciones: data.talles as TalleOpcion[],
             sinTalle: Number(data.sin_talle ?? 0),
+            cantidades: {},
           })
           return null
         }
@@ -355,17 +530,24 @@ export function NuevaVentaView({
     return productos.find((p) => p.id_producto === idProducto)?.nombre ?? 'Producto'
   }
 
-  // Abre el selector para un grupo ya cargado. Se excluye el resto del
-  // carrito pero SÍ se cuentan las unidades del propio grupo como "no
-  // disponibles" — el cambio implica quitar y volver a pedir N unidades del
-  // otro talle, así que las viejas no se pueden reusar. Si el producto no
-  // maneja talles no hay nada que elegir.
+  // Abre el selector para un grupo ya cargado. Se excluyen los ítems del
+  // resto del carrito y también los del propio grupo (van a ser devueltos
+  // apenas el vendedor confirme la nueva distribución). Sumamos la cantidad
+  // actual del grupo a la disponibilidad de su talle, así el vendedor puede
+  // "reusarla" en la nueva mezcla. Si el producto no maneja talles no hay
+  // nada que elegir.
   async function abrirCambioTalle(g: Grupo) {
     if (buscando) return
     setBuscando(true)
     setErrorBusqueda(null)
     try {
-      const r = await fetch(lookupUrl({ id_producto: g.id_producto }, itemsEnCarrito()))
+      // Excluyo el resto del carrito pero NO las unidades del propio grupo:
+      // así el disponible que vuelve el server ya incluye lo que el vendedor
+      // tenía cargado y puede reasignarlo libremente en la nueva mezcla.
+      const excluir = lineas
+        .filter((l) => !g.qrs.includes(l.qr_code))
+        .map((l) => l.id_item)
+      const r = await fetch(lookupUrl({ id_producto: g.id_producto }, excluir))
       const data = await r.json()
       if (data.reason !== 'elegir-talle') {
         setErrorBusqueda(
@@ -375,12 +557,16 @@ export function NuevaVentaView({
         )
         return
       }
+      const opciones = data.talles as TalleOpcion[]
       setSelectorTalle({
         idProducto: g.id_producto,
         productoNombre: g.producto_nombre,
         grupoKey: g.key,
-        opciones: data.talles as TalleOpcion[],
+        opciones,
         sinTalle: Number(data.sin_talle ?? 0),
+        cantidades: {
+          [g.talle ?? SIN_TALLE_KEY]: g.cantidad,
+        },
       })
     } catch (e) {
       setErrorBusqueda((e as Error).message)
@@ -389,29 +575,50 @@ export function NuevaVentaView({
     }
   }
 
-  // Cambia el talle de un grupo entero: quita las N unidades del talle viejo
-  // y pide N unidades del talle nuevo. Si el nuevo pedido falla a mitad de
-  // camino (poco stock), se queda con las que sí entraron.
-  async function cambiarTalleGrupo(grupoKey: string, talleNuevo: string | null) {
-    const g = grupos.find((x) => x.key === grupoKey)
-    if (!g) return
-    const set = new Set(g.qrs)
-    setLineas((ls) => ls.filter((l) => !set.has(l.qr_code)))
-    const running: string[] = []
-    for (let i = 0; i < g.cantidad; i++) {
-      const linea = await agregarPorProducto(g.id_producto, talleNuevo, running)
-      if (!linea) break
-      running.push(linea.id_item)
+  // Confirma la distribución de talles elegida en el selector. En "agregar"
+  // pide N unidades por cada talle > 0 encadenando exclusiones. En "cambiar"
+  // primero quita el grupo actual y después dispara el mismo flujo.
+  async function confirmarSelectorTalle() {
+    if (!selectorTalle) return
+    const pedidos: Array<{ talle: string | null; cant: number }> = []
+    for (const [k, v] of Object.entries(selectorTalle.cantidades)) {
+      if (v > 0) pedidos.push({ talle: k === SIN_TALLE_KEY ? null : k, cant: v })
     }
+    if (pedidos.length === 0) {
+      setSelectorTalle(null)
+      return
+    }
+    const grupoDeCambio = selectorTalle.grupoKey
+      ? grupos.find((x) => x.key === selectorTalle.grupoKey) ?? null
+      : null
+    // Base de exclusión "pura" (sin los ítems del grupo que se está
+    // reestructurando) — no depende del state async de React.
+    const qrsGrupo = new Set(grupoDeCambio?.qrs ?? [])
+    const excluirBase = lineas
+      .filter((l) => !qrsGrupo.has(l.qr_code))
+      .map((l) => l.id_item)
+    if (grupoDeCambio) {
+      setLineas((ls) => ls.filter((l) => !qrsGrupo.has(l.qr_code)))
+    }
+    const idProducto = selectorTalle.idProducto
     setSelectorTalle(null)
+    const running: string[] = []
+    for (const p of pedidos) {
+      for (let i = 0; i < p.cant; i++) {
+        const linea = await agregarPorProducto(idProducto, p.talle, running, excluirBase)
+        if (!linea) return
+        running.push(linea.id_item)
+      }
+    }
   }
 
-  /** Click en un chip del selector: agrega una línea nueva o cambia el grupo.
-   *  `talle=null` = eligió explícitamente la opción "Sin talle". */
-  function elegirTalle(talle: string | null) {
-    if (!selectorTalle) return
-    if (selectorTalle.grupoKey) void cambiarTalleGrupo(selectorTalle.grupoKey, talle)
-    else void agregarPorProducto(selectorTalle.idProducto, talle)
+  // Ajusta la cantidad de UN talle dentro del selector (sin llamar al server).
+  function setCantidadTalle(key: string, nueva: number, max: number) {
+    setSelectorTalle((s) => {
+      if (!s) return s
+      const n = Math.max(0, Math.min(max, Math.floor(nueva || 0)))
+      return { ...s, cantidades: { ...s.cantidades, [key]: n } }
+    })
   }
 
   // Ajusta la cantidad de un grupo (producto+talle) a `nueva`. Si sube, pide N
@@ -437,6 +644,26 @@ export function NuevaVentaView({
     const set = new Set(g.qrs)
     setLineas((ls) => ls.filter((l) => !set.has(l.qr_code)))
     setSelectorTalle((s) => (s?.grupoKey === g.key ? null : s))
+  }
+
+  // Toggle de un descuento del panel (global/categoría/proveedor).
+  function togglePanel(idRegla: string) {
+    setDescuentosPanel((s) => {
+      const n = new Set(s)
+      if (n.has(idRegla)) n.delete(idRegla)
+      else n.add(idRegla)
+      return n
+    })
+  }
+
+  // Toggle de un descuento de alcance=producto para ESE producto.
+  function toggleProducto(idProducto: string, idRegla: string) {
+    setDescuentosProducto((m) => {
+      const cur = new Set(m[idProducto] ?? [])
+      if (cur.has(idRegla)) cur.delete(idRegla)
+      else cur.add(idRegla)
+      return { ...m, [idProducto]: cur }
+    })
   }
 
   function crearCliente() {
@@ -468,7 +695,9 @@ export function NuevaVentaView({
     setConfirmarOpen(false)
     start(async () => {
       const res = await registrarVentaAction({
-        lineas: lineas.map((l) => ({ id_item: l.id_item })),
+        // Se manda la unión de descuentos por línea; el server valida cada
+        // uno contra el producto de esa línea y descarta los que no aplican.
+        lineas: lineas.map((l) => ({ id_item: l.id_item, descuentos: descuentosUnion })),
         formaPago,
         idCliente: idCliente || null,
         idReserva: idReserva || null,
@@ -620,53 +849,13 @@ export function NuevaVentaView({
           </form>
 
           {selectorTalle && (
-            <div className="rounded-md border border-border bg-card-2 p-3 space-y-2">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-sm">
-                  <span className="text-muted">
-                    {selectorTalle.grupoKey ? 'Cambiar talle de' : 'Elegí el talle de'}{' '}
-                  </span>
-                  <b>{selectorTalle.productoNombre}</b>
-                </span>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setSelectorTalle(null)}
-                >
-                  Cancelar
-                </Button>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {selectorTalle.opciones.map((o) => (
-                  <Button
-                    key={o.talle}
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    disabled={buscando}
-                    onClick={() => elegirTalle(o.talle)}
-                  >
-                    {o.talle} · {o.disponibles} u.
-                  </Button>
-                ))}
-                {/* Las "sin talle" son unidades que quedaron sin cargar el
-                    talle a propósito (o por olvido). Se pueden vender igual —
-                    el vendedor decide, no el sistema. */}
-                {selectorTalle.sinTalle > 0 && (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    disabled={buscando}
-                    onClick={() => elegirTalle(null)}
-                    title="Unidades sin talle asignado"
-                  >
-                    Sin talle · {selectorTalle.sinTalle} u.
-                  </Button>
-                )}
-              </div>
-            </div>
+            <SelectorTalleMulti
+              selector={selectorTalle}
+              disabled={buscando}
+              onChangeCantidad={setCantidadTalle}
+              onConfirm={() => void confirmarSelectorTalle()}
+              onCancel={() => setSelectorTalle(null)}
+            />
           )}
 
           {camaraOpen && (
@@ -724,15 +913,32 @@ export function NuevaVentaView({
                       {g.desactualizado && (
                         <Badge variant="warning">Precio desactualizado</Badge>
                       )}
+                      <LineaDescuentos
+                        grupo={g}
+                        disponibles={descProducto.get(g.id_producto) ?? []}
+                        seleccionados={descuentosProducto[g.id_producto] ?? EMPTY_SET}
+                        onToggle={(idRegla) => toggleProducto(g.id_producto, idRegla)}
+                        disabled={buscando}
+                      />
                     </td>
                     <td className="px-4 py-3 text-right font-mono">
-                      {g.precio_final != null
-                        ? `$ ${g.precio_final.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`
-                        : '—'}
+                      {g.precio_final != null ? (
+                        <div className="flex flex-col items-end leading-tight">
+                          {g.desglose.descuentos.length > 0 && g.precio_lista != null && (
+                            <span className="text-xs text-muted line-through">
+                              {money(g.precio_lista)}
+                            </span>
+                          )}
+                          <span>{money(g.precio_final)}</span>
+                        </div>
+                      ) : (
+                        '—'
+                      )}
                     </td>
                     <td className="px-4 py-3 text-right">
                       <CantidadGrupo
                         grupo={g}
+                        max={stockPorGrupo[g.key]}
                         onCommit={(n) => void setCantidadGrupo(g, n)}
                         disabled={buscando}
                       />
@@ -754,12 +960,61 @@ export function NuevaVentaView({
               )}
             </tbody>
             <tfoot>
+              {(totalDescuentos > 0 || totalRecargo > 0) && (
+                <>
+                  <tr className="border-t border-border">
+                    <td colSpan={3} className="px-4 pt-3 pb-1 text-right text-sm text-muted">
+                      Subtotal (precio de lista)
+                    </td>
+                    <td className="px-4 pt-3 pb-1 text-right font-mono text-sm text-muted">
+                      {money(subtotalLista)}
+                    </td>
+                    <td></td>
+                  </tr>
+                  {resumenDescuentos.map((r) => (
+                    <tr key={r.nombre + r.alcance}>
+                      <td colSpan={3} className="px-4 py-0.5 text-right text-sm text-muted">
+                        <span className="rounded bg-card-2 px-1 py-0.5 text-[10px] uppercase tracking-wide">
+                          {ALCANCE_CORTO[r.alcance]}
+                        </span>{' '}
+                        {r.nombre}
+                      </td>
+                      <td className="px-4 py-0.5 text-right font-mono text-sm text-pink-strong">
+                        −{money(r.total)}
+                      </td>
+                      <td></td>
+                    </tr>
+                  ))}
+                  {totalDescuentos > 0 && (
+                    <tr>
+                      <td colSpan={3} className="px-4 py-0.5 text-right text-sm font-medium text-pink-strong">
+                        Total descuentos
+                      </td>
+                      <td className="px-4 py-0.5 text-right font-mono text-sm font-semibold text-pink-strong">
+                        −{money(totalDescuentos)}
+                      </td>
+                      <td></td>
+                    </tr>
+                  )}
+                  {totalRecargo > 0 && (
+                    <tr>
+                      <td colSpan={3} className="px-4 py-0.5 pb-2 text-right text-sm font-medium text-terracota">
+                        Recargo · {FORMA_PAGO_LABEL[formaPago]}
+                      </td>
+                      <td className="px-4 py-0.5 pb-2 text-right font-mono text-sm font-semibold text-terracota">
+                        +{money(totalRecargo)}
+                      </td>
+                      <td></td>
+                    </tr>
+                  )}
+                </>
+              )}
               <tr className="border-t border-border bg-card-2">
                 <td colSpan={3} className="px-4 py-3 font-semibold">
                   Total ({lineas.length} ítem{lineas.length === 1 ? '' : 's'})
                 </td>
                 <td className="px-4 py-3 text-right font-mono font-semibold">
-                  $ {total.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                  {money(total)}
                 </td>
                 <td></td>
               </tr>
@@ -784,6 +1039,12 @@ export function NuevaVentaView({
                 </option>
               ))}
             </select>
+            {totalRecargo > 0 && (
+              <p className="mt-1 text-xs text-terracota">
+                Recargo por {FORMA_PAGO_LABEL[formaPago]}: +{money(totalRecargo)} — ya
+                incluido en el total.
+              </p>
+            )}
           </Field>
 
           <Field htmlFor="v-reserva" label="Reserva (opcional)" hint="Cargar ítems de una reserva activa">
@@ -802,6 +1063,15 @@ export function NuevaVentaView({
               ))}
             </select>
           </Field>
+
+          {lineas.length > 0 && (
+            <DescuentosPanelSelect
+              opciones={descPanel}
+              seleccionados={descuentosPanel}
+              onToggle={togglePanel}
+              productosTotal={productosEnCarritoCount}
+            />
+          )}
 
           <Field
             htmlFor="v-cli"
@@ -993,10 +1263,13 @@ export function NuevaVentaView({
  */
 function CantidadGrupo({
   grupo,
+  max,
   onCommit,
   disabled,
 }: {
   grupo: Grupo
+  /** Tope físico de unidades (producto+talle). undefined = sin dato aún. */
+  max?: number
   onCommit: (nueva: number) => void
   disabled: boolean
 }) {
@@ -1014,34 +1287,406 @@ function CantidadGrupo({
 
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current) }, [])
 
+  // Clamp al tope: nunca dejamos elegir más unidades de las que hay en stock.
+  // Si aún no llegó el dato de stock, no topeamos (el server igual valida).
+  function clamp(n: number): number {
+    const piso = Math.max(0, Math.floor(n || 0))
+    return max != null ? Math.min(piso, max) : piso
+  }
+
   function schedule(nueva: number) {
-    setVal(nueva)
+    const n = clamp(nueva)
+    setVal(n)
     if (timer.current) clearTimeout(timer.current)
-    timer.current = setTimeout(() => onCommit(nueva), 250)
+    timer.current = setTimeout(() => onCommit(n), 250)
   }
 
   function commitNow(nueva: number) {
     if (timer.current) clearTimeout(timer.current)
-    if (nueva !== grupo.cantidad) onCommit(nueva)
+    const n = clamp(nueva)
+    if (n !== val) setVal(n)
+    if (n !== grupo.cantidad) onCommit(n)
   }
 
+  const enTope = max != null && grupo.cantidad >= max
+
   return (
-    <NumberInput
-      min={0}
-      value={val}
-      disabled={disabled}
-      onChange={(e) => schedule(Number(e.target.value || 0))}
-      onBlur={() => commitNow(val)}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter') {
-          e.preventDefault()
-          commitNow(val)
-          ;(e.target as HTMLInputElement).blur()
-        }
-      }}
-      aria-label="Cantidad"
-      className="w-16 text-right"
-    />
+    <div className="flex flex-col items-end gap-0.5">
+      <NumberInput
+        min={0}
+        max={max}
+        value={val}
+        disabled={disabled}
+        onChange={(e) => schedule(Number(e.target.value || 0))}
+        onBlur={() => commitNow(val)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault()
+            commitNow(val)
+            ;(e.target as HTMLInputElement).blur()
+          }
+        }}
+        aria-label="Cantidad"
+        className="w-16 text-right"
+      />
+      {enTope && (
+        <span className="text-[10px] text-muted">
+          {max === 1 ? 'Única unidad' : `Máx. ${max}`}
+        </span>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Selector multi-talle. El vendedor ve TODOS los talles del producto con su
+ * stock libre y un input de cantidad por talle. Puede combinar (ej. 1 M + 1 S)
+ * y confirmar todo en una sola acción. En modo "cambiar" arranca precargado
+ * con la distribución actual del grupo, así el operador la reestructura sin
+ * tener que reescribir desde cero.
+ */
+function SelectorTalleMulti({
+  selector,
+  disabled,
+  onChangeCantidad,
+  onConfirm,
+  onCancel,
+}: {
+  selector: SelectorTalle
+  disabled: boolean
+  onChangeCantidad: (key: string, nueva: number, max: number) => void
+  onConfirm: () => void
+  onCancel: () => void
+}) {
+  const filas: Array<{ key: string; label: string; max: number }> = [
+    ...selector.opciones.map((o) => ({
+      key: o.talle,
+      label: `Talle ${o.talle}`,
+      max: o.disponibles,
+    })),
+  ]
+  if (selector.sinTalle > 0) {
+    filas.push({ key: SIN_TALLE_KEY, label: 'Sin talle', max: selector.sinTalle })
+  }
+  const totalElegido = Object.values(selector.cantidades).reduce((a, b) => a + b, 0)
+  const esCambio = !!selector.grupoKey
+
+  return (
+    <div className="rounded-md border border-border bg-card-2 p-3 space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="text-sm">
+          <span className="text-muted">
+            {esCambio ? 'Reestructurar' : 'Elegí talle y cantidad de'}{' '}
+          </span>
+          <b>{selector.productoNombre}</b>
+        </span>
+        <Button type="button" size="sm" variant="ghost" onClick={onCancel}>
+          Cancelar
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-x-3 gap-y-2">
+        {filas.map((f) => {
+          const cant = selector.cantidades[f.key] ?? 0
+          const agotado = f.max === 0
+          return (
+            <FilaTalle
+              key={f.key}
+              label={f.label}
+              max={f.max}
+              cant={cant}
+              disabled={disabled || agotado}
+              onChange={(n) => onChangeCantidad(f.key, n, f.max)}
+            />
+          )
+        })}
+      </div>
+
+      <div className="flex items-center justify-between gap-2 border-t border-border pt-2">
+        <span className="text-xs text-muted">
+          {totalElegido === 0
+            ? 'Poné al menos 1 unidad en algún talle.'
+            : `${totalElegido} unidad${totalElegido === 1 ? '' : 'es'} a ${esCambio ? 'dejar en el carrito' : 'agregar'}.`}
+        </span>
+        <Button
+          type="button"
+          size="sm"
+          disabled={disabled || totalElegido === 0}
+          onClick={onConfirm}
+        >
+          {esCambio ? 'Aplicar cambio' : `Agregar ${totalElegido || ''}`.trim()}
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+function FilaTalle({
+  label,
+  max,
+  cant,
+  disabled,
+  onChange,
+}: {
+  label: string
+  max: number
+  cant: number
+  disabled: boolean
+  onChange: (n: number) => void
+}) {
+  return (
+    <>
+      <span className="text-sm">
+        <span className="font-medium">{label}</span>{' '}
+        <span className="text-xs text-muted">· {max} disp.</span>
+      </span>
+      <Button
+        type="button"
+        size="sm"
+        variant="secondary"
+        disabled={disabled || cant <= 0}
+        onClick={() => onChange(cant - 1)}
+        aria-label={`Restar ${label}`}
+      >
+        −
+      </Button>
+      <NumberInput
+        min={0}
+        max={max}
+        value={cant}
+        disabled={disabled}
+        onChange={(e) => onChange(Number(e.target.value || 0))}
+        aria-label={`Cantidad ${label}`}
+        className="w-14 text-right"
+      />
+      <Button
+        type="button"
+        size="sm"
+        variant="secondary"
+        disabled={disabled || cant >= max}
+        onClick={() => onChange(cant + 1)}
+        aria-label={`Sumar ${label}`}
+      >
+        +
+      </Button>
+    </>
+  )
+}
+
+/** $ con 2 decimales, formato es-AR. */
+function money(n: number): string {
+  return `$ ${n.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`
+}
+
+/** Etiqueta corta del valor de un descuento: "15%" o "$ 500,00". */
+function descValorLabel(d: { tipo_valor: string; valor: number }): string {
+  return d.tipo_valor === 'porcentaje'
+    ? `${(d.valor * 100).toLocaleString('es-AR', { maximumFractionDigits: 2 })}%`
+    : money(d.valor)
+}
+
+const ALCANCE_CORTO: Record<string, string> = {
+  global: 'Global',
+  categoria: 'Categoría',
+  proveedor: 'Proveedor',
+  producto: 'Producto',
+}
+
+/**
+ * Descuentos de una fila del carrito. Muestra:
+ *   - chips seleccionables de los descuentos de alcance=producto disponibles,
+ *   - el listado de TODOS los descuentos aplicados a la línea con su impacto,
+ *   - un aviso si se combinan dos o más descuentos NO acumulables (modelo
+ *     "avisar, no bloquear": el vendedor decide igual).
+ */
+function LineaDescuentos({
+  grupo,
+  disponibles,
+  seleccionados,
+  onToggle,
+  disabled,
+}: {
+  grupo: Grupo
+  disponibles: DescuentoDisponible[]
+  seleccionados: Set<string>
+  onToggle: (idRegla: string) => void
+  disabled: boolean
+}) {
+  const aplicados = grupo.desglose.descuentos
+  const noAcumulables = aplicados.filter((d) => !d.acumulable).length
+  if (disponibles.length === 0 && aplicados.length === 0) return null
+
+  return (
+    <div className="mt-2 space-y-1.5">
+      {disponibles.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-xs text-muted">Descuento de producto:</span>
+          {disponibles.map((d) => {
+            const activo = seleccionados.has(d.id_regla)
+            return (
+              <button
+                key={d.id_regla}
+                type="button"
+                disabled={disabled}
+                onClick={() => onToggle(d.id_regla)}
+                aria-pressed={activo}
+                className={`rounded-full border px-2 py-0.5 text-xs transition disabled:opacity-50 ${
+                  activo
+                    ? 'border-pink-strong bg-pink-bg text-pink-strong'
+                    : 'border-border bg-card text-text hover:border-pink-strong'
+                }`}
+                title={activo ? 'Quitar descuento' : 'Aplicar descuento'}
+              >
+                {activo ? '✓ ' : ''}
+                {d.nombre} · −{descValorLabel(d)}
+              </button>
+            )
+          })}
+        </div>
+      )}
+
+      {aplicados.length > 0 && (
+        <ul className="space-y-0.5">
+          {aplicados.map((d) => (
+            <li
+              key={d.id_regla}
+              className="flex items-center justify-between gap-2 text-xs text-muted"
+            >
+              <span>
+                <span className="rounded bg-card-2 px-1 py-0.5 text-[10px] uppercase tracking-wide">
+                  {ALCANCE_CORTO[d.alcance]}
+                </span>{' '}
+                {d.nombre}
+                {!d.acumulable && ' · no acumulable'}
+              </span>
+              <span className="font-mono text-pink-strong">−{money(d.monto)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {noAcumulables >= 2 && (
+        <div className="text-xs text-terracota">
+          Estás combinando {noAcumulables} descuentos marcados como no
+          acumulables. Se aplican igual — revisá que sea lo que querés.
+        </div>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Selector de descuentos global/categoría/proveedor como desplegable
+ * multi-select (acumulable: se pueden tildar varios). Muestra chips de los
+ * activos debajo del botón, visibles aunque el desplegable esté cerrado.
+ */
+function DescuentosPanelSelect({
+  opciones,
+  seleccionados,
+  onToggle,
+  productosTotal,
+}: {
+  opciones: Array<{ d: DescuentoDisponible; productos: Set<string> }>
+  seleccionados: Set<string>
+  onToggle: (idRegla: string) => void
+  productosTotal: number
+}) {
+  const [open, setOpen] = useState(false)
+  const activos = opciones.filter((o) => seleccionados.has(o.d.id_regla))
+
+  return (
+    <div>
+      <div className="mb-1 text-sm font-medium">Descuentos de la venta</div>
+      {opciones.length === 0 ? (
+        <p className="text-xs text-muted">
+          No hay descuentos globales, de categoría o de proveedor para estos
+          productos. Los de producto se eligen en cada fila.
+        </p>
+      ) : (
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setOpen((o) => !o)}
+            aria-expanded={open}
+            className="flex w-full items-center justify-between rounded-md border border-border bg-card px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
+          >
+            <span className={activos.length ? 'text-text' : 'text-muted'}>
+              {activos.length === 0
+                ? 'Elegí descuentos…'
+                : `${activos.length} descuento${activos.length === 1 ? '' : 's'} aplicado${activos.length === 1 ? '' : 's'}`}
+            </span>
+            <span className="text-muted">▾</span>
+          </button>
+
+          {open && (
+            <>
+              {/* Backdrop para cerrar al clickear afuera (queda detrás de la lista). */}
+              <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+              <ul
+                role="listbox"
+                aria-multiselectable="true"
+                className="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md border border-border bg-card-2 shadow"
+              >
+                {opciones.map(({ d, productos }) => {
+                  const activo = seleccionados.has(d.id_regla)
+                  return (
+                    <li
+                      key={d.id_regla}
+                      role="option"
+                      aria-selected={activo}
+                      onClick={() => onToggle(d.id_regla)}
+                      className={`flex cursor-pointer items-start gap-2 px-3 py-2 text-sm ${
+                        activo ? 'bg-pink-bg' : 'hover:bg-card'
+                      }`}
+                    >
+                      <span className="mt-0.5 w-4 shrink-0 text-pink-strong">
+                        {activo ? '✓' : ''}
+                      </span>
+                      <span className="flex-1">
+                        <span className="flex items-center justify-between gap-2">
+                          <span className="font-medium">{d.nombre}</span>
+                          <span className="font-mono text-xs text-pink-strong">
+                            −{descValorLabel(d)}
+                          </span>
+                        </span>
+                        <span className="text-xs text-muted">
+                          {ALCANCE_CORTO[d.alcance]}
+                          {productos.size < productosTotal
+                            ? ` · ${productos.size} de ${productosTotal} productos`
+                            : ' · todo el carrito'}
+                          {!d.acumulable ? ' · no acumulable' : ''}
+                        </span>
+                      </span>
+                    </li>
+                  )
+                })}
+              </ul>
+            </>
+          )}
+
+          {activos.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {activos.map(({ d }) => (
+                <span
+                  key={d.id_regla}
+                  className="inline-flex items-center gap-1 rounded-full border border-pink-strong bg-pink-bg px-2 py-0.5 text-xs text-pink-strong"
+                >
+                  {d.nombre} · −{descValorLabel(d)}
+                  <button
+                    type="button"
+                    onClick={() => onToggle(d.id_regla)}
+                    aria-label={`Quitar ${d.nombre}`}
+                    className="hover:text-terracota"
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   )
 }
 

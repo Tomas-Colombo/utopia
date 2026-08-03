@@ -1,6 +1,7 @@
 import 'server-only'
 import { createServerClient } from '@/lib/dal/supabase'
 import type {
+  DescuentoDisponible,
   FormaPago,
   PreciosResumen,
   ProductoConPrecioStatus,
@@ -8,22 +9,52 @@ import type {
 } from '@/lib/types/precios'
 
 /**
- * Snapshot de precio para una venta futura. RPC `sp_calcular_precio_venta_snapshot`
- * hace toda la cascada + suma de descuentos + recargo por forma de pago.
- * NO persiste — solo calcula. Etapa 5 (venta) usa este resultado para
- * guardar `detalle_venta.precio_venta`.
+ * Snapshot de precio para una venta. RPC `sp_calcular_precio_venta_snapshot`
+ * aplica los descuentos ELEGIDOS (`idsDescuentos`) que sean válidos para el
+ * producto + el recargo por forma de pago. NO persiste — solo calcula.
+ *
+ * Los ids se pasan "todos juntos" a propósito: el SP valida cada uno contra
+ * el producto (alcance + vigencia) e ignora los que no aplican, así el
+ * caller no tiene que saber qué descuento pega en qué producto.
  */
 export async function calcularSnapshotPrecio(input: {
   idProducto: string
   formaPago?: FormaPago
+  idsDescuentos?: string[]
 }): Promise<SnapshotPrecio> {
   const supabase = await createServerClient()
   const { data, error } = await supabase.rpc('sp_calcular_precio_venta_snapshot', {
     p_id_producto: input.idProducto,
     p_forma_pago: input.formaPago ?? 'efectivo',
+    p_ids_descuentos: input.idsDescuentos ?? [],
   })
   if (error) throw new Error(`sp_calcular_precio_venta_snapshot: ${error.message}`)
   return data as SnapshotPrecio
+}
+
+/**
+ * Descuentos vigentes que aplican a cada producto del carrito. La UI los
+ * agrupa: alcance='producto' se ofrece por fila; global/categoría/proveedor
+ * en el panel lateral. Un round-trip para todo el carrito.
+ */
+export async function listDescuentosDisponiblesVenta(
+  idsProductos: string[],
+): Promise<DescuentoDisponible[]> {
+  if (idsProductos.length === 0) return []
+  const supabase = await createServerClient()
+  const { data, error } = await supabase.rpc('sp_descuentos_disponibles_venta', {
+    p_ids_productos: idsProductos,
+  })
+  if (error) throw new Error(`sp_descuentos_disponibles_venta: ${error.message}`)
+  return ((data ?? []) as Array<DescuentoDisponible & { valor: number | string }>).map((r) => ({
+    id_producto: r.id_producto,
+    id_regla: r.id_regla,
+    nombre: r.nombre,
+    alcance: r.alcance,
+    tipo_valor: r.tipo_valor,
+    valor: Number(r.valor),
+    acumulable: r.acumulable,
+  }))
 }
 
 /**

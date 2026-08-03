@@ -40,6 +40,8 @@ export interface ReglaPrecioRow {
   id_proveedor: string | null
   forma_pago: FormaPago | null
   prioridad: number
+  /** Sólo relevante en descuentos. Flag informativo: no fuerza exclusividad. */
+  acumulable: boolean
   fecha_inicio: string | null
   fecha_hasta: string | null
   fecha_baja: string | null
@@ -58,13 +60,29 @@ export interface ReglaPrecioInsert {
   id_proveedor?: string | null
   forma_pago?: FormaPago | null
   prioridad?: number
+  acumulable?: boolean
   fecha_inicio?: string | null
   fecha_hasta?: string | null
 }
 
 /**
+ * Un descuento aplicable a un producto del carrito, tal como lo devuelve
+ * `sp_descuentos_disponibles_venta`. La UI agrupa por alcance: 'producto'
+ * se ofrece en la fila; global/categoría/proveedor en el panel lateral.
+ */
+export interface DescuentoDisponible {
+  id_producto: string
+  id_regla: string
+  nombre: string
+  alcance: AlcanceRegla
+  tipo_valor: TipoValorRegla
+  valor: number
+  acumulable: boolean
+}
+
+/**
  * Respuesta de `sp_calcular_precio_venta_snapshot`. La UI y la venta
- * (Etapa 5) consumen esto.
+ * consumen esto.
  */
 export type SnapshotPrecio =
   | {
@@ -73,7 +91,7 @@ export type SnapshotPrecio =
       precio_final: number
       forma_pago: FormaPago
       desactualizado: boolean
-      desglose: Record<string, DesgloseItem>
+      desglose: DesgloseVenta
     }
   | {
       ok: false
@@ -81,12 +99,31 @@ export type SnapshotPrecio =
       requiere_recalcular: true
     }
 
-export interface DesgloseItem {
+/** Un descuento efectivamente aplicado a la línea, con su impacto en $. */
+export interface DescuentoAplicado {
+  id_regla: string
+  nombre: string
+  alcance: AlcanceRegla
+  tipo_valor: TipoValorRegla
+  valor: number
+  acumulable: boolean
+  /** Cuánto restó del precio de lista (en $, ya redondeado). */
+  monto: number
+}
+
+/** El recargo por forma de pago aplicado, si hubo. */
+export interface RecargoAplicado {
   id_regla: string
   tipo_valor: TipoValorRegla
   valor: number
-  nombre?: string
-  forma_pago?: FormaPago
+  forma_pago: FormaPago
+  monto: number
+}
+
+/** Desglose de reglas que devuelve el snapshot y se persiste en la venta. */
+export interface DesgloseVenta {
+  descuentos: DescuentoAplicado[]
+  recargo_forma_pago?: RecargoAplicado
 }
 
 /**

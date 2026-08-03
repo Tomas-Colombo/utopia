@@ -42,7 +42,7 @@ async function guarded(modulo: string, accion: string): Promise<Guarded> {
 // ─── Ventas ──────────────────────────────────────────────────────────
 
 export async function registrarVentaAction(input: {
-  lineas: Array<{ id_item: string }>
+  lineas: Array<{ id_item: string; descuentos?: string[] }>
   formaPago: FormaPago
   idCliente?: string | null
   idReserva?: string | null

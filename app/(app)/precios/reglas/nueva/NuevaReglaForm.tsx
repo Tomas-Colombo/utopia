@@ -43,6 +43,7 @@ export function NuevaReglaForm({
   const [idCategoria, setIdCategoria] = useState('')
   const [idProveedor, setIdProveedor] = useState('')
   const [formaPago, setFormaPago] = useState<FormaPago | ''>('')
+  const [acumulable, setAcumulable] = useState(false)
   const [prioridad, setPrioridad] = useState('0')
   const [fechaInicio, setFechaInicio] = useState('')
   const [fechaHasta, setFechaHasta] = useState('')
@@ -52,6 +53,7 @@ export function NuevaReglaForm({
   function handleTipoRegla(t: TipoRegla) {
     setTipoRegla(t)
     if (t !== 'recargo') setFormaPago('')
+    if (t !== 'descuento') setAcumulable(false)
   }
   function handleAlcance(a: AlcanceRegla) {
     setAlcance(a)
@@ -102,6 +104,7 @@ export function NuevaReglaForm({
         id_proveedor: alcance === 'proveedor' ? idProveedor : null,
         forma_pago: tipoRegla === 'recargo' ? (formaPago || null) : null,
         prioridad: Number(prioridad || 0),
+        acumulable: tipoRegla === 'descuento' ? acumulable : false,
         fecha_inicio: fechaInicio || null,
         fecha_hasta: fechaHasta || null,
       })
@@ -208,6 +211,25 @@ export function NuevaReglaForm({
             ))}
           </select>
         </Field>
+      )}
+
+      {tipoRegla === 'descuento' && (
+        <div className="rounded-md border border-border bg-card-2 p-3">
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={acumulable}
+              onChange={(e) => setAcumulable(e.target.checked)}
+              className="h-4 w-4 rounded border-border text-accent-pink focus:ring-accent-pink"
+            />
+            Acumulable con otros descuentos
+          </label>
+          <p className="mt-1 text-xs text-muted">
+            Ningún descuento se aplica solo: el vendedor los elige en la venta.
+            Este flag no bloquea nada — si se combinan descuentos no acumulables,
+            el sistema sólo avisa.
+          </p>
+        </div>
       )}
 
       {tipoRegla === 'recargo' && (

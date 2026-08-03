@@ -50,6 +50,7 @@ export async function createReglaAction(input: {
   id_proveedor?: string | null
   forma_pago?: FormaPago | null
   prioridad?: number
+  acumulable?: boolean
   fecha_inicio?: string | null
   fecha_hasta?: string | null
 }): Promise<ActionResult<{ id: string }>> {

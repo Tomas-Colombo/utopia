@@ -64,6 +64,13 @@ export async function GET(req: NextRequest) {
   const sinTalleParam = params.get('sin_talle') === '1'
   const formaPago = (params.get('forma_pago') as FormaPago | null) ?? 'efectivo'
   const idReservaCtx = params.get('id_reserva')?.trim() ?? null
+  // Descuentos elegidos por el vendedor. Se mandan TODOS juntos; el snapshot
+  // valida cada uno contra el producto (alcance + vigencia) e ignora los que
+  // no aplican. Así el cliente no necesita saber qué descuento pega en qué.
+  const idsDescuentos = (params.get('descuentos') ?? '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
   // Unidades ya cargadas en el carrito: no son candidatas.
   const excluir = (params.get('excluir') ?? '')
     .split(',')
@@ -227,6 +234,7 @@ export async function GET(req: NextRequest) {
   const snap = await calcularSnapshotPrecio({
     idProducto: item.id_producto,
     formaPago,
+    idsDescuentos,
   })
 
   if (!snap.ok) {
@@ -248,7 +256,7 @@ export async function GET(req: NextRequest) {
     precio_lista: snap.precio_lista,
     precio_final: snap.precio_final,
     desactualizado: snap.desactualizado,
-    desglose: snap.desglose as Record<string, unknown>,
+    desglose: snap.desglose,
     advertencia,
   }
   return NextResponse.json({ ok: true, linea })

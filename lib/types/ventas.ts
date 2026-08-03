@@ -2,7 +2,7 @@
  * Tipos TS mantenidos a mano contra 00020-00023.
  */
 
-import type { FormaPago } from './precios'
+import type { DesgloseVenta, FormaPago } from './precios'
 import type { TipoIngreso } from './inventario'
 
 export type EstadoVenta = 'registrada' | 'anulada'
@@ -81,7 +81,7 @@ export interface DetalleVentaRow {
   monto_gasto: number
   monto_ganancia: number
   tipo_ingreso_snapshot: TipoIngreso
-  desglose_reglas: Record<string, unknown>
+  desglose_reglas: DesgloseVenta
   id_rendicion: string | null
   excluida_rendicion: boolean
   created_at: string
@@ -110,7 +110,8 @@ export interface ComprobanteRow {
 
 /** Payload que la UI arma para sp_registrar_venta. */
 export interface RegistrarVentaInput {
-  lineas: Array<{ id_item: string }>
+  /** `descuentos`: ids de reglas de descuento elegidas para esa línea. */
+  lineas: Array<{ id_item: string; descuentos?: string[] }>
   forma_pago: FormaPago
   id_cliente?: string | null
   id_reserva?: string | null
@@ -169,6 +170,6 @@ export interface LineaCarrito {
   precio_lista: number | null
   precio_final: number | null
   desactualizado: boolean
-  desglose: Record<string, unknown>
+  desglose: DesgloseVenta
   advertencia: string | null // e.g. "reservado por otro cliente"
 }

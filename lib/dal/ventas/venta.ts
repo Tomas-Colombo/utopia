@@ -73,7 +73,10 @@ export async function spRegistrarVenta(input: RegistrarVentaInput): Promise<stri
   if (input.lineas.length === 0) throw new Error('lineas-vacias')
   const supabase = await createServerClient()
   const { data, error } = await supabase.rpc('sp_registrar_venta', {
-    p_lineas: input.lineas as unknown as object,
+    p_lineas: input.lineas.map((l) => ({
+      id_item: l.id_item,
+      descuentos: l.descuentos ?? [],
+    })) as unknown as object,
     p_forma_pago: input.forma_pago,
     p_id_cliente: input.id_cliente ?? null,
     p_id_reserva: input.id_reserva ?? null,

@@ -64,6 +64,7 @@ export async function spCreateReglaPrecio(input: ReglaPrecioInsert): Promise<str
     p_prioridad: input.prioridad ?? 0,
     p_fecha_inicio: input.fecha_inicio ?? null,
     p_fecha_hasta: input.fecha_hasta ?? null,
+    p_acumulable: input.acumulable ?? false,
   })
   if (error) throw new Error(`sp_create_regla_precio: ${error.message}`)
   return data as string
