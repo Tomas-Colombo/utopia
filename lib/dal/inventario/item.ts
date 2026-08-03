@@ -117,6 +117,12 @@ export async function listItemsByProducto(idProducto: string): Promise<ItemProdu
  * al producto/variante, no a una unidad, así que hay que elegir una unidad
  * concreta. El talle se compara case-insensitive (ilike sin comodines).
  */
+/**
+ * Filtro de talle para `listItemsDisponibles`:
+ *   - `undefined` → no filtra por talle (cualquiera)
+ *   - `null`      → sólo unidades SIN talle asignado (talle IS NULL)
+ *   - `"M"`       → sólo unidades de ese talle (case-insensitive)
+ */
 export async function listItemsDisponibles(
   idProducto: string,
   talle?: string | null,
@@ -129,10 +135,75 @@ export async function listItemsDisponibles(
     .eq('estado_item', 'disponible')
     .order('fecha_ingreso', { ascending: true })
     .limit(25)
-  if (talle) query = query.ilike('talle', talle)
+  if (talle === null) query = query.is('talle', null)
+  else if (talle) query = query.ilike('talle', talle)
   const { data, error } = await query
   if (error) throw new Error(`listItemsDisponibles: ${error.message}`)
   return (data ?? []) as ItemProductoRow[]
+}
+
+/** Stock libre de un talle concreto (`null` = unidades sin talle asignado). */
+export interface StockPorTalle {
+  talle: string | null
+  disponibles: number
+}
+
+/**
+ * Stock disponible de un producto AGRUPADO POR TALLE.
+ *
+ * No usa `listItemsDisponibles`: esa función corta en 25 unidades FIFO, y con
+ * un corte no se puede saber qué talles existen — si las 25 más viejas son
+ * todas "M", el resto de los talles desaparece del mapa. Acá se leen todas las
+ * unidades disponibles (sólo id + talle, dos columnas) y se agrupa en memoria.
+ *
+ * Descuenta las unidades bloqueadas por una reserva activa, salvo las de
+ * `idReservaCtx` (la reserva que se está cobrando) y las de `excluir`
+ * (unidades que ya están en el carrito y por lo tanto no se pueden volver a
+ * agregar).
+ *
+ * Cuesta 2 queries fijas, independientemente del stock.
+ */
+export async function contarDisponiblesPorTalle(
+  idProducto: string,
+  opts?: { idReservaCtx?: string | null; excluir?: string[] },
+): Promise<{ porTalle: StockPorTalle[]; totalDisponible: number }> {
+  const supabase = await createServerClient()
+  const { data, error } = await supabase
+    .from('item_producto')
+    .select('id_item, talle')
+    .eq('id_producto', idProducto)
+    .eq('estado_item', 'disponible')
+  if (error) throw new Error(`contarDisponiblesPorTalle: ${error.message}`)
+
+  const items = (data ?? []) as Array<{ id_item: string; talle: string | null }>
+  if (items.length === 0) return { porTalle: [], totalDisponible: 0 }
+
+  const { data: reservados, error: resErr } = await supabase
+    .from('detalle_reserva')
+    .select('id_item, id_reserva')
+    .eq('estado', 'activa')
+    .in('id_item', items.map((i) => i.id_item))
+  if (resErr) throw new Error(`contarDisponiblesPorTalle reservas: ${resErr.message}`)
+
+  const idReservaCtx = opts?.idReservaCtx ?? null
+  const bloqueados = new Set(
+    ((reservados ?? []) as Array<{ id_item: string; id_reserva: string }>)
+      .filter((r) => !idReservaCtx || r.id_reserva !== idReservaCtx)
+      .map((r) => r.id_item),
+  )
+  const excluidos = new Set(opts?.excluir ?? [])
+
+  const conteo = new Map<string | null, number>()
+  for (const it of items) {
+    if (bloqueados.has(it.id_item) || excluidos.has(it.id_item)) continue
+    conteo.set(it.talle, (conteo.get(it.talle) ?? 0) + 1)
+  }
+  return {
+    porTalle: [...conteo].map(([talle, disponibles]) => ({ talle, disponibles })),
+    // Sin descontar reservas ni carrito: distingue "no hay stock" de
+    // "hay stock pero está todo tomado".
+    totalDisponible: items.length,
+  }
 }
 
 /**
