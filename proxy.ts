@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { RESERVED_SUBDOMINIOS } from './lib/tenant/subdominio'
 
 /**
  * proxy.ts (Next.js 16 file convention; replaces the deprecated
@@ -19,10 +20,13 @@ import { NextResponse, type NextRequest } from 'next/server'
  *     Action or Route Handler").
  *
  * Per the Next.js proxy docs, this file stays self-contained (no shared DAL
- * import): the proxy may be deployed separately from the app runtime.
+ * import): the proxy may be deployed separately from the app runtime. The
+ * one exception is `lib/tenant/subdominio` — a dependency-free constants
+ * module, deliberately kept that way so the reserved list cannot drift
+ * between this file and tenant provisioning (see that file's header).
  */
 
-const RESERVED = new Set(['www', 'admin', 'api', 'app'])
+const RESERVED = new Set<string>(RESERVED_SUBDOMINIOS)
 const ROOT_PROD = process.env.UTOPIA_ROOT_DOMAIN ?? 'utopia.app'
 const ROOT_DEV = process.env.UTOPIA_ROOT_DOMAIN_DEV ?? 'localhost'
 
