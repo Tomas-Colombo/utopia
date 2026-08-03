@@ -15,6 +15,7 @@ import {
   listAlertaReposicion,
   listAlertaRotacionVencida,
 } from '@/lib/dal/reportes/reportes'
+import { AlertasReposicion } from './AlertasReposicion'
 import { ProductosTableClient } from './productos/ProductosTableClient'
 
 /**
@@ -51,50 +52,22 @@ export default async function InventarioHome(props: {
         title="Inventario"
         session={session}
         actions={
-          <Link href="/inventario/productos/nuevo">
-            <Button size="sm">Nuevo producto</Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link href="/inventario/ingresos/nuevo">
+              <Button size="sm">Nuevo ingreso</Button>
+            </Link>
+            <Link href="/inventario/productos/nuevo">
+              <Button size="sm">Nuevo producto</Button>
+            </Link>
+            <Link href="/inventario/categorias">
+              <Button size="sm">Categorías</Button>
+            </Link>
+          </div>
         }
       />
       <main className="flex-1 p-6 space-y-6">
         {/* Alertas — jerarquía visual §L105 */}
-        {alertasRepo.length > 0 && (
-          <section className="rounded-lg border-2 border-pink-strong bg-pink-bg p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-display text-lg text-pink-strong">
-                ⚠ Reposición urgente
-              </h3>
-              <span className="text-sm font-mono text-pink-strong">
-                {alertasRepo.length} producto{alertasRepo.length === 1 ? '' : 's'}
-              </span>
-            </div>
-            <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-              {alertasRepo.slice(0, 8).map((a) => (
-                <Link
-                  key={a.id_producto}
-                  href={`/inventario?q=${encodeURIComponent(a.nombre)}`}
-                  className="flex items-center justify-between rounded-md bg-card px-3 py-2 hover:bg-card-2 text-sm"
-                >
-                  <div className="min-w-0">
-                    <div className="font-medium truncate">{a.nombre}</div>
-                    {a.sku && <div className="text-xs font-mono text-muted">{a.sku}</div>}
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="font-mono text-xs">{a.disponibles}/{a.stock_minimo}</span>
-                    <Badge variant={a.severidad === 'sin_stock' ? 'danger' : 'warning'}>
-                      {a.severidad === 'sin_stock' ? 'Sin stock' : 'Bajo'}
-                    </Badge>
-                  </div>
-                </Link>
-              ))}
-              {alertasRepo.length > 8 && (
-                <div className="md:col-span-2 text-center text-xs text-muted pt-1">
-                  +{alertasRepo.length - 8} más
-                </div>
-              )}
-            </div>
-          </section>
-        )}
+        <AlertasReposicion alertas={alertasRepo} />
 
         {alertasRot.length > 0 && (
           <section className="rounded-lg border border-terracota bg-card p-4">
@@ -144,13 +117,7 @@ export default async function InventarioHome(props: {
           <Kpi label="Proveedores" value={proveedoresActivos.toString()} />
         </section>
 
-        {/* Accesos a los demás sub-módulos — justo debajo de las métricas */}
-        <section className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <NavCard href="/inventario/categorias" label="Categorías" value={categorias.length} />
-          <NavCard href="/inventario/ingresos" label="Ingresos" value="Ver" />
-        </section>
-
-        {/* Productos — buscador único (escáner + SKU) + tabla */}
+{/* Productos — buscador único (escáner + SKU) + tabla */}
         <section className="space-y-3">
           <h3 className="font-display text-lg">Productos</h3>
           <ProductosTableClient
@@ -191,25 +158,5 @@ function Kpi({
       <div className="text-xs uppercase font-mono text-muted">{label}</div>
       <div className="mt-1 font-display text-2xl text-text">{value}</div>
     </div>
-  )
-}
-
-function NavCard({
-  href,
-  label,
-  value,
-}: {
-  href: string
-  label: string
-  value: string | number
-}) {
-  return (
-    <Link
-      href={href}
-      className="rounded-lg border border-border bg-card p-5 hover:bg-card-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
-    >
-      <div className="text-sm text-muted">{label}</div>
-      <div className="mt-1 font-display text-2xl">{value}</div>
-    </Link>
   )
 }

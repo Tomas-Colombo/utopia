@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Topbar } from '@/components/shell/Topbar'
 import { Button } from '@/components/ui/Button'
+import { Kpi } from '@/components/ui/Kpi'
 import { verifySession } from '@/lib/dal/session'
 import { listVentas } from '@/lib/dal/ventas/venta'
 import { listReservas } from '@/lib/dal/reservas/reserva'
@@ -160,23 +161,3 @@ export default async function VentasHome(props: {
   )
 }
 
-function Kpi({
-  label,
-  value,
-  variant = 'default',
-}: {
-  label: string
-  value: string
-  variant?: 'default' | 'alert'
-}) {
-  return (
-    <div
-      className={`rounded-lg border p-4 ${
-        variant === 'alert' ? 'border-pink-strong bg-pink-bg' : 'border-border bg-card'
-      }`}
-    >
-      <div className="text-xs uppercase font-mono text-muted">{label}</div>
-      <div className="mt-1 font-display text-2xl text-text">{value}</div>
-    </div>
-  )
-}

@@ -23,7 +23,6 @@ export function EditarProductoForm({
   const [pending, start] = useTransition()
 
   const [nombre, setNombre] = useState(producto.nombre)
-  const [sku, setSku] = useState(producto.sku ?? '')
   const [idCategoria, setIdCategoria] = useState(producto.id_categoria)
   const [stockMinimo, setStockMinimo] = useState(String(producto.stock_minimo))
   const [descripcion, setDescripcion] = useState(producto.descripcion ?? '')
@@ -42,7 +41,6 @@ export function EditarProductoForm({
     start(async () => {
       const res = await updateProductoAction(producto.id_producto, {
         nombre: nombre.trim(),
-        sku: sku.trim() || null,
         id_categoria: idCategoria,
         stock_minimo: Number(stockMinimo || 0),
         descripcion: descripcion.trim() || null,
@@ -67,26 +65,21 @@ export function EditarProductoForm({
         />
       </Field>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Field htmlFor="prod-sku" label="SKU">
-          <Input id="prod-sku" value={sku} onChange={(e) => setSku(e.target.value)} />
-        </Field>
-        <Field htmlFor="prod-cat" label="Categoría" required error={errors.categoria}>
-          <select
-            id="prod-cat"
-            value={idCategoria}
-            onChange={(e) => setIdCategoria(e.target.value)}
-            aria-invalid={!!errors.categoria || undefined}
-            className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
-          >
-            {categorias.map((c) => (
-              <option key={c.id_categoria} value={c.id_categoria}>
-                {c.nombre}
-              </option>
-            ))}
-          </select>
-        </Field>
-      </div>
+      <Field htmlFor="prod-cat" label="Categoría" required error={errors.categoria}>
+        <select
+          id="prod-cat"
+          value={idCategoria}
+          onChange={(e) => setIdCategoria(e.target.value)}
+          aria-invalid={!!errors.categoria || undefined}
+          className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
+        >
+          {categorias.map((c) => (
+            <option key={c.id_categoria} value={c.id_categoria}>
+              {c.nombre}
+            </option>
+          ))}
+        </select>
+      </Field>
 
       <Field htmlFor="prod-stock" label="Stock mínimo">
         <NumberInput

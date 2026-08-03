@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { Topbar } from '@/components/shell/Topbar'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
+import { Kpi } from '@/components/ui/Kpi'
 import { verifySession } from '@/lib/dal/session'
 import { listRendiciones } from '@/lib/dal/rendiciones/rendicion'
 import {
@@ -121,23 +122,3 @@ export default async function RendicionesPage() {
   )
 }
 
-function Kpi({
-  label,
-  value,
-  variant = 'default',
-}: {
-  label: string
-  value: string
-  variant?: 'default' | 'alert'
-}) {
-  return (
-    <div
-      className={`rounded-lg border p-4 ${
-        variant === 'alert' ? 'border-pink-strong bg-pink-bg' : 'border-border bg-card'
-      }`}
-    >
-      <div className="text-xs uppercase font-mono text-muted">{label}</div>
-      <div className="mt-1 font-display text-2xl text-text">{value}</div>
-    </div>
-  )
-}

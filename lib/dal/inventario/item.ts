@@ -59,6 +59,47 @@ export async function getItemConDetalle(idItem: string): Promise<ItemConProducto
   }
 }
 
+/**
+ * Proveedor "habitual" de un producto: el del ingreso más reciente entre sus
+ * ítems. Es una regla de negocio (mono-proveedor por producto) que no está
+ * enforced en DB, así que la derivamos por historial. Devuelve null si el
+ * producto todavía no tiene ítems o si sus ingresos fueron sin proveedor.
+ */
+export async function getProveedorHabitualDeProducto(
+  idProducto: string,
+): Promise<{ id_proveedor: string; nombre: string } | null> {
+  const supabase = await createServerClient()
+  const { data, error } = await supabase
+    .from('item_producto')
+    .select('ingreso:ingreso_mercaderia!inner(proveedor:proveedor(id_proveedor, nombre))')
+    .eq('id_producto', idProducto)
+    .order('fecha_ingreso', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (error) throw new Error(`getProveedorHabitualDeProducto: ${error.message}`)
+  const prov = (data as { ingreso: { proveedor: { id_proveedor: string; nombre: string } | null } } | null)
+    ?.ingreso?.proveedor
+  return prov ?? null
+}
+
+/**
+ * Asigna talles retroactivamente a ítems que se ingresaron sin talle y siguen
+ * disponibles. Delega al RPC `sp_asignar_talles_a_producto` (migration 00044):
+ * ese RPC valida el cupo, respeta FIFO, y registra ajuste + auditoría.
+ */
+export async function spAsignarTallesAProducto(input: {
+  idProducto: string
+  distribucion: Array<{ talle: string; cantidad: number }>
+}): Promise<{ actualizados: number }> {
+  const supabase = await createServerClient()
+  const { data, error } = await supabase.rpc('sp_asignar_talles_a_producto', {
+    p_id_producto: input.idProducto,
+    p_distribucion: input.distribucion,
+  })
+  if (error) throw new Error(`sp_asignar_talles_a_producto: ${error.message}`)
+  return { actualizados: Number(data ?? 0) }
+}
+
 export async function listItemsByProducto(idProducto: string): Promise<ItemProductoRow[]> {
   const supabase = await createServerClient()
   const { data, error } = await supabase

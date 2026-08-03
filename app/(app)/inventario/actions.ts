@@ -19,7 +19,10 @@ import {
   spSetCostoProducto,
   updateProducto,
 } from '@/lib/dal/inventario/producto'
-import { spTransicionItem } from '@/lib/dal/inventario/item'
+import {
+  spAsignarTallesAProducto,
+  spTransicionItem,
+} from '@/lib/dal/inventario/item'
 import {
   addIngresoDetalle,
   createIngresoBorrador,
@@ -286,6 +289,27 @@ export async function updateProductoAction(
     revalidatePath('/inventario')
     revalidatePath('/inventario')
     return { ok: true }
+  } catch (e) {
+    return { ok: false, reason: (e as Error).message }
+  }
+}
+
+/**
+ * Asigna talles retroactivamente a ítems que se ingresaron sin talle y
+ * siguen `disponible`. El RPC valida el cupo (no puede exceder los
+ * disponibles-sin-talle), asigna FIFO y registra ajuste + auditoría.
+ */
+export async function asignarTallesProductoAction(input: {
+  idProducto: string
+  distribucion: Array<{ talle: string; cantidad: number }>
+}): Promise<ActionResult<{ actualizados: number }>> {
+  const g = await guarded('editar')
+  if ('error' in g) return { ok: false, reason: g.error }
+  try {
+    const { actualizados } = await spAsignarTallesAProducto(input)
+    revalidatePath('/inventario')
+    revalidatePath(`/inventario/productos/${input.idProducto}/ficha`)
+    return { ok: true, data: { actualizados } }
   } catch (e) {
     return { ok: false, reason: (e as Error).message }
   }

@@ -40,6 +40,123 @@ export async function listGastos(opts?: {
   return (data ?? []) as unknown as GastoConCategoria[]
 }
 
+export type GastosOrden = 'fecha_desc' | 'fecha_asc' | 'monto_desc' | 'monto_asc'
+
+/**
+ * Página del listado con `total` para paginación server-side.
+ * Filtros: rango de fechas (inclusivo), categoría, orden.
+ */
+export async function listGastosPaginado(opts: {
+  desde?: string
+  hasta?: string
+  idCategoria?: string
+  orden?: GastosOrden
+  page: number
+  pageSize: number
+}): Promise<{ rows: GastoConCategoria[]; total: number }> {
+  const supabase = await createServerClient()
+  const from = (Math.max(1, opts.page) - 1) * opts.pageSize
+  const to = from + opts.pageSize - 1
+
+  const orderBy: { column: string; ascending: boolean } = (() => {
+    switch (opts.orden ?? 'fecha_desc') {
+      case 'fecha_asc': return { column: 'fecha', ascending: true }
+      case 'monto_desc': return { column: 'monto', ascending: false }
+      case 'monto_asc': return { column: 'monto', ascending: true }
+      case 'fecha_desc':
+      default: return { column: 'fecha', ascending: false }
+    }
+  })()
+
+  let q = supabase
+    .from('gasto_negocio')
+    .select(`
+      *,
+      categoria:categoria_gasto(id_categoria_gasto, nombre)
+    `, { count: 'exact' })
+    .order(orderBy.column, { ascending: orderBy.ascending })
+    .range(from, to)
+  if (opts.desde) q = q.gte('fecha', opts.desde)
+  if (opts.hasta) q = q.lte('fecha', opts.hasta)
+  if (opts.idCategoria) q = q.eq('id_categoria_gasto', opts.idCategoria)
+  const { data, count, error } = await q
+  if (error) throw new Error(`listGastosPaginado: ${error.message}`)
+  return {
+    rows: (data ?? []) as unknown as GastoConCategoria[],
+    total: count ?? 0,
+  }
+}
+
+// ─── Categorías de gasto (CRUD) ──────────────────────────────────────
+
+export async function createCategoriaGasto(input: {
+  tenantId: string
+  nombre: string
+}): Promise<CategoriaGastoRow> {
+  const supabase = await createServerClient()
+  const { data, error } = await supabase
+    .from('categoria_gasto')
+    .insert({
+      id_tenant: input.tenantId,
+      nombre: input.nombre,
+      activa: true,
+    })
+    .select('*')
+    .single()
+  if (error) throw new Error(`createCategoriaGasto: ${error.message}`)
+  return data as CategoriaGastoRow
+}
+
+export async function renameCategoriaGasto(id: string, nombre: string): Promise<void> {
+  const supabase = await createServerClient()
+  const { error } = await supabase
+    .from('categoria_gasto')
+    .update({ nombre })
+    .eq('id_categoria_gasto', id)
+  if (error) throw new Error(`renameCategoriaGasto: ${error.message}`)
+}
+
+/**
+ * Baja de una categoría de gasto:
+ *  - Si no tiene gastos asociados → DELETE físico.
+ *  - Si tiene gastos → soft-delete (`activa=false`, `fecha_baja=now()`) para
+ *    preservar la referencia histórica en `gasto_negocio`.
+ */
+export async function bajaCategoriaGasto(id: string): Promise<{ hardDeleted: boolean }> {
+  const supabase = await createServerClient()
+
+  const { count, error: cErr } = await supabase
+    .from('gasto_negocio')
+    .select('id_gasto', { count: 'exact', head: true })
+    .eq('id_categoria_gasto', id)
+  if (cErr) throw new Error(`bajaCategoriaGasto count: ${cErr.message}`)
+
+  if ((count ?? 0) === 0) {
+    const { error } = await supabase
+      .from('categoria_gasto')
+      .delete()
+      .eq('id_categoria_gasto', id)
+    if (error) throw new Error(`bajaCategoriaGasto delete: ${error.message}`)
+    return { hardDeleted: true }
+  }
+
+  const { error } = await supabase
+    .from('categoria_gasto')
+    .update({ activa: false, fecha_baja: new Date().toISOString() })
+    .eq('id_categoria_gasto', id)
+  if (error) throw new Error(`bajaCategoriaGasto soft: ${error.message}`)
+  return { hardDeleted: false }
+}
+
+export async function reactivarCategoriaGasto(id: string): Promise<void> {
+  const supabase = await createServerClient()
+  const { error } = await supabase
+    .from('categoria_gasto')
+    .update({ activa: true, fecha_baja: null })
+    .eq('id_categoria_gasto', id)
+  if (error) throw new Error(`reactivarCategoriaGasto: ${error.message}`)
+}
+
 /**
  * RF-10: presupuesto vs gastado del mes calendario en curso, por categoría.
  * Se hacen 2 queries y se agregan en memoria. Volumen chico por tenant.

@@ -58,6 +58,7 @@ export interface CategoriaGastoRow {
   descripcion: string | null
   presupuesto_mensual: number | null
   activa: boolean
+  fecha_baja: string | null
   created_at: string
   updated_at: string
 }

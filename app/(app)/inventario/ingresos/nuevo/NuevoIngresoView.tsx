@@ -52,10 +52,14 @@ export function NuevoIngresoView({
   proveedores: proveedoresIniciales,
   productos,
   categorias: categoriasIniciales,
+  prefill,
 }: {
   proveedores: ProveedorRow[]
   productos: ProductoConDetalle[]
   categorias: CategoriaRow[]
+  /** Modo restock: llega desde /inventario/ingresos/nuevo?producto=<id> y
+   *  bloquea el proveedor + agrega una línea vinculada al producto. */
+  prefill?: { idProducto: string; idProveedor: string | null } | null
 }) {
   const router = useRouter()
   const toast = useToast()
@@ -66,7 +70,10 @@ export function NuevoIngresoView({
   const [proveedores, setProveedores] = useState(proveedoresIniciales)
   // Arranca SIEMPRE en "sin proveedor" para evitar cargar a un proveedor por
   // descuido; el usuario lo elige explícitamente. Vacío = sin proveedor.
-  const [idProveedor, setIdProveedor] = useState('')
+  // En modo restock, arranca con el proveedor habitual del producto y queda
+  // bloqueado (regla de negocio: cada producto es mono-proveedor).
+  const [idProveedor, setIdProveedor] = useState(prefill?.idProveedor ?? '')
+  const proveedorBloqueado = !!prefill?.idProveedor
   const [tipoIngreso, setTipoIngreso] = useState<TipoIngreso>('compra')
   const [numeroRemito, setNumeroRemito] = useState('')
   const [observaciones, setObservaciones] = useState('')
@@ -76,7 +83,23 @@ export function NuevoIngresoView({
   const [categorias, setCategorias] = useState(categoriasIniciales)
 
   // ─── Líneas ────────────────────────────────────────────────────────
-  const [filas, setFilas] = useState<Fila[]>([])
+  const [filas, setFilas] = useState<Fila[]>(() => {
+    if (!prefill?.idProducto) return []
+    const prod = productos.find((p) => p.id_producto === prefill.idProducto)
+    if (!prod) return []
+    return [
+      {
+        nombre: prod.nombre,
+        cantidad: '1',
+        costoUnitario: '',
+        esNuevo: false,
+        idProducto: prod.id_producto,
+        idCategoria: '',
+        talles: [],
+        tallesAbierto: false,
+      },
+    ]
+  })
   const [advertencias, setAdvertencias] = useState<string[]>([])
   const [confirmOpen, setConfirmOpen] = useState(false)
   // Índice de la fila que disparó el alta de categoría (null = modal cerrado).
@@ -277,14 +300,19 @@ export function NuevoIngresoView({
           <Field
             htmlFor="i-prov"
             label="Proveedor"
-            hint="Opcional: dejá «Sin proveedor» para producción propia, ofertas o ajustes."
+            hint={
+              proveedorBloqueado
+                ? 'Proveedor del producto — no se puede cambiar en un restock (regla mono-proveedor).'
+                : 'Opcional: dejá «Sin proveedor» para producción propia, ofertas o ajustes.'
+            }
           >
             <div className="flex gap-2">
               <select
                 id="i-prov"
                 value={idProveedor}
                 onChange={(e) => setIdProveedor(e.target.value)}
-                className={`min-w-0 flex-1 ${selectClass}`}
+                disabled={proveedorBloqueado || pending}
+                className={`min-w-0 flex-1 ${selectClass} disabled:cursor-not-allowed disabled:opacity-70`}
               >
                 <option value="">— Sin proveedor —</option>
                 {proveedores.map((p) => (
@@ -293,14 +321,16 @@ export function NuevoIngresoView({
                   </option>
                 ))}
               </select>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => setModalOpen(true)}
-                disabled={pending}
-              >
-                + Nuevo
-              </Button>
+              {!proveedorBloqueado && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setModalOpen(true)}
+                  disabled={pending}
+                >
+                  + Nuevo
+                </Button>
+              )}
             </div>
           </Field>
 

@@ -7,6 +7,7 @@ import { listGananciaPorProducto } from '@/lib/dal/reportes/reportes'
 import { listCategoriasActivas } from '@/lib/dal/inventario/categoria'
 import { listProductosParaBuscador } from '@/lib/dal/inventario/producto'
 import { normalizar } from '@/lib/inventario/producto-match'
+import { Kpi } from '@/components/ui/Kpi'
 import { GananciaProyectadaClient } from './GananciaProyectadaClient'
 
 const GANANCIA_PAGE_SIZE = 20
@@ -102,23 +103,3 @@ export default async function PreciosHome(props: {
   )
 }
 
-function Kpi({
-  label,
-  value,
-  variant = 'default',
-}: {
-  label: string
-  value: string
-  variant?: 'default' | 'alert'
-}) {
-  return (
-    <div
-      className={`rounded-lg border p-4 ${
-        variant === 'alert' ? 'border-pink-strong bg-pink-bg' : 'border-border bg-card'
-      }`}
-    >
-      <div className="text-xs uppercase font-mono text-muted">{label}</div>
-      <div className="mt-1 font-display text-2xl text-text">{value}</div>
-    </div>
-  )
-}

@@ -10,6 +10,7 @@ import { Table, type Column } from '@/components/ui/Table'
 import { normalizar } from '@/lib/inventario/producto-match'
 import type { ProductoBuscadorItem } from '@/lib/dal/inventario/producto'
 import type { CategoriaRow, ProductoConDetalle } from '@/lib/types/inventario'
+import { EditarProductoModal } from './EditarProductoModal'
 
 export function ProductosTableClient({
   rows,
@@ -42,6 +43,7 @@ export function ProductosTableClient({
   const [q, setQ] = useState(initialSearch)
   const [cat, setCat] = useState(initialCategoria)
   const [pending, startTransition] = useTransition()
+  const [editing, setEditing] = useState<ProductoConDetalle | null>(null)
 
   // Sugerencias por nombre o SKU (mismo criterio normalizado que ventas).
   const sugerencias = useMemo<SugerenciaProducto[]>(() => {
@@ -108,16 +110,23 @@ export function ProductosTableClient({
     },
     {
       key: 'stock_disponible',
-      label: 'Stock',
+      label: 'Stock / Mín.',
       align: 'right',
       render: (r) => {
-        const bajo = r.stock_disponible < r.stock_minimo
+        const tieneMinimo = r.stock_minimo > 0
+        const bajo = tieneMinimo && r.stock_disponible < r.stock_minimo
         return (
-          <div className="flex items-center justify-end gap-2">
-            <span className="font-mono">
-              {r.stock_disponible} / {r.stock_total}
+          <div className="flex flex-wrap items-center justify-end gap-x-2 gap-y-1">
+            <span className="whitespace-nowrap font-mono">
+              {tieneMinimo
+                ? `${r.stock_disponible} / ${r.stock_minimo}`
+                : r.stock_disponible}
             </span>
-            {bajo && <Badge variant="warning">Bajo mín.</Badge>}
+            {bajo && (
+              <Badge variant="warning">
+                <span className="whitespace-nowrap">Bajo</span>
+              </Badge>
+            )}
           </div>
         )
       },
@@ -127,12 +136,28 @@ export function ProductosTableClient({
       label: '',
       align: 'right',
       render: (r) => (
-        <Link
-          href={`/inventario/productos/${r.id_producto}`}
-          className="text-sm text-pink-strong hover:underline"
-        >
-          Editar
-        </Link>
+        <div className="flex items-center justify-end gap-3 text-sm">
+          <Link
+            href={`/inventario/productos/${r.id_producto}/ficha`}
+            className="text-pink-strong hover:underline"
+          >
+            Ver
+          </Link>
+          <Link
+            href={`/inventario/ingresos/nuevo?producto=${r.id_producto}`}
+            className="text-pink-strong hover:underline"
+            title="Cargar un ingreso prellenado con este producto"
+          >
+            Restock
+          </Link>
+          <button
+            type="button"
+            onClick={() => setEditing(r)}
+            className="text-pink-strong hover:underline"
+          >
+            Editar
+          </button>
+        </div>
       ),
     },
   ]
@@ -227,6 +252,13 @@ export function ProductosTableClient({
         total={total}
         onPageChange={goToPage}
         disabled={pending}
+      />
+
+      <EditarProductoModal
+        open={editing !== null}
+        producto={editing}
+        categorias={categorias}
+        onClose={() => setEditing(null)}
       />
     </div>
   )

@@ -11,6 +11,10 @@ import {
   spReincluirDetalleRendicion,
 } from '@/lib/dal/rendiciones/rendicion'
 import {
+  bajaCategoriaGasto,
+  createCategoriaGasto,
+  reactivarCategoriaGasto,
+  renameCategoriaGasto,
   spRegistrarGasto,
   spSetPresupuesto,
 } from '@/lib/dal/gastos/gasto'
@@ -139,6 +143,74 @@ export async function setPresupuestoAction(input: {
     await spSetPresupuesto(input)
     revalidatePath('/gastos/presupuestos')
     revalidatePath('/gastos')
+    return { ok: true }
+  } catch (e) {
+    return { ok: false, reason: (e as Error).message }
+  }
+}
+
+export async function createCategoriaGastoAction(input: {
+  nombre: string
+}): Promise<ActionResult<{ id: string }>> {
+  const g = await guarded('crear')
+  if (!g.ok) return { ok: false, reason: g.error }
+  const nombre = input.nombre?.trim() ?? ''
+  if (nombre.length < 2) return { ok: false, reason: 'nombre-corto' }
+  try {
+    const row = await createCategoriaGasto({ tenantId: g.tenantId, nombre })
+    revalidatePath('/gastos')
+    revalidatePath('/gastos/presupuestos')
+    revalidatePath('/gastos/nuevo')
+    return { ok: true, data: { id: row.id_categoria_gasto } }
+  } catch (e) {
+    return { ok: false, reason: (e as Error).message }
+  }
+}
+
+export async function renameCategoriaGastoAction(input: {
+  idCategoria: string
+  nombre: string
+}): Promise<ActionResult> {
+  const g = await guarded('editar')
+  if (!g.ok) return { ok: false, reason: g.error }
+  const nombre = input.nombre?.trim() ?? ''
+  if (nombre.length < 2) return { ok: false, reason: 'nombre-corto' }
+  try {
+    await renameCategoriaGasto(input.idCategoria, nombre)
+    revalidatePath('/gastos')
+    revalidatePath('/gastos/presupuestos')
+    return { ok: true }
+  } catch (e) {
+    return { ok: false, reason: (e as Error).message }
+  }
+}
+
+export async function bajaCategoriaGastoAction(input: {
+  idCategoria: string
+}): Promise<ActionResult<{ hardDeleted: boolean }>> {
+  const g = await guarded('editar')
+  if (!g.ok) return { ok: false, reason: g.error }
+  try {
+    const res = await bajaCategoriaGasto(input.idCategoria)
+    revalidatePath('/gastos')
+    revalidatePath('/gastos/presupuestos')
+    revalidatePath('/gastos/nuevo')
+    return { ok: true, data: res }
+  } catch (e) {
+    return { ok: false, reason: (e as Error).message }
+  }
+}
+
+export async function reactivarCategoriaGastoAction(input: {
+  idCategoria: string
+}): Promise<ActionResult> {
+  const g = await guarded('editar')
+  if (!g.ok) return { ok: false, reason: g.error }
+  try {
+    await reactivarCategoriaGasto(input.idCategoria)
+    revalidatePath('/gastos')
+    revalidatePath('/gastos/presupuestos')
+    revalidatePath('/gastos/nuevo')
     return { ok: true }
   } catch (e) {
     return { ok: false, reason: (e as Error).message }

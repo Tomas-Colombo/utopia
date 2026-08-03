@@ -2,11 +2,23 @@ import { Topbar } from '@/components/shell/Topbar'
 import { verifySession } from '@/lib/dal/session'
 import { listProveedoresActivos } from '@/lib/dal/inventario/proveedor'
 import { listCategoriasActivas } from '@/lib/dal/inventario/categoria'
-import { listProductosConDetalle } from '@/lib/dal/inventario/producto'
+import { getProducto, listProductosConDetalle } from '@/lib/dal/inventario/producto'
+import { getProveedorHabitualDeProducto } from '@/lib/dal/inventario/item'
 import { NuevoIngresoView } from './NuevoIngresoView'
 
-export default async function NuevoIngresoPage() {
+/** Whitelist para el ?from — evita open-redirect: solo rutas internas del app. */
+function safeBackHref(from: string | undefined, fallback: string): string {
+  if (!from) return fallback
+  if (!from.startsWith('/') || from.startsWith('//')) return fallback
+  return from
+}
+
+export default async function NuevoIngresoPage(props: {
+  searchParams: Promise<{ producto?: string; from?: string }>
+}) {
   const session = await verifySession()
+  const { producto: idProductoParam, from } = await props.searchParams
+
   // Todo se carga en una sola pantalla: proveedores para la cabecera y
   // productos/categorías para la carga de líneas (PDF o a mano). El ingreso
   // puede ser «sin proveedor», y el proveedor se crea inline desde el form.
@@ -15,14 +27,36 @@ export default async function NuevoIngresoPage() {
     listProductosConDetalle({ soloActivos: true }),
     listCategoriasActivas(),
   ])
+
+  // Modo restock: si viene ?producto=<id>, prefiliamos la línea con ese
+  // producto vinculado y bloqueamos el proveedor (mono-proveedor por producto).
+  let prefill: { idProducto: string; idProveedor: string | null } | null = null
+  if (idProductoParam) {
+    const [prod, proveedorHabitual] = await Promise.all([
+      getProducto(idProductoParam),
+      getProveedorHabitualDeProducto(idProductoParam),
+    ])
+    if (prod) {
+      prefill = {
+        idProducto: prod.id_producto,
+        idProveedor: proveedorHabitual?.id_proveedor ?? null,
+      }
+    }
+  }
+
   return (
     <>
-      <Topbar title="Nuevo ingreso" session={session} backHref="/inventario/ingresos" />
+      <Topbar
+        title={prefill ? 'Restock de producto' : 'Nuevo ingreso'}
+        session={session}
+        backHref={safeBackHref(from, '/inventario')}
+      />
       <main className="flex-1 p-6">
         <NuevoIngresoView
           proveedores={proveedores}
           productos={productos}
           categorias={categorias}
+          prefill={prefill}
         />
       </main>
     </>

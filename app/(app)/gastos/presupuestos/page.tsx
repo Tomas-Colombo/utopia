@@ -15,6 +15,8 @@ export default async function PresupuestosPage() {
             id: c.id_categoria_gasto,
             nombre: c.nombre,
             presupuesto: c.presupuesto_mensual,
+            activa: c.activa,
+            fechaBaja: c.fecha_baja,
           }))}
         />
       </main>
