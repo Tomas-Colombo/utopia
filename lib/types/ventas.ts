@@ -158,7 +158,11 @@ export interface ReservaConDetalle extends ReservaRow {
 
 export interface LineaCarrito {
   id_item: string
+  /** Necesario para poder repedir otra unidad del mismo producto (cambio de talle). */
+  id_producto: string
   qr_code: string
+  /** Talle de la unidad concreta; null = producto sin talle. */
+  talle: string | null
   producto_nombre: string
   sku: string | null
   categoria_nombre: string | null

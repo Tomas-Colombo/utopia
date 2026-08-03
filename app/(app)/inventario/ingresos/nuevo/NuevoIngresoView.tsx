@@ -81,7 +81,10 @@ export function NuevoIngresoView({
   // bloqueado (regla de negocio: cada producto es mono-proveedor).
   const [idProveedor, setIdProveedor] = useState(prefill?.idProveedor ?? '')
   const proveedorBloqueado = !!prefill?.idProveedor
-  const [tipoIngreso, setTipoIngreso] = useState<TipoIngreso>(prefill?.tipoIngreso ?? 'compra')
+  // Sin valor por defecto en alta normal — «compra» y «consignación» pagan
+  // en momentos distintos, así que el usuario tiene que elegirlo. En modo
+  // restock arranca con el tipo del último ingreso del producto (editable).
+  const [tipoIngreso, setTipoIngreso] = useState<TipoIngreso | ''>(prefill?.tipoIngreso ?? '')
   const [numeroRemito, setNumeroRemito] = useState('')
   const [observaciones, setObservaciones] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
@@ -98,7 +101,14 @@ export function NuevoIngresoView({
       {
         nombre: prod.nombre,
         cantidad: '1',
-        costoUnitario: prefill.costoUnitario != null ? String(prefill.costoUnitario) : '',
+        // Prefill del costo: el del último ingreso si viene en el prefill del
+        // restock; si no, el costo vigente del producto. Editable siempre.
+        costoUnitario:
+          prefill.costoUnitario != null
+            ? String(prefill.costoUnitario)
+            : prod.costo_vigente != null
+              ? String(prod.costo_vigente)
+              : '',
         esNuevo: false,
         idProducto: prod.id_producto,
         idCategoria: '',
@@ -215,6 +225,29 @@ export function NuevoIngresoView({
     )
   }
 
+  // En modo «Vincular» el producto elegido manda: el nombre lo aporta el
+  // producto (no hay input de texto) y el costo arranca en el costo vigente
+  // —el de la última compra— como valor por defecto editable.
+  function vincularProducto(i: number, idProducto: string) {
+    const prod = productos.find((p) => p.id_producto === idProducto)
+    setFilas((fs) =>
+      fs.map((f, idx) =>
+        idx === i
+          ? {
+              ...f,
+              esNuevo: false,
+              idProducto,
+              nombre: prod?.nombre ?? '',
+              costoUnitario:
+                prod?.costo_vigente != null ? String(prod.costo_vigente) : f.costoUnitario,
+              talles: [],
+              tallesAbierto: false,
+            }
+          : f,
+      ),
+    )
+  }
+
   // Al cambiar la cantidad (que manda), si los talles asignados la superan,
   // se resetean para volver a distribuir.
   function cambiarCantidad(i: number, val: string) {
@@ -239,6 +272,12 @@ export function NuevoIngresoView({
       return false
     }
     for (const f of filas) {
+      // En «Vincular» el nombre viene del producto elegido: el error útil es
+      // «falta elegir el producto», no «falta el nombre».
+      if (!f.esNuevo && !f.idProducto) {
+        toast.error('Elegí un producto en todas las líneas')
+        return false
+      }
       if (!f.nombre.trim()) {
         toast.error('Hay una línea sin nombre')
         return false
@@ -257,20 +296,21 @@ export function NuevoIngresoView({
         toast.error('Elegí la categoría', f.nombre)
         return false
       }
-      if (!f.esNuevo && !f.idProducto) {
-        toast.error('Elegí un producto', f.nombre)
-        return false
-      }
     }
     return true
   }
 
   function onGuardar() {
+    if (!tipoIngreso) {
+      toast.error('Elegí el tipo de ingreso', 'Compra o consignación')
+      return
+    }
     if (!lineasValidas()) return
     setConfirmOpen(true)
   }
 
   function guardar() {
+    if (!tipoIngreso) return
     setConfirmOpen(false)
     start(async () => {
       const res = await crearIngresoCompletoAction({
@@ -341,6 +381,14 @@ export function NuevoIngresoView({
             </div>
           </Field>
 
+          <Field htmlFor="i-remito" label="Número de remito/factura" hint="Opcional. Único por proveedor.">
+            <Input
+              id="i-remito"
+              value={numeroRemito}
+              onChange={(e) => setNumeroRemito(e.target.value)}
+            />
+          </Field>
+
           <Field htmlFor="i-tipo" label="Tipo de ingreso" required>
             <select
               id="i-tipo"
@@ -348,20 +396,15 @@ export function NuevoIngresoView({
               onChange={(e) => setTipoIngreso(e.target.value as TipoIngreso)}
               className={selectClass}
             >
+              <option value="" disabled>
+                — Elegí el tipo —
+              </option>
               {TIPOS.map((t) => (
                 <option key={t.value} value={t.value}>
                   {t.label}
                 </option>
               ))}
             </select>
-          </Field>
-
-          <Field htmlFor="i-remito" label="Número de remito/factura" hint="Opcional. Único por proveedor.">
-            <Input
-              id="i-remito"
-              value={numeroRemito}
-              onChange={(e) => setNumeroRemito(e.target.value)}
-            />
           </Field>
 
           <Field htmlFor="i-obs" label="Observaciones">
@@ -419,12 +462,16 @@ export function NuevoIngresoView({
                 <div key={i} className="rounded-lg border border-border bg-card-2 px-3 py-2.5">
                   {/* Fila única: nombre · nuevo/vincular · categoría/producto · cantidad · precio · quitar */}
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-                    <Input
-                      value={f.nombre}
-                      onChange={(e) => cambiarNombre(i, e.target.value)}
-                      placeholder="Producto"
-                      className="min-w-[9rem] flex-[2]"
-                    />
+                    {/* En «Vincular» el nombre lo define el select de abajo: no
+                        duplicamos el dato con un input de texto. */}
+                    {f.esNuevo && (
+                      <Input
+                        value={f.nombre}
+                        onChange={(e) => cambiarNombre(i, e.target.value)}
+                        placeholder="Producto"
+                        className="min-w-[9rem] flex-[2]"
+                      />
+                    )}
 
                     <div className="inline-flex shrink-0 overflow-hidden rounded-md border border-border text-xs">
                       <button
@@ -445,7 +492,7 @@ export function NuevoIngresoView({
                       </button>
                       <button
                         type="button"
-                        onClick={() => actualizar(i, { esNuevo: false, talles: [], tallesAbierto: false })}
+                        onClick={() => vincularProducto(i, match?.id_producto ?? f.idProducto)}
                         className={`px-3 py-1.5 font-medium transition-colors ${
                           !f.esNuevo ? 'bg-accent-pink text-sidebar' : 'text-muted hover:bg-card'
                         }`}
@@ -479,11 +526,9 @@ export function NuevoIngresoView({
                     ) : (
                       <select
                         value={f.idProducto}
-                        onChange={(e) =>
-                          actualizar(i, { idProducto: e.target.value, talles: [], tallesAbierto: false })
-                        }
+                        onChange={(e) => vincularProducto(i, e.target.value)}
                         aria-label="Producto existente"
-                        className={`${selectClass} min-w-[8rem] flex-1`}
+                        className={`${selectClass} min-w-[12rem] flex-[3]`}
                       >
                         <option value="">— Elegí el producto —</option>
                         {productos.map((p) => (
