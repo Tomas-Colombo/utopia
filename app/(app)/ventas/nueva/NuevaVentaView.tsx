@@ -12,6 +12,12 @@ import { Textarea } from '@/components/ui/Textarea'
 import { useToast } from '@/components/ui/Toast'
 import { QrScanner } from '@/components/inventario/QrScanner'
 import {
+  SIN_TALLE_KEY,
+  SelectorTalleMulti,
+  type SelectorTalle,
+  type TalleOpcion,
+} from '@/components/ventas/SelectorTalleMulti'
+import {
   buscarMatchNombre,
   indexarPorNombre,
   normalizar,
@@ -23,12 +29,17 @@ import {
   type FormaPago,
 } from '@/lib/types/precios'
 import type { ProductoConDetalle } from '@/lib/types/inventario'
-import type { LineaCarrito } from '@/lib/types/ventas'
+import type { CuentaDestinoRow, LineaCarrito } from '@/lib/types/ventas'
+import {
+  CobranzaPanel,
+  cobranzaCuadra,
+  normalizarPagos,
+  nuevoPago,
+  type PagoBorrador,
+} from './CobranzaPanel'
 import { registrarVentaAction, crearClienteAction } from '../actions'
 
 interface ClienteOption { id: string; nombre: string; telefono: string | null }
-/** Un talle con stock libre, tal como lo devuelve `elegir-talle`. */
-interface TalleOpcion { talle: string; disponibles: number }
 /** Grupo del carrito: N unidades del mismo producto+talle en una sola fila. */
 interface Grupo {
   key: string
@@ -47,18 +58,6 @@ interface Grupo {
   cantidad: number
   subtotal: number
 }
-interface SelectorTalle {
-  idProducto: string
-  productoNombre: string
-  /** null = agregar líneas nuevas; si tiene valor, es la key del grupo a reestructurar. */
-  grupoKey: string | null
-  opciones: TalleOpcion[]
-  /** Unidades disponibles SIN talle asignado — se ofrecen aparte. */
-  sinTalle: number
-  /** Cantidad por talle elegida por el vendedor. Clave = talle o '__sin__'. */
-  cantidades: Record<string, number>
-}
-const SIN_TALLE_KEY = '__sin__'
 /** Set vacío estable — evita recrear uno por render en las filas sin selección. */
 const EMPTY_SET: Set<string> = new Set()
 interface ReservaOption {
@@ -85,11 +84,13 @@ export function NuevaVentaView({
   clientes: clientesIniciales,
   reservasActivas,
   productos,
+  cuentas,
   idReservaPreseleccionada,
 }: {
   clientes: ClienteOption[]
   reservasActivas: ReservaOption[]
   productos: ProductoConDetalle[]
+  cuentas: CuentaDestinoRow[]
   idReservaPreseleccionada: string | null
 }) {
   const router = useRouter()
@@ -139,6 +140,10 @@ export function NuevaVentaView({
 
   const [lineas, setLineas] = useState<LineaCarrito[]>([])
   const [confirmarOpen, setConfirmarOpen] = useState(false)
+
+  // Cobranza: cómo se reparte el cobro entre cuentas. Arranca con un pago
+  // único, que siempre vale el total (ver normalizarPagos).
+  const [pagos, setPagos] = useState<PagoBorrador[]>(() => [nuevoPago(cuentas, 0)])
 
   // Tope físico de unidades por grupo (producto+talle). Evita que el vendedor
   // suba la cantidad de una fila más allá del stock real. Clave = grupo.key.
@@ -702,6 +707,21 @@ export function NuevaVentaView({
         idCliente: idCliente || null,
         idReserva: idReserva || null,
         observaciones: observaciones || null,
+        pagos: pagosNormalizados.map((p) => {
+          const recibido = Number(p.recibido.replace(',', '.'))
+          return {
+            medio: p.medio,
+            id_cuenta_destino: p.idCuenta,
+            monto: p.monto,
+            // El vuelto lo calcula la DB a partir de esto; sólo se manda si
+            // el vendedor lo cargó y es coherente.
+            monto_recibido:
+              p.medio === 'efectivo' && Number.isFinite(recibido) && recibido >= p.monto
+                ? recibido
+                : null,
+            referencia: p.referencia.trim() || null,
+          }
+        }),
       })
       if (!res.ok) return toast.error('No se pudo registrar la venta', traducirReason(res.reason))
       toast.success('Venta registrada', `Total $ ${total.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`)
@@ -764,7 +784,15 @@ export function NuevaVentaView({
     }
   }
 
-  const puedeConfirmar = lineas.length > 0 && !pending
+  // La cobranza tiene que cerrar contra el total ANTES de mandar: el SP la
+  // rechaza igual, pero avisar acá es más barato que un error después de
+  // haber tocado stock.
+  const pagosNormalizados = normalizarPagos(pagos, total, cuentas)
+  const cobranzaOk =
+    cuentas.length > 0 &&
+    pagosNormalizados.every((p) => p.idCuenta) &&
+    cobranzaCuadra(pagosNormalizados, total)
+  const puedeConfirmar = lineas.length > 0 && !pending && cobranzaOk
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px]">
@@ -1026,14 +1054,23 @@ export function NuevaVentaView({
       {/* Panel lateral */}
       <aside className="space-y-4">
         <div className="rounded-lg border border-border bg-card p-4 space-y-4">
-          <Field htmlFor="v-fp" label="Forma de pago" required>
+          {/* Cuotas, no "forma de pago": lo único que decide acá el vendedor es
+              si la venta se financia. Sin cuotas = precio de lista; el medio
+              real de cobro (efectivo, transferencia) se elige abajo, en
+              Cobranza, y no toca el precio. */}
+          <Field
+            htmlFor="v-fp"
+            label="Cuotas"
+            hint="Sin cuotas, precio de lista. Con cuotas se aplica el recargo configurado en Precios."
+          >
             <select
               id="v-fp"
-              value={formaPago}
-              onChange={(e) => setFormaPago(e.target.value as FormaPago)}
+              value={formaPago === 'efectivo' ? '' : formaPago}
+              onChange={(e) => setFormaPago((e.target.value || 'efectivo') as FormaPago)}
               className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
             >
-              {(['efectivo', 'cuotas_2', 'cuotas_3'] as FormaPago[]).map((fp) => (
+              <option value="">— Sin cuotas —</option>
+              {(['cuotas_2', 'cuotas_3'] as FormaPago[]).map((fp) => (
                 <option key={fp} value={fp}>
                   {FORMA_PAGO_LABEL[fp]}
                 </option>
@@ -1225,6 +1262,16 @@ export function NuevaVentaView({
           </Field>
         </div>
 
+        <div className="rounded-lg border border-border bg-card p-4">
+          <CobranzaPanel
+            cuentas={cuentas}
+            pagos={pagosNormalizados}
+            total={total}
+            disabled={pending}
+            onChange={setPagos}
+          />
+        </div>
+
         <div className="rounded-md border border-border bg-card-2 p-3 text-xs text-muted">
           El precio final se resuelve en el server aplicando la cascada
           de reglas (descuentos + recargo por forma de pago). Al confirmar,
@@ -1335,141 +1382,6 @@ function CantidadGrupo({
         </span>
       )}
     </div>
-  )
-}
-
-/**
- * Selector multi-talle. El vendedor ve TODOS los talles del producto con su
- * stock libre y un input de cantidad por talle. Puede combinar (ej. 1 M + 1 S)
- * y confirmar todo en una sola acción. En modo "cambiar" arranca precargado
- * con la distribución actual del grupo, así el operador la reestructura sin
- * tener que reescribir desde cero.
- */
-function SelectorTalleMulti({
-  selector,
-  disabled,
-  onChangeCantidad,
-  onConfirm,
-  onCancel,
-}: {
-  selector: SelectorTalle
-  disabled: boolean
-  onChangeCantidad: (key: string, nueva: number, max: number) => void
-  onConfirm: () => void
-  onCancel: () => void
-}) {
-  const filas: Array<{ key: string; label: string; max: number }> = [
-    ...selector.opciones.map((o) => ({
-      key: o.talle,
-      label: `Talle ${o.talle}`,
-      max: o.disponibles,
-    })),
-  ]
-  if (selector.sinTalle > 0) {
-    filas.push({ key: SIN_TALLE_KEY, label: 'Sin talle', max: selector.sinTalle })
-  }
-  const totalElegido = Object.values(selector.cantidades).reduce((a, b) => a + b, 0)
-  const esCambio = !!selector.grupoKey
-
-  return (
-    <div className="rounded-md border border-border bg-card-2 p-3 space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="text-sm">
-          <span className="text-muted">
-            {esCambio ? 'Reestructurar' : 'Elegí talle y cantidad de'}{' '}
-          </span>
-          <b>{selector.productoNombre}</b>
-        </span>
-        <Button type="button" size="sm" variant="ghost" onClick={onCancel}>
-          Cancelar
-        </Button>
-      </div>
-
-      <div className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-x-3 gap-y-2">
-        {filas.map((f) => {
-          const cant = selector.cantidades[f.key] ?? 0
-          const agotado = f.max === 0
-          return (
-            <FilaTalle
-              key={f.key}
-              label={f.label}
-              max={f.max}
-              cant={cant}
-              disabled={disabled || agotado}
-              onChange={(n) => onChangeCantidad(f.key, n, f.max)}
-            />
-          )
-        })}
-      </div>
-
-      <div className="flex items-center justify-between gap-2 border-t border-border pt-2">
-        <span className="text-xs text-muted">
-          {totalElegido === 0
-            ? 'Poné al menos 1 unidad en algún talle.'
-            : `${totalElegido} unidad${totalElegido === 1 ? '' : 'es'} a ${esCambio ? 'dejar en el carrito' : 'agregar'}.`}
-        </span>
-        <Button
-          type="button"
-          size="sm"
-          disabled={disabled || totalElegido === 0}
-          onClick={onConfirm}
-        >
-          {esCambio ? 'Aplicar cambio' : `Agregar ${totalElegido || ''}`.trim()}
-        </Button>
-      </div>
-    </div>
-  )
-}
-
-function FilaTalle({
-  label,
-  max,
-  cant,
-  disabled,
-  onChange,
-}: {
-  label: string
-  max: number
-  cant: number
-  disabled: boolean
-  onChange: (n: number) => void
-}) {
-  return (
-    <>
-      <span className="text-sm">
-        <span className="font-medium">{label}</span>{' '}
-        <span className="text-xs text-muted">· {max} disp.</span>
-      </span>
-      <Button
-        type="button"
-        size="sm"
-        variant="secondary"
-        disabled={disabled || cant <= 0}
-        onClick={() => onChange(cant - 1)}
-        aria-label={`Restar ${label}`}
-      >
-        −
-      </Button>
-      <NumberInput
-        min={0}
-        max={max}
-        value={cant}
-        disabled={disabled}
-        onChange={(e) => onChange(Number(e.target.value || 0))}
-        aria-label={`Cantidad ${label}`}
-        className="w-14 text-right"
-      />
-      <Button
-        type="button"
-        size="sm"
-        variant="secondary"
-        disabled={disabled || cant >= max}
-        onClick={() => onChange(cant + 1)}
-        aria-label={`Sumar ${label}`}
-      >
-        +
-      </Button>
-    </>
   )
 }
 

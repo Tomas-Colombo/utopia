@@ -1,12 +1,25 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Field } from '@/components/ui/Field'
 import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
 import { useToast } from '@/components/ui/Toast'
+import { QrScanner } from '@/components/inventario/QrScanner'
+import {
+  SIN_TALLE_KEY,
+  SelectorTalleMulti,
+  type SelectorTalle,
+  type TalleOpcion,
+} from '@/components/ventas/SelectorTalleMulti'
+import {
+  buscarMatchNombre,
+  indexarPorNombre,
+  normalizar,
+} from '@/lib/inventario/producto-match'
+import type { ProductoConDetalle } from '@/lib/types/inventario'
 import type { LineaCarrito } from '@/lib/types/ventas'
 import { crearReservaAction, crearClienteAction } from '../../actions'
 
@@ -15,9 +28,19 @@ interface Cliente { id: string; nombre: string; telefono: string | null }
 /**
  * Alta de reserva: carrito de items (sin precio final, porque el precio
  * se recalcula al vender) + cliente + fecha vencimiento.
- * Reutiliza el endpoint /api/ventas/lookup-item.
+ *
+ * El buscador de ítems es el MISMO que el de la venta: un solo input que
+ * acepta QR, SKU o nombre, con sugerencias, cámara y selector de talle. La
+ * alta de reserva no puede ser más pobre que la venta — es el mismo operador
+ * eligiendo las mismas unidades. Reutiliza /api/ventas/lookup-item.
  */
-export function NuevaReservaView({ clientes: clientesIniciales }: { clientes: Cliente[] }) {
+export function NuevaReservaView({
+  clientes: clientesIniciales,
+  productos,
+}: {
+  clientes: Cliente[]
+  productos: ProductoConDetalle[]
+}) {
   const router = useRouter()
   const toast = useToast()
   const [pending, start] = useTransition()
@@ -41,31 +64,199 @@ export function NuevaReservaView({ clientes: clientesIniciales }: { clientes: Cl
   const [qrInput, setQrInput] = useState('')
   const [buscando, setBuscando] = useState(false)
   const [errorBusqueda, setErrorBusqueda] = useState<string | null>(null)
+  const [camaraOpen, setCamaraOpen] = useState(false)
   const [items, setItems] = useState<LineaCarrito[]>([])
 
-  async function agregar(e?: React.FormEvent) {
+  // Buscador unificado: el mismo input acepta QR, SKU o nombre. Reusamos el
+  // índice de nombres normalizado del inventario para sugerir y resolver el
+  // producto cuando lo que se tipeó no es un código.
+  const [sugerenciasOpen, setSugerenciasOpen] = useState(false)
+  const [resaltado, setResaltado] = useState(0)
+  // Selector de talle: el server nunca elige una unidad por nosotros cuando la
+  // categoría maneja talles (responde 'elegir-talle' con el stock libre).
+  const [selectorTalle, setSelectorTalle] = useState<SelectorTalle | null>(null)
+  const indexNombres = useMemo(() => indexarPorNombre(productos), [productos])
+  const sugerencias = useMemo(() => {
+    const q = normalizar(qrInput)
+    if (!q) return []
+    return productos.filter((p) => normalizar(p.nombre).includes(q)).slice(0, 8)
+  }, [productos, qrInput])
+
+  /**
+   * URL del lookup. `excluir` son los ítems ya cargados: sin eso el server
+   * devuelve siempre la misma unidad (FIFO) y la segunda rebota como duplicada.
+   * No se manda forma_pago ni descuentos: en la reserva el precio es sólo
+   * referencia y se recalcula al vender.
+   */
+  function lookupUrl(
+    query: Record<string, string | null | undefined>,
+    excluirExtra: string[] = [],
+  ): string {
+    const qs = new URLSearchParams()
+    for (const [k, v] of Object.entries(query)) if (v) qs.set(k, v)
+    const excluir = [...items.map((i) => i.id_item), ...excluirExtra]
+    if (excluir.length > 0) qs.set('excluir', excluir.join(','))
+    return `/api/ventas/lookup-item?${qs.toString()}`
+  }
+
+  // Agrega evitando duplicados por QR. Devuelve la línea agregada, o null.
+  function pushItem(nueva: LineaCarrito): LineaCarrito | null {
+    let agregada: LineaCarrito | null = nueva
+    setItems((xs) => {
+      if (xs.some((x) => x.qr_code === nueva.qr_code)) {
+        agregada = null
+        return xs
+      }
+      return [...xs, nueva]
+    })
+    return agregada
+  }
+
+  // Submit del buscador. Con sugerencias de nombre abiertas, elegimos la
+  // resaltada — NUNCA caemos al path de código, para no agregar por SKU un
+  // ítem equivocado. Sin sugerencias, tratamos el texto como código o nombre
+  // exacto.
+  function agregar(e?: React.FormEvent) {
     e?.preventDefault()
-    const qr = qrInput.trim()
-    if (!qr) return
-    if (items.some((l) => l.qr_code === qr)) {
-      setErrorBusqueda('Ese ítem ya está en la lista')
+    if (sugerenciasOpen && sugerencias.length > 0) {
+      elegirSugerencia(sugerencias[Math.min(resaltado, sugerencias.length - 1)])
       return
     }
+    const texto = qrInput.trim()
+    if (!texto) return
+    const match = buscarMatchNombre(indexNombres, texto)
+    if (match) void agregarPorProducto(match.id_producto)
+    else void agregarPorCodigo(texto)
+  }
+
+  // Navegación por teclado del desplegable de nombres.
+  function onBuscadorKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (!sugerenciasOpen || sugerencias.length === 0) return
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setResaltado((i) => Math.min(sugerencias.length - 1, i + 1))
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setResaltado((i) => Math.max(0, i - 1))
+    } else if (e.key === 'Escape') {
+      setSugerenciasOpen(false)
+    }
+  }
+
+  function elegirSugerencia(p: ProductoConDetalle) {
+    setSugerenciasOpen(false)
+    setQrInput(p.nombre)
+    void agregarPorProducto(p.id_producto)
+  }
+
+  // Carga un ítem a partir de un código (QR exacto o SKU con talle). Lo usan
+  // tanto el input manual como el escaneo por cámara.
+  async function agregarPorCodigo(rawCode: string) {
+    const codigo = rawCode.trim()
+    if (!codigo || buscando) return
     setBuscando(true)
     setErrorBusqueda(null)
     try {
-      const r = await fetch(`/api/ventas/lookup-item?qr=${encodeURIComponent(qr)}`)
+      const r = await fetch(lookupUrl({ code: codigo }))
       const data = await r.json()
       if (!data.ok) {
-        setErrorBusqueda(explicar(data.reason))
+        setErrorBusqueda(explicar(data.reason, data))
         return
       }
-      setItems((xs) => [...xs, data.linea as LineaCarrito])
-      setQrInput('')
+      if (pushItem(data.linea as LineaCarrito)) setQrInput('')
+      else setErrorBusqueda('Ese ítem ya está en la lista')
     } catch (e) {
       setErrorBusqueda((e as Error).message)
     } finally {
       setBuscando(false)
+    }
+  }
+
+  // Agrega por producto (búsqueda por nombre). Si el producto usa talles y no
+  // se pasó uno, el server responde 'elegir-talle' con el stock de cada talle
+  // y abrimos el selector.
+  // `talle`: valor del talle (ej. "M"), o `null` para pedir explícitamente una
+  // unidad SIN talle. `extraExcluidos`: ids a saltear ADEMÁS de los ya
+  // cargados, para encadenar N llamadas sin depender del re-render de React.
+  async function agregarPorProducto(
+    idProducto: string,
+    talle?: string | null,
+    extraExcluidos: string[] = [],
+  ): Promise<LineaCarrito | null> {
+    if (!idProducto || buscando) return null
+    setBuscando(true)
+    setErrorBusqueda(null)
+    try {
+      const r = await fetch(
+        lookupUrl(
+          {
+            id_producto: idProducto,
+            talle: talle ?? undefined,
+            sin_talle: talle === null ? '1' : undefined,
+          },
+          extraExcluidos,
+        ),
+      )
+      const data = await r.json()
+      if (!data.ok) {
+        if (data.reason === 'elegir-talle') {
+          setSelectorTalle({
+            idProducto,
+            productoNombre:
+              productos.find((p) => p.id_producto === idProducto)?.nombre ?? 'Producto',
+            grupoKey: null,
+            opciones: data.talles as TalleOpcion[],
+            sinTalle: Number(data.sin_talle ?? 0),
+            cantidades: {},
+          })
+          return null
+        }
+        setErrorBusqueda(explicar(data.reason, data))
+        return null
+      }
+      const nueva = pushItem(data.linea as LineaCarrito)
+      if (!nueva) {
+        setErrorBusqueda('Ese ítem ya está en la lista')
+        return null
+      }
+      setQrInput('')
+      setSelectorTalle(null)
+      return nueva
+    } catch (e) {
+      setErrorBusqueda((e as Error).message)
+      return null
+    } finally {
+      setBuscando(false)
+    }
+  }
+
+  // Ajusta la cantidad de UN talle dentro del selector (sin llamar al server).
+  function setCantidadTalle(key: string, nueva: number, max: number) {
+    setSelectorTalle((s) => {
+      if (!s) return s
+      const n = Math.max(0, Math.min(max, Math.floor(nueva || 0)))
+      return { ...s, cantidades: { ...s.cantidades, [key]: n } }
+    })
+  }
+
+  // Confirma la distribución elegida: pide N unidades por cada talle > 0
+  // encadenando exclusiones para no recibir siempre la misma unidad.
+  async function confirmarSelectorTalle() {
+    if (!selectorTalle) return
+    const pedidos: Array<{ talle: string | null; cant: number }> = []
+    for (const [k, v] of Object.entries(selectorTalle.cantidades)) {
+      if (v > 0) pedidos.push({ talle: k === SIN_TALLE_KEY ? null : k, cant: v })
+    }
+    const idProducto = selectorTalle.idProducto
+    setSelectorTalle(null)
+    if (pedidos.length === 0) return
+    const running: string[] = []
+    for (const p of pedidos) {
+      for (let i = 0; i < p.cant; i++) {
+        const linea = await agregarPorProducto(idProducto, p.talle, running)
+        if (!linea) return
+        running.push(linea.id_item)
+      }
     }
   }
 
@@ -113,27 +304,101 @@ export function NuevaReservaView({ clientes: clientesIniciales }: { clientes: Cl
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px]">
       <section className="space-y-4">
-        <form onSubmit={agregar} className="rounded-lg border border-border bg-card p-4">
-          <Field
-            htmlFor="qr-r"
-            label="Escanear o tipear QR"
-            error={errorBusqueda ?? undefined}
-          >
-            <div className="flex gap-2">
-              <Input
-                id="qr-r"
-                autoFocus
-                value={qrInput}
-                onChange={(e) => setQrInput(e.target.value)}
-                placeholder="Código QR del ítem"
-                invalid={!!errorBusqueda}
+        <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+          <form onSubmit={agregar}>
+            <Field
+              htmlFor="qr-r"
+              label="Escanear, tipear código o buscar por nombre"
+              error={errorBusqueda ?? undefined}
+              hint="QR, SKU (ej: REM-0007-M) o nombre del producto. Enter para agregar."
+            >
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Input
+                    id="qr-r"
+                    autoFocus
+                    value={qrInput}
+                    onChange={(e) => {
+                      setQrInput(e.target.value)
+                      setSugerenciasOpen(true)
+                      setResaltado(0)
+                      setSelectorTalle(null)
+                    }}
+                    onFocus={() => setSugerenciasOpen(true)}
+                    onBlur={() => setTimeout(() => setSugerenciasOpen(false), 120)}
+                    onKeyDown={onBuscadorKeyDown}
+                    placeholder="QR, SKU o nombre"
+                    invalid={!!errorBusqueda}
+                    disabled={buscando}
+                    role="combobox"
+                    aria-expanded={sugerenciasOpen && sugerencias.length > 0}
+                    aria-autocomplete="list"
+                  />
+                  {sugerenciasOpen && sugerencias.length > 0 && (
+                    <ul
+                      role="listbox"
+                      className="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md border border-border bg-card-2 shadow"
+                    >
+                      {sugerencias.map((p, i) => {
+                        const activo = i === Math.min(resaltado, sugerencias.length - 1)
+                        return (
+                          <li
+                            key={p.id_producto}
+                            role="option"
+                            aria-selected={activo}
+                            // onMouseDown para seleccionar antes del blur del input.
+                            onMouseDown={(e) => {
+                              e.preventDefault()
+                              elegirSugerencia(p)
+                            }}
+                            onMouseEnter={() => setResaltado(i)}
+                            className={`flex cursor-pointer items-center justify-between gap-2 px-3 py-2 text-sm ${
+                              activo ? 'bg-pink-bg text-text' : 'text-text'
+                            }`}
+                          >
+                            <span>{p.nombre}</span>
+                            <span className="shrink-0 font-mono text-xs text-muted">
+                              {p.stock_disponible} u.
+                            </span>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  )}
+                </div>
+                <Button type="submit" disabled={buscando || !qrInput.trim()}>
+                  {buscando ? 'Buscando…' : 'Agregar'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setCamaraOpen((v) => !v)}
+                >
+                  {camaraOpen ? 'Cerrar' : '📷 Cámara'}
+                </Button>
+              </div>
+            </Field>
+          </form>
+
+          {selectorTalle && (
+            <SelectorTalleMulti
+              selector={selectorTalle}
+              disabled={buscando}
+              onChangeCantidad={setCantidadTalle}
+              onConfirm={() => void confirmarSelectorTalle()}
+              onCancel={() => setSelectorTalle(null)}
+            />
+          )}
+
+          {camaraOpen && (
+            <div className="mx-auto max-w-xs">
+              <QrScanner
+                onDetected={(text) => void agregarPorCodigo(text)}
+                onClose={() => setCamaraOpen(false)}
               />
-              <Button type="submit" disabled={buscando || !qrInput.trim()}>
-                {buscando ? 'Buscando…' : 'Agregar'}
-              </Button>
             </div>
-          </Field>
-        </form>
+          )}
+        </div>
 
         <div className="rounded-lg border border-border bg-card overflow-x-auto">
           <table className="w-full text-sm">
@@ -149,14 +414,19 @@ export function NuevaReservaView({ clientes: clientesIniciales }: { clientes: Cl
               {items.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="px-4 py-8 text-center text-muted">
-                    Escaneá los ítems a reservar.
+                    Buscá o escaneá los ítems a reservar.
                   </td>
                 </tr>
               ) : (
                 items.map((l) => (
                   <tr key={l.qr_code} className="border-b border-border-2">
                     <td className="px-4 py-3">
-                      <div className="font-medium">{l.producto_nombre}</div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-medium">{l.producto_nombre}</span>
+                        <span className="rounded-full border border-border bg-card-2 px-2 py-0.5 text-xs font-medium">
+                          {l.talle ? `Talle ${l.talle}` : 'Sin talle'}
+                        </span>
+                      </div>
                       <div className="text-xs text-muted">{l.sku ?? '—'}</div>
                     </td>
                     <td className="px-4 py-3 font-mono text-xs">{l.qr_code}</td>
@@ -288,11 +558,19 @@ export function NuevaReservaView({ clientes: clientesIniciales }: { clientes: Cl
   )
 }
 
-function explicar(reason: string): string {
-  if (reason.startsWith('item-not-found')) return 'No se encontró un ítem con ese QR.'
-  if (reason.startsWith('item-no-disponible')) return 'El ítem no está disponible.'
+function explicar(reason: string, extra?: Record<string, unknown>): string {
+  if (reason.startsWith('item-not-found')) return 'No se encontró un ítem con ese código.'
+  if (reason.startsWith('item-no-disponible')) {
+    const est = extra?.estado ? ` (estado: ${extra.estado})` : ''
+    return `El ítem no está disponible${est}.`
+  }
   if (reason.startsWith('item-ya-reservado') || reason.startsWith('item-en-reserva'))
     return 'El ítem ya está en otra reserva activa.'
+  if (reason === 'sku-sin-stock') return 'Ese producto no tiene unidades disponibles en stock.'
+  if (reason === 'sku-sin-stock-libre')
+    return 'No quedan unidades libres: están reservadas o ya las agregaste a la lista.'
+  if (reason === 'sin-precio-lista')
+    return 'El producto no tiene precio de venta. Fijalo en Precios → Control de precios.'
   if (reason === 'vencimiento-invalido') return 'La fecha de vencimiento debe ser futura.'
   return reason
 }

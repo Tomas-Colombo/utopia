@@ -3,6 +3,7 @@ import { verifySession } from '@/lib/dal/session'
 import { listClientes } from '@/lib/dal/clientes/cliente'
 import { listReservas } from '@/lib/dal/reservas/reserva'
 import { listProductosConDetalle } from '@/lib/dal/inventario/producto'
+import { listCuentasDestino } from '@/lib/dal/ventas/cuenta-destino'
 import { NuevaVentaView } from './NuevaVentaView'
 
 export default async function NuevaVentaPage(props: {
@@ -10,10 +11,11 @@ export default async function NuevaVentaPage(props: {
 }) {
   const session = await verifySession()
   const searchParams = await props.searchParams
-  const [clientes, reservasActivas, productos] = await Promise.all([
+  const [clientes, reservasActivas, productos, cuentas] = await Promise.all([
     listClientes({ soloActivos: true }),
     listReservas({ estado: 'activa' }),
     listProductosConDetalle({ soloActivos: true }),
+    listCuentasDestino({ soloActivas: true }),
   ])
   return (
     <>
@@ -33,6 +35,7 @@ export default async function NuevaVentaPage(props: {
             items_count: r.items_count,
           }))}
           productos={productos.filter((p) => p.stock_disponible > 0)}
+          cuentas={cuentas}
           idReservaPreseleccionada={searchParams.reserva ?? null}
         />
       </main>

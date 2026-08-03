@@ -1,11 +1,17 @@
 /**
- * Tipos TS mantenidos a mano contra 00020-00023.
+ * Tipos TS mantenidos a mano contra 00020-00023 y 00047.
  */
 
 import type { DesgloseVenta, FormaPago } from './precios'
 import type { TipoIngreso } from './inventario'
 
 export type EstadoVenta = 'registrada' | 'anulada'
+/**
+ * Por dónde ENTRÓ la plata. Distinto de `FormaPago`, que es cómo se PRECIÓ la
+ * venta (esa define el recargo por regla; ésta no toca el precio).
+ */
+export type MedioPago = 'efectivo' | 'transferencia' | 'tarjeta_debito' | 'tarjeta_credito'
+export type TipoCuentaDestino = 'efectivo' | 'banco' | 'billetera_virtual'
 export type EstadoReserva = 'activa' | 'cancelada' | 'vencida' | 'convertida_venta'
 export type TipoComprobante = 'factura_a' | 'factura_b' | 'factura_c' | 'remito' | 'ticket'
 
@@ -18,6 +24,17 @@ export const ESTADO_RESERVA_LABEL: Record<EstadoReserva, string> = {
   cancelada: 'Cancelada',
   vencida: 'Vencida',
   convertida_venta: 'Convertida en venta',
+}
+export const MEDIO_PAGO_LABEL: Record<MedioPago, string> = {
+  efectivo: 'Efectivo',
+  transferencia: 'Transferencia',
+  tarjeta_debito: 'Tarjeta de débito',
+  tarjeta_credito: 'Tarjeta de crédito',
+}
+export const TIPO_CUENTA_DESTINO_LABEL: Record<TipoCuentaDestino, string> = {
+  efectivo: 'Efectivo',
+  banco: 'Cuenta bancaria',
+  billetera_virtual: 'Billetera virtual',
 }
 export const TIPO_COMPROBANTE_LABEL: Record<TipoComprobante, string> = {
   factura_a: 'Factura A',
@@ -96,6 +113,46 @@ export interface VentaConDetalle extends VentaRow {
     }
   >
   comprobantes: ComprobanteRow[]
+  pagos: Array<PagoVentaRow & { cuenta: Pick<CuentaDestinoRow, 'id_cuenta_destino' | 'nombre' | 'tipo'> | null }>
+}
+
+// ─── Cobranza (00047) ────────────────────────────────────────────────
+
+export interface CuentaDestinoRow {
+  id_cuenta_destino: string
+  id_tenant: string
+  nombre: string
+  tipo: TipoCuentaDestino
+  titular: string | null
+  identificador: string | null
+  activo: boolean
+  es_predeterminada: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface PagoVentaRow {
+  id_pago_venta: string
+  id_tenant: string
+  id_venta: string
+  id_cuenta_destino: string
+  medio: MedioPago
+  monto: number
+  /** Sólo efectivo: lo que el cliente entregó. */
+  monto_recibido: number | null
+  /** Columna generada por la DB (`monto_recibido - monto`). */
+  vuelto: number | null
+  referencia: string | null
+  created_at: string
+}
+
+/** Un pago tal como lo arma la UI para sp_registrar_venta. */
+export interface PagoInput {
+  medio: MedioPago
+  id_cuenta_destino: string
+  monto: number
+  monto_recibido?: number | null
+  referencia?: string | null
 }
 
 export interface ComprobanteRow {
@@ -116,6 +173,11 @@ export interface RegistrarVentaInput {
   id_cliente?: string | null
   id_reserva?: string | null
   observaciones?: string | null
+  /**
+   * Cobranza. Vacío/omitido = el SP arma un solo pago por el total contra la
+   * cuenta predeterminada. Si viene, la suma DEBE dar el total de la venta.
+   */
+  pagos?: PagoInput[]
 }
 
 // ─── Reserva ─────────────────────────────────────────────────────────

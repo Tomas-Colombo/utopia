@@ -1,11 +1,15 @@
 import { Topbar } from '@/components/shell/Topbar'
 import { verifySession } from '@/lib/dal/session'
 import { listClientes } from '@/lib/dal/clientes/cliente'
+import { listProductosConDetalle } from '@/lib/dal/inventario/producto'
 import { NuevaReservaView } from './NuevaReservaView'
 
 export default async function NuevaReservaPage() {
   const session = await verifySession()
-  const clientes = await listClientes({ soloActivos: true })
+  const [clientes, productos] = await Promise.all([
+    listClientes({ soloActivos: true }),
+    listProductosConDetalle({ soloActivos: true }),
+  ])
   return (
     <>
       <Topbar title="Nueva reserva" session={session} backHref="/ventas/reservas" />
@@ -16,6 +20,7 @@ export default async function NuevaReservaPage() {
             nombre: c.nombre,
             telefono: c.telefono,
           }))}
+          productos={productos.filter((p) => p.stock_disponible > 0)}
         />
       </main>
     </>

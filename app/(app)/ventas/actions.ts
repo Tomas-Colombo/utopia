@@ -20,8 +20,17 @@ import {
   spCrearReserva,
   spVencerReservas,
 } from '@/lib/dal/reservas/reserva'
+import {
+  createCuentaDestino,
+  setCuentaPredeterminada,
+  updateCuentaDestino,
+} from '@/lib/dal/ventas/cuenta-destino'
 import type { FormaPago } from '@/lib/types/precios'
-import type { TipoComprobante } from '@/lib/types/ventas'
+import type {
+  PagoInput,
+  TipoComprobante,
+  TipoCuentaDestino,
+} from '@/lib/types/ventas'
 
 type ActionResult<T = unknown> = { ok: true; data?: T } | { ok: false; reason: string }
 type Guarded =
@@ -47,6 +56,8 @@ export async function registrarVentaAction(input: {
   idCliente?: string | null
   idReserva?: string | null
   observaciones?: string | null
+  /** Cobranza. Omitido = un pago por el total contra la cuenta predeterminada. */
+  pagos?: PagoInput[]
 }): Promise<ActionResult<{ id: string }>> {
   const g = await guarded('ventas', 'crear')
   if (!g.ok) return { ok: false, reason: g.error }
@@ -58,6 +69,7 @@ export async function registrarVentaAction(input: {
       id_cliente: input.idCliente ?? null,
       id_reserva: input.idReserva ?? null,
       observaciones: input.observaciones ?? null,
+      pagos: input.pagos,
     })
     revalidatePath('/ventas')
     revalidatePath('/inventario/productos')
@@ -170,6 +182,70 @@ export async function vencerReservasAction(): Promise<ActionResult<{ vencidas: n
     const vencidas = await spVencerReservas()
     revalidatePath('/ventas/reservas')
     return { ok: true, data: { vencidas } }
+  } catch (e) {
+    return { ok: false, reason: (e as Error).message }
+  }
+}
+
+// ─── Cuentas destino ─────────────────────────────────────────────────
+
+export async function crearCuentaDestinoAction(input: {
+  nombre: string
+  tipo: TipoCuentaDestino
+  titular?: string | null
+  identificador?: string | null
+}): Promise<ActionResult<{ id: string }>> {
+  const g = await guarded('ventas', 'crear')
+  if (!g.ok) return { ok: false, reason: g.error }
+  if (input.nombre.trim().length < 2) return { ok: false, reason: 'nombre-invalido' }
+  try {
+    const row = await createCuentaDestino({
+      id_tenant: g.tenantId,
+      nombre: input.nombre.trim(),
+      tipo: input.tipo,
+      titular: input.titular?.trim() || null,
+      identificador: input.identificador?.trim() || null,
+    })
+    revalidatePath('/ventas/cuentas')
+    revalidatePath('/ventas/nueva')
+    return { ok: true, data: { id: row.id_cuenta_destino } }
+  } catch (e) {
+    return { ok: false, reason: (e as Error).message }
+  }
+}
+
+export async function actualizarCuentaDestinoAction(input: {
+  id: string
+  patch: {
+    nombre?: string
+    tipo?: TipoCuentaDestino
+    titular?: string | null
+    identificador?: string | null
+    activo?: boolean
+  }
+}): Promise<ActionResult> {
+  const g = await guarded('ventas', 'editar')
+  if (!g.ok) return { ok: false, reason: g.error }
+  try {
+    await updateCuentaDestino(input.id, input.patch)
+    revalidatePath('/ventas/cuentas')
+    revalidatePath('/ventas/nueva')
+    return { ok: true }
+  } catch (e) {
+    return { ok: false, reason: (e as Error).message }
+  }
+}
+
+export async function marcarCuentaPredeterminadaAction(input: {
+  id: string
+}): Promise<ActionResult> {
+  const g = await guarded('ventas', 'editar')
+  if (!g.ok) return { ok: false, reason: g.error }
+  try {
+    await setCuentaPredeterminada(input.id)
+    revalidatePath('/ventas/cuentas')
+    revalidatePath('/ventas/nueva')
+    return { ok: true }
   } catch (e) {
     return { ok: false, reason: (e as Error).message }
   }

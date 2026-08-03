@@ -13,6 +13,7 @@ import {
   FORMA_PAGO_LABEL,
 } from '@/lib/types/precios'
 import {
+  MEDIO_PAGO_LABEL,
   TIPO_COMPROBANTE_LABEL,
   type TipoComprobante,
   type VentaConDetalle,
@@ -190,6 +191,42 @@ export function VentaDetalleView({ venta }: { venta: VentaConDetalle }) {
           </tbody>
         </table>
       </div>
+
+      {/* Cobranza: dónde entró la plata. Separada de "Forma de pago", que es
+          cómo se precio la venta. */}
+      {venta.pagos.length > 0 && (
+        <div className="rounded-lg border border-border bg-card p-4">
+          <h3 className="font-display text-lg mb-3">Cobranza</h3>
+          <ul className="space-y-2 text-sm">
+            {venta.pagos.map((p) => (
+              <li
+                key={p.id_pago_venta}
+                className="flex flex-wrap items-start justify-between gap-2 border-b border-border-2 pb-2 last:border-0"
+              >
+                <div className="min-w-0">
+                  <div className="font-medium">
+                    {MEDIO_PAGO_LABEL[p.medio]}
+                    {p.cuenta && <span className="text-muted"> · {p.cuenta.nombre}</span>}
+                  </div>
+                  {p.referencia && (
+                    <div className="font-mono text-xs text-muted">Ref. {p.referencia}</div>
+                  )}
+                  {p.vuelto != null && p.vuelto > 0 && (
+                    <div className="text-xs text-muted">
+                      Recibido $ {Number(p.monto_recibido).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                      {' · '}
+                      vuelto $ {Number(p.vuelto).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                    </div>
+                  )}
+                </div>
+                <span className="font-mono font-semibold whitespace-nowrap">
+                  $ {Number(p.monto).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Comprobantes */}
       {venta.comprobantes.length > 0 && (
