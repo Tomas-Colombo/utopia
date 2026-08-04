@@ -5,9 +5,15 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { NumberInput } from '@/components/ui/NumberInput'
 import { useToast } from '@/components/ui/Toast'
-import { StockTalleLoader, type LineaTalle } from '@/components/inventario/StockTalleLoader'
+import {
+  clampUnidades,
+  MAX_UNIDADES_LINEA,
+  StockTalleLoader,
+  type LineaTalle,
+} from '@/components/inventario/StockTalleLoader'
 import type { CategoriaRow, ProductoConDetalle } from '@/lib/types/inventario'
 import { buscarMatchNombre, indexarPorNombre } from '@/lib/inventario/producto-match'
+import { MAX_PDF_BYTES } from '@/lib/inventario/limites'
 import { importarRemitoAction, parseRemitoPdfAction } from '../../actions'
 
 export type DetalleImportado = {
@@ -70,6 +76,15 @@ export function RemitoImportPanel({
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
+    // Se corta acá para no subir al pedo: por encima del límite de Server
+    // Actions el request muere en el framework con un error ilegible.
+    if (file.size > MAX_PDF_BYTES) {
+      if (fileRef.current) fileRef.current.value = ''
+      return toast.error(
+        'El PDF es muy grande',
+        `Pesa ${(file.size / 1024 / 1024).toFixed(1)} MB y el máximo es ${MAX_PDF_BYTES / 1024 / 1024} MB.`,
+      )
+    }
     const fd = new FormData()
     fd.append('file', file)
     start(async () => {
@@ -124,12 +139,13 @@ export function RemitoImportPanel({
   // Al cambiar la cantidad (que manda), si los talles asignados la superan,
   // se resetean para volver a distribuir.
   function cambiarCantidad(i: number, val: string) {
-    const n = Number(val || 0)
+    const limpio = clampUnidades(val)
+    const n = Number(limpio || 0)
     setFilas((fs) =>
       fs.map((f, idx) => {
         if (idx !== i) return f
         const sum = f.talles.reduce((a, t) => a + t.cantidad, 0)
-        return { ...f, cantidad: val, talles: f.talles.length > 0 && sum > n ? [] : f.talles }
+        return { ...f, cantidad: limpio, talles: f.talles.length > 0 && sum > n ? [] : f.talles }
       }),
     )
   }
@@ -287,6 +303,8 @@ export function RemitoImportPanel({
                       <span className="text-xs text-muted">Cant.</span>
                       <NumberInput
                         min={1}
+                        max={MAX_UNIDADES_LINEA}
+                        step={1}
                         value={f.cantidad}
                         onChange={(e) => cambiarCantidad(i, e.target.value)}
                         aria-label="Cantidad"

@@ -217,6 +217,20 @@ export interface ReservaConDetalle extends ReservaRow {
   >
 }
 
+/**
+ * Una reserva activa que está bloqueando unidades de un producto concreto.
+ * El carrito de venta la usa para dos cosas: marcar el producto como
+ * reservado en el buscador, y saber a qué reserva engancharse si el vendedor
+ * lo carga igual.
+ */
+export interface ReservaDeProducto {
+  id_reserva: string
+  cliente_nombre: string | null
+  fecha_vencimiento: string
+  /** Unidades de ESE producto bloqueadas por ESTA reserva. */
+  unidades: number
+}
+
 // ─── Vista carrito (UI-only) ────────────────────────────────────────
 
 export interface LineaCarrito {

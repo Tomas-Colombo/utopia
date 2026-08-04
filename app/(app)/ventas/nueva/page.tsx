@@ -1,22 +1,51 @@
 import { Topbar } from '@/components/shell/Topbar'
 import { verifySession } from '@/lib/dal/session'
 import { listClientes } from '@/lib/dal/clientes/cliente'
-import { listReservas } from '@/lib/dal/reservas/reserva'
+import {
+  getReservaConDetalle,
+  listReservas,
+  listReservasActivasPorProducto,
+} from '@/lib/dal/reservas/reserva'
 import { listProductosConDetalle } from '@/lib/dal/inventario/producto'
 import { listCuentasDestino } from '@/lib/dal/ventas/cuenta-destino'
-import { NuevaVentaView } from './NuevaVentaView'
+import { NuevaVentaView, type PrecargaReserva } from './NuevaVentaView'
 
 export default async function NuevaVentaPage(props: {
   searchParams: Promise<{ reserva?: string }>
 }) {
   const session = await verifySession()
   const searchParams = await props.searchParams
-  const [clientes, reservasActivas, productos, cuentas] = await Promise.all([
-    listClientes({ soloActivos: true }),
-    listReservas({ estado: 'activa' }),
-    listProductosConDetalle({ soloActivos: true }),
-    listCuentasDestino({ soloActivas: true }),
-  ])
+  const idReserva = searchParams.reserva ?? null
+
+  const [clientes, reservasActivas, productos, cuentas, reservasPorProducto] =
+    await Promise.all([
+      listClientes({ soloActivos: true }),
+      listReservas({ estado: 'activa' }),
+      listProductosConDetalle({ soloActivos: true }),
+      listCuentasDestino({ soloActivas: true }),
+      listReservasActivasPorProducto(),
+    ])
+
+  // Acceso directo desde Reservas: la venta arranca con TODO lo que tenía la
+  // reserva (ítems, cliente, observaciones). Sólo los QR viajan al cliente —
+  // el precio de cada línea lo resuelve el lookup como en cualquier carga,
+  // porque el snapshot de la reserva puede haber quedado viejo.
+  let precarga: PrecargaReserva | null = null
+  if (idReserva) {
+    const reserva = await getReservaConDetalle(idReserva)
+    if (reserva && reserva.estado_reserva === 'activa') {
+      precarga = {
+        idReserva: reserva.id_reserva,
+        idCliente: reserva.cliente?.id_cliente ?? null,
+        clienteNombre: reserva.cliente?.nombre ?? null,
+        observaciones: reserva.observaciones,
+        qrs: reserva.lineas
+          .filter((l) => l.estado === 'activa' && l.item?.estado_item === 'disponible')
+          .map((l) => l.item!.qr_code),
+      }
+    }
+  }
+
   return (
     <>
       <Topbar title="Nueva venta" session={session} backHref="/ventas" />
@@ -35,8 +64,9 @@ export default async function NuevaVentaPage(props: {
             items_count: r.items_count,
           }))}
           productos={productos.filter((p) => p.stock_disponible > 0)}
+          reservasPorProducto={reservasPorProducto}
           cuentas={cuentas}
-          idReservaPreseleccionada={searchParams.reserva ?? null}
+          precargaReserva={precarga}
         />
       </main>
     </>

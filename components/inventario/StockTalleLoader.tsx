@@ -3,10 +3,27 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { NumberInput } from '@/components/ui/NumberInput'
+import { MAX_UNIDADES_LINEA } from '@/lib/inventario/limites'
 
 export type LineaTalle = { talle: string | null; cantidad: number }
 
 const SIN_TALLE = '__sin_talle__'
+
+// Mismo tope que revalidan las Server Actions; se re-exporta para que los
+// formularios que ya usan este control no cambien su import.
+export { MAX_UNIDADES_LINEA }
+
+/**
+ * Normaliza lo que se tipea en un input de unidades: entero, no negativo y
+ * bajo el tope. El atributo `max` nativo sólo frena las flechitas del spinner
+ * — tipeando o pegando entra cualquier cosa.
+ */
+export function clampUnidades(val: string): string {
+  if (val.trim() === '') return ''
+  const n = Number(val)
+  if (!Number.isFinite(n)) return ''
+  return String(Math.min(Math.max(Math.floor(n), 0), MAX_UNIDADES_LINEA))
+}
 
 /**
  * Carga dinámica de stock por talle: se elige un talle (o "sin talle"),
@@ -37,16 +54,26 @@ export function StockTalleLoader({
   const conTope = max != null
   const restante = conTope ? Math.max(0, max - total) : Infinity
   const sinCupo = conTope && restante <= 0
+  // Tope efectivo del input: el cupo de la línea si lo hay, siempre bajo el
+  // máximo duro de unidades.
+  const maxInput = conTope ? Math.min(restante, MAX_UNIDADES_LINEA) : MAX_UNIDADES_LINEA
 
   function agregar() {
-    let cant = Number(cantidad || 0)
-    if (cant <= 0) return
+    let cant = Math.floor(Number(cantidad || 0))
+    if (!Number.isFinite(cant) || cant <= 0) return
+    cant = Math.min(cant, MAX_UNIDADES_LINEA)
     if (conTope) cant = Math.min(cant, restante)
     if (cant <= 0) return
     const t = talle === SIN_TALLE ? null : talle
     const idx = value.findIndex((l) => l.talle === t)
     if (idx >= 0) {
-      onChange(value.map((l, i) => (i === idx ? { ...l, cantidad: l.cantidad + cant } : l)))
+      // El merge también se clampea: acumular sobre un talle existente no
+      // puede sortear el tope.
+      onChange(
+        value.map((l, i) =>
+          i === idx ? { ...l, cantidad: Math.min(l.cantidad + cant, MAX_UNIDADES_LINEA) } : l,
+        ),
+      )
     } else {
       onChange([...value, { talle: t, cantidad: cant }])
     }
@@ -62,8 +89,10 @@ export function StockTalleLoader({
       <div className="flex flex-wrap items-center gap-2">
         <NumberInput
           min={1}
+          max={maxInput}
+          step={1}
           value={cantidad}
-          onChange={(e) => setCantidad(e.target.value)}
+          onChange={(e) => setCantidad(clampUnidades(e.target.value))}
           disabled={disabled || sinCupo}
           className="w-20"
           aria-label="Cantidad"

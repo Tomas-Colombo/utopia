@@ -127,6 +127,9 @@ export async function GET(req: NextRequest) {
       const candidatos = (await listItemsDisponibles(producto.id_producto, talle)).filter(
         (c) => !excluidos.has(c.id_item),
       )
+      // Si todas las unidades están tomadas por OTRA reserva, devolvemos cuál:
+      // el carrito puede engancharse a esa reserva y volver a pedir.
+      let bloqueante: string | null = null
       for (const c of candidatos) {
         const rid = await reservaActiva(c.id_item)
         if (!rid) { item = c; break }
@@ -135,6 +138,7 @@ export async function GET(req: NextRequest) {
           advertencia = 'Item de esta reserva'
           break
         }
+        bloqueante ??= rid
       }
       if (!item) {
         return NextResponse.json({
@@ -142,6 +146,7 @@ export async function GET(req: NextRequest) {
           reason: candidatos.length > 0 ? 'sku-sin-stock-libre' : 'sku-sin-stock',
           sku: baseSku,
           talle,
+          id_reserva: bloqueante,
         })
       }
     } else {
@@ -163,18 +168,24 @@ export async function GET(req: NextRequest) {
     // vendedor elija. Las "sin talle" se venden si el usuario las eligió a
     // propósito — no las bloqueamos, porque a veces se cargó así queriendo.
     if (tallesCategoria.length > 0 && !talleParam && !sinTalleParam) {
-      const { porTalle, totalDisponible } = await contarDisponiblesPorTalle(idProductoParam, {
-        idReservaCtx,
-        excluir,
-      })
-      const conTalle = porTalle.filter((s) => s.talle !== null && s.disponibles > 0)
-      const sinTalle = porTalle.find((s) => s.talle === null)?.disponibles ?? 0
+      const { porTalle, totalDisponible, reservasBloqueantes } =
+        await contarDisponiblesPorTalle(idProductoParam, { idReservaCtx, excluir })
+      // Los talles reservados por otra reserva se informan, NO se ocultan:
+      // el vendedor tiene que ver que existen y por qué no puede tomarlos
+      // (y si la venta adopta esa reserva, pasan a ser vendibles).
+      const conTalle = porTalle.filter(
+        (s) => s.talle !== null && (s.disponibles > 0 || s.reservados > 0),
+      )
+      const filaSinTalle = porTalle.find((s) => s.talle === null)
+      const sinTalle = filaSinTalle?.disponibles ?? 0
+      const sinTalleReservados = filaSinTalle?.reservados ?? 0
 
-      if (conTalle.length === 0 && sinTalle === 0) {
+      if (conTalle.length === 0 && sinTalle === 0 && sinTalleReservados === 0) {
         return NextResponse.json({
           ok: false,
           reason: totalDisponible > 0 ? 'sku-sin-stock-libre' : 'sku-sin-stock',
           id_producto: idProductoParam,
+          id_reserva: reservasBloqueantes[0] ?? null,
         })
       }
 
@@ -187,9 +198,18 @@ export async function GET(req: NextRequest) {
         ok: false,
         reason: 'elegir-talle',
         talles: conTalle
-          .map((s) => ({ talle: s.talle as string, disponibles: s.disponibles }))
+          .map((s) => ({
+            talle: s.talle as string,
+            disponibles: s.disponibles,
+            reservados: s.reservados,
+          }))
           .sort((a, b) => rank(a.talle) - rank(b.talle) || a.talle.localeCompare(b.talle)),
         sin_talle: sinTalle,
+        sin_talle_reservados: sinTalleReservados,
+        // Sólo se ofrece adoptar cuando hay UNA sola reserva en juego: con
+        // varias no hay forma de adivinar cuál está viniendo a buscar el
+        // cliente, y una venta se ata a una sola reserva.
+        id_reserva: reservasBloqueantes.length === 1 ? reservasBloqueantes[0] : null,
       })
     }
 
@@ -199,16 +219,19 @@ export async function GET(req: NextRequest) {
       (c) => !excluidos.has(c.id_item),
     )
     const usables: { c: ItemProductoRow; adv: string | null }[] = []
+    let bloqueante: string | null = null
     for (const c of candidatos) {
       const rid = await reservaActiva(c.id_item)
       if (!rid) usables.push({ c, adv: null })
       else if (idReservaCtx && rid === idReservaCtx) usables.push({ c, adv: 'Item de esta reserva' })
+      else bloqueante ??= rid
     }
     if (usables.length === 0) {
       return NextResponse.json({
         ok: false,
         reason: candidatos.length > 0 ? 'sku-sin-stock-libre' : 'sku-sin-stock',
         talle: talleParam,
+        id_reserva: bloqueante,
       })
     }
     item = usables[0].c

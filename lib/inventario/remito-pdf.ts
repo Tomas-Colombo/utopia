@@ -16,6 +16,37 @@
  * El TOTAL del PDF se ignora: el costo total se recalcula como cantidad × precio.
  */
 
+/** Firma de archivo PDF: los bytes de `%PDF-`. */
+const PDF_MAGIC = Uint8Array.from([0x25, 0x50, 0x44, 0x46, 0x2d])
+
+/** Ventana de búsqueda de la firma, en bytes desde el arranque del archivo. */
+const PDF_MAGIC_VENTANA = 1024
+
+/**
+ * ¿Los bytes son realmente un PDF? El `Content-Type` de un `File` lo pone el
+ * navegador a partir de la extensión: renombrar `algo.exe` a `algo.pdf` alcanza
+ * para pasarlo, y un cliente hecho a mano puede mandarlo vacío. Lo único que no
+ * se falsea sin construir un PDF de verdad es la firma del archivo.
+ *
+ * Se busca en la ventana inicial y no sólo en el offset 0 porque el estándar
+ * tolera bytes antes de la cabecera (BOM, saltos de línea) y los lectores
+ * reales los aceptan: exigir offset 0 daría falsos negativos con PDFs válidos.
+ */
+export function pareceUnPdf(bytes: Uint8Array): boolean {
+  const ventana = bytes.subarray(0, PDF_MAGIC_VENTANA)
+  for (let i = 0; i + PDF_MAGIC.length <= ventana.length; i++) {
+    let match = true
+    for (let j = 0; j < PDF_MAGIC.length; j++) {
+      if (ventana[i + j] !== PDF_MAGIC[j]) {
+        match = false
+        break
+      }
+    }
+    if (match) return true
+  }
+  return false
+}
+
 export interface TextItemLite {
   str: string
   x: number

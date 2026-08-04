@@ -4,9 +4,9 @@ import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Field } from '@/components/ui/Field'
 import { Input } from '@/components/ui/Input'
+import { Modal } from '@/components/ui/Modal'
 import { NumberInput } from '@/components/ui/NumberInput'
 import { Textarea } from '@/components/ui/Textarea'
 import { useToast } from '@/components/ui/Toast'
@@ -29,7 +29,11 @@ import {
   type FormaPago,
 } from '@/lib/types/precios'
 import type { ProductoConDetalle } from '@/lib/types/inventario'
-import type { CuentaDestinoRow, LineaCarrito } from '@/lib/types/ventas'
+import type {
+  CuentaDestinoRow,
+  LineaCarrito,
+  ReservaDeProducto,
+} from '@/lib/types/ventas'
 import {
   CobranzaPanel,
   cobranzaCuadra,
@@ -69,6 +73,19 @@ interface ReservaOption {
 }
 
 /**
+ * Venta que arranca desde una reserva (acceso directo desde /ventas/reservas).
+ * Los ítems viajan como QR: el precio se resuelve con el lookup normal, no con
+ * el snapshot de la reserva, que puede haber quedado viejo.
+ */
+export interface PrecargaReserva {
+  idReserva: string
+  idCliente: string | null
+  clienteNombre: string | null
+  observaciones: string | null
+  qrs: string[]
+}
+
+/**
  * Carrito de venta con escaneo QR + búsqueda manual.
  *
  * IMPORTANTE: el precio final ES calculado en el server (endpoint
@@ -84,14 +101,17 @@ export function NuevaVentaView({
   clientes: clientesIniciales,
   reservasActivas,
   productos,
+  reservasPorProducto,
   cuentas,
-  idReservaPreseleccionada,
+  precargaReserva,
 }: {
   clientes: ClienteOption[]
   reservasActivas: ReservaOption[]
   productos: ProductoConDetalle[]
+  /** Reservas activas que bloquean unidades, indexadas por id_producto. */
+  reservasPorProducto: Record<string, ReservaDeProducto[]>
   cuentas: CuentaDestinoRow[]
-  idReservaPreseleccionada: string | null
+  precargaReserva: PrecargaReserva | null
 }) {
   const router = useRouter()
   const toast = useToast()
@@ -99,7 +119,7 @@ export function NuevaVentaView({
 
   const [clientes, setClientes] = useState<ClienteOption[]>(clientesIniciales)
   const [formaPago, setFormaPago] = useState<FormaPago>('efectivo')
-  const [idCliente, setIdCliente] = useState<string>('')
+  const [idCliente, setIdCliente] = useState<string>(precargaReserva?.idCliente ?? '')
 
   // Alta rápida de cliente en línea
   const [creandoCliente, setCreandoCliente] = useState(false)
@@ -107,8 +127,10 @@ export function NuevaVentaView({
   const [nuevoNombre, setNuevoNombre] = useState('')
   const [nuevoTelefono, setNuevoTelefono] = useState('')
   const [errorCliente, setErrorCliente] = useState<string | null>(null)
-  const [idReserva, setIdReserva] = useState<string>(idReservaPreseleccionada ?? '')
-  const [observaciones, setObservaciones] = useState('')
+  // La venta se ata a UNA reserva. Vacío = venta suelta, y en ese caso el
+  // campo ni se muestra: aparece recién cuando se carga un ítem reservado.
+  const [idReserva, setIdReserva] = useState<string>(precargaReserva?.idReserva ?? '')
+  const [observaciones, setObservaciones] = useState(precargaReserva?.observaciones ?? '')
 
   const [qrInput, setQrInput] = useState('')
   const [buscando, setBuscando] = useState(false)
@@ -125,21 +147,47 @@ export function NuevaVentaView({
   //   grupoKey === '<qr>' → estoy cambiando el talle de esa línea del carrito
   const [selectorTalle, setSelectorTalle] = useState<SelectorTalle | null>(null)
   const indexNombres = useMemo(() => indexarPorNombre(productos), [productos])
+  /**
+   * Sugerencias por nombre Y por SKU, rankeadas: primero el SKU exacto, después
+   * lo que empieza con lo tipeado, y al final las coincidencias en el medio.
+   * Así tipear un SKU deja el producto correcto arriba de todo.
+   *
+   * No hay riesgo de que un QR escaneado matchee acá: el QR son 24 chars hex
+   * (`gen_random_bytes(12)`), más largo que cualquier SKU, y el test es
+   * "el SKU/nombre contiene lo tipeado" — nunca al revés.
+   */
   const sugerencias = useMemo(() => {
     const q = normalizar(qrInput)
     if (!q) return []
-    return productos.filter((p) => normalizar(p.nombre).includes(q)).slice(0, 8)
+    const puntaje = (p: ProductoConDetalle): number => {
+      const sku = normalizar(p.sku ?? '')
+      const nombre = normalizar(p.nombre)
+      if (sku && sku === q) return 0
+      if (sku && sku.startsWith(q)) return 1
+      if (nombre.startsWith(q)) return 2
+      if (sku && sku.includes(q)) return 3
+      if (nombre.includes(q)) return 4
+      return Number.POSITIVE_INFINITY
+    }
+    return productos
+      .map((p) => ({ p, s: puntaje(p) }))
+      .filter((x) => Number.isFinite(x.s))
+      .sort((a, b) => a.s - b.s || a.p.nombre.localeCompare(b.p.nombre))
+      .slice(0, 8)
+      .map((x) => x.p)
   }, [productos, qrInput])
 
   // Combobox de cliente: mismo patrón que el buscador de productos. `cliInput`
   // guarda lo tipeado (o el nombre del cliente seleccionado en modo readonly).
   // Mostrador = idCliente vacío. Buscamos por nombre y por teléfono normalizados.
-  const [cliInput, setCliInput] = useState('')
+  const [cliInput, setCliInput] = useState(precargaReserva?.clienteNombre ?? '')
   const [cliOpen, setCliOpen] = useState(false)
   const [cliResaltado, setCliResaltado] = useState(0)
 
   const [lineas, setLineas] = useState<LineaCarrito[]>([])
-  const [confirmarOpen, setConfirmarOpen] = useState(false)
+  // Paso 2 del flujo: el cobro vive en un modal, no en la misma pantalla que
+  // el carrito. Recién ahí aparece el botón de confirmar la venta.
+  const [cobranzaOpen, setCobranzaOpen] = useState(false)
 
   // Cobranza: cómo se reparte el cobro entre cuentas. Arranca con un pago
   // único, que siempre vale el total (ver normalizarPagos).
@@ -299,6 +347,90 @@ export function NuevaVentaView({
     [lineas],
   )
 
+  // ── Reservas ───────────────────────────────────────────────────────
+  // Reservar NO cambia el estado del ítem: la unidad sigue 'disponible' y por
+  // eso aparece en el catálogo. El bloqueo vive en `detalle_reserva`, así que
+  // acá se cruza a mano para poder mostrarlo y para saber a qué reserva
+  // engancharse si el vendedor carga ese producto igual.
+
+  /** Unidades del producto tomadas por reservas ajenas a la venta actual. */
+  function reservadasDe(idProducto: string): number {
+    return (reservasPorProducto[idProducto] ?? [])
+      .filter((r) => r.id_reserva !== idReserva)
+      .reduce((a, r) => a + r.unidades, 0)
+  }
+
+  /**
+   * Reserva que esta venta puede adoptar por ese producto. Sólo cuando hay UNA:
+   * con dos reservas en juego no se puede adivinar cuál viene a buscar el
+   * cliente, y una venta se ata a una sola reserva.
+   */
+  function reservaAdoptableDe(idProducto: string): ReservaDeProducto | null {
+    const rs = (reservasPorProducto[idProducto] ?? []).filter(
+      (r) => r.id_reserva !== idReserva,
+    )
+    return rs.length === 1 ? rs[0] : null
+  }
+
+  /** Etiqueta corta de una reserva por id (para carteles). */
+  function labelReserva(rid: string): string {
+    const r = reservasActivas.find((x) => x.id === rid)
+    if (!r) return 'reserva'
+    const vence = new Date(r.fecha_vencimiento).toLocaleDateString('es-AR')
+    return `${r.cliente_nombre ?? 'Mostrador'} · vence ${vence}`
+  }
+
+  const reservaActual = idReserva
+    ? reservasActivas.find((r) => r.id === idReserva) ?? null
+    : null
+
+  /**
+   * Suelta la reserva y vacía el carrito. Los ítems cargados podían estar ahí
+   * SÓLO gracias a esa reserva; dejarlos daría un carrito que el server rebota
+   * recién al confirmar.
+   */
+  function desvincularReserva() {
+    setIdReserva('')
+    setLineas([])
+    setErrorBusqueda(null)
+  }
+
+  // Precarga desde una reserva (acceso directo desde /ventas/reservas). Corre
+  // una sola vez y resuelve el precio con el lookup normal: el snapshot que
+  // guardó la reserva puede haber quedado viejo.
+  const precargaHecha = useRef(false)
+  useEffect(() => {
+    const p = precargaReserva
+    if (!p || precargaHecha.current) return
+    precargaHecha.current = true
+    if (p.qrs.length === 0) return
+    ;(async () => {
+      setBuscando(true)
+      const cargadas: LineaCarrito[] = []
+      let fallos = 0
+      for (const qr of p.qrs) {
+        try {
+          const r = await fetch(
+            lookupUrl({ code: qr }, cargadas.map((l) => l.id_item), p.idReserva),
+          )
+          const data = await r.json()
+          if (data.ok) cargadas.push(data.linea as LineaCarrito)
+          else fallos++
+        } catch {
+          fallos++
+        }
+      }
+      setLineas(cargadas)
+      setBuscando(false)
+      if (fallos > 0) {
+        setErrorBusqueda(
+          `${fallos} ítem(s) de la reserva no se pudieron cargar (vendidos, dados de baja o sin precio de venta).`,
+        )
+      }
+    })()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // Agrupa por producto+talle preservando el orden de entrada al carrito. Se
   // usa una unidad como "prototipo" (nombre, precio, sku); el precio final se
   // asume igual en todas las unidades del grupo — es lo que devuelve el
@@ -412,14 +544,19 @@ export function NuevaVentaView({
   // unidades a saltear. `excluir` es lo que permite cargar dos unidades del
   // mismo producto y talle: sin eso el server devuelve siempre la misma (FIFO)
   // y la segunda rebota como duplicada.
+  // `reservaOverride` existe porque `setIdReserva` no impacta hasta el próximo
+  // render: cuando la venta adopta una reserva en el mismo tick en que carga
+  // el ítem, hay que mandarla explícita o el server la rebota por reservada.
   function lookupUrl(
     query: Record<string, string | null | undefined>,
     excluir: string[] = [],
+    reservaOverride?: string | null,
   ): string {
     const qs = new URLSearchParams()
     for (const [k, v] of Object.entries(query)) if (v) qs.set(k, v)
     qs.set('forma_pago', formaPago)
-    if (idReserva) qs.set('id_reserva', idReserva)
+    const rid = reservaOverride ?? idReserva
+    if (rid) qs.set('id_reserva', rid)
     if (excluir.length > 0) qs.set('excluir', excluir.join(','))
     // Descuentos elegidos: se mandan todos; el server filtra por producto.
     if (descuentosKey) qs.set('descuentos', descuentosKey)
@@ -439,8 +576,17 @@ export function NuevaVentaView({
     setBuscando(true)
     setErrorBusqueda(null)
     try {
-      const r = await fetch(lookupUrl({ code: codigo }, itemsEnCarrito()))
-      const data = await r.json()
+      let data = await (await fetch(lookupUrl({ code: codigo }, itemsEnCarrito()))).json()
+
+      // El ítem escaneado está reservado y la venta todavía no está atada a
+      // ninguna reserva: es el caso "vengo a buscar lo que reservé". Se adopta
+      // esa reserva y se reintenta, en vez de mandarlo a buscarla a mano.
+      const rid: string | null = !idReserva ? data.id_reserva ?? null : null
+      if (!data.ok && rid && esReasonDeReserva(data.reason)) {
+        setIdReserva(rid)
+        data = await (await fetch(lookupUrl({ code: codigo }, itemsEnCarrito(), rid))).json()
+      }
+
       if (!data.ok) {
         setErrorBusqueda(traducirReason(data.reason, data))
         return
@@ -482,31 +628,47 @@ export function NuevaVentaView({
     talle?: string | null,
     extraExcluidos: string[] = [],
     excluirBase?: string[],
+    reservaOverride?: string | null,
   ): Promise<LineaCarrito | null> {
     if (!idProducto || buscando) return null
     setBuscando(true)
     setErrorBusqueda(null)
     try {
       const base = excluirBase ?? itemsEnCarrito()
-      const r = await fetch(
-        lookupUrl(
-          {
-            id_producto: idProducto,
-            talle: talle ?? undefined,
-            sin_talle: talle === null ? '1' : undefined,
-          },
-          [...base, ...extraExcluidos],
-        ),
-      )
-      const data = await r.json()
+      const query = {
+        id_producto: idProducto,
+        talle: talle ?? undefined,
+        sin_talle: talle === null ? '1' : undefined,
+      }
+      const excluir = [...base, ...extraExcluidos]
+      let data = await (
+        await fetch(lookupUrl(query, excluir, reservaOverride))
+      ).json()
+
+      // Todas las unidades están tomadas por una reserva y la venta todavía no
+      // está atada a ninguna: la adopta y reintenta. Es el flujo "el cliente
+      // vino a buscar lo que había reservado".
+      const puedeAdoptar = !reservaOverride && !idReserva
+      if (!data.ok && puedeAdoptar && data.id_reserva && esReasonDeReserva(data.reason)) {
+        const rid = data.id_reserva as string
+        setIdReserva(rid)
+        data = await (await fetch(lookupUrl(query, excluir, rid))).json()
+      }
+
       if (!data.ok) {
         if (data.reason === 'elegir-talle') {
+          // Las unidades reservadas se ofrecen sólo si hay UNA reserva en
+          // juego y la venta todavía puede adoptarla.
+          const adoptable = puedeAdoptar ? (data.id_reserva as string | null) : null
           setSelectorTalle({
             idProducto,
             productoNombre: nombreDeProducto(idProducto),
             grupoKey: null,
             opciones: data.talles as TalleOpcion[],
             sinTalle: Number(data.sin_talle ?? 0),
+            sinTalleReservados: Number(data.sin_talle_reservados ?? 0),
+            idReservaAdoptable: adoptable,
+            reservaLabel: adoptable ? labelReserva(adoptable) : null,
             cantidades: {},
           })
           return null
@@ -562,13 +724,16 @@ export function NuevaVentaView({
         )
         return
       }
-      const opciones = data.talles as TalleOpcion[]
+      const adoptable = idReserva ? null : (data.id_reserva as string | null)
       setSelectorTalle({
         idProducto: g.id_producto,
         productoNombre: g.producto_nombre,
         grupoKey: g.key,
-        opciones,
+        opciones: data.talles as TalleOpcion[],
         sinTalle: Number(data.sin_talle ?? 0),
+        sinTalleReservados: Number(data.sin_talle_reservados ?? 0),
+        idReservaAdoptable: adoptable,
+        reservaLabel: adoptable ? labelReserva(adoptable) : null,
         cantidades: {
           [g.talle ?? SIN_TALLE_KEY]: g.cantidad,
         },
@@ -606,11 +771,31 @@ export function NuevaVentaView({
       setLineas((ls) => ls.filter((l) => !qrsGrupo.has(l.qr_code)))
     }
     const idProducto = selectorTalle.idProducto
+    // Si el vendedor pidió más unidades de las libres en algún talle, está
+    // tomando unidades reservadas: la venta adopta esa reserva ANTES de pedir
+    // nada, o el server rebota cada unidad por reservada.
+    const libresDe = (talle: string | null): number =>
+      talle === null
+        ? selectorTalle.sinTalle
+        : selectorTalle.opciones.find((o) => o.talle === talle)?.disponibles ?? 0
+    const tomaReservadas = pedidos.some((p) => p.cant > libresDe(p.talle))
+    const reservaAdoptada =
+      tomaReservadas && selectorTalle.idReservaAdoptable
+        ? selectorTalle.idReservaAdoptable
+        : null
+    if (reservaAdoptada) setIdReserva(reservaAdoptada)
+
     setSelectorTalle(null)
     const running: string[] = []
     for (const p of pedidos) {
       for (let i = 0; i < p.cant; i++) {
-        const linea = await agregarPorProducto(idProducto, p.talle, running, excluirBase)
+        const linea = await agregarPorProducto(
+          idProducto,
+          p.talle,
+          running,
+          excluirBase,
+          reservaAdoptada,
+        )
         if (!linea) return
         running.push(linea.id_item)
       }
@@ -697,7 +882,7 @@ export function NuevaVentaView({
   }
 
   function confirmar() {
-    setConfirmarOpen(false)
+    setCobranzaOpen(false)
     start(async () => {
       const res = await registrarVentaAction({
         // Se manda la unión de descuentos por línea; el server valida cada
@@ -795,8 +980,8 @@ export function NuevaVentaView({
   const puedeConfirmar = lineas.length > 0 && !pending && cobranzaOk
 
   return (
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px]">
-      {/* Carrito */}
+    <div className="space-y-5">
+      {/* Paso 1 — carrito: buscador + tabla de ítems */}
       <section className="space-y-4">
         <div className="rounded-lg border border-border bg-card p-4 space-y-3">
           <form onSubmit={agregarLinea}>
@@ -837,6 +1022,12 @@ export function NuevaVentaView({
                     >
                       {sugerencias.map((p, i) => {
                         const activo = i === Math.min(resaltado, sugerencias.length - 1)
+                        // El stock del catálogo cuenta las unidades reservadas
+                        // como libres (reservar no cambia el estado del ítem).
+                        // Acá se separan para que el vendedor vea la verdad.
+                        const reservadas = reservadasDe(p.id_producto)
+                        const libres = Math.max(0, p.stock_disponible - reservadas)
+                        const quien = reservaAdoptableDe(p.id_producto)?.cliente_nombre
                         return (
                           <li
                             key={p.id_producto}
@@ -852,9 +1043,22 @@ export function NuevaVentaView({
                               activo ? 'bg-pink-bg text-text' : 'text-text'
                             }`}
                           >
-                            <span>{p.nombre}</span>
+                            <span className="flex min-w-0 flex-wrap items-center gap-1.5">
+                              <span className="truncate">{p.nombre}</span>
+                              {p.sku && (
+                                <span className="shrink-0 font-mono text-[11px] text-muted">
+                                  {p.sku}
+                                </span>
+                              )}
+                              {reservadas > 0 && (
+                                <span className="shrink-0 rounded-full border border-terracota/50 bg-card px-1.5 py-0.5 text-[10px] font-medium text-terracota">
+                                  {reservadas} reservada{reservadas === 1 ? '' : 's'}
+                                  {quien ? ` · ${quien}` : ''}
+                                </span>
+                              )}
+                            </span>
                             <span className="shrink-0 font-mono text-xs text-muted">
-                              {p.stock_disponible} u.
+                              {libres} libre{libres === 1 ? '' : 's'}
                             </span>
                           </li>
                         )
@@ -1051,9 +1255,18 @@ export function NuevaVentaView({
         </div>
       </section>
 
-      {/* Panel lateral */}
-      <aside className="space-y-4">
-        <div className="rounded-lg border border-border bg-card p-4 space-y-4">
+      {/* Paso 1 (cont.) — datos de la venta. Grilla responsive en vez de una
+          columna lateral angosta: en tablet entran de a dos y en desktop de a
+          cuatro, así el bloque no empuja el carrito hacia arriba. */}
+      <section className="rounded-lg border border-border bg-card p-4">
+        <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+          <h2 className="text-sm font-semibold text-text">Detalles de la venta</h2>
+          <span className="text-xs text-muted">
+            Todo opcional — aplica a la venta completa
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 gap-x-4 gap-y-4 sm:grid-cols-2 xl:grid-cols-4">
           {/* Cuotas, no "forma de pago": lo único que decide acá el vendedor es
               si la venta se financia. Sin cuotas = precio de lista; el medio
               real de cobro (efectivo, transferencia) se elige abajo, en
@@ -1084,22 +1297,37 @@ export function NuevaVentaView({
             )}
           </Field>
 
-          <Field htmlFor="v-reserva" label="Reserva (opcional)" hint="Cargar ítems de una reserva activa">
-            <select
-              id="v-reserva"
-              value={idReserva}
-              onChange={(e) => setIdReserva(e.target.value)}
-              className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
-            >
-              <option value="">— Ninguna —</option>
-              {reservasActivas.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.cliente_nombre ?? 'Mostrador'} · {r.items_count} ítems
-                  {' '}({new Date(r.fecha_vencimiento).toLocaleDateString('es-AR')})
-                </option>
-              ))}
-            </select>
-          </Field>
+          {/* El campo Reserva NO se elige a mano: aparece solo cuando la venta
+              se enganchó a una reserva (por precarga o por cargar un ítem
+              reservado). Sin eso sería una decisión más para tomar en el
+              mostrador sin ningún motivo. */}
+          {idReserva && (
+            // `self-end` lo alinea con los inputs de los Field vecinos en vez
+            // de estirarse a lo alto de la fila.
+            <div className="flex items-center justify-between gap-2 self-end rounded-md border border-pink-strong/40 bg-pink-bg px-2.5 py-1.5">
+              <span className="min-w-0 truncate text-xs">
+                <span className="font-medium text-pink-strong">Reserva</span>
+                <span className="text-text">
+                  {' '}· {reservaActual?.cliente_nombre ?? 'Mostrador'}
+                </span>
+                {reservaActual && (
+                  <span className="text-muted">
+                    {' '}· vence{' '}
+                    {new Date(reservaActual.fecha_vencimiento).toLocaleDateString('es-AR')}
+                  </span>
+                )}
+              </span>
+              <button
+                type="button"
+                onClick={desvincularReserva}
+                disabled={pending}
+                title="Quita la reserva de esta venta y vacía el carrito"
+                className="shrink-0 text-xs text-muted underline-offset-2 hover:text-terracota hover:underline disabled:opacity-50"
+              >
+                Quitar
+              </button>
+            </div>
+          )}
 
           {lineas.length > 0 && (
             <DescuentosPanelSelect
@@ -1209,7 +1437,7 @@ export function NuevaVentaView({
           </Field>
 
           {creandoCliente && (
-            <div className="rounded-md border border-border bg-card-2 p-3 space-y-3">
+            <div className="rounded-md border border-border bg-card-2 p-3 space-y-3 sm:col-span-2 xl:col-span-4">
               <Field htmlFor="v-nc-nombre" label="Nombre" required error={errorCliente ?? undefined}>
                 <Input
                   id="v-nc-nombre"
@@ -1252,17 +1480,69 @@ export function NuevaVentaView({
             </div>
           )}
 
-          <Field htmlFor="v-obs" label="Observaciones">
-            <Textarea
-              id="v-obs"
-              rows={2}
-              value={observaciones}
-              onChange={(e) => setObservaciones(e.target.value)}
-            />
-          </Field>
+          <div className="sm:col-span-2 xl:col-span-4">
+            <Field htmlFor="v-obs" label="Observaciones">
+              <Textarea
+                id="v-obs"
+                rows={2}
+                value={observaciones}
+                onChange={(e) => setObservaciones(e.target.value)}
+              />
+            </Field>
+          </div>
         </div>
+      </section>
 
-        <div className="rounded-lg border border-border bg-card p-4">
+      {/* Barra de acción: queda pegada abajo mientras se carga el carrito, así
+          el total y el paso siguiente están siempre a un toque de distancia. */}
+      <div className="sticky bottom-4 z-10 flex flex-col gap-3 rounded-lg border border-border bg-card p-4 shadow-lg sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <div className="text-xs text-muted">
+            Total · {lineas.length} ítem{lineas.length === 1 ? '' : 's'}
+          </div>
+          <div className="font-mono text-xl font-semibold text-text">{money(total)}</div>
+        </div>
+        <Button
+          className="w-full sm:w-auto"
+          size="lg"
+          onClick={() => setCobranzaOpen(true)}
+          disabled={lineas.length === 0 || pending}
+        >
+          {pending ? 'Registrando…' : 'Continuar al cobro'}
+        </Button>
+      </div>
+
+      {/* Paso 2 — cobranza. El botón de confirmar sólo existe acá adentro. */}
+      <Modal
+        open={cobranzaOpen}
+        title="Cobranza"
+        size="lg"
+        onClose={() => setCobranzaOpen(false)}
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setCobranzaOpen(false)}
+              disabled={pending}
+            >
+              Volver
+            </Button>
+            <Button type="button" onClick={confirmar} disabled={!puedeConfirmar}>
+              {pending ? 'Registrando…' : `Confirmar venta · ${money(total)}`}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div className="flex items-center justify-between rounded-md border border-border bg-card-2 px-3 py-2">
+            <span className="text-sm text-muted">
+              {lineas.length} ítem{lineas.length === 1 ? '' : 's'}
+              {formaPago !== 'efectivo' ? ` · ${FORMA_PAGO_LABEL[formaPago]}` : ''}
+            </span>
+            <span className="font-mono text-lg font-semibold text-text">{money(total)}</span>
+          </div>
+
           <CobranzaPanel
             cuentas={cuentas}
             pagos={pagosNormalizados}
@@ -1270,33 +1550,14 @@ export function NuevaVentaView({
             disabled={pending}
             onChange={setPagos}
           />
+
+          <p className="rounded-md border border-border bg-card-2 p-3 text-xs text-muted">
+            Al confirmar se marcan los ítems como vendidos y se revalida en el
+            server el precio, el estado de cada ítem y la reserva. No se puede
+            deshacer sin anular la venta.
+          </p>
         </div>
-
-        <div className="rounded-md border border-border bg-card-2 p-3 text-xs text-muted">
-          El precio final se resuelve en el server aplicando la cascada
-          de reglas (descuentos + recargo por forma de pago). Al confirmar,
-          se verifica de nuevo estado del ítem y reserva.
-        </div>
-
-        <Button
-          className="w-full"
-          size="lg"
-          onClick={() => setConfirmarOpen(true)}
-          disabled={!puedeConfirmar}
-        >
-          {pending ? 'Registrando…' : `Confirmar venta · $ ${total.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`}
-        </Button>
-      </aside>
-
-      <ConfirmDialog
-        open={confirmarOpen}
-        title="Confirmar venta"
-        description={`Se van a marcar ${lineas.length} ítem(s) como vendidos por un total de $ ${total.toLocaleString('es-AR', { minimumFractionDigits: 2 })}. Esta acción no se puede deshacer sin anular la venta.`}
-        confirmLabel="Sí, confirmar"
-        cancelLabel="Cancelar"
-        onConfirm={confirmar}
-        onCancel={() => setConfirmarOpen(false)}
-      />
+      </Modal>
     </div>
   )
 }
@@ -1602,6 +1863,18 @@ function DescuentosPanelSelect({
   )
 }
 
+/**
+ * Motivos de rechazo del lookup que se destraban enganchando la venta a la
+ * reserva que está bloqueando las unidades.
+ */
+function esReasonDeReserva(reason: string): boolean {
+  return (
+    reason === 'item-en-reserva' ||
+    reason === 'item-ya-reservado' ||
+    reason === 'sku-sin-stock-libre'
+  )
+}
+
 function traducirReason(reason: string, extra?: Record<string, unknown>): string {
   if (reason.startsWith('item-not-found')) return 'No se encontró un ítem con ese QR en este tenant.'
   if (reason.startsWith('item-no-disponible')) {
@@ -1612,7 +1885,14 @@ function traducirReason(reason: string, extra?: Record<string, unknown>): string
   if (reason.startsWith('item-en-otra-reserva')) return 'El ítem pertenece a otra reserva distinta a la que cargaste.'
   if (reason.startsWith('item-ya-reservado')) return 'El ítem ya está en una reserva activa.'
   if (reason === 'sku-sin-stock') return 'Ese SKU no tiene unidades disponibles en stock.'
-  if (reason === 'sku-sin-stock-libre') return 'No quedan unidades libres: están reservadas o ya las cargaste en el carrito.'
+  if (reason === 'sku-sin-stock-libre') {
+    // Con `id_reserva` el rebote es por una reserva ajena a la venta actual:
+    // el auto-enganche ya se intentó y no aplicaba (la venta está atada a
+    // otra reserva, o hay más de una en juego).
+    return extra?.id_reserva
+      ? 'Las unidades que quedan están tomadas por otra reserva. Desvinculá la reserva actual o cobrá esa reserva aparte.'
+      : 'No quedan unidades libres: están reservadas o ya las cargaste en el carrito.'
+  }
   if (reason === 'sin-precio-lista') return 'El producto no tiene precio de venta. Fijalo en Precios → Control de precios.'
   if (reason === 'reserva-no-activa') return 'La reserva ya no está activa (fue cancelada, vencida o convertida).'
   if (reason === 'lineas-vacias') return 'Agregá al menos un ítem al carrito.'

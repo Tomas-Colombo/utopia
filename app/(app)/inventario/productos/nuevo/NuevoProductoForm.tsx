@@ -8,7 +8,12 @@ import { Input } from '@/components/ui/Input'
 import { NumberInput } from '@/components/ui/NumberInput'
 import { Textarea } from '@/components/ui/Textarea'
 import { useToast } from '@/components/ui/Toast'
-import { StockTalleLoader, type LineaTalle } from '@/components/inventario/StockTalleLoader'
+import {
+  clampUnidades,
+  MAX_UNIDADES_LINEA,
+  StockTalleLoader,
+  type LineaTalle,
+} from '@/components/inventario/StockTalleLoader'
 import type { CategoriaRow, ProductoConDetalle, ProveedorRow } from '@/lib/types/inventario'
 import { buscarMatchNombre, indexarPorNombre } from '@/lib/inventario/producto-match'
 import { createProductoAction } from '../../actions'
@@ -198,8 +203,10 @@ export function NuevoProductoForm({
         <NumberInput
           id="prod-stock-total"
           min={0}
+          max={MAX_UNIDADES_LINEA}
+          step={1}
           value={stockTotalDeclarado}
-          onChange={(e) => setStockTotalDeclarado(e.target.value)}
+          onChange={(e) => setStockTotalDeclarado(clampUnidades(e.target.value))}
           placeholder={stockCargado > 0 ? `${stockCargado} (auto)` : '0'}
         />
       </Field>

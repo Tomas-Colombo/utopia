@@ -89,18 +89,20 @@ export function SidebarClient({
         aria-label="Navegación principal"
       >
         <div
-          className={`flex items-center gap-2 px-5 pb-5 pt-[22px] ${
-            collapsed ? 'flex-col justify-center px-2' : ''
+          className={`relative flex items-center px-5 pb-5 pt-[22px] ${
+            collapsed ? 'flex-col justify-center gap-2 px-2' : 'justify-center'
           }`}
         >
-          <Logo compact={collapsed} />
+          <Logo compact />
           <button
             type="button"
             onClick={toggleCollapsed}
             aria-label={collapsed ? 'Expandir barra lateral' : 'Minimizar barra lateral'}
             aria-expanded={!collapsed}
             title={collapsed ? 'Expandir' : 'Minimizar'}
-            className="ml-auto inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[#6f6c67] transition-colors hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-rosa md:ml-auto"
+            className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[#6f6c67] transition-colors hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-rosa ${
+              collapsed ? '' : 'absolute right-3 top-1/2 -translate-y-1/2'
+            }`}
           >
             <ChevronIcon direction={collapsed ? 'right' : 'left'} />
           </button>
@@ -142,13 +144,13 @@ export function SidebarClient({
             aria-label="Navegación"
             className="absolute inset-y-0 left-0 flex w-[252px] max-w-[80%] flex-col bg-sidebar text-[#8b8681] shadow-xl"
           >
-            <div className="flex items-center gap-2 px-5 pb-5 pt-[22px]">
-              <Logo />
+            <div className="relative flex items-center justify-center px-5 pb-5 pt-[22px]">
+              <Logo compact />
               <button
                 type="button"
                 onClick={() => setMobileOpen(false)}
                 aria-label="Cerrar menú"
-                className="ml-auto inline-flex h-8 w-8 items-center justify-center rounded-md text-[#6f6c67] transition-colors hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-rosa"
+                className="absolute right-3 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-[#6f6c67] transition-colors hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-rosa"
               >
                 <CloseIcon />
               </button>

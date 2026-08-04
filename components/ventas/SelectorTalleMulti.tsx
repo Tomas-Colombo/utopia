@@ -3,10 +3,12 @@
 import { Button } from '@/components/ui/Button'
 import { NumberInput } from '@/components/ui/NumberInput'
 
-/** Un talle con stock libre, tal como lo devuelve `elegir-talle`. */
+/** Un talle con su stock, tal como lo devuelve `elegir-talle`. */
 export interface TalleOpcion {
   talle: string
   disponibles: number
+  /** Unidades del talle tomadas por una reserva activa ajena. */
+  reservados?: number
 }
 
 /** Clave interna de la fila "sin talle" dentro de `cantidades`. */
@@ -20,6 +22,16 @@ export interface SelectorTalle {
   opciones: TalleOpcion[]
   /** Unidades disponibles SIN talle asignado — se ofrecen aparte. */
   sinTalle: number
+  /** Unidades sin talle tomadas por una reserva activa ajena. */
+  sinTalleReservados?: number
+  /**
+   * Reserva a la que se puede enganchar la venta para liberar las unidades
+   * reservadas. `null`/ausente = las reservadas no son tomables (es el caso
+   * del alta de reserva, donde no existe la noción de adoptar).
+   */
+  idReservaAdoptable?: string | null
+  /** Etiqueta corta de esa reserva (cliente), para el cartel. */
+  reservaLabel?: string | null
   /** Cantidad por talle elegida por el operador. Clave = talle o '__sin__'. */
   cantidades: Record<string, number>
 }
@@ -48,18 +60,38 @@ export function SelectorTalleMulti({
   onConfirm: () => void
   onCancel: () => void
 }) {
-  const filas: Array<{ key: string; label: string; max: number }> = [
-    ...selector.opciones.map((o) => ({
+  // Las unidades reservadas suman al tope SÓLO si la venta puede adoptar esa
+  // reserva. Si no, se muestran igual pero no se pueden tomar.
+  const adopta = !!selector.idReservaAdoptable
+  const filas: Array<{
+    key: string
+    label: string
+    libres: number
+    reservados: number
+    max: number
+  }> = selector.opciones.map((o) => {
+    const reservados = o.reservados ?? 0
+    return {
       key: o.talle,
       label: `Talle ${o.talle}`,
-      max: o.disponibles,
-    })),
-  ]
-  if (selector.sinTalle > 0) {
-    filas.push({ key: SIN_TALLE_KEY, label: 'Sin talle', max: selector.sinTalle })
+      libres: o.disponibles,
+      reservados,
+      max: o.disponibles + (adopta ? reservados : 0),
+    }
+  })
+  const sinTalleReservados = selector.sinTalleReservados ?? 0
+  if (selector.sinTalle > 0 || sinTalleReservados > 0) {
+    filas.push({
+      key: SIN_TALLE_KEY,
+      label: 'Sin talle',
+      libres: selector.sinTalle,
+      reservados: sinTalleReservados,
+      max: selector.sinTalle + (adopta ? sinTalleReservados : 0),
+    })
   }
   const totalElegido = Object.values(selector.cantidades).reduce((a, b) => a + b, 0)
   const esCambio = !!selector.grupoKey
+  const hayReservados = filas.some((f) => f.reservados > 0)
 
   return (
     <div className="rounded-md border border-border bg-card-2 p-3 space-y-3">
@@ -75,6 +107,14 @@ export function SelectorTalleMulti({
         </Button>
       </div>
 
+      {hayReservados && (
+        <p className="rounded border border-terracota/40 bg-card px-2 py-1.5 text-xs text-terracota">
+          {adopta
+            ? `Hay unidades reservadas${selector.reservaLabel ? ` para ${selector.reservaLabel}` : ''}. Si las tomás, la venta queda ligada a esa reserva.`
+            : 'Hay unidades reservadas por otra reserva activa: no se pueden tomar desde acá.'}
+        </p>
+      )}
+
       <div className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-x-3 gap-y-2">
         {filas.map((f) => {
           const cant = selector.cantidades[f.key] ?? 0
@@ -83,6 +123,8 @@ export function SelectorTalleMulti({
             <FilaTalle
               key={f.key}
               label={f.label}
+              libres={f.libres}
+              reservados={f.reservados}
               max={f.max}
               cant={cant}
               disabled={disabled || agotado}
@@ -113,12 +155,16 @@ export function SelectorTalleMulti({
 
 function FilaTalle({
   label,
+  libres,
+  reservados,
   max,
   cant,
   disabled,
   onChange,
 }: {
   label: string
+  libres: number
+  reservados: number
   max: number
   cant: number
   disabled: boolean
@@ -128,7 +174,12 @@ function FilaTalle({
     <>
       <span className="text-sm">
         <span className="font-medium">{label}</span>{' '}
-        <span className="text-xs text-muted">· {max} disp.</span>
+        <span className="text-xs text-muted">· {libres} disp.</span>
+        {reservados > 0 && (
+          <span className="ml-1 rounded-full border border-terracota/50 bg-card px-1.5 py-0.5 text-[10px] font-medium text-terracota">
+            {reservados} reservada{reservados === 1 ? '' : 's'}
+          </span>
+        )}
       </span>
       <Button
         type="button"

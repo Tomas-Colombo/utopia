@@ -7,6 +7,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Field } from '@/components/ui/Field'
 import { NumberInput } from '@/components/ui/NumberInput'
 import { useToast } from '@/components/ui/Toast'
+import { clampUnidades, MAX_UNIDADES_LINEA } from '@/components/inventario/StockTalleLoader'
 import type {
   CategoriaRow,
   IngresoMercaderiaDetalleRow,
@@ -352,8 +353,10 @@ export function IngresoDetalleView({
               <NumberInput
                 id="l-cant"
                 min={1}
+                max={MAX_UNIDADES_LINEA}
+                step={1}
                 value={cantidad}
-                onChange={(e) => setCantidad(e.target.value)}
+                onChange={(e) => setCantidad(clampUnidades(e.target.value))}
               />
             </Field>
             <Field htmlFor="l-costo" label="Costo unitario">

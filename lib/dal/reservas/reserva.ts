@@ -1,6 +1,11 @@
 import 'server-only'
 import { createServerClient } from '@/lib/dal/supabase'
-import type { EstadoReserva, ReservaConDetalle, ReservaRow } from '@/lib/types/ventas'
+import type {
+  EstadoReserva,
+  ReservaConDetalle,
+  ReservaDeProducto,
+  ReservaRow,
+} from '@/lib/types/ventas'
 
 export async function listReservas(opts?: {
   estado?: EstadoReserva
@@ -26,6 +31,63 @@ export async function listReservas(opts?: {
     const { lineas, ...rest } = r
     return { ...rest, items_count: lineas?.length ?? 0 }
   })
+}
+
+/**
+ * Unidades bloqueadas por reservas activas, agrupadas por producto.
+ *
+ * Reservar NO cambia `estado_item` (sigue 'disponible'): el bloqueo vive en
+ * `detalle_reserva`. Por eso el stock del catálogo cuenta las unidades
+ * reservadas como si estuvieran libres, y el carrito de venta necesita este
+ * mapa para distinguirlas — y para saber a qué reserva engancharse cuando el
+ * vendedor elige igual ese producto.
+ *
+ * Una query, sin importar cuántas reservas haya.
+ */
+export async function listReservasActivasPorProducto(): Promise<
+  Record<string, ReservaDeProducto[]>
+> {
+  const supabase = await createServerClient()
+  const { data, error } = await supabase
+    .from('detalle_reserva')
+    .select(`
+      id_producto,
+      id_reserva,
+      reserva:reserva!inner(
+        fecha_vencimiento,
+        estado_reserva,
+        cliente:cliente(nombre)
+      )
+    `)
+    .eq('estado', 'activa')
+    .eq('reserva.estado_reserva', 'activa')
+  if (error) throw new Error(`listReservasActivasPorProducto: ${error.message}`)
+
+  const filas = (data ?? []) as unknown as Array<{
+    id_producto: string
+    id_reserva: string
+    reserva: {
+      fecha_vencimiento: string
+      cliente: { nombre: string } | null
+    } | null
+  }>
+
+  const porProducto: Record<string, ReservaDeProducto[]> = {}
+  for (const f of filas) {
+    if (!f.id_producto || !f.reserva) continue
+    const lista = (porProducto[f.id_producto] ??= [])
+    const existente = lista.find((r) => r.id_reserva === f.id_reserva)
+    if (existente) existente.unidades++
+    else {
+      lista.push({
+        id_reserva: f.id_reserva,
+        cliente_nombre: f.reserva.cliente?.nombre ?? null,
+        fecha_vencimiento: f.reserva.fecha_vencimiento,
+        unidades: 1,
+      })
+    }
+  }
+  return porProducto
 }
 
 export async function getReservaConDetalle(id: string): Promise<ReservaConDetalle | null> {

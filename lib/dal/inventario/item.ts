@@ -180,10 +180,17 @@ export async function listItemsDisponibles(
   return (data ?? []) as ItemProductoRow[]
 }
 
-/** Stock libre de un talle concreto (`null` = unidades sin talle asignado). */
+/** Stock de un talle concreto (`null` = unidades sin talle asignado). */
 export interface StockPorTalle {
   talle: string | null
+  /** Unidades libres: ni reservadas por otro ni ya cargadas en el carrito. */
   disponibles: number
+  /**
+   * Unidades tomadas por una reserva activa ajena al contexto. Se informan
+   * aparte en vez de desaparecer: el vendedor tiene que poder VER que el
+   * talle existe pero está reservado.
+   */
+  reservados: number
 }
 
 /**
@@ -191,56 +198,45 @@ export interface StockPorTalle {
  *
  * No usa `listItemsDisponibles`: esa función corta en 25 unidades FIFO, y con
  * un corte no se puede saber qué talles existen — si las 25 más viejas son
- * todas "M", el resto de los talles desaparece del mapa. Acá se leen todas las
- * unidades disponibles (sólo id + talle, dos columnas) y se agrupa en memoria.
+ * todas "M", el resto de los talles desaparece del mapa.
  *
  * Descuenta las unidades bloqueadas por una reserva activa, salvo las de
  * `idReservaCtx` (la reserva que se está cobrando) y las de `excluir`
  * (unidades que ya están en el carrito y por lo tanto no se pueden volver a
  * agregar).
  *
- * Cuesta 2 queries fijas, independientemente del stock.
+ * Delega en `sp_stock_por_talle` (00050): un round-trip y sólo viaja el
+ * agregado. La versión anterior traía todas las unidades disponibles y después
+ * mandaba sus id_item de vuelta en un `.in(...)` para cruzarlas contra
+ * `detalle_reserva` — con 3000 unidades eran 3000 UUIDs en el query string y
+ * el request moría con 414 URI Too Long.
  */
 export async function contarDisponiblesPorTalle(
   idProducto: string,
   opts?: { idReservaCtx?: string | null; excluir?: string[] },
-): Promise<{ porTalle: StockPorTalle[]; totalDisponible: number }> {
+): Promise<{
+  porTalle: StockPorTalle[]
+  totalDisponible: number
+  /** Reservas activas (distintas de `idReservaCtx`) que están bloqueando unidades. */
+  reservasBloqueantes: string[]
+}> {
   const supabase = await createServerClient()
-  const { data, error } = await supabase
-    .from('item_producto')
-    .select('id_item, talle')
-    .eq('id_producto', idProducto)
-    .eq('estado_item', 'disponible')
-  if (error) throw new Error(`contarDisponiblesPorTalle: ${error.message}`)
+  const { data, error } = await supabase.rpc('sp_stock_por_talle', {
+    p_id_producto: idProducto,
+    p_id_reserva_ctx: opts?.idReservaCtx ?? null,
+    p_excluir: opts?.excluir ?? [],
+  })
+  if (error) throw new Error(`sp_stock_por_talle: ${error.message}`)
 
-  const items = (data ?? []) as Array<{ id_item: string; talle: string | null }>
-  if (items.length === 0) return { porTalle: [], totalDisponible: 0 }
-
-  const { data: reservados, error: resErr } = await supabase
-    .from('detalle_reserva')
-    .select('id_item, id_reserva')
-    .eq('estado', 'activa')
-    .in('id_item', items.map((i) => i.id_item))
-  if (resErr) throw new Error(`contarDisponiblesPorTalle reservas: ${resErr.message}`)
-
-  const idReservaCtx = opts?.idReservaCtx ?? null
-  const bloqueados = new Set(
-    ((reservados ?? []) as Array<{ id_item: string; id_reserva: string }>)
-      .filter((r) => !idReservaCtx || r.id_reserva !== idReservaCtx)
-      .map((r) => r.id_item),
-  )
-  const excluidos = new Set(opts?.excluir ?? [])
-
-  const conteo = new Map<string | null, number>()
-  for (const it of items) {
-    if (bloqueados.has(it.id_item) || excluidos.has(it.id_item)) continue
-    conteo.set(it.talle, (conteo.get(it.talle) ?? 0) + 1)
+  const r = (data ?? {}) as {
+    porTalle?: StockPorTalle[]
+    totalDisponible?: number | string
+    reservasBloqueantes?: string[]
   }
   return {
-    porTalle: [...conteo].map(([talle, disponibles]) => ({ talle, disponibles })),
-    // Sin descontar reservas ni carrito: distingue "no hay stock" de
-    // "hay stock pero está todo tomado".
-    totalDisponible: items.length,
+    porTalle: r.porTalle ?? [],
+    totalDisponible: Number(r.totalDisponible ?? 0),
+    reservasBloqueantes: r.reservasBloqueantes ?? [],
   }
 }
 

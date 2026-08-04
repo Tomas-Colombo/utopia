@@ -32,8 +32,14 @@ import {
   spConfirmarIngreso,
   spImportarRemito,
 } from '@/lib/dal/inventario/ingreso'
+import {
+  excedeOperacion,
+  MAX_PDF_BYTES,
+  MAX_UNIDADES_OPERACION,
+  unidadesInvalidas,
+} from '@/lib/inventario/limites'
 import { extraerRemitoDesdePdf } from '@/lib/inventario/remito-pdf.server'
-import type { ParsedRemito } from '@/lib/inventario/remito-pdf'
+import { pareceUnPdf, type ParsedRemito } from '@/lib/inventario/remito-pdf'
 import type { EstadoItem, TipoIngreso, TipoProveedor } from '@/lib/types/inventario'
 
 /**
@@ -46,6 +52,20 @@ import type { EstadoItem, TipoIngreso, TipoProveedor } from '@/lib/types/inventa
  */
 
 type ActionResult<T = unknown> = { ok: true; data?: T } | { ok: false; reason: string }
+
+/**
+ * Traduce violaciones de índices únicos a un mensaje de negocio. El índice es
+ * la garantía real contra duplicados (el chequeo del formulario es sólo UX y
+ * pierde ante un doble click o dos pestañas), pero el error crudo de Postgres
+ * no se le muestra a nadie.
+ */
+function mensajeDeError(e: unknown): string {
+  const msg = (e as Error).message
+  if (/producto_tenant_nombre_uk/i.test(msg)) {
+    return 'Ya existe un producto con ese nombre.'
+  }
+  return msg
+}
 
 async function guarded(accion: string): Promise<{ tenantId: string; userId: string } | { error: string }> {
   try {
@@ -213,6 +233,20 @@ export async function createProductoAction(input: {
 }): Promise<ActionResult<{ id: string; itemsCreados: number }>> {
   const g = await guarded('crear')
   if ('error' in g) return { ok: false, reason: g.error }
+
+  // Se valida ANTES de crear nada: si el stock viene mal, no queremos dejar
+  // el producto creado y fallar recién al generar las unidades.
+  const stock = (input.stock ?? []).filter((s) => s.cantidad !== 0)
+  let totalUnidades = 0
+  for (const s of stock) {
+    const err = unidadesInvalidas(s.cantidad, `talle ${s.talle ?? 'sin talle'}`)
+    if (err) return { ok: false, reason: err }
+    totalUnidades += s.cantidad
+  }
+  if (totalUnidades > MAX_UNIDADES_OPERACION) {
+    return { ok: false, reason: excedeOperacion(totalUnidades) }
+  }
+
   try {
     const id = await spCreateProducto({
       idCategoria: input.idCategoria,
@@ -230,7 +264,6 @@ export async function createProductoAction(input: {
       })
     }
     let itemsCreados = 0
-    const stock = (input.stock ?? []).filter((s) => s.cantidad > 0)
     if (stock.length > 0) {
       if (input.idProveedor) {
         // Ingreso "compra" dinámico: crea el borrador, agrega una línea por
@@ -267,7 +300,7 @@ export async function createProductoAction(input: {
     revalidatePath('/inventario')
     return { ok: true, data: { id, itemsCreados } }
   } catch (e) {
-    return { ok: false, reason: (e as Error).message }
+    return { ok: false, reason: mensajeDeError(e) }
   }
 }
 
@@ -368,6 +401,8 @@ export async function addIngresoDetalleAction(input: {
 }): Promise<ActionResult<{ id: string }>> {
   const g = await guarded('crear')
   if ('error' in g) return { ok: false, reason: g.error }
+  const errCantidad = unidadesInvalidas(input.cantidad, 'la línea')
+  if (errCantidad) return { ok: false, reason: errCantidad }
   try {
     const id = await addIngresoDetalle({
       tenantId: g.tenantId,
@@ -456,8 +491,21 @@ export async function parseRemitoPdfAction(
   try {
     const file = form.get('file')
     if (!(file instanceof File)) return { ok: false, reason: 'archivo-invalido' }
+    if (file.size === 0) return { ok: false, reason: 'El archivo está vacío.' }
+    // Antes de `arrayBuffer()`: el tamaño se conoce sin materializar los bytes.
+    if (file.size > MAX_PDF_BYTES) {
+      return {
+        ok: false,
+        reason: `El PDF pesa ${(file.size / 1024 / 1024).toFixed(1)} MB y el máximo es ${MAX_PDF_BYTES / 1024 / 1024} MB.`,
+      }
+    }
     if (file.type && file.type !== 'application/pdf') return { ok: false, reason: 'no-es-pdf' }
+
     const bytes = new Uint8Array(await file.arrayBuffer())
+    // La firma es el chequeo que vale; el `file.type` de arriba es un atajo
+    // barato que además se puede mandar vacío desde un cliente hecho a mano.
+    if (!pareceUnPdf(bytes)) return { ok: false, reason: 'no-es-pdf' }
+
     const parsed = await extraerRemitoDesdePdf(bytes)
     return { ok: true, data: parsed }
   } catch (e) {
@@ -510,17 +558,30 @@ function normalizarLineasRemito(
   if (lineas.length === 0) return { ok: false, reason: 'sin-lineas' }
 
   const out: LineaRemitoSp[] = []
+  let totalUnidades = 0
   for (const l of lineas) {
     const nombre = l.nombre.trim()
     if (!nombre) return { ok: false, reason: 'hay una línea sin nombre de producto' }
-    if (l.cantidad <= 0) return { ok: false, reason: `cantidad inválida en "${nombre}"` }
+    const errCantidad = unidadesInvalidas(l.cantidad, nombre)
+    if (errCantidad) return { ok: false, reason: errCantidad }
     if (l.esNuevo && !l.idCategoria) return { ok: false, reason: `falta categoría para "${nombre}"` }
     if (!l.esNuevo && !l.idProducto) return { ok: false, reason: `falta elegir producto para "${nombre}"` }
 
-    const breakdown = (l.talles ?? []).filter((t) => t.cantidad > 0)
+    // Las partes en cero son filas vacías del formulario y se descartan;
+    // cualquier otro valor raro (negativo, fraccionario, gigante) corta.
+    const breakdown = (l.talles ?? []).filter((t) => t.cantidad !== 0)
+    for (const t of breakdown) {
+      const errTalle = unidadesInvalidas(t.cantidad, `${nombre} · talle ${t.talle ?? 'sin talle'}`)
+      if (errTalle) return { ok: false, reason: errTalle }
+    }
     const asignado = breakdown.reduce((a, t) => a + t.cantidad, 0)
     if (asignado > l.cantidad) {
       return { ok: false, reason: `los talles superan la cantidad en "${nombre}"` }
+    }
+
+    totalUnidades += l.cantidad
+    if (totalUnidades > MAX_UNIDADES_OPERACION) {
+      return { ok: false, reason: excedeOperacion(totalUnidades) }
     }
     const resto = l.cantidad - asignado
     const partes =
@@ -571,7 +632,7 @@ export async function importarRemitoAction(input: {
       data: { creados: res.creados, vinculados: res.vinculados, detalles: res.detalles },
     }
   } catch (e) {
-    return { ok: false, reason: (e as Error).message }
+    return { ok: false, reason: mensajeDeError(e) }
   }
 }
 
@@ -652,6 +713,6 @@ export async function crearIngresoCompletoAction(input: {
     } catch {
       // Si la limpieza falla, priorizamos reportar el error original.
     }
-    return { ok: false, reason: (e as Error).message }
+    return { ok: false, reason: mensajeDeError(e) }
   }
 }

@@ -91,13 +91,23 @@ export function ReservasClient({ rows }: { rows: Row[] }) {
                       {ESTADO_RESERVA_LABEL[r.estado_reserva]}
                     </Badge>
                   </td>
-                  <td className="px-4 py-3 text-right">
-                    <Link
-                      href={`/ventas/reservas/${r.id_reserva}`}
-                      className="text-sm text-pink-strong hover:underline"
-                    >
-                      Abrir
-                    </Link>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-end gap-3">
+                      {/* Acceso directo al mostrador: abre la venta con los
+                          ítems, el cliente y las observaciones de la reserva
+                          ya cargados. */}
+                      {r.estado_reserva === 'activa' && (
+                        <Link href={`/ventas/nueva?reserva=${r.id_reserva}`}>
+                          <Button size="sm">Vender</Button>
+                        </Link>
+                      )}
+                      <Link
+                        href={`/ventas/reservas/${r.id_reserva}`}
+                        className="text-sm text-pink-strong hover:underline"
+                      >
+                        Abrir
+                      </Link>
+                    </div>
                   </td>
                 </tr>
               ))}
