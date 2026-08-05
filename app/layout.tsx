@@ -1,6 +1,11 @@
 import type { Metadata } from "next";
 import { Archivo, Archivo_Black, Space_Mono } from "next/font/google";
+import { InlineScript } from "@/components/theming/InlineScript";
 import { ThemeProvider } from "@/components/theming/ThemeProvider";
+import {
+  DEFAULT_THEME,
+  THEME_INIT_SCRIPT,
+} from "@/components/theming/themeStorage";
 import "./globals.css";
 
 // Display — headings/hero numerals (design §8.4). Archivo Black only ships
@@ -42,9 +47,20 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      // Server-rendered default. The inline script below replaces it with the
+      // stored preference before the first paint, so this is only what a
+      // first-time visitor (or a browser with localStorage blocked) gets.
+      data-theme={DEFAULT_THEME}
       suppressHydrationWarning
       className={`${archivoBlack.variable} ${archivo.variable} ${spaceMono.variable} h-full antialiased`}
     >
+      <head>
+        {/* Blocking, synchronous, and deliberately before <body>: this is the
+            only place that can set the theme ahead of the first paint. See
+            components/theming/themeStorage.ts and the Next.js guide
+            "How to prevent flash before hydration". */}
+        <InlineScript html={THEME_INIT_SCRIPT} />
+      </head>
       <body className="min-h-full flex flex-col">
         <ThemeProvider>
           {children}

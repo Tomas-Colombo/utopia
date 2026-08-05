@@ -1,5 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ThemeProvider, useTheme } from './ThemeProvider'
 
@@ -44,44 +44,63 @@ describe('ThemeProvider', () => {
     document.documentElement.removeAttribute('data-theme')
   })
 
-  afterEach(() => {
-    vi.restoreAllMocks()
-  })
-
-  it("reads localStorage['utopia-theme'] when present", async () => {
-    window.localStorage.setItem('utopia-theme', 'dark')
+  it('opens dark on a first visit, with nothing stored', async () => {
     renderWithProvider()
 
     await waitFor(() => expect(screen.getByTestId('theme-value')).toHaveTextContent('dark'))
     expect(document.documentElement.getAttribute('data-theme')).toBe('dark')
   })
 
-  it('falls back to prefers-color-scheme when no theme is stored', async () => {
-    stubMatchMedia(true)
-    renderWithProvider()
-
-    await waitFor(() => expect(screen.getByTestId('theme-value')).toHaveTextContent('dark'))
-    expect(document.documentElement.getAttribute('data-theme')).toBe('dark')
-  })
-
-  it('falls back to light when neither storage nor OS preference is dark', async () => {
+  it('still opens dark when the OS asks for light', async () => {
+    // The product decision is that Utopía opens dark for everyone; the old
+    // `prefers-color-scheme` fallback is intentionally gone.
     stubMatchMedia(false)
+    renderWithProvider()
+
+    await waitFor(() => expect(screen.getByTestId('theme-value')).toHaveTextContent('dark'))
+    expect(document.documentElement.getAttribute('data-theme')).toBe('dark')
+  })
+
+  it("honours a stored 'light' choice over the dark default", async () => {
+    window.localStorage.setItem('utopia-theme', 'light')
     renderWithProvider()
 
     await waitFor(() => expect(screen.getByTestId('theme-value')).toHaveTextContent('light'))
     expect(document.documentElement.getAttribute('data-theme')).toBe('light')
   })
 
-  it('exposes useTheme() returning { theme, setTheme } that mutates the DOM attribute', async () => {
-    stubMatchMedia(false)
+  it('falls back to dark when the stored value is not a theme', async () => {
+    window.localStorage.setItem('utopia-theme', 'chartreuse')
+    renderWithProvider()
+
+    await waitFor(() => expect(screen.getByTestId('theme-value')).toHaveTextContent('dark'))
+  })
+
+  it('persists the choice through setTheme so it survives the next visit', async () => {
     const user = userEvent.setup()
     renderWithProvider()
 
-    await waitFor(() => expect(screen.getByTestId('theme-value')).toHaveTextContent('light'))
+    await waitFor(() => expect(screen.getByTestId('theme-value')).toHaveTextContent('dark'))
 
     await user.click(screen.getByRole('button', { name: 'toggle' }))
 
+    await waitFor(() => expect(screen.getByTestId('theme-value')).toHaveTextContent('light'))
+    expect(document.documentElement.getAttribute('data-theme')).toBe('light')
+    expect(window.localStorage.getItem('utopia-theme')).toBe('light')
+  })
+
+  it('picks up a change made in another tab', async () => {
+    renderWithProvider()
+
     await waitFor(() => expect(screen.getByTestId('theme-value')).toHaveTextContent('dark'))
-    expect(document.documentElement.getAttribute('data-theme')).toBe('dark')
+
+    // A different tab writes the key; the browser notifies this one.
+    window.localStorage.setItem('utopia-theme', 'light')
+    act(() => {
+      window.dispatchEvent(new StorageEvent('storage', { key: 'utopia-theme' }))
+    })
+
+    await waitFor(() => expect(screen.getByTestId('theme-value')).toHaveTextContent('light'))
+    expect(document.documentElement.getAttribute('data-theme')).toBe('light')
   })
 })

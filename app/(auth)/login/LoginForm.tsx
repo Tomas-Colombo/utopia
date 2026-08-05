@@ -6,6 +6,15 @@ import { loginAction, type LoginActionState } from './actions'
 const initialState: LoginActionState = { ok: false }
 
 /**
+ * Fields float directly on the animated backdrop now that the auth card is
+ * gone, so they carry their own surface: a translucent panel over a blur,
+ * plus the stronger border token. That keeps the input affordance readable
+ * against whatever the shader happens to be drawing underneath.
+ */
+const FIELD_CLASS =
+  'rounded-md border border-border-2 bg-panel/70 px-3 py-2 text-sm text-text backdrop-blur-sm transition-colors focus-visible:border-rosa focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rosa-bg'
+
+/**
  * Login form (design §5, spec 3.1/3.2). `useActionState` is React 19's
  * current API (replaces the deprecated `useFormState`, see Next.js 16
  * upgrade guide) — exposes `[state, formAction, pending]`.
@@ -17,7 +26,7 @@ export function LoginForm() {
     <form action={formAction} className="flex flex-col gap-4">
       <div className="flex flex-col gap-1">
         <label htmlFor="email" className="text-sm font-medium text-text">
-          Email
+          Correo electrónico
         </label>
         <input
           id="email"
@@ -25,12 +34,12 @@ export function LoginForm() {
           type="email"
           autoComplete="email"
           required
-          className="rounded-md border border-border bg-bg px-3 py-2 text-sm text-text"
+          className={FIELD_CLASS}
         />
       </div>
       <div className="flex flex-col gap-1">
         <label htmlFor="password" className="text-sm font-medium text-text">
-          Password
+          Contraseña
         </label>
         <input
           id="password"
@@ -38,7 +47,7 @@ export function LoginForm() {
           type="password"
           autoComplete="current-password"
           required
-          className="rounded-md border border-border bg-bg px-3 py-2 text-sm text-text"
+          className={FIELD_CLASS}
         />
       </div>
       {state.error && (
@@ -51,7 +60,7 @@ export function LoginForm() {
         disabled={pending}
         className="rounded-md bg-accent-pink px-4 py-2 text-sm font-semibold text-sidebar disabled:opacity-60"
       >
-        {pending ? 'Signing in…' : 'Sign in'}
+        {pending ? 'Ingresando…' : 'Ingresar'}
       </button>
     </form>
   )

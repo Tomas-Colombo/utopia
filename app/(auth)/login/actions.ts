@@ -26,14 +26,14 @@ export async function loginAction(
   const password = String(formData.get('password') ?? '')
 
   if (!email || !password) {
-    return { ok: false, error: 'Email and password are required' }
+    return { ok: false, error: 'El correo electrónico y la contraseña son obligatorios' }
   }
 
   const supabase = await createServerClient()
   const { error } = await supabase.auth.signInWithPassword({ email, password })
 
   if (error) {
-    return { ok: false, error: 'Invalid credentials' }
+    return { ok: false, error: 'Credenciales inválidas' }
   }
 
   // El vendedor arranca en su módulo de trabajo, no en un dashboard.

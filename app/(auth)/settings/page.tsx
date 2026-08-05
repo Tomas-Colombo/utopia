@@ -16,5 +16,12 @@ export default async function SettingsPage() {
 
   // Role name display deferred to Slice 8 (guard work adds rolId/role name
   // to `Session`) — literal placeholder per this slice's explicit scope.
-  return <SettingsView email={session.user.email} roleName="—" />
+  //
+  // The panel used to live in the auth layout. It moved here when login went
+  // card-less, so this view keeps exactly the surface it always had.
+  return (
+    <div className="w-full rounded-md border border-border bg-card p-8 shadow-sm">
+      <SettingsView email={session.user.email} roleName="—" />
+    </div>
+  )
 }
