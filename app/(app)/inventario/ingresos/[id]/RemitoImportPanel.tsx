@@ -339,7 +339,7 @@ export function RemitoImportPanel({
                   {(match && f.esNuevo) || talles.length > 0 ? (
                     <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5">
                       {match && f.esNuevo && (
-                        <span className="text-xs text-pink-strong">
+                        <span className="text-xs text-alerta-ink">
                           Ya existe un producto con este nombre. Cambiá el nombre o usá «Vincular».
                         </span>
                       )}

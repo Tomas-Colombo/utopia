@@ -121,7 +121,7 @@ export function GuiaReglas() {
           prioridad 1: están empatadas en especificidad, así que se pasa al segundo
           criterio y <strong>gana la de prioridad 2</strong>.
         </p>
-        <div className="mt-4 rounded-lg border border-pink-strong bg-pink-bg p-4">
+        <div className="mt-4 rounded-lg border border-alerta-ink bg-alerta-bg p-4">
           <div className="mb-2 text-sm font-medium text-text">
             Atención: la prioridad no cruza niveles de alcance
           </div>

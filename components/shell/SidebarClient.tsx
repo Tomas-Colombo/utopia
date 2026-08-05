@@ -83,7 +83,7 @@ export function SidebarClient({
     <>
       {/* Desktop rail */}
       <aside
-        className={`hidden h-screen bg-sidebar text-[#8b8681] transition-[width] duration-200 md:sticky md:top-0 md:flex md:shrink-0 md:flex-col ${
+        className={`hidden h-screen bg-sidebar text-sidebar-ink transition-[width] duration-200 md:sticky md:top-0 md:flex md:shrink-0 md:flex-col ${
           collapsed ? 'md:w-[72px]' : 'md:w-[252px]'
         }`}
         aria-label="Navegación principal"
@@ -100,7 +100,7 @@ export function SidebarClient({
             aria-label={collapsed ? 'Expandir barra lateral' : 'Minimizar barra lateral'}
             aria-expanded={!collapsed}
             title={collapsed ? 'Expandir' : 'Minimizar'}
-            className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[#6f6c67] transition-colors hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-rosa ${
+            className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-sidebar-ink-2 transition-colors hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-rosa ${
               collapsed ? '' : 'absolute right-3 top-1/2 -translate-y-1/2'
             }`}
           >
@@ -142,7 +142,7 @@ export function SidebarClient({
             role="dialog"
             aria-modal="true"
             aria-label="Navegación"
-            className="absolute inset-y-0 left-0 flex w-[252px] max-w-[80%] flex-col bg-sidebar text-[#8b8681] shadow-xl"
+            className="absolute inset-y-0 left-0 flex w-[252px] max-w-[80%] flex-col bg-sidebar text-sidebar-ink shadow-xl"
           >
             <div className="relative flex items-center justify-center px-5 pb-5 pt-[22px]">
               <Logo compact />
@@ -150,7 +150,7 @@ export function SidebarClient({
                 type="button"
                 onClick={() => setMobileOpen(false)}
                 aria-label="Cerrar menú"
-                className="absolute right-3 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-[#6f6c67] transition-colors hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-rosa"
+                className="absolute right-3 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-sidebar-ink-2 transition-colors hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-rosa"
               >
                 <CloseIcon />
               </button>
@@ -209,7 +209,7 @@ function NavContent({
               // rail keeps the grouping as a hairline rule instead of dropping it.
               <div className="mx-2 my-3 h-px bg-white/10" aria-hidden />
             ) : (
-              <div className="px-3 pb-[7px] pt-4 font-mono text-[9.5px] tracking-[0.2em] text-[#5c5a56]">
+              <div className="px-3 pb-[7px] pt-4 font-mono text-[9.5px] tracking-[0.2em] text-sidebar-ink-3">
                 {group.label}
               </div>
             )}
@@ -226,8 +226,8 @@ function NavContent({
                       aria-label={item.label}
                       className={`flex items-center gap-[11px] rounded-md py-2.5 text-[13.5px] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-rosa ${
                         active
-                          ? 'bg-rosa font-semibold text-[#131312]'
-                          : 'font-medium text-[#8b8681] hover:bg-white/5 hover:text-[#e8e3db]'
+                          ? 'bg-rosa font-semibold text-sidebar-active-ink'
+                          : 'font-medium text-sidebar-ink hover:bg-white/5 hover:text-sidebar-ink-hi'
                       } ${collapsed ? 'justify-center px-0' : 'px-[13px]'}`}
                     >
                       <span className="shrink-0" aria-hidden>
@@ -242,25 +242,25 @@ function NavContent({
           </div>
         ))}
         {isEmpty && !collapsed && (
-          <p className="px-3 py-2 text-xs text-[#6f6c67]">Sin módulos habilitados</p>
+          <p className="px-3 py-2 text-xs text-sidebar-ink-2">Sin módulos habilitados</p>
         )}
       </nav>
 
-      <div className="border-t border-[#262523] px-3 py-3.5">
+      <div className="border-t border-sidebar-line px-3 py-3.5">
         <div className={`flex items-center gap-[11px] ${collapsed ? 'justify-center' : ''}`}>
           <span
             aria-hidden
-            className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full font-display text-[13px] text-[#131312]"
-            style={{ background: 'linear-gradient(135deg,#E9A6BC,#c97e97)' }}
+            className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full font-display text-[13px] text-sidebar-active-ink"
+            style={{ background: 'var(--sidebar-avatar)' }}
           >
             {initialOf(email)}
           </span>
           {!collapsed && (
             <span className="min-w-0 leading-[1.25]">
-              <span className="block truncate text-[12.5px] font-semibold text-[#efeae2]">
+              <span className="block truncate text-[12.5px] font-semibold text-sidebar-ink-hi-2">
                 {email}
               </span>
-              <span className="block truncate font-mono text-[9.5px] uppercase text-[#6f6c67]">
+              <span className="block truncate font-mono text-[9.5px] uppercase text-sidebar-ink-2">
                 {rolNombre ?? 'Sin rol asignado'}
               </span>
             </span>
@@ -272,7 +272,7 @@ function NavContent({
             type="submit"
             title={collapsed ? 'Cerrar sesión' : undefined}
             aria-label="Cerrar sesión"
-            className={`mt-1 flex w-full items-center gap-[11px] rounded-md py-2 text-[13px] font-medium text-[#8b8681] transition-colors hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-rosa ${
+            className={`mt-1 flex w-full items-center gap-[11px] rounded-md py-2 text-[13px] font-medium text-sidebar-ink transition-colors hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-rosa ${
               collapsed ? 'justify-center px-0' : 'px-[13px]'
             }`}
           >

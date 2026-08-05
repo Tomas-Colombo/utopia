@@ -117,7 +117,7 @@ export function VentaDetalleView({ venta }: { venta: VentaConDetalle }) {
       </div>
 
       {venta.motivo_anulacion && (
-        <div className="rounded-md border border-pink-strong bg-pink-bg px-3 py-2 text-sm text-pink-strong">
+        <div className="rounded-md border border-alerta-ink bg-alerta-bg px-3 py-2 text-sm text-alerta-ink">
           Anulada: {venta.motivo_anulacion}
         </div>
       )}
@@ -160,7 +160,7 @@ export function VentaDetalleView({ venta }: { venta: VentaConDetalle }) {
                   $ {Number(l.monto_proveedor).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                 </td>
                 <td className="px-4 py-3 text-right font-mono">
-                  <span className={Number(l.monto_ganancia) < 0 ? 'text-pink-strong' : 'text-success'}>
+                  <span className={Number(l.monto_ganancia) < 0 ? 'text-alerta-ink' : 'text-success'}>
                     $ {Number(l.monto_ganancia).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                   </span>
                 </td>

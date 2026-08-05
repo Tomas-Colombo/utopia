@@ -26,7 +26,7 @@ export function ThemeToggle({ collapsed = false }: { collapsed?: boolean }) {
       onClick={handleClick}
       title={collapsed ? label : undefined}
       aria-label={label}
-      className={`mt-2.5 flex w-full items-center gap-[11px] rounded-md py-2 text-[13px] font-medium text-[#8b8681] transition-colors hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-rosa ${
+      className={`mt-2.5 flex w-full items-center gap-[11px] rounded-md py-2 text-[13px] font-medium text-sidebar-ink transition-colors hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-rosa ${
         collapsed ? 'justify-center px-0' : 'px-[13px]'
       }`}
     >

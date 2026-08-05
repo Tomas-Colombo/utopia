@@ -21,6 +21,15 @@ export const lightTokens = {
   success: '#3E8E5A',
   muted: '#5A5652',
   muted2: '#8A837A',
+  // Alert channel. In light it is the rosa accent by another name — the split
+  // only does work in dark, where the accent turns platinum and alerts do not.
+  // `alertaOn` is the foreground for `alertaInk`, which cannot be derived: it
+  // is a DARK pink here and a LIGHT pink in dark mode, so the readable text
+  // flips with the theme.
+  alerta: '#E9A6BC',
+  alertaBg: '#F7E4EA',
+  alertaInk: '#C2607F',
+  alertaOn: '#FAF8F4',
 } as const
 
 export type ThemeTokenKey = keyof typeof lightTokens

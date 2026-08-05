@@ -29,7 +29,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
       ref={ref}
       aria-invalid={isInvalid || undefined}
       data-invalid={isInvalid || undefined}
-      className={`w-full px-3 py-2 text-sm aria-[invalid=true]:border-rosa-ink ${className}`}
+      className={`w-full px-3 py-2 text-sm aria-[invalid=true]:border-alerta-ink ${className}`}
       {...rest}
     >
       {children}

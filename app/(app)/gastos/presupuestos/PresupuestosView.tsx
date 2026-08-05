@@ -217,7 +217,7 @@ export function PresupuestosView({ initial }: { initial: Cat[] }) {
                     {c.activa ? (
                       <span className="text-xs text-muted">Activa</span>
                     ) : (
-                      <span className="text-xs text-pink-strong">
+                      <span className="text-xs text-alerta-ink">
                         Baja
                         {c.fechaBaja && (
                           <span className="text-muted-2">

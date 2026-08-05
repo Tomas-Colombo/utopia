@@ -19,7 +19,7 @@ export interface BadgeProps {
 const VARIANT_CLASS: Record<BadgeVariant, string> = {
   success: 'bg-success text-sidebar',
   warning: 'bg-terracota text-sidebar',
-  danger: 'bg-pink-strong text-sidebar',
+  danger: 'bg-alerta-ink text-sidebar',
   neutral: 'bg-card-3 text-muted',
   info: 'bg-accent-pink text-sidebar',
 }

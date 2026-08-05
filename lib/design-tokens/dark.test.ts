@@ -34,23 +34,29 @@ function contrastRatio(hexA: string, hexB: string): number {
 }
 
 describe('darkTokens', () => {
-  it('defines the exact hex values from design §8.3', () => {
-    expect(darkTokens.bg).toBe('#1A1815')
-    expect(darkTokens.text).toBe('#EDE9E3')
-    expect(darkTokens.sidebarBg).toBe('#131312')
-    expect(darkTokens.accentPink).toBe('#E9A6BC')
-    expect(darkTokens.pinkStrong).toBe('#E58AA6')
-    expect(darkTokens.terracota).toBe('#D89A78')
-    expect(darkTokens.success).toBe('#4FB574')
+  it('defines the exact hex values of the platino palette', () => {
+    expect(darkTokens.bg).toBe('#0C0D0F')
+    expect(darkTokens.text).toBe('#F4F6F8')
+    expect(darkTokens.sidebarBg).toBe('#08090B')
+    expect(darkTokens.accentPink).toBe('#C4CDD6')
+    expect(darkTokens.pinkStrong).toBe('#E4EAF0')
+    expect(darkTokens.terracota).toBe('#9BA7B2')
+    expect(darkTokens.success).toBe('#6FD39A')
   })
 
   it('exposes the same token shape as lightTokens', () => {
     expect(Object.keys(darkTokens).sort()).toEqual(Object.keys(lightTokens).sort())
   })
 
-  it('keeps the sidebar dark constant identical across themes (REQ-DS-07)', () => {
-    expect(darkTokens.sidebarBg).toBe(lightTokens.sidebarBg)
-    expect(darkTokens.sidebarBg).toBe('#131312')
+  // REQ-DS-07 as it actually shipped: the rail is dark in BOTH themes, and
+  // dark mode takes it darker still rather than holding it constant. The
+  // assertion is on luminance, not a literal, so re-tuning the palette does
+  // not require editing the test — only breaking the invariant does.
+  it('keeps the navigation rail dark in both themes, and darker in dark mode', () => {
+    expect(relativeLuminance(darkTokens.sidebarBg)).toBeLessThan(
+      relativeLuminance(lightTokens.sidebarBg),
+    )
+    expect(contrastRatio(lightTokens.sidebarBg, '#FFFFFF')).toBeGreaterThanOrEqual(4.5)
   })
 
   describe('WCAG 2.1 AA contrast against --bg (≥4.5:1 body text)', () => {

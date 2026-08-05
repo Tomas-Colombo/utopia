@@ -118,7 +118,7 @@ export function ConfirmDialog({
             data-variant={variant}
             onClick={onConfirm}
             className={`rounded-md px-4 py-2 text-sm font-semibold text-sidebar ${
-              variant === 'danger' ? 'bg-pink-strong' : 'bg-accent-pink'
+              variant === 'danger' ? 'bg-alerta-ink' : 'bg-accent-pink'
             }`}
           >
             {confirmLabel}

@@ -1,27 +1,43 @@
 import type { DesignTokens } from './tokens'
 
 /**
- * Derived dark-theme design tokens — verbatim source of truth from design
- * §8.3. Neutrals invert lightness; accents keep hue but raise lightness for
- * WCAG 2.1 AA contrast against `--bg`. `sidebarBg` is intentionally
- * UNCHANGED (REQ-DS-07): the sidebar stays dark in both themes.
+ * Derived dark-theme design tokens — the "platino" palette, mirroring the
+ * `:root[data-theme="dark"]` block in `app/globals.css`. That stylesheet is
+ * what the browser actually renders; this module exists so the jsdom contrast
+ * suite (`tests/a11y/demo-contrast.test.tsx`) can assert against real hex
+ * values, since Vitest never runs the Tailwind PostCSS build. KEEP THE TWO IN
+ * STEP — a drift here turns the a11y test into a false green.
+ *
+ * Platino replaces the earlier warm-asphalt ("chocolate") dark theme: the axis
+ * is cold graphite instead of brown, and `accentPink` is no longer pink at all
+ * — the accent is platinum. Pink survives only in the `--alerta-*` channel
+ * (globals.css), which has no counterpart here because the demo screen does
+ * not render an alert surface.
+ *
+ * `sidebarBg` is NOT held constant across themes. The rail is dark in both,
+ * but dark mode takes it darker still, which is what globals.css has done
+ * since the v2 palette landed.
  */
 export const darkTokens: DesignTokens = {
-  bg: '#1A1815',
-  text: '#EDE9E3',
-  topbar: 'rgba(26,24,21,.85)',
-  border: '#33302B',
-  border2: '#3B372F',
-  card: '#232019',
-  card2: '#26221B',
-  card3: '#2B2720',
-  card4: '#2E2A22',
-  sidebarBg: '#131312',
-  accentPink: '#E9A6BC',
-  pinkBg: '#3A2630',
-  pinkStrong: '#E58AA6',
-  terracota: '#D89A78',
-  success: '#4FB574',
-  muted: '#B3ACA1',
-  muted2: '#938C82',
+  bg: '#0C0D0F',
+  text: '#F4F6F8',
+  topbar: 'rgba(12,13,15,.85)',
+  border: '#282C31',
+  border2: '#3B4148',
+  card: '#15171A',
+  card2: '#1B1E22',
+  card3: '#20242A',
+  card4: '#2E343B',
+  sidebarBg: '#08090B',
+  accentPink: '#C4CDD6',
+  pinkBg: '#232930',
+  pinkStrong: '#E4EAF0',
+  terracota: '#9BA7B2',
+  success: '#6FD39A',
+  muted: '#B9C0C7',
+  muted2: '#8E97A0',
+  alerta: '#F0AEC4',
+  alertaBg: '#2E1E26',
+  alertaInk: '#F4BFD0',
+  alertaOn: '#17150F',
 }

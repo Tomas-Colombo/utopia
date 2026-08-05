@@ -111,7 +111,7 @@ export function NuevoGastoForm({ categorias }: { categorias: Cat[] }) {
         </Field>
 
         {err && (
-          <div role="alert" className="rounded-md border border-pink-strong bg-pink-bg px-3 py-2 text-sm text-pink-strong">
+          <div role="alert" className="rounded-md border border-alerta-ink bg-alerta-bg px-3 py-2 text-sm text-alerta-ink">
             {err}
           </div>
         )}

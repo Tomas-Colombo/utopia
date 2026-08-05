@@ -121,7 +121,7 @@ function Kpi({
   return (
     <div
       className={`rounded-lg border p-4 ${
-        variant === 'alert' ? 'border-pink-strong bg-pink-bg' : 'border-border bg-card'
+        variant === 'alert' ? 'border-alerta-ink bg-alerta-bg' : 'border-border bg-card'
       }`}
     >
       <div className="text-xs uppercase font-mono text-muted">{label}</div>

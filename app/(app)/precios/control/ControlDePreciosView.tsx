@@ -218,7 +218,7 @@ export function ControlDePreciosView({
                             r.diferencia_pct > 0
                               ? 'text-success'
                               : r.diferencia_pct < 0
-                                ? 'text-pink-strong'
+                                ? 'text-alerta-ink'
                                 : ''
                           }
                         >

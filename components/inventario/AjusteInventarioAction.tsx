@@ -107,7 +107,7 @@ export function AjusteInventarioAction({
               <div
                 className={`font-mono text-lg ${
                   Number(cantContada || 0) - Number(cantSistema || 0) < 0
-                    ? 'text-pink-strong'
+                    ? 'text-alerta-ink'
                     : Number(cantContada || 0) - Number(cantSistema || 0) > 0
                       ? 'text-success'
                       : ''

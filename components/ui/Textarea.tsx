@@ -14,7 +14,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
         ref={ref}
         aria-invalid={isInvalid || undefined}
         data-invalid={isInvalid || undefined}
-        className={`w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-text placeholder:text-muted-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink disabled:opacity-50 aria-[invalid=true]:border-pink-strong ${className}`}
+        className={`w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-text placeholder:text-muted-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink disabled:opacity-50 aria-[invalid=true]:border-alerta-ink ${className}`}
         {...rest}
       />
     )

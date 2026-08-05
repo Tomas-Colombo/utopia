@@ -30,6 +30,10 @@ describe('lightTokens', () => {
       'success',
       'muted',
       'muted2',
+      'alerta',
+      'alertaBg',
+      'alertaInk',
+      'alertaOn',
     ].sort()
 
     expect(Object.keys(lightTokens).sort()).toEqual(expectedKeys)

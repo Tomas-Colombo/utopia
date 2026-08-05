@@ -132,7 +132,7 @@ export function RotacionTable({ rows }: { rows: RotacionRow[] }) {
                   <td className="px-4 py-3 text-right font-mono">{r.unidades_vendidas}</td>
                   <td className="px-4 py-3 text-right font-mono">{fmtMoney(r.monto_vendido)}</td>
                   <td className="px-4 py-3 text-right font-mono">
-                    <span className={r.monto_ganancia < 0 ? 'text-pink-strong' : ''}>
+                    <span className={r.monto_ganancia < 0 ? 'text-alerta-ink' : ''}>
                       {fmtMoney(r.monto_ganancia)}
                     </span>
                   </td>

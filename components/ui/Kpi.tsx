@@ -3,7 +3,7 @@ type KpiTone = 'default' | 'muted'
 
 const BOX: Record<KpiVariant, string> = {
   default: 'border-border bg-card',
-  alert: 'border-pink-strong bg-pink-bg',
+  alert: 'border-alerta-ink bg-alerta-bg',
   highlight: 'border-accent-pink bg-card',
   nested: 'border-border bg-card-2',
 }

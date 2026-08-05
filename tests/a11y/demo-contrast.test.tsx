@@ -32,6 +32,10 @@ const TOKEN_CLASS_SUFFIX: Record<ThemeTokenKey, string> = {
   success: 'success',
   muted: 'muted',
   muted2: 'muted-2',
+  alerta: 'alerta',
+  alertaBg: 'alerta-bg',
+  alertaInk: 'alerta-ink',
+  alertaOn: 'alerta-on',
 }
 
 /**

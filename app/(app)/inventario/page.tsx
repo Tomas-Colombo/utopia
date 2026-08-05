@@ -151,7 +151,7 @@ function Kpi({
     <div
       className={`rounded-lg border p-4 ${
         variant === 'alert'
-          ? 'border-pink-strong bg-pink-bg'
+          ? 'border-alerta-ink bg-alerta-bg'
           : 'border-border bg-card'
       }`}
     >

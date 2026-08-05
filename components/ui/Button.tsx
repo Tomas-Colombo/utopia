@@ -10,20 +10,26 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 // Design system v2 button hierarchy:
-//   primary  — rosa. Reserved for the action OF THE DAY (sell, spend).
+//   primary  — the accent. Reserved for the action OF THE DAY (sell, spend).
+//              Rosa in light, platinum in dark — `--rosa` carries both.
 //   neutral  — ink block. Everything else that commits something.
 //   secondary/ghost — outline and bare, for escape hatches.
+//   danger   — the alert channel, which stays pink in every theme.
 //
-// The `#131312` on rosa is the design's own literal, not a token: it must stay
-// near-black in BOTH themes because `--rosa` is light in both. Same AA
+// The `#131312` on the accent is the design's own literal, not a token: it must
+// stay near-black in BOTH themes because `--rosa` is light in both. Same AA
 // rationale as Badge/ConfirmDialog (REQ-DS-04). Ghost/secondary use
 // text-ink/text-muted because they sit on theme-aware neutral backgrounds.
+//
+// `danger` cannot use a literal foreground the way `primary` does: --alerta-ink
+// is a DARK pink in light mode and a LIGHT pink in dark mode, so the readable
+// text flips with the theme. That is exactly what --alerta-on carries.
 const VARIANT_CLASS: Record<ButtonVariant, string> = {
   primary: 'bg-rosa text-[#131312] font-bold hover:brightness-95 focus-visible:ring-rosa-ink',
   neutral: 'bg-ink text-bg hover:opacity-90 focus-visible:ring-rosa',
   secondary: 'border border-line-2 bg-transparent text-muted hover:bg-hover hover:text-ink focus-visible:ring-rosa',
   ghost: 'text-ink hover:bg-hover focus-visible:ring-rosa',
-  danger: 'bg-rosa-ink text-[#FAF8F4] hover:opacity-90 focus-visible:ring-rosa-ink',
+  danger: 'bg-alerta-ink text-alerta-on hover:opacity-90 focus-visible:ring-alerta-ink',
 }
 
 const SIZE_CLASS: Record<ButtonSize, string> = {

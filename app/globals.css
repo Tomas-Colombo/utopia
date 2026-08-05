@@ -50,6 +50,33 @@
   --terra-bg: color-mix(in oklab, var(--terra) 17%, var(--bg));
   --hover: color-mix(in oklab, var(--rosa) 7%, var(--panel));
 
+  /* Alert channel — the ONE surface that stays pink in every theme.
+     Light mode aliases the rosa accent, so nothing here changes what light
+     already looked like; the split only pays off in dark, where --rosa turns
+     platinum and an alarm still has to read as an alarm. Use these ONLY for
+     errors, danger, negative values and threshold breaches — never for links,
+     chips or selected states, which are supposed to follow the accent. */
+  --alerta: var(--rosa);
+  --alerta-ink: var(--rosa-ink);
+  --alerta-bg: var(--rosa-bg);
+  /* Text that sits ON --alerta-ink. It cannot be derived: --alerta-ink is a
+     DARK pink in light mode and a LIGHT pink in dark mode, so the readable
+     foreground flips with it. */
+  --alerta-on: #FAF8F4;
+
+  /* Navigation rail internals. The rail is dark in BOTH themes, so its text
+     can never ride on --ink — which is why these were inline literals in
+     SidebarClient. They are tokens now because the platinum palette needs a
+     COOL set of them while light keeps the warm greys it always had. */
+  --sidebar-ink: #8B8681;
+  --sidebar-ink-2: #6F6C67;
+  --sidebar-ink-3: #5C5A56;
+  --sidebar-ink-hi: #E8E3DB;
+  --sidebar-ink-hi-2: #EFEAE2;
+  --sidebar-line: #262523;
+  --sidebar-active-ink: #131312;
+  --sidebar-avatar: linear-gradient(135deg, #E9A6BC, #C97E97);
+
   /* Chevron stroke for native <select>. A data: URI cannot read currentColor,
      so the colour is baked per theme. */
   --select-arrow: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'><path d='M1 1.5 6 6.5 11 1.5' stroke='%23A29A8F' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/></svg>");
@@ -81,46 +108,76 @@
   --success: var(--ok);
 }
 
-/* ---- Dark ----------------------------------------------------------------
-   Not an inversion: the base shifts to warm asphalt and the contrast block
-   flips from ink to bone. --sidebar goes DARKER than light mode (#0E0D0C),
-   it is not held constant. */
+/* ---- Dark — "platino" ----------------------------------------------------
+   Replaces the earlier warm-asphalt ("chocolate") dark theme. The axis moves
+   from warm (brown / bone) to cold (graphite / chrome): the base drops to
+   #0C0D0F and the text climbs to #F4F6F8, so the contrast is harder instead
+   of muted.
+
+   The accent is no longer pink. --rosa now carries a PLATINUM value, which is
+   what makes the active sidebar pill, the primary button and the highlighted
+   chart bars turn chrome-on-near-black without touching a single call site.
+   Pink survives only in the --alerta-* channel below.
+
+   Kept from the previous dark theme: --sidebar still goes darker than light
+   mode rather than being held constant. */
 :root[data-theme="dark"] {
-  --bg: #121110;
-  --panel: #1A1917;
-  --panel-2: #201E1B;
-  --line: #2C2A26;
-  --line-2: #3A3733;
+  --bg: #0C0D0F;
+  --panel: #15171A;
+  --panel-2: #1B1E22;
+  --line: #282C31;
+  --line-2: #3B4148;
 
-  --ink: #F2EFE9;
-  --muted: #B3ACA1;
-  --muted-2: #8E877E;
-  --dim: #7C766E;
+  --ink: #F4F6F8;
+  --muted: #B9C0C7;
+  --muted-2: #8E97A0;
+  --dim: #79828B;
 
-  --block: #EDE8E0;
-  --block-ink: #17150F;
-  --block-dim: #6F6A62;
+  --block: #DDE2E7;
+  --block-ink: #0E1013;
+  --block-dim: #5D666F;
 
-  --sidebar: #0E0D0C;
+  --sidebar: #08090B;
 
   /* Chrome reads as intended on the dark backdrop; only dial it back so it
      sits behind the form instead of competing with it. */
   --logo-auth: opacity(0.62);
 
-  --rosa: #F0AEC4;
-  --terra: #D89A78;
-  --ok: #5FBF83;
+  --rosa: #C4CDD6;
+  --terra: #9BA7B2;
+  --ok: #6FD39A;
 
-  --sw1: #26241F;
-  --sw2: #302D27;
+  --sw1: #20242A;
+  --sw2: #2E343B;
 
-  --rosa-bg: color-mix(in oklab, var(--rosa) 20%, var(--bg));
-  --rosa-ink: color-mix(in oklab, var(--rosa) 84%, #ffffff);
+  /* Literal, not color-mix: the platinum ramp is hand-picked, and mixing a
+     desaturated grey into the base would collapse the step between them. */
+  --rosa-bg: #232930;
+  --rosa-ink: #E4EAF0;
+  --terra-bg: #232930;
   --ok-bg: color-mix(in oklab, var(--ok) 16%, var(--bg));
-  --terra-bg: color-mix(in oklab, var(--terra) 16%, var(--bg));
   --hover: color-mix(in oklab, var(--rosa) 9%, var(--panel));
 
-  --select-arrow: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'><path d='M1 1.5 6 6.5 11 1.5' stroke='%237C766E' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  /* Alerts stay pink — same hue the chocolate dark theme used, so low stock
+     and an exceeded budget still read as an alarm against the cold base
+     instead of blending into the platinum accent. Literal rather than
+     color-mix so `lib/design-tokens/dark.ts` can mirror it exactly and the
+     jsdom contrast suite actually guards these values. */
+  --alerta: #F0AEC4;
+  --alerta-ink: #F4BFD0;
+  --alerta-bg: #2E1E26;
+  --alerta-on: #17150F;
+
+  --sidebar-ink: #858E97;
+  --sidebar-ink-2: #6B747D;
+  --sidebar-ink-3: #575F67;
+  --sidebar-ink-hi: #E4EAF0;
+  --sidebar-ink-hi-2: #F4F6F8;
+  --sidebar-line: #16181C;
+  --sidebar-active-ink: #0E1013;
+  --sidebar-avatar: linear-gradient(135deg, #C4CDD6, #8E97A0);
+
+  --select-arrow: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'><path d='M1 1.5 6 6.5 11 1.5' stroke='%2379828B' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/></svg>");
 }
 
 /* Tailwind 4 CSS-first theme mapping. `inline` is required (not plain
@@ -149,6 +206,22 @@
   --color-sw1: var(--sw1);
   --color-sw2: var(--sw2);
   --color-hover: var(--hover);
+
+  /* Alert channel — pink in every theme (see :root). */
+  --color-alerta: var(--alerta);
+  --color-alerta-bg: var(--alerta-bg);
+  --color-alerta-ink: var(--alerta-ink);
+  --color-alerta-on: var(--alerta-on);
+
+  /* Navigation rail internals. Longest-match wins in Tailwind, so `bg-sidebar`
+     still resolves to --color-sidebar and does not collide with these. */
+  --color-sidebar-ink: var(--sidebar-ink);
+  --color-sidebar-ink-2: var(--sidebar-ink-2);
+  --color-sidebar-ink-3: var(--sidebar-ink-3);
+  --color-sidebar-ink-hi: var(--sidebar-ink-hi);
+  --color-sidebar-ink-hi-2: var(--sidebar-ink-hi-2);
+  --color-sidebar-line: var(--sidebar-line);
+  --color-sidebar-active-ink: var(--sidebar-active-ink);
 
   /* Legacy aliases */
   --color-text: var(--text);

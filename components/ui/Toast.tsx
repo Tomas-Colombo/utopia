@@ -82,7 +82,7 @@ export function useToast(): ToastAPI {
 
 const VARIANT_CLASS: Record<ToastVariant, string> = {
   success: 'bg-success text-sidebar',
-  error: 'bg-pink-strong text-sidebar',
+  error: 'bg-alerta-ink text-sidebar',
   info: 'bg-accent-pink text-sidebar',
 }
 

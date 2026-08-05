@@ -65,7 +65,7 @@ export function PresupuestosMesTable({ rows }: { rows: CategoriaGastoStatus[] })
                 <td className="px-4 py-3 text-right font-mono">
                   {p.restante != null
                     ? (p.restante < 0
-                        ? <span className="text-pink-strong">-$ {Math.abs(p.restante).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+                        ? <span className="text-alerta-ink">-$ {Math.abs(p.restante).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
                         : `$ ${p.restante.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`)
                     : <span className="text-muted-2">—</span>}
                 </td>
@@ -75,7 +75,7 @@ export function PresupuestosMesTable({ rows }: { rows: CategoriaGastoStatus[] })
                       <div className="flex-1 h-2 rounded bg-card-3 overflow-hidden">
                         <div
                           className={
-                            p.alerta === 'excedido' ? 'h-full bg-pink-strong' :
+                            p.alerta === 'excedido' ? 'h-full bg-alerta-ink' :
                             p.alerta === 'cerca' ? 'h-full bg-terracota' :
                             'h-full bg-success'
                           }

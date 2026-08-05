@@ -375,7 +375,7 @@ export function IngresoDetalleView({
 
           {/* Aviso del invariante, según el estado del nombre. */}
           {linea.esNuevo && matchLinea && (
-            <p className="text-xs text-pink-strong">
+            <p className="text-xs text-alerta-ink">
               Ya existe un producto con este nombre. Cambiá el nombre o usá «Del inventario» para vincularlo.
             </p>
           )}

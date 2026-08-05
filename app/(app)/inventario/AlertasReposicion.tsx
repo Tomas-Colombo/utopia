@@ -29,12 +29,12 @@ export function AlertasReposicion({ alertas }: { alertas: AlertaReposicion[] }) 
 
   return (
     <>
-      <section className="rounded-lg border-2 border-pink-strong bg-pink-bg p-4">
+      <section className="rounded-lg border-2 border-alerta-ink bg-alerta-bg p-4">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="font-display text-lg text-pink-strong">
+          <h3 className="font-display text-lg text-alerta-ink">
             ⚠ Reposición urgente
           </h3>
-          <span className="text-sm font-mono text-pink-strong">
+          <span className="text-sm font-mono text-alerta-ink">
             {alertas.length} producto{alertas.length === 1 ? '' : 's'}
           </span>
         </div>
@@ -47,7 +47,7 @@ export function AlertasReposicion({ alertas }: { alertas: AlertaReposicion[] }) 
           <button
             type="button"
             onClick={() => setModalOpen(true)}
-            className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-md py-2 text-sm font-medium text-pink-strong hover:bg-card/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-strong"
+            className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-md py-2 text-sm font-medium text-alerta-ink hover:bg-card/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-alerta-ink"
           >
             Ver todos ({alertas.length})
             <span aria-hidden>→</span>
