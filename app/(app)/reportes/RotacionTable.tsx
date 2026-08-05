@@ -74,7 +74,7 @@ export function RotacionTable({ rows }: { rows: RotacionRow[] }) {
               id="rot-cat"
               value={cat}
               onChange={(e) => reset(setCat, e.target.value)}
-              className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
+              className="w-full"
             >
               <option value="">Todas</option>
               {categorias.map((c) => (
@@ -89,7 +89,7 @@ export function RotacionTable({ rows }: { rows: RotacionRow[] }) {
               id="rot-orden"
               value={orden}
               onChange={(e) => reset<Orden>(setOrden, e.target.value as Orden)}
-              className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
+              className="w-full"
             >
               <option value="unidades_desc">Unidades (mayor a menor)</option>
               <option value="unidades_asc">Unidades (menor a mayor)</option>

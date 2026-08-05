@@ -351,9 +351,6 @@ export function NuevoIngresoView({
     })
   }
 
-  const selectClass =
-    'w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink'
-
   return (
     <div className="space-y-6">
       {/* ─── Cabecera ─────────────────────────────────────────────── */}
@@ -375,7 +372,7 @@ export function NuevoIngresoView({
                 value={idProveedor}
                 onChange={(e) => setIdProveedor(e.target.value)}
                 disabled={proveedorBloqueado || pending}
-                className={`min-w-0 flex-1 ${selectClass} disabled:cursor-not-allowed disabled:opacity-70`}
+                className="w-full min-w-0 flex-1"
               >
                 <option value="">— Sin proveedor —</option>
                 {proveedores.map((p) => (
@@ -410,7 +407,7 @@ export function NuevoIngresoView({
               id="i-tipo"
               value={tipoIngreso}
               onChange={(e) => setTipoIngreso(e.target.value as TipoIngreso)}
-              className={selectClass}
+              className="w-full"
             >
               <option value="" disabled>
                 — Elegí el tipo —
@@ -530,7 +527,7 @@ export function NuevoIngresoView({
                           actualizar(i, { idCategoria: e.target.value, talles: [], tallesAbierto: false })
                         }}
                         aria-label="Categoría del producto nuevo"
-                        className={`${selectClass} min-w-[8rem] flex-1`}
+                        className="w-full min-w-[8rem] flex-1"
                       >
                         {categorias.map((c) => (
                           <option key={c.id_categoria} value={c.id_categoria}>
@@ -544,7 +541,7 @@ export function NuevoIngresoView({
                         value={f.idProducto}
                         onChange={(e) => vincularProducto(i, e.target.value)}
                         aria-label="Producto existente"
-                        className={`${selectClass} min-w-[12rem] flex-[3]`}
+                        className="w-full min-w-[12rem] flex-[3]"
                       >
                         <option value="">— Elegí el producto —</option>
                         {productos.map((p) => (

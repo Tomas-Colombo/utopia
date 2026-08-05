@@ -180,7 +180,7 @@ export function CobranzaPanel({
                   }}
                   disabled={disabled}
                   aria-label="Medio de pago"
-                  className="flex-1 rounded-md border border-border bg-card px-2 py-1.5 text-sm text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
+                  className="flex-1"
                 >
                   {MEDIOS.map((m) => (
                     <option key={m} value={m}>
@@ -208,7 +208,7 @@ export function CobranzaPanel({
                   onChange={(e) => actualizar(p.key, { idCuenta: e.target.value })}
                   disabled={disabled}
                   aria-label="Cuenta destino"
-                  className="w-full rounded-md border border-border bg-card px-2 py-1.5 text-sm text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
+                  className="w-full"
                 >
                   {opcionesCuenta.map((c) => (
                     <option key={c.id_cuenta_destino} value={c.id_cuenta_destino}>

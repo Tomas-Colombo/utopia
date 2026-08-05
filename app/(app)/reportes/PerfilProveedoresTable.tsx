@@ -79,7 +79,7 @@ export function PerfilProveedoresTable({ rows }: { rows: PerfilProveedorRow[] })
               id="prov-tipo"
               value={tipo}
               onChange={(e) => reset(setTipo, e.target.value)}
-              className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-text capitalize focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
+              className="w-full capitalize"
             >
               <option value="">Todos</option>
               {tipos.map((t) => (
@@ -94,7 +94,7 @@ export function PerfilProveedoresTable({ rows }: { rows: PerfilProveedorRow[] })
               id="prov-orden"
               value={orden}
               onChange={(e) => reset<Orden>(setOrden, e.target.value as Orden)}
-              className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
+              className="w-full"
             >
               <option value="pendiente_desc">Pendiente rendir (mayor a menor)</option>
               <option value="pendiente_asc">Pendiente rendir (menor a mayor)</option>

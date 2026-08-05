@@ -133,7 +133,7 @@ export function NuevaReglaForm({
             id="r-tipo"
             value={tipoRegla}
             onChange={(e) => handleTipoRegla(e.target.value as TipoRegla)}
-            className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
+            className="w-full"
           >
             {(['margen', 'descuento', 'recargo'] as TipoRegla[]).map((t) => (
               <option key={t} value={t}>
@@ -148,7 +148,7 @@ export function NuevaReglaForm({
             id="r-alcance"
             value={alcance}
             onChange={(e) => handleAlcance(e.target.value as AlcanceRegla)}
-            className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
+            className="w-full"
           >
             {(['producto', 'categoria', 'proveedor', 'global'] as AlcanceRegla[]).map((a) => (
               <option key={a} value={a}>
@@ -165,7 +165,7 @@ export function NuevaReglaForm({
             id="r-prod"
             value={idProducto}
             onChange={(e) => setIdProducto(e.target.value)}
-            className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
+            className="w-full"
           >
             <option value="">— Elegí un producto —</option>
             {productos.map((p) => (
@@ -183,7 +183,7 @@ export function NuevaReglaForm({
             id="r-cat"
             value={idCategoria}
             onChange={(e) => setIdCategoria(e.target.value)}
-            className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
+            className="w-full"
           >
             <option value="">— Elegí una categoría —</option>
             {categorias.map((c) => (
@@ -201,7 +201,7 @@ export function NuevaReglaForm({
             id="r-prov"
             value={idProveedor}
             onChange={(e) => setIdProveedor(e.target.value)}
-            className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
+            className="w-full"
           >
             <option value="">— Elegí un proveedor —</option>
             {proveedores.map((p) => (
@@ -238,7 +238,7 @@ export function NuevaReglaForm({
             id="r-fp"
             value={formaPago}
             onChange={(e) => setFormaPago(e.target.value as FormaPago | '')}
-            className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
+            className="w-full"
           >
             <option value="">— Elegí forma de pago —</option>
             {(['efectivo', 'cuotas_2', 'cuotas_3'] as FormaPago[]).map((fp) => (
@@ -256,7 +256,7 @@ export function NuevaReglaForm({
             id="r-tv"
             value={tipoValor}
             onChange={(e) => setTipoValor(e.target.value as TipoValorRegla)}
-            className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
+            className="w-full"
           >
             <option value="porcentaje">Porcentaje</option>
             <option value="monto_fijo">Monto fijo</option>

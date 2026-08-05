@@ -13,6 +13,12 @@
 
 /* ---- Light ---------------------------------------------------------------- */
 :root {
+  /* Tells the engine which way the UA-rendered chrome should go: the native
+     <select> POPUP, scrollbars, spinners and autofill. The popup list is drawn
+     by the platform, not by us — without this it renders light-on-light in the
+     dark theme no matter what we style the closed control with. */
+  color-scheme: light;
+
   /* Surfaces */
   --bg: #F7F5F1;
   --panel: #FFFFFF;
@@ -42,6 +48,19 @@
   /* Striped image placeholders */
   --sw1: #F0ECE6;
   --sw2: #E4DED5;
+
+  /* Form-control surface. Deliberately NOT --panel: a control that shares the
+     panel's colour disappears into the card it sits on, which is exactly how
+     every <select> in the app used to read. The border does the heavy lifting
+     in light mode (white on white needs an edge), the fill does it in dark. */
+  --control: #FBF8F4;
+  --control-line: #978B7B;
+  --control-hover: #F5F1EA;
+  /* Row highlight inside the open dropdown — replaces the platform's blue.
+     The mix ratio is themed rather than shared: rosa is itself a light colour,
+     so mixing it into a near-white surface barely moves the luminance and the
+     row needs a much heavier dose here than platinum does on the dark base. */
+  --control-active: color-mix(in oklab, var(--rosa) 40%, var(--control));
 
   /* Derived accents. color-mix keeps them in step when --rosa is themed. */
   --rosa-bg: color-mix(in oklab, var(--rosa) 32%, var(--bg));
@@ -122,6 +141,8 @@
    Kept from the previous dark theme: --sidebar still goes darker than light
    mode rather than being held constant. */
 :root[data-theme="dark"] {
+  color-scheme: dark;
+
   --bg: #0C0D0F;
   --panel: #15171A;
   --panel-2: #1B1E22;
@@ -149,6 +170,13 @@
 
   --sw1: #20242A;
   --sw2: #2E343B;
+
+  /* Sits ABOVE --panel, not level with it, so the control reads as a control
+     on top of a card instead of a hole in it. */
+  --control: #21262C;
+  --control-line: #626A72;
+  --control-hover: #272D34;
+  --control-active: color-mix(in oklab, var(--rosa) 24%, var(--control));
 
   /* Literal, not color-mix: the platinum ramp is hand-picked, and mixing a
      desaturated grey into the base would collapse the step between them. */
@@ -206,6 +234,12 @@
   --color-sw1: var(--sw1);
   --color-sw2: var(--sw2);
   --color-hover: var(--hover);
+
+  /* Form-control surface, shared by <select>, Input, Textarea, NumberInput and
+     the SearchableSelect trigger so a mixed form reads as one row of controls. */
+  --color-control: var(--control);
+  --color-control-line: var(--control-line);
+  --color-control-hover: var(--control-hover);
 
   /* Alert channel — pink in every theme (see :root). */
   --color-alerta: var(--alerta);
@@ -274,70 +308,14 @@
     background: transparent;
   }
 
-  /* --- Native dropdowns ---------------------------------------------------
-     Every <select> in the app picks up the design treatment here so a plain
-     `<select>` is never unstyled, no matter which screen it lives on. The
-     closed control is fully ours; the popup list is the platform's, but
-     option/optgroup colours are honoured by Chromium and Firefox on
-     Windows/Linux, which is where this app runs.
-
-     Colours live in @layer base so Tailwind utilities (bg-panel, text-ink, …)
-     still win when a caller wants to override them. Only the right padding
-     that reserves room for the chevron is unlayered — see below. */
+  /* --- Native dropdowns: density only -------------------------------------
+     Typography and padding stay LAYERED so a compact call site can still pass
+     `px-2 py-1 text-xs` and win. Everything that defines what a dropdown LOOKS
+     like is unlayered further down — see the block after this layer. */
   select {
-    appearance: none;
-    -webkit-appearance: none;
-    background-color: var(--panel);
-    background-image: var(--select-arrow);
-    background-repeat: no-repeat;
-    background-position: right 0.75rem center;
-    background-size: 12px 8px;
-    border: 1px solid var(--line-2);
-    border-radius: 6px;
-    color: var(--ink);
     font-family: var(--font-body), system-ui, sans-serif;
     font-size: 13.5px;
-    cursor: pointer;
-    transition: border-color 0.15s, background-color 0.15s;
-  }
-  select:hover:not(:disabled) {
-    border-color: var(--rosa);
-  }
-  select:focus-visible {
-    outline: none;
-    border-color: var(--rosa);
-    box-shadow: 0 0 0 2px var(--rosa-bg);
-  }
-  select:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-  select[multiple],
-  select[size]:not([size="1"]) {
-    background-image: none;
-    padding-right: 0.75rem;
-  }
-
-  select option {
-    background-color: var(--panel);
-    color: var(--ink);
-    padding: 8px 12px;
-  }
-  select option:checked {
-    background-color: var(--rosa);
-    color: #131312;
-    font-weight: 600;
-  }
-  select option:disabled {
-    color: var(--dim);
-  }
-  select optgroup {
-    background-color: var(--panel-2);
-    color: var(--dim);
-    font-family: var(--font-mono), ui-monospace, monospace;
-    font-size: 10px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
+    padding: 0.5rem 0.75rem;
   }
 
   @keyframes fadeUp {
@@ -352,10 +330,209 @@
   }
 }
 
-/* Unlayered on purpose: unlayered declarations outrank every Tailwind layer,
-   including utilities. The chevron sits in the right 2rem of the control, so
-   an inherited `px-3` from an existing call site must NOT win here or the
-   longest option label would run underneath the arrow. */
+/* --- Native dropdowns: the look ------------------------------------------
+   UNLAYERED ON PURPOSE. Unlayered declarations outrank every Tailwind layer,
+   utilities included, which is the entire point: ~36 raw <select> call sites
+   across the app carry their own `bg-card border-border` and used to override
+   the design treatment, producing a control the same colour as the card
+   behind it. Chrome belongs to the design system, not to the call site — so
+   it wins here, and every dropdown in the app looks identical whether it went
+   through `components/ui/Select.tsx` or not.
+
+   Density (font-size, padding) is deliberately NOT here: it stays in
+   @layer base above so compact filter rows can still tune it.
+
+   The closed control is fully ours. The POPUP list is the platform's:
+   `color-scheme` (set per theme on :root) is what makes it render dark, and
+   the option/optgroup colours below are honoured by Chromium and Firefox on
+   Windows/Linux, which is where this app runs. */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-color: var(--control);
+  background-image: var(--select-arrow);
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 12px 8px;
+  border: 1px solid var(--control-line);
+  border-radius: 6px;
+  color: var(--ink);
+  cursor: pointer;
+  transition: border-color 0.15s, background-color 0.15s, box-shadow 0.15s;
+}
+
+/* The chevron sits in the right 2rem of the control, so an inherited `px-3`
+   from an existing call site must NOT win or the longest option label would
+   run underneath the arrow. */
 select:not([multiple]):not([size]) {
   padding-right: 2.25rem;
+}
+
+select:hover:not(:disabled) {
+  background-color: var(--control-hover);
+  border-color: var(--rosa);
+}
+
+select:focus-visible {
+  outline: none;
+  border-color: var(--rosa);
+  box-shadow: 0 0 0 2px var(--rosa-bg);
+}
+
+select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+select[aria-invalid="true"] {
+  border-color: var(--alerta-ink);
+}
+
+/* A list box (multiple / size>1) is not a dropdown: no chevron, no reserved
+   gutter, and the rows need to breathe. */
+select[multiple],
+select[size]:not([size="1"]) {
+  background-image: none;
+  padding-right: 0.75rem;
+  cursor: default;
+}
+
+select option {
+  background-color: var(--control);
+  color: var(--ink);
+  padding: 8px 12px;
+}
+
+/* Near-black literal, not a token: --rosa is light in BOTH themes (pink in
+   light, platinum in dark), so the readable foreground does not flip. Same
+   rationale as the primary Button. */
+select option:checked {
+  background-color: var(--rosa);
+  color: #131312;
+  font-weight: 600;
+}
+
+select option:disabled {
+  color: var(--dim);
+}
+
+select optgroup {
+  background-color: var(--panel-2);
+  color: var(--dim);
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* --- The open popup ------------------------------------------------------
+   Everything above styles the CLOSED control. A classic <select> renders its
+   POPUP as an operating-system widget: the corner radius and the blue hover
+   highlight belong to the platform, and no amount of CSS reaches them. That
+   is what `appearance: base-select` is for — it opts the control out of the
+   UA widget and hands the popup over as real, stylable DOM.
+
+   Gated behind @supports on purpose. Chromium 135+ gets the full treatment;
+   anything older or non-Chromium keeps the native popup, which is still
+   perfectly functional (and still gets the closed-control styling above) —
+   it just keeps the platform's highlight colour. This is the progressive
+   enhancement, not a polyfill: no JS, no loss of the mobile OS picker, form
+   autofill or type-ahead, which is exactly why these stay native selects. */
+@supports (appearance: base-select) {
+  select:not([multiple]):not([size]),
+  ::picker(select) {
+    appearance: base-select;
+  }
+
+  /* base-select drops the UA button chrome, so the closed control is restated.
+     The chevron moves from a background image to ::picker-icon — a real
+     pseudo-element, which is what lets it animate on open. */
+  select:not([multiple]):not([size]) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-align: left;
+    background-image: none;
+    padding-right: 0.75rem;
+
+    /* A native select clips its label to one line; base-select does not — the
+       generated content is ordinary flow content, so "Consignación (paga al
+       vender)" wraps and the control grows to two lines, shoving the form
+       around. This belongs on ::selectedcontent, but Lightning CSS (Tailwind
+       4's parser) does not know that pseudo-element yet and silently DROPS any
+       rule using it — ::picker-icon and ::checkmark do survive. white-space is
+       inherited, so setting it here reaches the generated content anyway. */
+    white-space: nowrap;
+    overflow: hidden;
+  }
+
+  select::picker-icon {
+    content: '';
+    flex: none;
+    width: 12px;
+    height: 8px;
+    margin-left: auto;
+    background: var(--select-arrow) center / 12px 8px no-repeat;
+    transition: transform 0.15s ease;
+  }
+  select:open::picker-icon {
+    transform: rotate(180deg);
+  }
+
+  ::picker(select) {
+    border: 1px solid var(--control-line);
+    border-radius: 10px;
+    background: var(--control);
+    box-shadow: 0 10px 28px rgb(0 0 0 / 0.3);
+    padding: 4px;
+    margin-top: 4px;
+    max-height: 18rem;
+    overflow-y: auto;
+  }
+
+  select option {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-radius: 6px;
+    padding: 7px 10px;
+    background: transparent;
+    color: var(--ink);
+    cursor: pointer;
+    transition: background-color 0.12s;
+  }
+
+  /* :hover for the mouse, :focus for the keyboard — the picker moves focus
+     between options as you arrow through it, so styling only :hover would
+     leave keyboard users with no visible position. */
+  select option:hover:not(:disabled),
+  select option:focus:not(:disabled) {
+    background: var(--control-active);
+    outline: none;
+  }
+
+  select option:checked {
+    background: var(--rosa);
+    color: #131312;
+    font-weight: 600;
+  }
+
+  select option:disabled {
+    background: transparent;
+    color: var(--dim);
+    cursor: not-allowed;
+  }
+
+  /* Kept, not hidden: the selected row must not be identified by colour
+     alone. Pushed to the trailing edge so the labels stay left-aligned. */
+  select option::checkmark {
+    order: 1;
+    margin-left: auto;
+    color: inherit;
+  }
+
+  select optgroup {
+    background: transparent;
+    padding: 6px 10px 2px;
+  }
 }

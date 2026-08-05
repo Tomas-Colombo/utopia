@@ -60,7 +60,7 @@ export function AuditoriaView({
               id="a-ent"
               value={entidad}
               onChange={(e) => setEntidad(e.target.value)}
-              className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
+              className="w-full"
             >
               <option value="">Todas</option>
               {entidades.map((e) => (

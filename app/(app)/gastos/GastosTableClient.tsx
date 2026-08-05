@@ -133,7 +133,7 @@ export function GastosTableClient({
                 navigate(buildParams(1, { cat: e.target.value }))
               }}
               disabled={pending}
-              className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
+              className="w-full"
             >
               <option value="">Todas</option>
               {categorias.map((c) => (
@@ -153,7 +153,7 @@ export function GastosTableClient({
                 navigate(buildParams(1, { orden: o }))
               }}
               disabled={pending}
-              className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
+              className="w-full"
             >
               <option value="fecha_desc">Fecha (más reciente)</option>
               <option value="fecha_asc">Fecha (más antiguo)</option>

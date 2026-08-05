@@ -102,7 +102,7 @@ export function StockTalleLoader({
           onChange={(e) => setTalle(e.target.value)}
           disabled={disabled || sinCupo}
           aria-label="Talle"
-          className="rounded-md border border-border bg-card px-3 py-2 text-sm text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink disabled:opacity-50"
+          className=""
         >
           {talles.map((t) => (
             <option key={t} value={t}>

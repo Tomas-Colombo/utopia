@@ -120,7 +120,7 @@ export function ControlDePreciosView({
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value as Filter)}
-            className="rounded-md border border-border bg-card px-3 py-2 text-sm text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
+            className=""
           >
             <option value="todos">Todos</option>
             <option value="desactualizados">Solo desactualizados</option>

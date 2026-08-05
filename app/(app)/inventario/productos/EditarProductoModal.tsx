@@ -116,7 +116,7 @@ export function EditarProductoModal({
             value={idCategoria}
             onChange={(e) => setIdCategoria(e.target.value)}
             aria-invalid={!!errors.categoria || undefined}
-            className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
+            className="w-full"
           >
             {categorias.map((c) => (
               <option key={c.id_categoria} value={c.id_categoria}>

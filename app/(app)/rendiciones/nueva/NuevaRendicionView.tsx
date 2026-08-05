@@ -102,7 +102,7 @@ export function NuevaRendicionView({
             id="r-prov"
             value={idProvSeleccionado}
             onChange={(e) => elegirProveedor(e.target.value)}
-            className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
+            className="w-full"
           >
             <option value="">— Elegí un proveedor —</option>
             {proveedores.map((p) => (

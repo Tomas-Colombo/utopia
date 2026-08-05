@@ -97,7 +97,7 @@ export function ReglasView({ initial }: { initial: ReglaPrecioRow[] }) {
             <select
               value={orden}
               onChange={(e) => setOrden(e.target.value as OrdenPrioridad)}
-              className="rounded-md border border-border bg-card px-3 py-2 text-sm text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
+              className=""
             >
               <option value="desc">Mayor a menor</option>
               <option value="asc">Menor a mayor</option>

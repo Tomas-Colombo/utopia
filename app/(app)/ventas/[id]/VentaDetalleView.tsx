@@ -296,7 +296,7 @@ export function VentaDetalleView({ venta }: { venta: VentaConDetalle }) {
               id="c-tipo"
               value={tipoComp}
               onChange={(e) => setTipoComp(e.target.value as TipoComprobante)}
-              className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
+              className="w-full"
             >
               {(Object.keys(TIPO_COMPROBANTE_LABEL) as TipoComprobante[]).map((t) => (
                 <option key={t} value={t}>{TIPO_COMPROBANTE_LABEL[t]}</option>

@@ -131,7 +131,7 @@ export function NuevoProveedorModal({
               id="pm-tipo"
               value={tipo}
               onChange={(e) => setTipo(e.target.value as TipoProveedor)}
-              className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
+              className="w-full"
             >
               {TIPOS.map((t) => (
                 <option key={t.value} value={t.value}>

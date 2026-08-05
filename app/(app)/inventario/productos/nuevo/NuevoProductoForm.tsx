@@ -124,7 +124,7 @@ export function NuevoProductoForm({
               setStock([]) // los talles son propios de cada categoría
             }}
             aria-invalid={!!errors.categoria || undefined}
-            className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
+            className="w-full"
           >
             {categorias.map((c) => (
               <option key={c.id_categoria} value={c.id_categoria}>
@@ -164,7 +164,7 @@ export function NuevoProductoForm({
               value={moneda}
               onChange={(e) => setMoneda(e.target.value)}
               aria-label="Moneda"
-              className="rounded-md border border-border bg-card px-3 py-2 text-sm text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
+              className=""
             >
               <option value="ARS">ARS</option>
               <option value="USD">USD</option>
@@ -183,7 +183,7 @@ export function NuevoProductoForm({
             id="prod-proveedor"
             value={idProveedor}
             onChange={(e) => setIdProveedor(e.target.value)}
-            className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
+            className="w-full"
           >
             <option value="">Sin proveedor (alta directa)</option>
             {proveedores.map((p) => (

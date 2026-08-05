@@ -59,7 +59,7 @@ export function NuevaConsignacionForm({
           id="c-prov"
           value={idProv}
           onChange={(e) => setIdProv(e.target.value)}
-          className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
+          className="w-full"
         >
           {proveedores.map((p) => (
             <option key={p.id} value={p.id}>

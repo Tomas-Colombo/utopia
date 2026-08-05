@@ -119,7 +119,7 @@ export function UsuariosView({
                       onChange={(e) => cambiarRol(u, e.target.value)}
                       disabled={pending}
                       aria-label={`Rol de ${u.email}`}
-                      className="rounded-md border border-border bg-card px-2 py-1 text-sm text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
+                      className=""
                     >
                       <option value="">— Sin rol —</option>
                       {roles.map((r) => (

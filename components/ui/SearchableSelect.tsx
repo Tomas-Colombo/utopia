@@ -105,8 +105,8 @@ export function SearchableSelect({
         aria-controls={listboxId}
         aria-haspopup="listbox"
         aria-label={ariaLabel}
-        className={`flex w-full items-center justify-between gap-2 rounded-md border bg-panel px-3 py-2 text-left text-[13.5px] transition-colors hover:border-rosa focus:outline-none focus-visible:ring-2 focus-visible:ring-rosa-bg ${
-          open ? 'border-rosa' : 'border-line-2'
+        className={`flex w-full items-center justify-between gap-2 rounded-md border bg-control px-3 py-2 text-left text-[13.5px] transition-colors hover:border-rosa focus:outline-none focus-visible:ring-2 focus-visible:ring-rosa-bg ${
+          open ? 'border-rosa' : 'border-control-line'
         } ${selectedOption ? 'text-ink' : 'text-dim'}`}
         onClick={() => (open ? closeListbox() : openListbox())}
       >
@@ -120,7 +120,7 @@ export function SearchableSelect({
       </button>
 
       {open && (
-        <div className="absolute z-20 mt-1 w-full overflow-hidden rounded-md border border-line-2 bg-panel shadow-[0_8px_24px_rgba(0,0,0,0.14)]">
+        <div className="absolute z-20 mt-1 w-full overflow-hidden rounded-md border border-control-line bg-control shadow-[0_8px_24px_rgba(0,0,0,0.28)]">
           <input
             ref={searchInputRef}
             type="text"
@@ -132,7 +132,7 @@ export function SearchableSelect({
             onChange={(event) => handleSearchChange(event.target.value)}
             onKeyDown={handleSearchKeyDown}
             autoFocus
-            className="w-full border-b border-line bg-panel-2 px-3 py-2 text-[13.5px] text-ink outline-none placeholder:text-dim"
+            className="w-full border-b border-control-line bg-control-hover px-3 py-2 text-[13.5px] text-ink outline-none placeholder:text-dim"
           />
           <ul id={listboxId} role="listbox" className="max-h-60 overflow-auto py-1">
             {filteredOptions.length === 0 ? (

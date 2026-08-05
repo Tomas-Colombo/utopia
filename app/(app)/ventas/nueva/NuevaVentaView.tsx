@@ -1280,7 +1280,7 @@ export function NuevaVentaView({
               id="v-fp"
               value={formaPago === 'efectivo' ? '' : formaPago}
               onChange={(e) => setFormaPago((e.target.value || 'efectivo') as FormaPago)}
-              className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
+              className="w-full"
             >
               <option value="">— Sin cuotas —</option>
               {(['cuotas_2', 'cuotas_3'] as FormaPago[]).map((fp) => (

@@ -191,9 +191,6 @@ export function RemitoImportPanel({
     })
   }
 
-  const selectClass =
-    'w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink'
-
   return (
     <div className="rounded-lg border border-border bg-card p-4 space-y-4">
       <div className="flex items-center justify-between gap-3">
@@ -272,7 +269,7 @@ export function RemitoImportPanel({
                           actualizar(i, { idCategoria: e.target.value, talles: [], tallesAbierto: false })
                         }
                         aria-label="Categoría del producto nuevo"
-                        className={`${selectClass} min-w-[8rem] flex-1`}
+                        className="w-full min-w-[8rem] flex-1"
                       >
                         {categorias.map((c) => (
                           <option key={c.id_categoria} value={c.id_categoria}>
@@ -287,7 +284,7 @@ export function RemitoImportPanel({
                           actualizar(i, { idProducto: e.target.value, talles: [], tallesAbierto: false })
                         }
                         aria-label="Producto existente"
-                        className={`${selectClass} min-w-[8rem] flex-1`}
+                        className="w-full min-w-[8rem] flex-1"
                       >
                         <option value="">— Elegí el producto —</option>
                         {productos.map((p) => (

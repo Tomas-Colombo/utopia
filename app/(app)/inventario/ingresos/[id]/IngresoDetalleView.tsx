@@ -321,7 +321,7 @@ export function IngresoDetalleView({
                     setIdCategoriaAdd(e.target.value)
                     setTalleAdd('')
                   }}
-                  className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
+                  className="w-full"
                 >
                   {categorias.map((c) => (
                     <option key={c.id_categoria} value={c.id_categoria}>
@@ -338,7 +338,7 @@ export function IngresoDetalleView({
                 value={talleAdd}
                 onChange={(e) => setTalleAdd(e.target.value)}
                 disabled={tallesAdd.length === 0}
-                className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink disabled:opacity-50"
+                className="w-full"
               >
                 <option value="">Sin talle</option>
                 {tallesAdd.map((t) => (
