@@ -4,6 +4,13 @@
 /node_modules
 /.pnp
 .pnp.*
+
+# This project builds with pnpm (see "packageManager" in package.json), and
+# Vercel runs `pnpm install --frozen-lockfile`. pnpm-lock.yaml is the ONLY
+# lockfile of record. A committed package-lock.json silently drifts out of
+# sync the moment anyone runs `npm install`, and the drift only surfaces as a
+# failed deploy (ERR_PNPM_OUTDATED_LOCKFILE), never locally.
+package-lock.json
 .yarn/*
 !.yarn/patches
 !.yarn/plugins
