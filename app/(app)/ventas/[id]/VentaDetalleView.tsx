@@ -9,9 +9,7 @@ import { Field } from '@/components/ui/Field'
 import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import { useToast } from '@/components/ui/Toast'
-import {
-  FORMA_PAGO_LABEL,
-} from '@/lib/types/precios'
+import { formaPagoLabel } from '@/lib/types/precios'
 import {
   MEDIO_PAGO_LABEL,
   TIPO_COMPROBANTE_LABEL,
@@ -94,7 +92,7 @@ export function VentaDetalleView({ venta }: { venta: VentaConDetalle }) {
         </div>
         <div>
           <div className="text-xs uppercase font-mono text-muted">Forma de pago</div>
-          <div className="mt-1">{FORMA_PAGO_LABEL[venta.forma_pago]}</div>
+          <div className="mt-1">{formaPagoLabel(venta.forma_pago)}</div>
         </div>
         <div>
           <div className="text-xs uppercase font-mono text-muted">Total</div>

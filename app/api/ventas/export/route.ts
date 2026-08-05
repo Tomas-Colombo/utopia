@@ -9,7 +9,7 @@ import {
   inicioDelDiaSiguiente,
   mesActual,
 } from '@/lib/fechas'
-import { FORMA_PAGO_LABEL, type FormaPago } from '@/lib/types/precios'
+import { formaPagoLabel } from '@/lib/types/precios'
 
 /**
  * GET /api/ventas/export?desde=YYYY-MM-DD&hasta=YYYY-MM-DD
@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
     ...ventas.map((v) => [
       new Date(v.fecha).toLocaleString('es-AR'),
       v.cliente?.nombre ?? 'Mostrador',
-      FORMA_PAGO_LABEL[v.forma_pago as FormaPago] ?? v.forma_pago,
+      formaPagoLabel(v.forma_pago),
       String(v.lineas_count),
       numero(Number(v.total)),
       v.estado_venta === 'anulada' ? 'Anulada' : 'Registrada',

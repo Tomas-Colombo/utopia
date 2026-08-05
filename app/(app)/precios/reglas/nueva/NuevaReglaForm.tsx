@@ -9,25 +9,34 @@ import { NumberInput } from '@/components/ui/NumberInput'
 import { useToast } from '@/components/ui/Toast'
 import {
   ALCANCE_LABEL,
-  FORMA_PAGO_LABEL,
   TIPO_REGLA_LABEL,
+  formaPagoDeCuotas,
   type AlcanceRegla,
   type FormaPago,
+  type PlanCuotasRow,
   type TipoRegla,
   type TipoValorRegla,
 } from '@/lib/types/precios'
 import { createReglaAction } from '../../actions'
+import { PlanesCuotasModal } from '../../PlanesCuotasModal'
 
-interface Ref { id: string; nombre: string; sku?: string | null }
+export interface Ref { id: string; nombre: string; sku?: string | null }
 
 export function NuevaReglaForm({
   categorias,
   proveedores,
   productos,
+  planesCuotas,
+  onSuccess,
+  onCancel,
 }: {
   categorias: Ref[]
   proveedores: Ref[]
   productos: Ref[]
+  planesCuotas: PlanCuotasRow[]
+  /** Set when the form runs inside a modal: closes it instead of navigating. */
+  onSuccess?: () => void
+  onCancel?: () => void
 }) {
   const router = useRouter()
   const toast = useToast()
@@ -48,6 +57,12 @@ export function NuevaReglaForm({
   const [fechaInicio, setFechaInicio] = useState('')
   const [fechaHasta, setFechaHasta] = useState('')
   const [error, setError] = useState<string | null>(null)
+
+  // Los planes viven en el server, pero el modal los puede cambiar sin salir
+  // del formulario: se copian a estado local y se refrescan desde la action.
+  const [planes, setPlanes] = useState(planesCuotas)
+  const [cuotasOpen, setCuotasOpen] = useState(false)
+  const planesActivos = planes.filter((p) => p.activo)
 
   // Cuando el usuario cambia tipo_regla, resetear forma_pago si dejó de ser recargo.
   function handleTipoRegla(t: TipoRegla) {
@@ -110,12 +125,24 @@ export function NuevaReglaForm({
       })
       if (!res.ok) return toast.error('No se pudo crear', res.reason)
       toast.success('Regla creada')
-      router.push('/precios/reglas')
+      if (onSuccess) onSuccess()
+      else router.push('/precios/reglas')
       router.refresh()
     })
   }
 
+  // Si el plan que estaba elegido se da de baja desde el modal, la selección
+  // deja de ser válida y se limpia.
+  function handlePlanesChange(next: PlanCuotasRow[]) {
+    setPlanes(next)
+    const sigueActivo = next.some(
+      (p) => p.activo && formaPagoDeCuotas(p.cuotas) === formaPago,
+    )
+    if (formaPago && formaPago !== 'efectivo' && !sigueActivo) setFormaPago('')
+  }
+
   return (
+    <>
     <form onSubmit={submit} className="space-y-4">
       <Field htmlFor="r-nombre" label="Nombre" required>
         <Input
@@ -234,19 +261,38 @@ export function NuevaReglaForm({
 
       {tipoRegla === 'recargo' && (
         <Field htmlFor="r-fp" label="Forma de pago" required hint="Solo aplica a recargos (RF-09)">
-          <select
-            id="r-fp"
-            value={formaPago}
-            onChange={(e) => setFormaPago(e.target.value as FormaPago | '')}
-            className="w-full"
-          >
-            <option value="">— Elegí forma de pago —</option>
-            {(['efectivo', 'cuotas_2', 'cuotas_3'] as FormaPago[]).map((fp) => (
-              <option key={fp} value={fp}>
-                {FORMA_PAGO_LABEL[fp]}
-              </option>
-            ))}
-          </select>
+          <div className="flex items-center gap-2">
+            <select
+              id="r-fp"
+              value={formaPago}
+              onChange={(e) => setFormaPago(e.target.value as FormaPago | '')}
+              className="w-full"
+            >
+              <option value="">— Elegí forma de pago —</option>
+              <option value="efectivo">Efectivo</option>
+              {planesActivos.map((p) => (
+                <option key={p.cuotas} value={formaPagoDeCuotas(p.cuotas)}>
+                  {p.cuotas} cuotas
+                </option>
+              ))}
+            </select>
+            {/* Sin plan de cuotas no hay recargo por cuotas que crear: el
+                acceso al alta vive acá para no perder el formulario. */}
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setCuotasOpen(true)}
+              className="shrink-0"
+            >
+              + Cuotas
+            </Button>
+          </div>
+          {planesActivos.length === 0 && (
+            <p className="mt-1 text-xs text-muted">
+              No hay planes de cuotas cargados — agregá uno con <b>+ Cuotas</b> para
+              poder cobrarle un recargo.
+            </p>
+          )}
         </Field>
       )}
 
@@ -332,7 +378,11 @@ export function NuevaReglaForm({
       </div>
 
       <div className="flex justify-end gap-2 pt-2">
-        <Button variant="secondary" onClick={() => router.back()} disabled={pending}>
+        <Button
+          variant="secondary"
+          onClick={() => (onCancel ? onCancel() : router.back())}
+          disabled={pending}
+        >
           Cancelar
         </Button>
         <Button type="submit" disabled={pending}>
@@ -340,5 +390,13 @@ export function NuevaReglaForm({
         </Button>
       </div>
     </form>
+
+    <PlanesCuotasModal
+      open={cuotasOpen}
+      onClose={() => setCuotasOpen(false)}
+      planes={planes}
+      onChange={handlePlanesChange}
+    />
+    </>
   )
 }

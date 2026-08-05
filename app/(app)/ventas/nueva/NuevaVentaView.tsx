@@ -23,10 +23,12 @@ import {
   normalizar,
 } from '@/lib/inventario/producto-match'
 import {
-  FORMA_PAGO_LABEL,
+  formaPagoDeCuotas,
+  formaPagoLabel,
   type DescuentoDisponible,
   type DesgloseVenta,
   type FormaPago,
+  type PlanCuotasRow,
 } from '@/lib/types/precios'
 import type { ProductoConDetalle } from '@/lib/types/inventario'
 import type {
@@ -103,6 +105,7 @@ export function NuevaVentaView({
   productos,
   reservasPorProducto,
   cuentas,
+  planesCuotas,
   precargaReserva,
 }: {
   clientes: ClienteOption[]
@@ -111,6 +114,8 @@ export function NuevaVentaView({
   /** Reservas activas que bloquean unidades, indexadas por id_producto. */
   reservasPorProducto: Record<string, ReservaDeProducto[]>
   cuentas: CuentaDestinoRow[]
+  /** Planes que el tenant configuró en Precios. Sólo los activos se ofrecen. */
+  planesCuotas: PlanCuotasRow[]
   precargaReserva: PrecargaReserva | null
 }) {
   const router = useRouter()
@@ -1231,7 +1236,7 @@ export function NuevaVentaView({
                   {totalRecargo > 0 && (
                     <tr>
                       <td colSpan={3} className="px-4 py-0.5 pb-2 text-right text-sm font-medium text-terracota">
-                        Recargo · {FORMA_PAGO_LABEL[formaPago]}
+                        Recargo · {formaPagoLabel(formaPago)}
                       </td>
                       <td className="px-4 py-0.5 pb-2 text-right font-mono text-sm font-semibold text-terracota">
                         +{money(totalRecargo)}
@@ -1283,15 +1288,17 @@ export function NuevaVentaView({
               className="w-full"
             >
               <option value="">— Sin cuotas —</option>
-              {(['cuotas_2', 'cuotas_3'] as FormaPago[]).map((fp) => (
-                <option key={fp} value={fp}>
-                  {FORMA_PAGO_LABEL[fp]}
-                </option>
-              ))}
+              {planesCuotas
+                .filter((p) => p.activo)
+                .map((p) => (
+                  <option key={p.cuotas} value={formaPagoDeCuotas(p.cuotas)}>
+                    {p.cuotas} cuotas
+                  </option>
+                ))}
             </select>
             {totalRecargo > 0 && (
               <p className="mt-1 text-xs text-terracota">
-                Recargo por {FORMA_PAGO_LABEL[formaPago]}: +{money(totalRecargo)} — ya
+                Recargo por {formaPagoLabel(formaPago)}: +{money(totalRecargo)} — ya
                 incluido en el total.
               </p>
             )}
@@ -1538,7 +1545,7 @@ export function NuevaVentaView({
           <div className="flex items-center justify-between rounded-md border border-border bg-card-2 px-3 py-2">
             <span className="text-sm text-muted">
               {lineas.length} ítem{lineas.length === 1 ? '' : 's'}
-              {formaPago !== 'efectivo' ? ` · ${FORMA_PAGO_LABEL[formaPago]}` : ''}
+              {formaPago !== 'efectivo' ? ` · ${formaPagoLabel(formaPago)}` : ''}
             </span>
             <span className="font-mono text-lg font-semibold text-text">{money(total)}</span>
           </div>

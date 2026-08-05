@@ -3,11 +3,15 @@ import { Topbar } from '@/components/shell/Topbar'
 import { Button } from '@/components/ui/Button'
 import { verifySession } from '@/lib/dal/session'
 import { listReglasPrecio } from '@/lib/dal/precios/regla'
+import { listPlanesCuotas } from '@/lib/dal/precios/cuotas'
 import { ReglasView } from './ReglasView'
 
 export default async function ReglasPage() {
   const session = await verifySession()
-  const rows = await listReglasPrecio({ incluirBaja: false })
+  const [rows, planesCuotas] = await Promise.all([
+    listReglasPrecio({ incluirBaja: false }),
+    listPlanesCuotas(),
+  ])
 
   return (
     <>
@@ -22,7 +26,7 @@ export default async function ReglasPage() {
         }
       />
       <main className="flex-1 p-6">
-        <ReglasView initial={rows} />
+        <ReglasView initial={rows} planesCuotas={planesCuotas} />
       </main>
     </>
   )

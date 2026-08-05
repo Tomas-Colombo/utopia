@@ -8,6 +8,7 @@ import {
 } from '@/lib/dal/reservas/reserva'
 import { listProductosConDetalle } from '@/lib/dal/inventario/producto'
 import { listCuentasDestino } from '@/lib/dal/ventas/cuenta-destino'
+import { listPlanesCuotas } from '@/lib/dal/precios/cuotas'
 import { NuevaVentaView, type PrecargaReserva } from './NuevaVentaView'
 
 export default async function NuevaVentaPage(props: {
@@ -17,14 +18,21 @@ export default async function NuevaVentaPage(props: {
   const searchParams = await props.searchParams
   const idReserva = searchParams.reserva ?? null
 
-  const [clientes, reservasActivas, productos, cuentas, reservasPorProducto] =
-    await Promise.all([
-      listClientes({ soloActivos: true }),
-      listReservas({ estado: 'activa' }),
-      listProductosConDetalle({ soloActivos: true }),
-      listCuentasDestino({ soloActivas: true }),
-      listReservasActivasPorProducto(),
-    ])
+  const [
+    clientes,
+    reservasActivas,
+    productos,
+    cuentas,
+    reservasPorProducto,
+    planesCuotas,
+  ] = await Promise.all([
+    listClientes({ soloActivos: true }),
+    listReservas({ estado: 'activa' }),
+    listProductosConDetalle({ soloActivos: true }),
+    listCuentasDestino({ soloActivas: true }),
+    listReservasActivasPorProducto(),
+    listPlanesCuotas({ soloActivos: true }),
+  ])
 
   // Acceso directo desde Reservas: la venta arranca con TODO lo que tenía la
   // reserva (ítems, cliente, observaciones). Sólo los QR viajan al cliente —
@@ -66,6 +74,7 @@ export default async function NuevaVentaPage(props: {
           productos={productos.filter((p) => p.stock_disponible > 0)}
           reservasPorProducto={reservasPorProducto}
           cuentas={cuentas}
+          planesCuotas={planesCuotas}
           precargaReserva={precarga}
         />
       </main>

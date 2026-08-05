@@ -8,12 +8,14 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useToast } from '@/components/ui/Toast'
 import {
   ALCANCE_LABEL,
-  FORMA_PAGO_LABEL,
   TIPO_REGLA_LABEL,
+  formaPagoLabel,
+  type PlanCuotasRow,
   type ReglaPrecioRow,
   type TipoRegla,
 } from '@/lib/types/precios'
 import { bajaReglaAction } from '../actions'
+import { PlanesCuotasModal } from '../PlanesCuotasModal'
 
 const TIPO_VARIANT: Record<TipoRegla, 'success' | 'info' | 'warning'> = {
   margen: 'info',
@@ -39,13 +41,21 @@ function ordenarPorPrioridad(
   })
 }
 
-export function ReglasView({ initial }: { initial: ReglaPrecioRow[] }) {
+export function ReglasView({
+  initial,
+  planesCuotas,
+}: {
+  initial: ReglaPrecioRow[]
+  planesCuotas: PlanCuotasRow[]
+}) {
   const router = useRouter()
   const toast = useToast()
   const [rows, setRows] = useState(initial)
   const [confirm, setConfirm] = useState<ReglaPrecioRow | null>(null)
   const [orden, setOrden] = useState<OrdenPrioridad>('desc')
   const [pending, start] = useTransition()
+  const [planes, setPlanes] = useState(planesCuotas)
+  const [cuotasOpen, setCuotasOpen] = useState(false)
 
   function ejecutarBaja() {
     if (!confirm) return
@@ -77,6 +87,27 @@ export function ReglasView({ initial }: { initial: ReglaPrecioRow[] }) {
 
   return (
     <div className="space-y-6">
+      {/* Los planes de cuotas son el paso previo a un recargo por cuotas, así
+          que su configuración vive donde se administran las reglas. */}
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-card px-4 py-3">
+        <p className="text-sm text-muted">
+          Planes de cuotas activos:{' '}
+          {planes.some((p) => p.activo) ? (
+            <b className="text-text">
+              {planes
+                .filter((p) => p.activo)
+                .map((p) => p.cuotas)
+                .join(' · ')}
+            </b>
+          ) : (
+            <span className="text-muted-2">ninguno</span>
+          )}
+        </p>
+        <Button variant="secondary" size="sm" onClick={() => setCuotasOpen(true)}>
+          Editar cuotas
+        </Button>
+      </div>
+
       {rows.length === 0 && (
         <div className="rounded-lg border border-dashed border-border bg-card p-10 text-center">
           <p className="font-display text-lg mb-2">Sin reglas configuradas</p>
@@ -150,7 +181,7 @@ export function ReglasView({ initial }: { initial: ReglaPrecioRow[] }) {
                       </td>
                       <td className="px-4 py-3">{ALCANCE_LABEL[r.alcance]}</td>
                       <td className="px-4 py-3">
-                        {r.forma_pago ? FORMA_PAGO_LABEL[r.forma_pago] : <span className="text-muted-2">—</span>}
+                        {r.forma_pago ? formaPagoLabel(r.forma_pago) : <span className="text-muted-2">—</span>}
                       </td>
                       <td className="px-4 py-3 text-right font-mono">{fmtValor(r)}</td>
                       <td className="px-4 py-3 text-right font-mono">{r.prioridad}</td>
@@ -187,6 +218,13 @@ export function ReglasView({ initial }: { initial: ReglaPrecioRow[] }) {
         cancelLabel="Cancelar"
         onConfirm={ejecutarBaja}
         onCancel={() => setConfirm(null)}
+      />
+
+      <PlanesCuotasModal
+        open={cuotasOpen}
+        onClose={() => setCuotasOpen(false)}
+        planes={planes}
+        onChange={setPlanes}
       />
     </div>
   )

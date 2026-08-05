@@ -6,12 +6,46 @@
 export type TipoRegla = 'margen' | 'descuento' | 'recargo'
 export type TipoValorRegla = 'porcentaje' | 'monto_fijo'
 export type AlcanceRegla = 'global' | 'categoria' | 'proveedor' | 'producto'
-export type FormaPago = 'efectivo' | 'cuotas_2' | 'cuotas_3'
+/**
+ * Cómo se PRECIÓ la venta. Las cuotas ya no son un set fijo: el enum de la DB
+ * (00052) cubre `cuotas_2`..`cuotas_24` y cada tenant elige cuáles ofrece en
+ * `plan_cuotas`. `transferencia` existe en el enum desde 00047.
+ */
+export type FormaPago = 'efectivo' | 'transferencia' | `cuotas_${number}`
 
-export const FORMA_PAGO_LABEL: Record<FormaPago, string> = {
-  efectivo: 'Efectivo',
-  cuotas_2: '2 cuotas',
-  cuotas_3: '3 cuotas',
+/** Rango que soporta el enum `forma_pago` en la DB (00052). */
+export const CUOTAS_MIN = 2
+export const CUOTAS_MAX = 24
+
+/** `'cuotas_6'` → 6. Cualquier otra forma de pago → null. */
+export function cuotasDeFormaPago(fp: string | null | undefined): number | null {
+  const m = /^cuotas_(\d+)$/.exec(fp ?? '')
+  return m ? Number(m[1]) : null
+}
+
+/** 6 → `'cuotas_6'`. El caller valida el rango contra CUOTAS_MIN/MAX. */
+export function formaPagoDeCuotas(cuotas: number): FormaPago {
+  return `cuotas_${cuotas}`
+}
+
+/**
+ * Etiqueta legible. Reemplaza al viejo `FORMA_PAGO_LABEL`: con las cuotas
+ * configurables ya no hay un Record cerrado que enumerarlas.
+ */
+export function formaPagoLabel(fp: string | null | undefined): string {
+  if (!fp) return '—'
+  if (fp === 'efectivo') return 'Efectivo'
+  if (fp === 'transferencia') return 'Transferencia'
+  const n = cuotasDeFormaPago(fp)
+  return n === null ? fp : `${n} cuotas`
+}
+
+/** Un plan de cuotas ofrecido por el tenant (`plan_cuotas`, 00052). */
+export interface PlanCuotasRow {
+  id_tenant: string
+  cuotas: number
+  activo: boolean
+  created_at: string
 }
 
 export const TIPO_REGLA_LABEL: Record<TipoRegla, string> = {

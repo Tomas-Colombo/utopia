@@ -10,14 +10,22 @@ import {
   spExtenderVigenciaRegla,
 } from '@/lib/dal/precios/regla'
 import {
+  listPlanesCuotas,
+  setPlanCuotasActivo,
+  upsertPlanCuotas,
+} from '@/lib/dal/precios/cuotas'
+import {
   spRecalcularBatch,
   spRecalcularPrecioVenta,
 } from '@/lib/dal/precios/resolucion'
-import type {
-  AlcanceRegla,
-  FormaPago,
-  TipoRegla,
-  TipoValorRegla,
+import {
+  CUOTAS_MAX,
+  CUOTAS_MIN,
+  type AlcanceRegla,
+  type FormaPago,
+  type PlanCuotasRow,
+  type TipoRegla,
+  type TipoValorRegla,
 } from '@/lib/types/precios'
 
 type ActionResult<T = unknown> = { ok: true; data?: T } | { ok: false; reason: string }
@@ -90,6 +98,52 @@ export async function extenderVigenciaReglaAction(input: {
     await spExtenderVigenciaRegla(input.idRegla, input.fechaHasta)
     revalidatePath('/precios/reglas')
     return { ok: true }
+  } catch (e) {
+    return { ok: false, reason: (e as Error).message }
+  }
+}
+
+// ─── Planes de cuotas ────────────────────────────────────────────────
+
+/**
+ * Las acciones de cuotas devuelven la lista completa ya refrescada: el modal
+ * se abre sobre pantallas que ya tenían los planes en props (nueva regla,
+ * nueva venta) y así se actualizan sin recargar la página.
+ */
+type PlanesResult = ActionResult<{ planes: PlanCuotasRow[] }>
+
+/** Las páginas que consumen planes activos en su desplegable. */
+function revalidarPlanes() {
+  revalidatePath('/precios/reglas')
+  revalidatePath('/precios/reglas/nueva')
+  revalidatePath('/ventas/nueva')
+}
+
+export async function crearPlanCuotasAction(cuotas: number): Promise<PlanesResult> {
+  const g = await guarded('crear')
+  if (!g.ok) return { ok: false, reason: g.error }
+  if (!Number.isInteger(cuotas) || cuotas < CUOTAS_MIN || cuotas > CUOTAS_MAX) {
+    return { ok: false, reason: `cuotas-fuera-de-rango (${CUOTAS_MIN}-${CUOTAS_MAX})` }
+  }
+  try {
+    await upsertPlanCuotas(g.tenantId, cuotas)
+    revalidarPlanes()
+    return { ok: true, data: { planes: await listPlanesCuotas() } }
+  } catch (e) {
+    return { ok: false, reason: (e as Error).message }
+  }
+}
+
+export async function setPlanCuotasActivoAction(
+  cuotas: number,
+  activo: boolean,
+): Promise<PlanesResult> {
+  const g = await guarded('editar')
+  if (!g.ok) return { ok: false, reason: g.error }
+  try {
+    await setPlanCuotasActivo(cuotas, activo)
+    revalidarPlanes()
+    return { ok: true, data: { planes: await listPlanesCuotas() } }
   } catch (e) {
     return { ok: false, reason: (e as Error).message }
   }

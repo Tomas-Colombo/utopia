@@ -4,14 +4,16 @@ import { verifySession } from '@/lib/dal/session'
 import { listCategoriasActivas } from '@/lib/dal/inventario/categoria'
 import { listProveedoresActivos } from '@/lib/dal/inventario/proveedor'
 import { listProductosConDetalle } from '@/lib/dal/inventario/producto'
+import { listPlanesCuotas } from '@/lib/dal/precios/cuotas'
 import { NuevaReglaForm } from './NuevaReglaForm'
 
 export default async function NuevaReglaPage() {
   const session = await verifySession()
-  const [categorias, proveedores, productos] = await Promise.all([
+  const [categorias, proveedores, productos, planesCuotas] = await Promise.all([
     listCategoriasActivas(),
     listProveedoresActivos(),
     listProductosConDetalle({ soloActivos: true }),
+    listPlanesCuotas(),
   ])
   return (
     <>
@@ -38,6 +40,7 @@ export default async function NuevaReglaPage() {
               nombre: p.nombre,
               sku: p.sku,
             }))}
+            planesCuotas={planesCuotas}
           />
         </div>
       </main>
