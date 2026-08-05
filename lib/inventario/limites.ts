@@ -38,6 +38,23 @@ export function unidadesInvalidas(cantidad: unknown, contexto: string): string |
   return null
 }
 
+/**
+ * Valida un monto (costo, precio). Devuelve el mensaje de error o `null`.
+ *
+ * El `typeof` no es paranoia: el payload lo arma el navegador, y un
+ * `"NaN"` string llega hasta `::numeric` en Postgres, donde `'NaN'::numeric`
+ * es un valor válido que además pasa cualquier `check (>= 0)` porque NaN se
+ * ordena como mayor que todo.
+ */
+export function montoInvalido(monto: unknown, contexto: string): string | null {
+  if (monto == null) return null
+  if (typeof monto !== 'number' || !Number.isFinite(monto)) {
+    return `costo inválido en "${contexto}"`
+  }
+  if (monto < 0) return `el costo en "${contexto}" no puede ser negativo`
+  return null
+}
+
 /** Mensaje único para cuando la operación completa se pasa del tope. */
 export function excedeOperacion(total: number): string {
   return `La carga suma ${total} unidades y el máximo por operación es ${MAX_UNIDADES_OPERACION}. Dividila en varias.`

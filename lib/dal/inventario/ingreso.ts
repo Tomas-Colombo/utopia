@@ -293,11 +293,25 @@ export async function spCancelarIngreso(input: {
   }
 }
 
-export async function removeIngresoDetalle(idDetalle: string): Promise<void> {
+/**
+ * Borra una línea del ingreso. `idIngreso` NO es decorativo: filtra por las dos
+ * claves para que un id_detalle de otro ingreso no se pueda borrar pasándolo
+ * por la action. La RLS acota al tenant, pero adentro del tenant no acota nada.
+ */
+export async function removeIngresoDetalle(
+  idDetalle: string,
+  idIngreso: string,
+): Promise<void> {
   const supabase = await createServerClient()
-  const { error } = await supabase
-    .from('ingreso_mercaderia_detalle').delete().eq('id_detalle', idDetalle)
+  const { error, count } = await supabase
+    .from('ingreso_mercaderia_detalle')
+    .delete({ count: 'exact' })
+    .eq('id_detalle', idDetalle)
+    .eq('id_ingreso', idIngreso)
   if (error) throw new Error(`removeIngresoDetalle: ${error.message}`)
+  // Sin filas borradas la línea no era de este ingreso (o no existe). Se
+  // reporta en vez de devolver ok con un no-op silencioso.
+  if ((count ?? 0) === 0) throw new Error('La línea no pertenece a este ingreso.')
 }
 
 /**

@@ -36,6 +36,7 @@ import {
   excedeOperacion,
   MAX_PDF_BYTES,
   MAX_UNIDADES_OPERACION,
+  montoInvalido,
   unidadesInvalidas,
 } from '@/lib/inventario/limites'
 import { extraerRemitoDesdePdf } from '@/lib/inventario/remito-pdf.server'
@@ -63,6 +64,12 @@ function mensajeDeError(e: unknown): string {
   const msg = (e as Error).message
   if (/producto_tenant_nombre_uk/i.test(msg)) {
     return 'Ya existe un producto con ese nombre.'
+  }
+  if (/ingreso-confirmado/i.test(msg)) {
+    return 'El ingreso ya fue confirmado y no se puede modificar. Recargá la página.'
+  }
+  if (/ingreso_detalle_costo_no_nan/i.test(msg)) {
+    return 'Hay un costo unitario inválido en el remito.'
   }
   return msg
 }
@@ -297,7 +304,6 @@ export async function createProductoAction(input: {
       }
     }
     revalidatePath('/inventario')
-    revalidatePath('/inventario')
     return { ok: true, data: { id, itemsCreados } }
   } catch (e) {
     return { ok: false, reason: mensajeDeError(e) }
@@ -392,32 +398,10 @@ export async function transicionItemAction(input: {
 
 // ─── Ingresos ────────────────────────────────────────────────────────
 
-export async function addIngresoDetalleAction(input: {
-  idIngreso: string
-  idProducto: string
-  cantidad: number
-  costoUnitario: number
-  talle?: string | null
-}): Promise<ActionResult<{ id: string }>> {
-  const g = await guarded('crear')
-  if ('error' in g) return { ok: false, reason: g.error }
-  const errCantidad = unidadesInvalidas(input.cantidad, 'la línea')
-  if (errCantidad) return { ok: false, reason: errCantidad }
-  try {
-    const id = await addIngresoDetalle({
-      tenantId: g.tenantId,
-      idIngreso: input.idIngreso,
-      idProducto: input.idProducto,
-      cantidad: input.cantidad,
-      costoUnitario: input.costoUnitario,
-      talle: input.talle ?? null,
-    })
-    revalidatePath(`/inventario/ingresos/${input.idIngreso}`)
-    return { ok: true, data: { id } }
-  } catch (e) {
-    return { ok: false, reason: (e as Error).message }
-  }
-}
+// `addIngresoDetalleAction` se eliminó: no la llamaba nadie. El alta manual de
+// una línea en IngresoDetalleView usa `importarRemitoAction`, que es la que
+// resuelve el vínculo producto-nuevo/existente. El DAL `addIngresoDetalle`
+// sigue vivo, lo usa `createProductoAction` para el stock inicial.
 
 export async function removeIngresoDetalleAction(input: {
   idIngreso: string
@@ -426,11 +410,11 @@ export async function removeIngresoDetalleAction(input: {
   const g = await guarded('editar')
   if ('error' in g) return { ok: false, reason: g.error }
   try {
-    await removeIngresoDetalle(input.idDetalle)
+    await removeIngresoDetalle(input.idDetalle, input.idIngreso)
     revalidatePath(`/inventario/ingresos/${input.idIngreso}`)
     return { ok: true }
   } catch (e) {
-    return { ok: false, reason: (e as Error).message }
+    return { ok: false, reason: mensajeDeError(e) }
   }
 }
 
@@ -564,6 +548,8 @@ function normalizarLineasRemito(
     if (!nombre) return { ok: false, reason: 'hay una línea sin nombre de producto' }
     const errCantidad = unidadesInvalidas(l.cantidad, nombre)
     if (errCantidad) return { ok: false, reason: errCantidad }
+    const errCosto = montoInvalido(l.costoUnitario, nombre)
+    if (errCosto) return { ok: false, reason: errCosto }
     if (l.esNuevo && !l.idCategoria) return { ok: false, reason: `falta categoría para "${nombre}"` }
     if (!l.esNuevo && !l.idProducto) return { ok: false, reason: `falta elegir producto para "${nombre}"` }
 
