@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useId, useRef, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react'
+import { useCallback, useId, useRef, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react'
+import { Portal } from './Portal'
 
 export interface ModalProps {
   open: boolean
@@ -35,12 +36,14 @@ export function Modal({ open, title, onClose, children, footer, size = 'md' }: M
   const titleId = `${baseId}-title`
   const dialogRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    if (!open) return
-    // Focus first focusable element inside the dialog (usually the first input).
-    const first = dialogRef.current?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR)
-    first?.focus()
-  }, [open])
+  // Focus the first focusable element inside the dialog (usually the first
+  // input). This is a callback ref rather than an `[open]` effect because the
+  // dialog renders through a client-only Portal and therefore attaches one
+  // commit after `open` flips — an effect would fire while the node is null.
+  const setDialogNode = useCallback((node: HTMLDivElement | null) => {
+    dialogRef.current = node
+    node?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR)?.focus()
+  }, [])
 
   function handleKeyDown(event: ReactKeyboardEvent<HTMLDivElement>) {
     if (event.key === 'Escape') {
@@ -71,37 +74,41 @@ export function Modal({ open, title, onClose, children, footer, size = 'md' }: M
   if (!open) return null
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-text/40 p-4"
-      onClick={onClose}
-    >
+    <Portal>
       <div
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        onClick={(e) => e.stopPropagation()}
-        onKeyDown={handleKeyDown}
-        className={`w-full ${SIZE_CLASS[size]} rounded-md border border-border bg-card shadow-lg`}
+        className="fixed inset-0 z-50 flex items-center justify-center bg-text/40 p-4"
+        onClick={onClose}
       >
-        <div className="flex items-center justify-between border-b border-border px-6 py-4">
-          <h2 id={titleId} className="font-display text-lg text-text">
-            {title}
-          </h2>
-          <button
-            type="button"
-            aria-label="Cerrar"
-            onClick={onClose}
-            className="rounded-md p-1 text-muted hover:bg-card-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
-          >
-            <span aria-hidden>×</span>
-          </button>
+        <div
+          ref={setDialogNode}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={titleId}
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={handleKeyDown}
+          // max-h + scroll is a last-resort guard: content slots cap their own
+          // height, but a short viewport must never clip the dialog chrome.
+          className={`flex max-h-[calc(100vh-2rem)] w-full flex-col overflow-y-auto ${SIZE_CLASS[size]} rounded-md border border-border bg-card shadow-lg`}
+        >
+          <div className="flex items-center justify-between border-b border-border px-6 py-4">
+            <h2 id={titleId} className="font-display text-lg text-text">
+              {title}
+            </h2>
+            <button
+              type="button"
+              aria-label="Cerrar"
+              onClick={onClose}
+              className="rounded-md p-1 text-muted hover:bg-card-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
+            >
+              <span aria-hidden>×</span>
+            </button>
+          </div>
+          <div className="px-6 py-5">{children}</div>
+          {footer && (
+            <div className="flex justify-end gap-3 border-t border-border px-6 py-4">{footer}</div>
+          )}
         </div>
-        <div className="px-6 py-5">{children}</div>
-        {footer && (
-          <div className="flex justify-end gap-3 border-t border-border px-6 py-4">{footer}</div>
-        )}
       </div>
-    </div>
+    </Portal>
   )
 }

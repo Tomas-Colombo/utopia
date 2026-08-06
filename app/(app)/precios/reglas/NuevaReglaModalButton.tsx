@@ -23,7 +23,6 @@ export function NuevaReglaModalButton({
   productos: Ref[]
   planesCuotas: PlanCuotasRow[]
 }) {
-  const router = useRouter()
   const [open, setOpen] = useState(false)
 
   return (

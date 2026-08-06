@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useId, useRef, type KeyboardEvent as ReactKeyboardEvent } from 'react'
+import { useCallback, useId, useRef, type KeyboardEvent as ReactKeyboardEvent } from 'react'
+import { Portal } from './Portal'
 
 export interface ConfirmDialogProps {
   open: boolean
@@ -37,14 +38,14 @@ export function ConfirmDialog({
   const baseId = useId()
   const titleId = `${baseId}-title`
   const dialogRef = useRef<HTMLDivElement>(null)
-  const confirmButtonRef = useRef<HTMLButtonElement>(null)
 
   // Initial focus lands on the confirm button every time the dialog opens.
-  useEffect(() => {
-    if (open) {
-      confirmButtonRef.current?.focus()
-    }
-  }, [open])
+  // This is a callback ref rather than an `[open]` effect because the dialog
+  // renders through a client-only Portal and therefore attaches one commit
+  // after `open` flips — an effect would fire while the node is still null.
+  const focusOnAttach = useCallback((node: HTMLButtonElement | null) => {
+    node?.focus()
+  }, [])
 
   function getFocusableElements(): HTMLElement[] {
     if (!dialogRef.current) return []
@@ -83,48 +84,50 @@ export function ConfirmDialog({
   if (!open) return null
 
   return (
-    <div
-      data-testid="confirm-dialog-backdrop"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-text/40"
-      onClick={onCancel}
-    >
+    <Portal>
       <div
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        onClick={(event) => event.stopPropagation()}
-        onKeyDown={handleKeyDown}
-        className="w-full max-w-md rounded-md border border-border bg-card p-6 shadow-lg"
+        data-testid="confirm-dialog-backdrop"
+        className="fixed inset-0 z-50 flex items-center justify-center bg-text/40 p-4"
+        onClick={onCancel}
       >
-        <h2 id={titleId} className="font-display text-lg text-text">
-          {title}
-        </h2>
-        {description && <p className="mt-2 text-sm text-muted">{description}</p>}
-        <div className="mt-6 flex justify-end gap-3">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="rounded-md border border-border px-4 py-2 text-sm text-text"
-          >
-            {cancelLabel}
-          </button>
-          {/* text-sidebar (fixed near-black in both themes) — text-text/text-bg
-              flip to a LIGHT color in dark theme and fail AA against these
-              light accent backgrounds (verified via WCAG contrast math). */}
-          <button
-            ref={confirmButtonRef}
-            type="button"
-            data-variant={variant}
-            onClick={onConfirm}
-            className={`rounded-md px-4 py-2 text-sm font-semibold text-sidebar ${
-              variant === 'danger' ? 'bg-alerta-ink' : 'bg-accent-pink'
-            }`}
-          >
-            {confirmLabel}
-          </button>
+        <div
+          ref={dialogRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={titleId}
+          onClick={(event) => event.stopPropagation()}
+          onKeyDown={handleKeyDown}
+          className="w-full max-w-md rounded-md border border-border bg-card p-6 shadow-lg"
+        >
+          <h2 id={titleId} className="font-display text-lg text-text">
+            {title}
+          </h2>
+          {description && <p className="mt-2 text-sm text-muted">{description}</p>}
+          <div className="mt-6 flex justify-end gap-3">
+            <button
+              type="button"
+              onClick={onCancel}
+              className="rounded-md border border-border px-4 py-2 text-sm text-text"
+            >
+              {cancelLabel}
+            </button>
+            {/* text-sidebar (fixed near-black in both themes) — text-text/text-bg
+                flip to a LIGHT color in dark theme and fail AA against these
+                light accent backgrounds (verified via WCAG contrast math). */}
+            <button
+              ref={focusOnAttach}
+              type="button"
+              data-variant={variant}
+              onClick={onConfirm}
+              className={`rounded-md px-4 py-2 text-sm font-semibold text-sidebar ${
+                variant === 'danger' ? 'bg-alerta-ink' : 'bg-accent-pink'
+              }`}
+            >
+              {confirmLabel}
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </Portal>
   )
 }
