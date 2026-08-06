@@ -1,16 +1,21 @@
-import Link from 'next/link'
 import { Topbar } from '@/components/shell/Topbar'
-import { Button } from '@/components/ui/Button'
 import { verifySession } from '@/lib/dal/session'
 import { listReglasPrecio } from '@/lib/dal/precios/regla'
 import { listPlanesCuotas } from '@/lib/dal/precios/cuotas'
+import { listCategoriasActivas } from '@/lib/dal/inventario/categoria'
+import { listProveedoresActivos } from '@/lib/dal/inventario/proveedor'
+import { listProductosConDetalle } from '@/lib/dal/inventario/producto'
 import { ReglasView } from './ReglasView'
+import { NuevaReglaModalButton } from './NuevaReglaModalButton'
 
 export default async function ReglasPage() {
   const session = await verifySession()
-  const [rows, planesCuotas] = await Promise.all([
+  const [rows, planesCuotas, categorias, proveedores, productos] = await Promise.all([
     listReglasPrecio({ incluirBaja: false }),
     listPlanesCuotas(),
+    listCategoriasActivas(),
+    listProveedoresActivos(),
+    listProductosConDetalle({ soloActivos: true }),
   ])
 
   return (
@@ -20,9 +25,16 @@ export default async function ReglasPage() {
         session={session}
         backHref="/precios"
         actions={
-          <Link href="/precios/reglas/nueva">
-            <Button size="sm">Nueva regla</Button>
-          </Link>
+          <NuevaReglaModalButton
+            categorias={categorias.map((c) => ({ id: c.id_categoria, nombre: c.nombre }))}
+            proveedores={proveedores.map((p) => ({ id: p.id_proveedor, nombre: p.nombre }))}
+            productos={productos.map((p) => ({
+              id: p.id_producto,
+              nombre: p.nombre,
+              sku: p.sku,
+            }))}
+            planesCuotas={planesCuotas}
+          />
         }
       />
       <main className="flex-1 p-6">
