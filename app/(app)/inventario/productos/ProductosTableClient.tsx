@@ -102,7 +102,7 @@ export function ProductosTableClient({
       render: (r) =>
         r.costo_vigente != null ? (
           <span className="font-mono">
-            {r.moneda_vigente ?? '$'} {r.costo_vigente.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+            {r.moneda_vigente ?? '$'} {r.costo_vigente.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
           </span>
         ) : (
           <span className="text-muted-2">—</span>

@@ -86,7 +86,7 @@ export default async function ReservaDetallePage(props: {
                   </td>
                   <td className="px-4 py-3 font-mono text-xs">{l.item?.qr_code ?? '—'}</td>
                   <td className="px-4 py-3 text-right font-mono">
-                    $ {Number(l.precio_snapshot).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                    $ {Number(l.precio_snapshot).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                   </td>
                   <td className="px-4 py-3 capitalize text-xs">{l.item?.estado_item ?? '—'}</td>
                   <td className="px-4 py-3">

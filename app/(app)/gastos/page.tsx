@@ -69,7 +69,7 @@ export default async function GastosPage({
         <section className="grid grid-cols-2 gap-4 md:grid-cols-4">
           <Kpi
             label="Gastado este mes"
-            value={`$ ${totalMes.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`}
+            value={`$ ${totalMes.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`}
           />
           <Kpi
             label="Categorías excedidas"

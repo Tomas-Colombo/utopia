@@ -3,11 +3,14 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Field } from '@/components/ui/Field'
 import { Input } from '@/components/ui/Input'
 import { Pagination } from '@/components/ui/Pagination'
+import { useToast } from '@/components/ui/Toast'
 import type { GastoConCategoria } from '@/lib/types/rendiciones'
 import type { GastosOrden } from '@/lib/dal/gastos/gasto'
+import { eliminarGastoAction } from '../rendiciones/actions'
 
 interface CatOpt { id: string; nombre: string }
 
@@ -38,11 +41,14 @@ export function GastosTableClient({
   total: number
 }) {
   const router = useRouter()
+  const toast = useToast()
   const [pending, startTransition] = useTransition()
   const [desde, setDesde] = useState(initialDesde)
   const [hasta, setHasta] = useState(initialHasta)
   const [cat, setCat] = useState(initialCategoria)
   const [orden, setOrden] = useState<GastosOrden>(initialOrden)
+  const [aEliminar, setAEliminar] = useState<GastoConCategoria | null>(null)
+  const [eliminando, startEliminar] = useTransition()
 
   const invertido = desde && hasta && desde > hasta
 
@@ -82,6 +88,18 @@ export function GastosTableClient({
 
   function goToPage(nextPage: number) {
     navigate(buildParams(nextPage))
+  }
+
+  function confirmarEliminar() {
+    const gasto = aEliminar
+    if (!gasto) return
+    startEliminar(async () => {
+      const res = await eliminarGastoAction({ idGasto: gasto.id_gasto })
+      setAEliminar(null)
+      if (!res.ok) return toast.error('No se pudo eliminar el gasto', res.reason)
+      toast.success('Gasto eliminado')
+      router.refresh()
+    })
   }
 
   return (
@@ -186,6 +204,9 @@ export function GastosTableClient({
                 <th className="px-4 py-3">Descripción</th>
                 <th className="px-4 py-3">Comprobante</th>
                 <th className="px-4 py-3 text-right">Monto</th>
+                <th className="px-4 py-3 text-right">
+                  <span className="sr-only">Acciones</span>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -195,12 +216,23 @@ export function GastosTableClient({
                     {new Date(g.fecha).toLocaleDateString('es-AR')}
                   </td>
                   <td className="px-4 py-3">{g.categoria?.nombre ?? '—'}</td>
-                  <td className="px-4 py-3">{g.descripcion}</td>
+                  <td className="px-4 py-3">{g.descripcion || '—'}</td>
                   <td className="px-4 py-3 font-mono text-xs text-muted">
                     {g.comprobante_ref ?? '—'}
                   </td>
                   <td className="px-4 py-3 text-right font-mono font-semibold">
-                    $ {Number(g.monto).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                    $ {Number(g.monto).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setAEliminar(g)}
+                      disabled={eliminando}
+                      aria-label={`Eliminar gasto del ${new Date(g.fecha).toLocaleDateString('es-AR')}`}
+                    >
+                      Eliminar
+                    </Button>
                   </td>
                 </tr>
               ))}
@@ -215,6 +247,21 @@ export function GastosTableClient({
         total={total}
         onPageChange={goToPage}
         disabled={pending}
+      />
+
+      <ConfirmDialog
+        open={aEliminar !== null}
+        variant="danger"
+        title="Eliminar gasto"
+        description={
+          aEliminar
+            ? `Se borra definitivamente el gasto de $ ${Number(aEliminar.monto).toLocaleString('es-AR', { maximumFractionDigits: 0 })} en "${aEliminar.categoria?.nombre ?? 'sin categoría'}" del ${new Date(aEliminar.fecha).toLocaleDateString('es-AR')}. El total gastado del mes, el presupuesto de la categoría y los reportes se recalculan sin él. No se puede deshacer: usalo sólo si el gasto se cargó mal.`
+            : undefined
+        }
+        confirmLabel={eliminando ? 'Eliminando…' : 'Eliminar'}
+        cancelLabel="Cancelar"
+        onConfirm={confirmarEliminar}
+        onCancel={() => setAEliminar(null)}
       />
     </div>
   )

@@ -103,7 +103,7 @@ export function ControlDePreciosView({
   }
 
   const fmt = (n: number | null) =>
-    n == null ? '—' : `$ ${n.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`
+    n == null ? '—' : `$ ${n.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`
 
   return (
     <div className="space-y-4">

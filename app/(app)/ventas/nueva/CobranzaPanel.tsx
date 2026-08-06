@@ -221,8 +221,7 @@ export function CobranzaPanel({
               <div className="flex items-center gap-2">
                 <label className="text-xs text-muted w-16 shrink-0">Monto</label>
                 <NumberInput
-                  min={0}
-                  step={0.01}
+                  thousands
                   value={p.monto}
                   // Con un solo pago el monto ES el total; editarlo no tiene
                   // sentido y sólo genera estados inconsistentes.
@@ -251,9 +250,9 @@ export function CobranzaPanel({
                   </label>
                   {/* Opcional: si el vendedor no lo carga, la venta se registra
                       igual y el pago queda sin vuelto. */}
-                  <Input
+                  <NumberInput
                     id={`recibido-${p.key}`}
-                    inputMode="decimal"
+                    thousands
                     value={p.recibido}
                     onChange={(e) => actualizar(p.key, { recibido: e.target.value })}
                     disabled={disabled}
@@ -311,5 +310,5 @@ function redondear(n: number): number {
 }
 
 function money(n: number): string {
-  return `$ ${n.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`
+  return `$ ${n.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`
 }

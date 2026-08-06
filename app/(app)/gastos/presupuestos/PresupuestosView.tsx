@@ -201,8 +201,7 @@ export function PresupuestosView({ initial }: { initial: Cat[] }) {
                   <td className="px-4 py-3">
                     <NumberInput
                       aria-label={`Presupuesto ${c.nombre}`}
-                      min={0}
-                      step="0.01"
+                      thousands
                       value={values[c.id] ?? ''}
                       onChange={(e) =>
                         setValues((v) => ({ ...v, [c.id]: e.target.value }))

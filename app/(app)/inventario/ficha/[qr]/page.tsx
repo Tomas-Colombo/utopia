@@ -97,7 +97,7 @@ export default async function FichaItemPage(props: {
                 <div>
                   <div className="text-xs uppercase font-mono text-muted">Costo ingreso</div>
                   <div className="font-mono">
-                    $ {Number(detalle.costo_ingreso).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                    $ {Number(detalle.costo_ingreso).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                   </div>
                 </div>
                 <div>

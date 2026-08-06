@@ -367,7 +367,7 @@ export default async function ProveedorPerfilPage(props: {
 }
 
 function fmtMoney(n: number): string {
-  return `$ ${Number(n).toLocaleString('es-AR', { minimumFractionDigits: 2 })}`
+  return `$ ${Number(n).toLocaleString('es-AR', { maximumFractionDigits: 0 })}`
 }
 
 function Dato({ label, children }: { label: string; children: React.ReactNode }) {

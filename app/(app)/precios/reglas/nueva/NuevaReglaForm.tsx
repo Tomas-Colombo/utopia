@@ -327,8 +327,7 @@ export function NuevaReglaForm({
           <Field htmlFor="r-vm" label="Monto (ARS)" required>
             <NumberInput
               id="r-vm"
-              min={0}
-              step="0.01"
+              thousands
               value={valorMonto}
               onChange={(e) => setValorMonto(e.target.value)}
             />

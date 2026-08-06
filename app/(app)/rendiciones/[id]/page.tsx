@@ -56,7 +56,7 @@ export default async function RendicionDetallePage(props: {
           <div>
             <div className="text-xs uppercase font-mono text-muted">Total</div>
             <div className="mt-1 font-mono font-semibold text-lg">
-              $ {total.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+              $ {total.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
             </div>
             <div className="text-xs text-muted">{rendicion.cantidad_lineas} líneas</div>
           </div>
@@ -104,10 +104,10 @@ export default async function RendicionDetallePage(props: {
                     {l.cliente_nombre ?? <span className="text-muted-2">Mostrador</span>}
                   </td>
                   <td className="px-4 py-3 text-right font-mono text-muted">
-                    $ {Number(l.precio_venta).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                    $ {Number(l.precio_venta).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                   </td>
                   <td className="px-4 py-3 text-right font-mono">
-                    $ {Number(l.monto_proveedor).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                    $ {Number(l.monto_proveedor).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                   </td>
                 </tr>
               ))}
@@ -116,7 +116,7 @@ export default async function RendicionDetallePage(props: {
               <tr className="border-t border-border bg-card-2">
                 <td colSpan={5} className="px-4 py-3 font-semibold">Total</td>
                 <td className="px-4 py-3 text-right font-mono font-semibold">
-                  $ {total.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                  $ {total.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                 </td>
               </tr>
             </tfoot>

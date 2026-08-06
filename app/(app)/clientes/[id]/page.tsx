@@ -51,7 +51,7 @@ export default async function ClienteDetallePage(props: {
           <Kpi label="Compras" value={ventas.length.toString()} />
           <Kpi
             label="Total facturado"
-            value={`$ ${totalComprado.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`}
+            value={`$ ${totalComprado.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`}
           />
           <Kpi label="Reservas" value={reservas.length.toString()} />
           <Kpi
@@ -99,7 +99,7 @@ export default async function ClienteDetallePage(props: {
                     <td className="px-4 py-3">{new Date(v.fecha).toLocaleString('es-AR')}</td>
                     <td className="px-4 py-3 capitalize">{v.forma_pago.replace('_', ' ')}</td>
                     <td className="px-4 py-3 text-right font-mono">
-                      $ {Number(v.total).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                      $ {Number(v.total).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                     </td>
                     <td className="px-4 py-3">
                       {v.estado_venta === 'anulada' ? (

@@ -70,7 +70,8 @@ export interface GastoNegocioRow {
   id_usuario_alta: string | null
   fecha: string
   monto: number
-  descripcion: string
+  /** Opcional: un gasto puede quedar identificado sólo por categoría + monto. */
+  descripcion: string | null
   comprobante_ref: string | null
   created_at: string
   updated_at: string

@@ -42,7 +42,7 @@ export default async function RendicionesPage() {
           />
           <Kpi
             label="Monto adeudado"
-            value={`$ ${totalPendiente.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`}
+            value={`$ ${totalPendiente.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`}
             variant={totalPendiente > 0 ? 'alert' : 'default'}
           />
           <Kpi label="Pagadas" value={(rows.length - pendientes.length).toString()} />
@@ -93,7 +93,7 @@ export default async function RendicionesPage() {
                     </td>
                     <td className="px-4 py-3 text-right font-mono">{r.cantidad_lineas}</td>
                     <td className="px-4 py-3 text-right font-mono font-semibold">
-                      $ {Number(r.monto_total).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                      $ {Number(r.monto_total).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                     </td>
                     <td className="px-4 py-3">
                       <Badge variant={VARIANT[r.estado]}>{ESTADO_RENDICION_LABEL[r.estado]}</Badge>

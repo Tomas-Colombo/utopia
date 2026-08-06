@@ -56,17 +56,17 @@ export function PresupuestosMesTable({ rows }: { rows: CategoriaGastoStatus[] })
                 <td className="px-4 py-3 font-medium">{p.nombre}</td>
                 <td className="px-4 py-3 text-right font-mono">
                   {p.presupuesto_mensual != null
-                    ? `$ ${p.presupuesto_mensual.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`
+                    ? `$ ${p.presupuesto_mensual.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`
                     : <span className="text-muted-2">—</span>}
                 </td>
                 <td className="px-4 py-3 text-right font-mono">
-                  $ {p.gastado_mes.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                  $ {p.gastado_mes.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                 </td>
                 <td className="px-4 py-3 text-right font-mono">
                   {p.restante != null
                     ? (p.restante < 0
-                        ? <span className="text-alerta-ink">-$ {Math.abs(p.restante).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
-                        : `$ ${p.restante.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`)
+                        ? <span className="text-alerta-ink">-$ {Math.abs(p.restante).toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
+                        : `$ ${p.restante.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`)
                     : <span className="text-muted-2">—</span>}
                 </td>
                 <td className="px-4 py-3 w-40">

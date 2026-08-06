@@ -81,7 +81,7 @@ export function GananciaProyectadaClient({
   }
 
   const fmtMoney = (n: number | null) =>
-    n == null ? '—' : `$ ${n.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`
+    n == null ? '—' : `$ ${n.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`
 
   const columns: Column<GananciaPorProductoRow>[] = [
     {

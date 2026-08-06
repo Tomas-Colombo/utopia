@@ -74,7 +74,7 @@ export function ReglasView({
     if (r.tipo_valor === 'porcentaje') {
       return `${(r.valor * 100).toFixed(2)}%`
     }
-    return `$ ${Number(r.valor).toLocaleString('es-AR', { minimumFractionDigits: 2 })}`
+    return `$ ${Number(r.valor).toLocaleString('es-AR', { maximumFractionDigits: 0 })}`
   }
 
   function fmtVigencia(r: ReglaPrecioRow): string {

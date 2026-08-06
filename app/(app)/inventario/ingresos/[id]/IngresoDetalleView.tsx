@@ -218,10 +218,10 @@ export function IngresoDetalleView({
                   <td className="px-4 py-3">{d.talle ?? <span className="text-muted-2">—</span>}</td>
                   <td className="px-4 py-3 text-right font-mono">{d.cantidad}</td>
                   <td className="px-4 py-3 text-right font-mono">
-                    $ {Number(d.costo_unitario).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                    $ {Number(d.costo_unitario).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                   </td>
                   <td className="px-4 py-3 text-right font-mono">
-                    $ {(d.cantidad * d.costo_unitario).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                    $ {(d.cantidad * d.costo_unitario).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                   </td>
                   {!readonly && (
                     <td className="px-4 py-3 text-right">
@@ -240,7 +240,7 @@ export function IngresoDetalleView({
               <td className="px-4 py-3 text-right font-mono font-semibold">{totalCantidad}</td>
               <td className="px-4 py-3"></td>
               <td className="px-4 py-3 text-right font-mono font-semibold">
-                $ {totalCosto.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                $ {totalCosto.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
               </td>
               {!readonly && <td></td>}
             </tr>
@@ -362,8 +362,7 @@ export function IngresoDetalleView({
             <Field htmlFor="l-costo" label="Costo unitario">
               <NumberInput
                 id="l-costo"
-                min={0}
-                step="0.01"
+                thousands
                 value={costoUnitario}
                 onChange={(e) => setCostoUnitario(e.target.value)}
               />

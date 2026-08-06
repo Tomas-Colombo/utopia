@@ -274,7 +274,7 @@ export function ConsignacionDetalleView({
                   <td className="px-4 py-3 font-mono text-xs">{d.item?.qr_code ?? '—'}</td>
                   <td className="px-4 py-3 text-right font-mono">
                     {d.item?.costo_ingreso != null
-                      ? `$ ${Number(d.item.costo_ingreso).toLocaleString('es-AR', { minimumFractionDigits: 2 })}`
+                      ? `$ ${Number(d.item.costo_ingreso).toLocaleString('es-AR', { maximumFractionDigits: 0 })}`
                       : '—'}
                   </td>
                   <td className="px-4 py-3 text-xs">{d.motivo ?? <span className="text-muted-2">—</span>}</td>

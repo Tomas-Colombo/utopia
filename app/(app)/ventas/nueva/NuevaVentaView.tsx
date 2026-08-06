@@ -914,7 +914,7 @@ export function NuevaVentaView({
         }),
       })
       if (!res.ok) return toast.error('No se pudo registrar la venta', traducirReason(res.reason))
-      toast.success('Venta registrada', `Total $ ${total.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`)
+      toast.success('Venta registrada', `Total $ ${total.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`)
       router.push(`/ventas/${res.data!.id}`)
       router.refresh()
     })
@@ -1181,7 +1181,7 @@ export function NuevaVentaView({
                       />
                     </td>
                     <td className="px-4 py-3 text-right font-mono font-semibold">
-                      $ {g.subtotal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                      $ {g.subtotal.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                     </td>
                     <td className="px-4 py-3 text-right">
                       <Button
@@ -1655,7 +1655,7 @@ function CantidadGrupo({
 
 /** $ con 2 decimales, formato es-AR. */
 function money(n: number): string {
-  return `$ ${n.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`
+  return `$ ${n.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`
 }
 
 /** Etiqueta corta del valor de un descuento: "15%" o "$ 500,00". */

@@ -432,7 +432,7 @@ export function NuevaReservaView({
                     <td className="px-4 py-3 font-mono text-xs">{l.qr_code}</td>
                     <td className="px-4 py-3 text-right font-mono">
                       {l.precio_final != null
-                        ? `$ ${l.precio_final.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`
+                        ? `$ ${l.precio_final.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`
                         : '—'}
                     </td>
                     <td className="px-4 py-3 text-right">

@@ -41,14 +41,13 @@ export function NuevoGastoForm({ categorias }: { categorias: Cat[] }) {
     e.preventDefault()
     const m = Number(monto || 0)
     if (m <= 0) return setErr('Monto inválido')
-    if (descripcion.trim().length < 2) return setErr('Descripción muy corta')
     if (!idCat) return setErr('Elegí una categoría')
     setErr(null)
     start(async () => {
       const res = await registrarGastoAction({
         idCategoriaGasto: idCat,
         monto: m,
-        descripcion,
+        descripcion: descripcion.trim() || null,
         fecha: fecha ? new Date(fecha).toISOString() : null,
         comprobanteRef: comprobante || null,
       })
@@ -80,8 +79,7 @@ export function NuevoGastoForm({ categorias }: { categorias: Cat[] }) {
           <Field htmlFor="g-monto" label="Monto" required>
             <NumberInput
               id="g-monto"
-              min={0}
-              step="0.01"
+              thousands
               value={monto}
               onChange={(e) => setMonto(e.target.value)}
               autoFocus
@@ -97,7 +95,7 @@ export function NuevoGastoForm({ categorias }: { categorias: Cat[] }) {
           </Field>
         </div>
 
-        <Field htmlFor="g-desc" label="Descripción" required>
+        <Field htmlFor="g-desc" label="Descripción" hint="Opcional">
           <Textarea
             id="g-desc"
             rows={3}

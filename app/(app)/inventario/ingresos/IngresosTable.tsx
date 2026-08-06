@@ -115,7 +115,7 @@ export function IngresosTable({
                 <td className="px-4 py-3 text-right font-mono">{r.total_lineas}</td>
                 <td className="px-4 py-3 text-right font-mono">{r.total_cantidad}</td>
                 <td className="px-4 py-3 text-right font-mono">
-                  $ {r.total_costo.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                  $ {r.total_costo.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                 </td>
                 <td className="px-4 py-3">
                   {cancelado ? (

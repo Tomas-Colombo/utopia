@@ -190,5 +190,5 @@ export function PerfilProveedoresTable({ rows }: { rows: PerfilProveedorRow[] })
 }
 
 function fmtMoney(n: number): string {
-  return `$ ${n.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`
+  return `$ ${n.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`
 }

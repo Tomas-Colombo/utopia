@@ -15,6 +15,7 @@ import {
   createCategoriaGasto,
   reactivarCategoriaGasto,
   renameCategoriaGasto,
+  spEliminarGasto,
   spRegistrarGasto,
   spSetPresupuesto,
 } from '@/lib/dal/gastos/gasto'
@@ -109,25 +110,44 @@ export async function marcarRendicionPagadaAction(input: {
 export async function registrarGastoAction(input: {
   idCategoriaGasto: string
   monto: number
-  descripcion: string
+  /** Opcional: vacío se guarda como null. */
+  descripcion?: string | null
   fecha?: string | null
   comprobanteRef?: string | null
 }): Promise<ActionResult<{ id: string }>> {
   const g = await guarded('crear')
   if (!g.ok) return { ok: false, reason: g.error }
-  if (!input.descripcion?.trim()) return { ok: false, reason: 'descripcion-requerida' }
   if (!input.monto || input.monto <= 0) return { ok: false, reason: 'monto-invalido' }
   try {
     const id = await spRegistrarGasto({
       idCategoriaGasto: input.idCategoriaGasto,
       monto: input.monto,
-      descripcion: input.descripcion.trim(),
+      descripcion: input.descripcion?.trim() || null,
       fecha: input.fecha ?? null,
       comprobanteRef: input.comprobanteRef?.trim() || null,
     })
     revalidatePath('/gastos')
     revalidatePath('/gastos/presupuestos')
     return { ok: true, data: { id } }
+  } catch (e) {
+    return { ok: false, reason: (e as Error).message }
+  }
+}
+
+/**
+ * Borrado físico de un gasto mal cargado. Va con permiso 'editar' (mismo
+ * criterio que `bajaCategoriaGastoAction`, que también borra en duro).
+ */
+export async function eliminarGastoAction(input: {
+  idGasto: string
+}): Promise<ActionResult> {
+  const g = await guarded('editar')
+  if (!g.ok) return { ok: false, reason: g.error }
+  try {
+    await spEliminarGasto(input.idGasto)
+    revalidatePath('/gastos')
+    revalidatePath('/gastos/presupuestos')
+    return { ok: true }
   } catch (e) {
     return { ok: false, reason: (e as Error).message }
   }

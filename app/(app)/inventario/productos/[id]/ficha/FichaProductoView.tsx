@@ -199,9 +199,7 @@ export function FichaProductoView({
           label="Costo vigente"
           value={
             costoVigente != null
-              ? `${monedaVigente ?? '$'} ${costoVigente.toLocaleString('es-AR', {
-                  minimumFractionDigits: 2,
-                })}`
+              ? `${monedaVigente ?? '$'} ${costoVigente.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`
               : '—'
           }
         />
@@ -217,7 +215,7 @@ export function FichaProductoView({
             label="Precio de venta"
             value={
               producto.precio_venta != null
-                ? `$ ${producto.precio_venta.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`
+                ? `$ ${producto.precio_venta.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`
                 : '—'
             }
             hint={

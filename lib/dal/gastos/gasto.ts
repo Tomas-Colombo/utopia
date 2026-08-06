@@ -230,7 +230,7 @@ export async function listPresupuestoMes(): Promise<CategoriaGastoStatus[]> {
 export async function spRegistrarGasto(input: {
   idCategoriaGasto: string
   monto: number
-  descripcion: string
+  descripcion?: string | null
   fecha?: string | null
   comprobanteRef?: string | null
 }): Promise<string> {
@@ -238,12 +238,25 @@ export async function spRegistrarGasto(input: {
   const { data, error } = await supabase.rpc('sp_registrar_gasto', {
     p_id_categoria_gasto: input.idCategoriaGasto,
     p_monto: input.monto,
-    p_descripcion: input.descripcion,
+    p_descripcion: input.descripcion ?? null,
     p_fecha: input.fecha ?? null,
     p_comprobante_ref: input.comprobanteRef ?? null,
   })
   if (error) throw new Error(`sp_registrar_gasto: ${error.message}`)
   return data as string
+}
+
+/**
+ * Borrado FÍSICO de un gasto (carga equivocada). No hay soft-delete porque
+ * un gasto anulado seguiría apareciendo en el histórico sin aportar nada;
+ * `sp_eliminar_gasto` audita la fila completa antes de borrarla.
+ */
+export async function spEliminarGasto(idGasto: string): Promise<void> {
+  const supabase = await createServerClient()
+  const { error } = await supabase.rpc('sp_eliminar_gasto', {
+    p_id_gasto: idGasto,
+  })
+  if (error) throw new Error(`sp_eliminar_gasto: ${error.message}`)
 }
 
 export async function spSetPresupuesto(input: {

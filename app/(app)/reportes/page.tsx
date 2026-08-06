@@ -153,6 +153,6 @@ export default async function ReportesPage(props: {
 }
 
 function fmtMoney(n: number): string {
-  return `$ ${n.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`
+  return `$ ${n.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`
 }
 

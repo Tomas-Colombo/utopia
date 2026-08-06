@@ -95,7 +95,7 @@ export default async function VentasHome(props: {
           <Kpi label="Ventas del período" value={resumen.registradas.toString()} />
           <Kpi
             label="Facturado en el período"
-            value={`$ ${resumen.facturado.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`}
+            value={`$ ${resumen.facturado.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`}
           />
           <Kpi label="Reservas activas" value={reservasActivas.length.toString()} />
           <Kpi
@@ -187,7 +187,7 @@ export default async function VentasHome(props: {
                       <td className="px-4 py-3 capitalize">{v.forma_pago.replace('_', ' ')}</td>
                       <td className="px-4 py-3 text-right font-mono">{v.lineas_count}</td>
                       <td className="px-4 py-3 text-right font-mono">
-                        $ {Number(v.total).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                        $ {Number(v.total).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                       </td>
                       <td className="px-4 py-3">
                         {v.estado_venta === 'anulada' ? (

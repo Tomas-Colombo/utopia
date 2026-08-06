@@ -160,5 +160,5 @@ export function RotacionTable({ rows }: { rows: RotacionRow[] }) {
 }
 
 function fmtMoney(n: number): string {
-  return `$ ${n.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`
+  return `$ ${n.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`
 }

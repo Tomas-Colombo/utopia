@@ -85,7 +85,7 @@ export function NuevaRendicionView({
         observaciones: obs || null,
       })
       if (!res.ok) return toast.error('No se pudo generar', traducir(res.reason))
-      toast.success('Rendición generada', `Total $ ${total.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`)
+      toast.success('Rendición generada', `Total $ ${total.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`)
       router.push(`/rendiciones/${res.data!.id}`)
       router.refresh()
     })
@@ -173,10 +173,10 @@ export function NuevaRendicionView({
                         {l.cliente_nombre ?? <span className="text-muted-2">Mostrador</span>}
                       </td>
                       <td className="px-4 py-3 text-right font-mono text-muted">
-                        $ {Number(l.precio_venta).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                        $ {Number(l.precio_venta).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                       </td>
                       <td className="px-4 py-3 text-right font-mono font-semibold">
-                        $ {Number(l.monto_proveedor).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                        $ {Number(l.monto_proveedor).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                       </td>
                       <td className="px-4 py-3 text-right">
                         {excluida ? (
@@ -209,7 +209,7 @@ export function NuevaRendicionView({
                     Total a rendir ({visibles.length} líneas)
                   </td>
                   <td className="px-4 py-3 text-right font-mono font-semibold">
-                    $ {total.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                    $ {total.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                   </td>
                   <td></td>
                 </tr>
@@ -241,7 +241,7 @@ export function NuevaRendicionView({
               onClick={() => setConfirmOpen(true)}
               disabled={!puedeGenerar}
             >
-              {pending ? 'Generando…' : `Confirmar rendición · $ ${total.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`}
+              {pending ? 'Generando…' : `Confirmar rendición · $ ${total.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`}
             </Button>
           </div>
         </>
@@ -250,7 +250,7 @@ export function NuevaRendicionView({
       <ConfirmDialog
         open={confirmOpen}
         title="Generar rendición"
-        description={`Se van a marcar ${visibles.length} línea(s) como rendidas por un total de $ ${total.toLocaleString('es-AR', { minimumFractionDigits: 2 })}. Esta acción no se puede deshacer.`}
+        description={`Se van a marcar ${visibles.length} línea(s) como rendidas por un total de $ ${total.toLocaleString('es-AR', { maximumFractionDigits: 0 })}. Esta acción no se puede deshacer.`}
         confirmLabel="Sí, generar"
         cancelLabel="Cancelar"
         onConfirm={confirmar}

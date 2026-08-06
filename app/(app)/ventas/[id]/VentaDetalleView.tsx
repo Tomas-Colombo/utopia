@@ -97,7 +97,7 @@ export function VentaDetalleView({ venta }: { venta: VentaConDetalle }) {
         <div>
           <div className="text-xs uppercase font-mono text-muted">Total</div>
           <div className="mt-1 font-mono font-semibold">
-            $ {total.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+            $ {total.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
           </div>
         </div>
         <div className="flex items-end justify-end gap-2">
@@ -149,17 +149,17 @@ export function VentaDetalleView({ venta }: { venta: VentaConDetalle }) {
                 </td>
                 <td className="px-4 py-3 font-mono text-xs">{l.item?.qr_code ?? '—'}</td>
                 <td className="px-4 py-3 text-right font-mono">
-                  $ {Number(l.precio_venta).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                  $ {Number(l.precio_venta).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                 </td>
                 <td className="px-4 py-3 text-right font-mono text-muted">
-                  $ {Number(l.costo_snapshot).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                  $ {Number(l.costo_snapshot).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                 </td>
                 <td className="px-4 py-3 text-right font-mono">
-                  $ {Number(l.monto_proveedor).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                  $ {Number(l.monto_proveedor).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                 </td>
                 <td className="px-4 py-3 text-right font-mono">
                   <span className={Number(l.monto_ganancia) < 0 ? 'text-alerta-ink' : 'text-success'}>
-                    $ {Number(l.monto_ganancia).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                    $ {Number(l.monto_ganancia).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                   </span>
                 </td>
                 <td className="px-4 py-3">
@@ -211,14 +211,14 @@ export function VentaDetalleView({ venta }: { venta: VentaConDetalle }) {
                   )}
                   {p.vuelto != null && p.vuelto > 0 && (
                     <div className="text-xs text-muted">
-                      Recibido $ {Number(p.monto_recibido).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                      Recibido $ {Number(p.monto_recibido).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                       {' · '}
-                      vuelto $ {Number(p.vuelto).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                      vuelto $ {Number(p.vuelto).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                     </div>
                   )}
                 </div>
                 <span className="font-mono font-semibold whitespace-nowrap">
-                  $ {Number(p.monto).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                  $ {Number(p.monto).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                 </span>
               </li>
             ))}

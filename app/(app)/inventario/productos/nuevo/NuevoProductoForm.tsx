@@ -154,8 +154,7 @@ export function NuevoProductoForm({
           <div className="flex gap-2">
             <NumberInput
               id="prod-costo"
-              min={0}
-              step="0.01"
+              thousands
               value={costoInicial}
               onChange={(e) => setCostoInicial(e.target.value)}
               className="flex-1"

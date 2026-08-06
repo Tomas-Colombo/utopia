@@ -312,8 +312,7 @@ export function RemitoImportPanel({
                     <div className="flex shrink-0 items-center gap-1.5">
                       <span className="text-xs text-muted">$</span>
                       <NumberInput
-                        min={0}
-                        step="0.01"
+                        thousands
                         value={f.costoUnitario}
                         onChange={(e) => actualizar(i, { costoUnitario: e.target.value })}
                         aria-label="Precio unitario"
