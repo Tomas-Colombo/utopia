@@ -101,7 +101,7 @@ export async function createRolAction(input: {
   if (input.nombre.trim().length < 2) return { ok: false, reason: 'nombre-corto' }
   try {
     const id = await spCreateRol({ nombre: input.nombre.trim(), permisos: input.permisos })
-    revalidatePath('/administracion/roles')
+    revalidatePath('/administracion')
     return { ok: true, data: { id } }
   } catch (e) {
     return { ok: false, reason: (e as Error).message }
@@ -117,7 +117,7 @@ export async function updateRolAction(input: {
   if (!g.ok) return { ok: false, reason: g.error }
   try {
     await spUpdateRol(input)
-    revalidatePath('/administracion/roles')
+    revalidatePath('/administracion')
     return { ok: true }
   } catch (e) {
     return { ok: false, reason: (e as Error).message }
@@ -129,7 +129,7 @@ export async function deleteRolAction(input: { idRol: string }): Promise<ActionR
   if (!g.ok) return { ok: false, reason: g.error }
   try {
     await spDeleteRol(input.idRol)
-    revalidatePath('/administracion/roles')
+    revalidatePath('/administracion')
     return { ok: true }
   } catch (e) {
     return { ok: false, reason: (e as Error).message }

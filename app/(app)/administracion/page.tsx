@@ -7,6 +7,20 @@ import {
   listRoles,
   listUsuarios,
 } from '@/lib/dal/administracion/administracion'
+import { RolesModal } from './RolesModal'
+
+function cardLink(c: { href: string; label: string; value: string }) {
+  return (
+    <Link
+      key={c.href}
+      href={c.href}
+      className="rounded-lg border border-border bg-card p-5 hover:bg-card-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
+    >
+      <div className="text-sm text-muted">{c.label}</div>
+      <div className="mt-1 font-display text-2xl">{c.value}</div>
+    </Link>
+  )
+}
 
 export default async function AdministracionHome() {
   const session = await verifySession()
@@ -18,9 +32,9 @@ export default async function AdministracionHome() {
   ])
   const modulosHab = modulos.filter((m) => m.habilitado).length
 
+  // Roles no está acá: es un pop-up (`RolesModal`), no una ruta.
   const cards = [
     { href: '/administracion/usuarios', label: 'Usuarios', value: usuarios.length.toString() },
-    { href: '/administracion/roles', label: 'Roles', value: roles.length.toString() },
     { href: '/administracion/modulos', label: 'Módulos habilitados', value: `${modulosHab}/${modulos.length}` },
     { href: '/administracion/auditoria', label: 'Auditoría', value: 'Ver' },
   ]
@@ -30,16 +44,9 @@ export default async function AdministracionHome() {
       <Topbar title="Administración" session={session} />
       <main className="flex-1 p-6 space-y-6">
         <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          {cards.map((c) => (
-            <Link
-              key={c.href}
-              href={c.href}
-              className="rounded-lg border border-border bg-card p-5 hover:bg-card-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
-            >
-              <div className="text-sm text-muted">{c.label}</div>
-              <div className="mt-1 font-display text-2xl">{c.value}</div>
-            </Link>
-          ))}
+          {cards.slice(0, 1).map(cardLink)}
+          <RolesModal roles={roles} />
+          {cards.slice(1).map(cardLink)}
         </section>
 
         <section className="rounded-lg border border-border bg-card overflow-x-auto">

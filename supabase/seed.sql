@@ -10,6 +10,7 @@ insert into modulo (codigo, nombre) values
   ('precios', 'Precios'),
   ('consignaciones', 'Consignaciones'),
   ('rendiciones', 'Rendiciones'),
+  ('gastos', 'Gastos'),
   ('reportes', 'Reportes'),
   ('administracion', 'Administración')
 on conflict (codigo) do nothing;

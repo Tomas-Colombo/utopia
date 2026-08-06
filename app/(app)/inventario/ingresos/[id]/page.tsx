@@ -7,11 +7,20 @@ import { listCategoriasActivas } from '@/lib/dal/inventario/categoria'
 import { listProductosConDetalle } from '@/lib/dal/inventario/producto'
 import { IngresoDetalleView } from './IngresoDetalleView'
 
+/** Whitelist para el ?from — evita open-redirect: solo rutas internas del app. */
+function safeBackHref(from: string | undefined, fallback: string): string {
+  if (!from) return fallback
+  if (!from.startsWith('/') || from.startsWith('//')) return fallback
+  return from
+}
+
 export default async function IngresoDetallePage(props: {
   params: Promise<{ id: string }>
+  searchParams: Promise<{ from?: string }>
 }) {
   const session = await verifySession()
   const { id } = await props.params
+  const { from } = await props.searchParams
   const ingreso = await getIngreso(id)
   if (!ingreso) notFound()
 
@@ -25,7 +34,7 @@ export default async function IngresoDetallePage(props: {
       <Topbar
         title={`Ingreso ${new Date(ingreso.fecha).toLocaleDateString('es-AR')}`}
         session={session}
-        backHref="/inventario/ingresos"
+        backHref={safeBackHref(from, '/inventario/ingresos')}
         actions={
           <Badge variant={ingreso.confirmado ? 'success' : 'neutral'}>
             {ingreso.confirmado ? 'Confirmado' : 'Borrador'}

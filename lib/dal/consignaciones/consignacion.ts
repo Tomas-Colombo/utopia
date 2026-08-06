@@ -10,6 +10,10 @@ import type {
 export async function listConsignaciones(opts?: {
   estado?: EstadoConsignacion
   idProveedor?: string
+  /** Timestamp ISO inclusivo (inicio del día). */
+  desde?: string
+  /** Timestamp ISO EXCLUSIVO (inicio del día siguiente). */
+  hastaExclusivo?: string
 }): Promise<ConsignacionConResumen[]> {
   const supabase = await createServerClient()
   let q = supabase
@@ -22,6 +26,8 @@ export async function listConsignaciones(opts?: {
     .order('fecha', { ascending: false })
   if (opts?.estado) q = q.eq('estado', opts.estado)
   if (opts?.idProveedor) q = q.eq('id_proveedor', opts.idProveedor)
+  if (opts?.desde) q = q.gte('fecha', opts.desde)
+  if (opts?.hastaExclusivo) q = q.lt('fecha', opts.hastaExclusivo)
   const { data, error } = await q
   if (error) throw new Error(`listConsignaciones: ${error.message}`)
 
@@ -71,6 +77,7 @@ export async function getConsignacionConDetalle(
 /** Unidad elegible para apartar en un lote de consignación (buscador). */
 export interface ItemElegibleConsignacion {
   id_item: string
+  id_producto: string
   qr_code: string
   producto_nombre: string
   sku: string | null
@@ -95,7 +102,7 @@ export async function listItemsElegiblesConsignacion(
   const { data, error } = await supabase
     .from('item_producto')
     .select(
-      'id_item, qr_code, talle, producto:producto(nombre, sku), ingreso:ingreso_mercaderia!inner(id_proveedor)',
+      'id_item, id_producto, qr_code, talle, producto:producto(nombre, sku), ingreso:ingreso_mercaderia!inner(id_proveedor)',
     )
     .eq('estado_item', 'disponible')
     .eq('tipo_ingreso', 'consignacion')
@@ -106,6 +113,7 @@ export async function listItemsElegiblesConsignacion(
 
   const rows = (data ?? []) as unknown as Array<{
     id_item: string
+    id_producto: string
     qr_code: string
     talle: string | null
     producto: { nombre: string; sku: string | null } | null
@@ -135,6 +143,7 @@ export async function listItemsElegiblesConsignacion(
     .filter((r) => !excluidos.has(r.id_item))
     .map((r) => ({
       id_item: r.id_item,
+      id_producto: r.id_producto,
       qr_code: r.qr_code,
       producto_nombre: r.producto?.nombre ?? '(sin nombre)',
       sku: r.producto?.sku ?? null,
@@ -144,17 +153,62 @@ export async function listItemsElegiblesConsignacion(
 
 // ─── RPCs ────────────────────────────────────────────────────────────
 
-export async function spCrearConsignacion(input: {
+/**
+ * Alta atómica del lote: proveedor + ítems en una sola transacción. Reemplaza
+ * a `sp_crear_consignacion` (lote vacío), que quedó revocada en 00054 — no
+ * existen consignaciones sin ítems.
+ */
+export async function spCrearConsignacionConItems(input: {
   idProveedor: string
   observaciones?: string | null
+  items: string[]
+  motivo?: string | null
 }): Promise<string> {
   const supabase = await createServerClient()
-  const { data, error } = await supabase.rpc('sp_crear_consignacion', {
+  const { data, error } = await supabase.rpc('sp_crear_consignacion_con_items', {
     p_id_proveedor: input.idProveedor,
     p_observaciones: input.observaciones ?? null,
+    p_items: input.items,
+    p_motivo: input.motivo ?? null,
   })
-  if (error) throw new Error(`sp_crear_consignacion: ${error.message}`)
+  if (error) throw new Error(`sp_crear_consignacion_con_items: ${error.message}`)
   return data as string
+}
+
+export async function spEditarConsignacion(input: {
+  idConsignacion: string
+  observaciones?: string | null
+  idProveedor?: string | null
+}): Promise<void> {
+  const supabase = await createServerClient()
+  const { error } = await supabase.rpc('sp_editar_consignacion', {
+    p_id_consignacion: input.idConsignacion,
+    p_observaciones: input.observaciones ?? null,
+    p_id_proveedor: input.idProveedor ?? null,
+  })
+  if (error) throw new Error(`sp_editar_consignacion: ${error.message}`)
+}
+
+/** Confirma la salida de todos los pendientes y cierra el lote. */
+export async function spConfirmarConsignacion(idConsignacion: string): Promise<number> {
+  const supabase = await createServerClient()
+  const { data, error } = await supabase.rpc('sp_confirmar_consignacion', {
+    p_id_consignacion: idConsignacion,
+  })
+  if (error) throw new Error(`sp_confirmar_consignacion: ${error.message}`)
+  return (data as number) ?? 0
+}
+
+/** Borrado físico. Los ítems que ya habían salido vuelven a 'disponible'. */
+export async function spEliminarConsignacion(
+  idConsignacion: string,
+): Promise<{ items_reestockeados: number; detalles_borrados: number }> {
+  const supabase = await createServerClient()
+  const { data, error } = await supabase.rpc('sp_eliminar_consignacion', {
+    p_id_consignacion: idConsignacion,
+  })
+  if (error) throw new Error(`sp_eliminar_consignacion: ${error.message}`)
+  return data as { items_reestockeados: number; detalles_borrados: number }
 }
 
 export async function spAgregarItemConsignacion(input: {

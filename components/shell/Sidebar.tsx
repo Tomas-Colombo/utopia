@@ -27,9 +27,7 @@ const GROUP_ORDER: readonly NavGroup[] = ['OPERACIONES', 'FINANZAS', 'SISTEMA'] 
 
 // Módulo codes MUST match seed.sql `modulo.codigo` values verbatim.
 // See supabase/seed.sql — catalog is: inventario, ventas, precios,
-// consignaciones, rendiciones, reportes, administracion.
-// `gastos` currently lives under `rendiciones` per Etapa 7 grouping;
-// promote to its own module later if needed.
+// consignaciones, rendiciones, gastos, reportes, administracion.
 const NAV_ITEMS: readonly NavItem[] = [
   { href: '/ventas', label: 'Ventas', icon: 'ventas', moduloCodigo: 'ventas', group: 'OPERACIONES' },
   { href: '/inventario', label: 'Inventario', icon: 'inventario', moduloCodigo: 'inventario', group: 'OPERACIONES' },
@@ -45,8 +43,7 @@ const NAV_ITEMS: readonly NavItem[] = [
   // proveedor" — es lo que la sección hace (lote de devolución). Label
   // abreviado para que entre en el rail sin truncar.
   { href: '/consignaciones', label: 'Devoluciones prov.', icon: 'consignaciones', moduloCodigo: 'consignaciones', group: 'OPERACIONES' },
-  // Gastos vive bajo el módulo 'rendiciones' (mismo permiso).
-  { href: '/gastos', label: 'Gastos', icon: 'gastos', moduloCodigo: 'rendiciones', group: 'FINANZAS' },
+  { href: '/gastos', label: 'Gastos', icon: 'gastos', moduloCodigo: 'gastos', group: 'FINANZAS' },
   { href: '/rendiciones', label: 'Rendiciones', icon: 'rendiciones', moduloCodigo: 'rendiciones', group: 'FINANZAS' },
   { href: '/reportes', label: 'Reportes', icon: 'reportes', moduloCodigo: 'reportes', group: 'FINANZAS' },
   { href: '/administracion', label: 'Administración', icon: 'administracion', moduloCodigo: 'administracion', group: 'SISTEMA' },

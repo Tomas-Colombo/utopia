@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import { Topbar } from '@/components/shell/Topbar'
 import { Badge } from '@/components/ui/Badge'
+import { hasPermission } from '@/lib/dal/guard'
 import { verifySession } from '@/lib/dal/session'
 import {
   getConsignacionConDetalle,
@@ -17,11 +18,20 @@ const VARIANT: Record<EstadoConsignacion, 'success' | 'neutral'> = {
   cerrada: 'neutral',
 }
 
+/** Whitelist para el ?from — evita open-redirect: solo rutas internas del app. */
+function safeBackHref(from: string | undefined, fallback: string): string {
+  if (!from) return fallback
+  if (!from.startsWith('/') || from.startsWith('//')) return fallback
+  return from
+}
+
 export default async function ConsignacionDetallePage(props: {
   params: Promise<{ id: string }>
+  searchParams: Promise<{ from?: string }>
 }) {
   const session = await verifySession()
   const { id } = await props.params
+  const { from } = await props.searchParams
   const cons = await getConsignacionConDetalle(id)
   if (!cons) notFound()
 
@@ -37,13 +47,18 @@ export default async function ConsignacionDetallePage(props: {
       <Topbar
         title={`Consignación ${new Date(cons.fecha).toLocaleDateString('es-AR')}`}
         session={session}
-        backHref="/consignaciones"
+        backHref={safeBackHref(from, '/consignaciones')}
         actions={
           <Badge variant={VARIANT[cons.estado]}>{ESTADO_CONSIGNACION_LABEL[cons.estado]}</Badge>
         }
       />
       <main className="flex-1 p-6">
-        <ConsignacionDetalleView cons={cons} itemsElegibles={itemsElegibles} />
+        <ConsignacionDetalleView
+          cons={cons}
+          itemsElegibles={itemsElegibles}
+          puedeEliminar={hasPermission(session, 'consignaciones', 'eliminar')}
+          volverHref={safeBackHref(from, '/consignaciones')}
+        />
       </main>
     </>
   )

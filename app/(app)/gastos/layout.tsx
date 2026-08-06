@@ -3,9 +3,8 @@ import { AuthorizationError } from '@/lib/dal/errors'
 import { requireModuleRole } from '@/lib/dal/guard'
 import { verifySession } from '@/lib/dal/session'
 
-// Gastos vive bajo el módulo 'rendiciones' (decisión previa: no hay
-// módulo 'gastos' separado en el catálogo seed; se agrupa con
-// rendiciones porque ambos son cuentas financieras).
+// Gastos es su propio módulo del catálogo (00055): se habilita y se permisa
+// por separado de rendiciones.
 export default async function GastosLayout({
   children,
 }: {
@@ -13,7 +12,7 @@ export default async function GastosLayout({
 }) {
   const session = await verifySession()
   try {
-    await requireModuleRole(session, 'rendiciones', 'ver')
+    await requireModuleRole(session, 'gastos', 'ver')
   } catch (error) {
     if (error instanceof AuthorizationError) {
       if (error.reason === 'no-session') redirect('/login')

@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Topbar } from '@/components/shell/Topbar'
 import { Badge } from '@/components/ui/Badge'
+import { Kpi } from '@/components/ui/Kpi'
 import { verifySession } from '@/lib/dal/session'
 import {
   getPerfilProveedorPorId,
@@ -71,6 +72,19 @@ export default async function ProveedorPerfilPage(props: {
   const rendiciones = rendicionesFiltradas.slice((rendPage - 1) * PAGE_SIZE, rendPage * PAGE_SIZE)
 
   const wa = waMeLink(proveedor.telefono)
+
+  // Se vuelve por donde se vino: los detalles a los que salta este perfil
+  // reciben un `?from=` con la URL actual, así el botón "volver" del Topbar
+  // devuelve acá y no al listado de la otra sección. Cada tabla propaga SU
+  // paginación (el resto ya está en la primera página, no hace falta fijarla).
+  function volverAqui(pageKey: 'ing_page' | 'cons_page' | 'rend_page', page: number): string {
+    const qs = new URLSearchParams()
+    if (sp.desde) qs.set('desde', sp.desde)
+    if (sp.hasta) qs.set('hasta', sp.hasta)
+    if (page > 1) qs.set(pageKey, String(page))
+    const query = qs.toString()
+    return `/proveedores/${id}${query ? `?${query}` : ''}`
+  }
 
   return (
     <>
@@ -213,7 +227,7 @@ export default async function ProveedorPerfilPage(props: {
                       <td className="px-4 py-3 text-right font-mono">{fmtMoney(i.total_costo)}</td>
                       <td className="px-4 py-3 text-right">
                         <Link
-                          href={`/inventario/ingresos/${i.id_ingreso}`}
+                          href={`/inventario/ingresos/${i.id_ingreso}?from=${encodeURIComponent(volverAqui('ing_page', ingPage))}`}
                           className="text-sm text-pink-strong hover:underline"
                         >
                           Ver
@@ -275,7 +289,7 @@ export default async function ProveedorPerfilPage(props: {
                       <td className="px-4 py-3 text-right font-mono">{c.devueltos}</td>
                       <td className="px-4 py-3 text-right">
                         <Link
-                          href={`/consignaciones/${c.id_consignacion}`}
+                          href={`/consignaciones/${c.id_consignacion}?from=${encodeURIComponent(volverAqui('cons_page', consPage))}`}
                           className="text-sm text-pink-strong hover:underline"
                         >
                           Ver
@@ -341,7 +355,7 @@ export default async function ProveedorPerfilPage(props: {
                       <td className="px-4 py-3 text-right font-mono">{fmtMoney(r.monto_total)}</td>
                       <td className="px-4 py-3 text-right">
                         <Link
-                          href={`/rendiciones/${r.id_rendicion}`}
+                          href={`/rendiciones/${r.id_rendicion}?from=${encodeURIComponent(volverAqui('rend_page', rendPage))}`}
                           className="text-sm text-pink-strong hover:underline"
                         >
                           Ver
@@ -381,26 +395,3 @@ function Dato({ label, children }: { label: string; children: React.ReactNode })
   )
 }
 
-function Kpi({
-  label,
-  value,
-  sub,
-  variant = 'default',
-}: {
-  label: string
-  value: string
-  sub?: string
-  variant?: 'default' | 'alert'
-}) {
-  return (
-    <div
-      className={`rounded-lg border p-4 ${
-        variant === 'alert' ? 'border-alerta-ink bg-alerta-bg' : 'border-border bg-card'
-      }`}
-    >
-      <div className="text-xs uppercase font-mono text-muted">{label}</div>
-      <div className="mt-1 font-display text-2xl text-text">{value}</div>
-      {sub && <div className="mt-1 text-xs text-muted">{sub}</div>}
-    </div>
-  )
-}

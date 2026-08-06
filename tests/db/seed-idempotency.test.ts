@@ -8,6 +8,7 @@ const SEEDED_MODULO_CODES = [
   'precios',
   'consignaciones',
   'rendiciones',
+  'gastos',
   'reportes',
   'administracion',
 ]

@@ -97,7 +97,10 @@ export function ConfirmDialog({
           aria-labelledby={titleId}
           onClick={(event) => event.stopPropagation()}
           onKeyDown={handleKeyDown}
-          className="w-full max-w-md rounded-md border border-border bg-card p-6 shadow-lg"
+          // max-h + scroll: en una pantalla baja (o con una descripción larga)
+          // el diálogo se recortaba y los botones quedaban fuera de vista, sin
+          // forma de llegar a ellos. Mismo guard que `Modal`.
+          className="flex max-h-[calc(100vh-2rem)] w-full max-w-md flex-col overflow-y-auto rounded-md border border-border bg-card p-6 shadow-lg"
         >
           <h2 id={titleId} className="font-display text-lg text-text">
             {title}

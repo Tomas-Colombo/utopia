@@ -14,11 +14,20 @@ const VARIANT: Record<EstadoRendicion, 'success' | 'warning'> = {
   pagada: 'success',
 }
 
+/** Whitelist para el ?from — evita open-redirect: solo rutas internas del app. */
+function safeBackHref(from: string | undefined, fallback: string): string {
+  if (!from) return fallback
+  if (!from.startsWith('/') || from.startsWith('//')) return fallback
+  return from
+}
+
 export default async function RendicionDetallePage(props: {
   params: Promise<{ id: string }>
+  searchParams: Promise<{ from?: string }>
 }) {
   const session = await verifySession()
   const { id } = await props.params
+  const { from } = await props.searchParams
   const rendicion = await getRendicionConDetalle(id)
   if (!rendicion) notFound()
 
@@ -29,7 +38,7 @@ export default async function RendicionDetallePage(props: {
       <Topbar
         title={`Rendición ${new Date(rendicion.fecha_generacion).toLocaleDateString('es-AR')}`}
         session={session}
-        backHref="/rendiciones"
+        backHref={safeBackHref(from, '/rendiciones')}
         actions={
           <Badge variant={VARIANT[rendicion.estado]}>
             {ESTADO_RENDICION_LABEL[rendicion.estado]}

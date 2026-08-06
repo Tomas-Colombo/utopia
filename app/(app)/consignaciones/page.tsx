@@ -1,24 +1,78 @@
 import Link from 'next/link'
 import { Topbar } from '@/components/shell/Topbar'
-import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
+import { Kpi } from '@/components/ui/Kpi'
+import { hasPermission } from '@/lib/dal/guard'
 import { verifySession } from '@/lib/dal/session'
 import { listConsignaciones } from '@/lib/dal/consignaciones/consignacion'
+import { listProveedoresActivos } from '@/lib/dal/inventario/proveedor'
 import {
-  ESTADO_CONSIGNACION_LABEL,
-  type EstadoConsignacion,
-} from '@/lib/types/consignaciones'
+  esFechaValida,
+  inicioDelDia,
+  inicioDelDiaSiguiente,
+  anioActual,
+} from '@/lib/fechas'
+import { type EstadoConsignacion } from '@/lib/types/consignaciones'
+import { ConsignacionesFiltros } from './ConsignacionesFiltros'
+import { ConsignacionesTableClient } from './ConsignacionesTableClient'
 
-const VARIANT: Record<EstadoConsignacion, 'success' | 'neutral'> = {
-  activa: 'success',
-  cerrada: 'neutral',
+function esEstado(v: string | undefined): v is EstadoConsignacion {
+  return v === 'activa' || v === 'cerrada'
 }
 
-export default async function ConsignacionesPage() {
+/**
+ * Listado de devoluciones a proveedor.
+ *
+ * Los tres filtros (período, proveedor, estado) viven en la URL y se aplican
+ * en la QUERY, no en el render: las métricas de arriba se calculan sobre el
+ * mismo recorte que la tabla de abajo. Sin params el período por defecto es el
+ * año en curso — una devolución es un evento poco frecuente, un default de
+ * "este mes" mostraría vacío la mayoría de los días.
+ */
+export default async function ConsignacionesPage(props: {
+  searchParams: Promise<{
+    desde?: string
+    hasta?: string
+    proveedor?: string
+    estado?: string
+  }>
+}) {
   const session = await verifySession()
-  const rows = await listConsignaciones()
+  const sp = await props.searchParams
+
+  // Params inválidos o incompletos → año en curso. Nunca reventar por una URL
+  // tipeada a mano.
+  const porDefecto = anioActual()
+  const desde = esFechaValida(sp.desde) ? sp.desde : porDefecto.desde
+  const hastaCrudo = esFechaValida(sp.hasta) ? sp.hasta : porDefecto.hasta
+  const hasta = hastaCrudo < desde ? desde : hastaCrudo
+  const estado = esEstado(sp.estado) ? sp.estado : undefined
+  const idProveedor = sp.proveedor || undefined
+
+  const [rows, proveedores] = await Promise.all([
+    listConsignaciones({
+      estado,
+      idProveedor,
+      desde: inicioDelDia(desde),
+      hastaExclusivo: inicioDelDiaSiguiente(hasta),
+    }),
+    listProveedoresActivos(),
+  ])
+
   const activas = rows.filter((r) => r.estado === 'activa').length
   const pendientesTotales = rows.reduce((a, r) => a + r.pendientes, 0)
+  const devueltosTotales = rows.reduce((a, r) => a + r.devueltos, 0)
+
+  const hayFiltroExtra = Boolean(estado || idProveedor)
+
+  // URL del listado CON los filtros puestos: los detalles a los que salta la
+  // tabla la reciben en `?from=` y el botón volver devuelve a esta misma vista.
+  const volverHref = (() => {
+    const qs = new URLSearchParams({ desde, hasta })
+    if (idProveedor) qs.set('proveedor', idProveedor)
+    if (estado) qs.set('estado', estado)
+    return `/consignaciones?${qs.toString()}`
+  })()
 
   return (
     <>
@@ -32,25 +86,36 @@ export default async function ConsignacionesPage() {
         }
       />
       <main className="flex-1 p-6 space-y-6">
+        <ConsignacionesFiltros
+          desde={desde}
+          hasta={hasta}
+          idProveedor={idProveedor ?? ''}
+          estado={estado ?? ''}
+          proveedores={proveedores.map((p) => ({ id: p.id_proveedor, nombre: p.nombre }))}
+        />
+
         <section className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          <Kpi label="Total" value={rows.length.toString()} />
-          <Kpi label="Activas" value={activas.toString()} />
+          <Kpi label="Lotes en el filtro" value={rows.length.toString()} />
+          <Kpi label="Activos" value={activas.toString()} />
           <Kpi
             label="Ítems pendientes"
             value={pendientesTotales.toString()}
             variant={pendientesTotales > 0 ? 'alert' : 'default'}
           />
-          <Kpi
-            label="Cerradas"
-            value={(rows.length - activas).toString()}
-          />
+          <Kpi label="Ítems devueltos" value={devueltosTotales.toString()} />
         </section>
 
         {rows.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border bg-card p-10 text-center">
-            <p className="font-display text-lg mb-2">Sin consignaciones</p>
+            <p className="font-display text-lg mb-2">
+              {hayFiltroExtra || sp.desde || sp.hasta
+                ? 'Sin devoluciones con estos filtros'
+                : 'Sin consignaciones'}
+            </p>
             <p className="text-sm text-muted mb-4">
-              Cuando decidís devolver mercadería a un proveedor, creá un lote de consignación.
+              {hayFiltroExtra || sp.desde || sp.hasta
+                ? 'Probá ampliar el período o quitar el filtro de proveedor o estado.'
+                : 'Cuando decidís devolver mercadería a un proveedor, creá un lote de consignación.'}
             </p>
             <Link
               href="/consignaciones/nueva"
@@ -60,72 +125,13 @@ export default async function ConsignacionesPage() {
             </Link>
           </div>
         ) : (
-          <div className="rounded-lg border border-border bg-card overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border text-left">
-                  <th className="px-4 py-3">Fecha</th>
-                  <th className="px-4 py-3">Proveedor</th>
-                  <th className="px-4 py-3 text-right">Ítems</th>
-                  <th className="px-4 py-3 text-right">Pendientes</th>
-                  <th className="px-4 py-3 text-right">Devueltos</th>
-                  <th className="px-4 py-3">Estado</th>
-                  <th className="px-4 py-3"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r) => (
-                  <tr key={r.id_consignacion} className="border-b border-border-2">
-                    <td className="px-4 py-3">{new Date(r.fecha).toLocaleDateString('es-AR')}</td>
-                    <td className="px-4 py-3">{r.proveedor?.nombre ?? '—'}</td>
-                    <td className="px-4 py-3 text-right font-mono">{r.total_items}</td>
-                    <td className="px-4 py-3 text-right font-mono">
-                      {r.pendientes > 0 ? (
-                        <span className="text-terracota">{r.pendientes}</span>
-                      ) : (
-                        r.pendientes
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-right font-mono">{r.devueltos}</td>
-                    <td className="px-4 py-3">
-                      <Badge variant={VARIANT[r.estado]}>{ESTADO_CONSIGNACION_LABEL[r.estado]}</Badge>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <Link
-                        href={`/consignaciones/${r.id_consignacion}`}
-                        className="text-sm text-pink-strong hover:underline"
-                      >
-                        Abrir
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <ConsignacionesTableClient
+            rows={rows}
+            puedeEliminar={hasPermission(session, 'consignaciones', 'eliminar')}
+            volverHref={volverHref}
+          />
         )}
       </main>
     </>
-  )
-}
-
-function Kpi({
-  label,
-  value,
-  variant = 'default',
-}: {
-  label: string
-  value: string
-  variant?: 'default' | 'alert'
-}) {
-  return (
-    <div
-      className={`rounded-lg border p-4 ${
-        variant === 'alert' ? 'border-alerta-ink bg-alerta-bg' : 'border-border bg-card'
-      }`}
-    >
-      <div className="text-xs uppercase font-mono text-muted">{label}</div>
-      <div className="mt-1 font-display text-2xl text-text">{value}</div>
-    </div>
   )
 }

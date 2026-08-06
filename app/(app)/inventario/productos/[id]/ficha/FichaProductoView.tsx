@@ -196,10 +196,10 @@ export function FichaProductoView({
         <Kpi label="Stock total" value={stockTotal.toString()} />
         <Kpi label="Stock mínimo" value={producto.stock_minimo.toString()} />
         <Kpi
-          label="Costo vigente"
+          label="Precio de venta"
           value={
-            costoVigente != null
-              ? `${monedaVigente ?? '$'} ${costoVigente.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`
+            producto.precio_venta != null
+              ? `$ ${producto.precio_venta.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`
               : '—'
           }
         />
@@ -211,19 +211,6 @@ export function FichaProductoView({
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Dato label="Categoría" value={categoria?.nombre ?? '—'} />
           <Dato label="Proveedor habitual" value={proveedor?.nombre ?? 'Sin proveedor'} />
-          <Dato
-            label="Precio de venta"
-            value={
-              producto.precio_venta != null
-                ? `$ ${producto.precio_venta.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`
-                : '—'
-            }
-            hint={
-              producto.precio_venta_desactualizado
-                ? 'Marcado como desactualizado — recalcular precio'
-                : undefined
-            }
-          />
           <Dato label="Estado" value={producto.activo ? 'Activo' : 'Inactivo'} />
         </div>
         <Dato

@@ -96,13 +96,13 @@ export function ProductosTableClient({
       render: (r) => r.categoria?.nombre ?? <span className="text-muted-2">—</span>,
     },
     {
-      key: 'costo_vigente',
-      label: 'Costo',
+      key: 'precio_venta',
+      label: 'Precio de venta',
       align: 'right',
       render: (r) =>
-        r.costo_vigente != null ? (
+        r.precio_venta != null ? (
           <span className="font-mono">
-            {r.moneda_vigente ?? '$'} {r.costo_vigente.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+            $ {r.precio_venta.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
           </span>
         ) : (
           <span className="text-muted-2">—</span>

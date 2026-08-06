@@ -25,16 +25,23 @@ type Guarded =
   | { ok: true; tenantId: string; userId: string }
   | { ok: false; error: string }
 
-async function guarded(accion: string): Promise<Guarded> {
+async function guardedModulo(modulo: string, accion: string): Promise<Guarded> {
   try {
     const session = await verifySession()
-    await requireModuleRole(session, 'rendiciones', accion)
+    await requireModuleRole(session, modulo, accion)
     return { ok: true, tenantId: session.tenantId, userId: session.user.id }
   } catch (e) {
     if (e instanceof AuthorizationError) return { ok: false, error: e.reason }
     throw e
   }
 }
+
+/** Acciones de rendiciones. */
+const guarded = (accion: string) => guardedModulo('rendiciones', accion)
+
+/** Acciones de gastos — módulo propio desde 00055, se habilita y se permisa
+ *  por separado de rendiciones aunque las actions convivan en este archivo. */
+const guardedGastos = (accion: string) => guardedModulo('gastos', accion)
 
 // ─── Rendiciones ─────────────────────────────────────────────────────
 
@@ -115,7 +122,7 @@ export async function registrarGastoAction(input: {
   fecha?: string | null
   comprobanteRef?: string | null
 }): Promise<ActionResult<{ id: string }>> {
-  const g = await guarded('crear')
+  const g = await guardedGastos('crear')
   if (!g.ok) return { ok: false, reason: g.error }
   if (!input.monto || input.monto <= 0) return { ok: false, reason: 'monto-invalido' }
   try {
@@ -141,7 +148,7 @@ export async function registrarGastoAction(input: {
 export async function eliminarGastoAction(input: {
   idGasto: string
 }): Promise<ActionResult> {
-  const g = await guarded('editar')
+  const g = await guardedGastos('editar')
   if (!g.ok) return { ok: false, reason: g.error }
   try {
     await spEliminarGasto(input.idGasto)
@@ -157,7 +164,7 @@ export async function setPresupuestoAction(input: {
   idCategoria: string
   presupuesto: number | null
 }): Promise<ActionResult> {
-  const g = await guarded('editar')
+  const g = await guardedGastos('editar')
   if (!g.ok) return { ok: false, reason: g.error }
   try {
     await spSetPresupuesto(input)
@@ -172,7 +179,7 @@ export async function setPresupuestoAction(input: {
 export async function createCategoriaGastoAction(input: {
   nombre: string
 }): Promise<ActionResult<{ id: string }>> {
-  const g = await guarded('crear')
+  const g = await guardedGastos('crear')
   if (!g.ok) return { ok: false, reason: g.error }
   const nombre = input.nombre?.trim() ?? ''
   if (nombre.length < 2) return { ok: false, reason: 'nombre-corto' }
@@ -191,7 +198,7 @@ export async function renameCategoriaGastoAction(input: {
   idCategoria: string
   nombre: string
 }): Promise<ActionResult> {
-  const g = await guarded('editar')
+  const g = await guardedGastos('editar')
   if (!g.ok) return { ok: false, reason: g.error }
   const nombre = input.nombre?.trim() ?? ''
   if (nombre.length < 2) return { ok: false, reason: 'nombre-corto' }
@@ -208,7 +215,7 @@ export async function renameCategoriaGastoAction(input: {
 export async function bajaCategoriaGastoAction(input: {
   idCategoria: string
 }): Promise<ActionResult<{ hardDeleted: boolean }>> {
-  const g = await guarded('editar')
+  const g = await guardedGastos('editar')
   if (!g.ok) return { ok: false, reason: g.error }
   try {
     const res = await bajaCategoriaGasto(input.idCategoria)
@@ -224,7 +231,7 @@ export async function bajaCategoriaGastoAction(input: {
 export async function reactivarCategoriaGastoAction(input: {
   idCategoria: string
 }): Promise<ActionResult> {
-  const g = await guarded('editar')
+  const g = await guardedGastos('editar')
   if (!g.ok) return { ok: false, reason: g.error }
   try {
     await reactivarCategoriaGasto(input.idCategoria)

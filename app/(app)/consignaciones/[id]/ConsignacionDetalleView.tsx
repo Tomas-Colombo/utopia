@@ -16,11 +16,15 @@ import {
   type ConsignacionConDetalle,
   type EstadoConsignacionDetalle,
 } from '@/lib/types/consignaciones'
+import { Textarea } from '@/components/ui/Textarea'
 import {
   agregarItemConsignacionAction,
   cancelarItemConsignacionAction,
   cerrarConsignacionAction,
+  confirmarConsignacionAction,
   confirmarSalidaItemAction,
+  editarConsignacionAction,
+  eliminarConsignacionAction,
 } from '../actions'
 
 const DETALLE_VARIANT: Record<EstadoConsignacionDetalle, 'success' | 'warning' | 'neutral'> = {
@@ -47,9 +51,13 @@ type LookupResp = LookupOk | LookupFail
 export function ConsignacionDetalleView({
   cons,
   itemsElegibles,
+  puedeEliminar,
+  volverHref,
 }: {
   cons: ConsignacionConDetalle
   itemsElegibles: ItemElegibleConsignacion[]
+  puedeEliminar: boolean
+  volverHref: string
 }) {
   const router = useRouter()
   const toast = useToast()
@@ -63,6 +71,11 @@ export function ConsignacionDetalleView({
   const [confirmarSalida, setConfirmarSalida] = useState<string | null>(null)
   const [cancelarItem, setCancelarItem] = useState<string | null>(null)
   const [cerrarOpen, setCerrarOpen] = useState(false)
+  const [confirmarLoteOpen, setConfirmarLoteOpen] = useState(false)
+  const [eliminarOpen, setEliminarOpen] = useState(false)
+
+  const [editando, setEditando] = useState(false)
+  const [obs, setObs] = useState(cons.observaciones ?? '')
 
   const readonly = cons.estado === 'cerrada'
   const pendientes = cons.detalles.filter((d) => d.estado === 'pendiente').length
@@ -165,6 +178,45 @@ export function ConsignacionDetalleView({
     })
   }
 
+  /** Salida de TODOS los pendientes + cierre, en una transacción. */
+  function ejecutarConfirmarLote() {
+    setConfirmarLoteOpen(false)
+    start(async () => {
+      const res = await confirmarConsignacionAction({ idConsignacion: cons.id_consignacion })
+      if (!res.ok) return toast.error('No se pudo confirmar', traducir(res.reason))
+      toast.success(`Lote confirmado · ${res.data!.confirmados} ítem(s) devueltos`)
+      router.refresh()
+    })
+  }
+
+  function ejecutarGuardarObs() {
+    start(async () => {
+      const res = await editarConsignacionAction({
+        idConsignacion: cons.id_consignacion,
+        observaciones: obs,
+      })
+      if (!res.ok) return toast.error('No se pudo guardar', traducir(res.reason))
+      setEditando(false)
+      toast.success('Observaciones actualizadas')
+      router.refresh()
+    })
+  }
+
+  function ejecutarEliminar() {
+    setEliminarOpen(false)
+    start(async () => {
+      const res = await eliminarConsignacionAction({ idConsignacion: cons.id_consignacion })
+      if (!res.ok) return toast.error('No se pudo eliminar', traducir(res.reason))
+      const n = res.data!.reestockeados
+      toast.success(
+        'Consignación eliminada',
+        n > 0 ? `${n} ítem(s) volvieron al stock disponible` : undefined,
+      )
+      router.push(volverHref)
+      router.refresh()
+    })
+  }
+
   return (
     <div className="space-y-6">
       {/* Metadata */}
@@ -189,16 +241,37 @@ export function ConsignacionDetalleView({
             )}
           </div>
         </div>
-        <div className="flex items-end justify-end gap-2">
+        <div className="flex flex-wrap items-end justify-end gap-2">
+          {!readonly && pendientes > 0 && (
+            <Button
+              size="sm"
+              onClick={() => setConfirmarLoteOpen(true)}
+              disabled={pending}
+              title="El proveedor se llevó todo: confirma la salida de los pendientes y cierra"
+            >
+              Confirmar lote
+            </Button>
+          )}
           {!readonly && (
             <Button
-              variant={pendientes > 0 ? 'secondary' : 'primary'}
+              variant="secondary"
               size="sm"
               onClick={() => setCerrarOpen(true)}
               disabled={pending || pendientes > 0}
               title={pendientes > 0 ? 'Resolvé todos los pendientes primero' : ''}
             >
               Cerrar lote
+            </Button>
+          )}
+          {puedeEliminar && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setEliminarOpen(true)}
+              disabled={pending}
+              title="Borra el lote; los ítems que ya salieron vuelven al stock"
+            >
+              Eliminar
             </Button>
           )}
         </div>
@@ -333,12 +406,49 @@ export function ConsignacionDetalleView({
         </table>
       </div>
 
-      {cons.observaciones && (
-        <div className="rounded-lg border border-border bg-card-2 p-4 text-sm">
-          <div className="text-xs uppercase font-mono text-muted mb-1">Observaciones</div>
-          <div>{cons.observaciones}</div>
+      {/* Observaciones — editables mientras el lote esté activo. */}
+      <div className="rounded-lg border border-border bg-card-2 p-4 text-sm space-y-2">
+        <div className="flex items-baseline justify-between gap-2">
+          <div className="text-xs uppercase font-mono text-muted">Observaciones</div>
+          {!readonly && !editando && (
+            <Button size="sm" variant="ghost" onClick={() => setEditando(true)} disabled={pending}>
+              Editar
+            </Button>
+          )}
         </div>
-      )}
+        {editando ? (
+          <div className="space-y-2">
+            <Textarea
+              id="cons-obs"
+              rows={3}
+              value={obs}
+              onChange={(e) => setObs(e.target.value)}
+              placeholder="Motivo general del lote"
+              disabled={pending}
+            />
+            <div className="flex justify-end gap-2">
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => {
+                  setObs(cons.observaciones ?? '')
+                  setEditando(false)
+                }}
+                disabled={pending}
+              >
+                Cancelar
+              </Button>
+              <Button size="sm" onClick={ejecutarGuardarObs} disabled={pending}>
+                {pending ? 'Guardando…' : 'Guardar'}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className={cons.observaciones ? '' : 'text-muted-2'}>
+            {cons.observaciones || 'Sin observaciones.'}
+          </div>
+        )}
+      </div>
 
       {/* Modales */}
       <ConfirmDialog
@@ -369,6 +479,29 @@ export function ConsignacionDetalleView({
         onConfirm={ejecutarCerrar}
         onCancel={() => setCerrarOpen(false)}
       />
+      <ConfirmDialog
+        open={confirmarLoteOpen}
+        title="Confirmar el lote completo"
+        description={`Se confirma la salida de los ${pendientes} ítem(s) pendientes y el lote queda cerrado. Los ítems dejan de estar en stock. Esta acción no se puede deshacer desde acá.`}
+        confirmLabel="Sí, salió todo"
+        cancelLabel="Cancelar"
+        onConfirm={ejecutarConfirmarLote}
+        onCancel={() => setConfirmarLoteOpen(false)}
+      />
+      <ConfirmDialog
+        open={eliminarOpen}
+        title="Eliminar la consignación"
+        description={
+          devueltos > 0
+            ? `El lote se borra definitivamente y los ${devueltos} ítem(s) que ya habían salido VUELVEN al stock disponible. Usalo solo si la devolución se cargó por error.`
+            : 'El lote se borra definitivamente. Los ítems apartados quedan libres para venta o para otro lote.'
+        }
+        variant="danger"
+        confirmLabel="Sí, eliminar"
+        cancelLabel="Volver"
+        onConfirm={ejecutarEliminar}
+        onCancel={() => setEliminarOpen(false)}
+      />
     </div>
   )
 }
@@ -391,5 +524,9 @@ function traducir(reason: string, extra?: LookupFail): string {
     return 'No se puede cerrar: quedan ítems pendientes de devolver o cancelar.'
   if (reason === 'consignacion-no-activa')
     return 'La consignación ya está cerrada.'
+  if (reason.startsWith('proveedor-con-items'))
+    return 'No se puede cambiar el proveedor con ítems apartados.'
+  if (reason === 'consignacion-not-found') return 'La consignación ya no existe.'
+  if (reason === 'no-permission') return 'Tu rol no tiene permiso para esta acción.'
   return reason
 }

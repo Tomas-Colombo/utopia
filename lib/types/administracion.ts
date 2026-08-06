@@ -72,8 +72,9 @@ export const CATALOGO_PERMISOS: Record<string, string[]> = {
   inventario: ['ver', 'crear', 'editar', 'eliminar'],
   precios: ['ver', 'crear', 'editar', 'eliminar'],
   ventas: ['ver', 'crear', 'editar'],
-  consignaciones: ['ver', 'crear', 'editar'],
+  consignaciones: ['ver', 'crear', 'editar', 'eliminar'],
   rendiciones: ['ver', 'crear', 'editar'],
+  gastos: ['ver', 'crear', 'editar'],
   reportes: ['ver'],
   administracion: ['ver', 'crear', 'editar', 'eliminar'],
 }
@@ -83,7 +84,8 @@ export const MODULO_NOMBRE: Record<string, string> = {
   precios: 'Precios',
   ventas: 'Ventas',
   consignaciones: 'Consignaciones',
-  rendiciones: 'Rendiciones y Gastos',
+  rendiciones: 'Rendiciones',
+  gastos: 'Gastos',
   reportes: 'Reportes',
   administracion: 'Administración',
 }
