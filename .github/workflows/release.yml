@@ -1,0 +1,131 @@
+name: Release to production
+
+# Tag-anchored and manually dispatched. Merging to main means "approved and
+# ready to publish"; running this workflow is the act of publishing.
+#
+# This exists because Vercel and the database were two pipelines that did not
+# know about each other: a merge deployed new CODE while utopia-dev still had
+# the old SCHEMA, and everything in between was a live app asking for columns
+# that did not exist yet. Here the order is guaranteed by construction —
+# migrations first, deploy second, and the deploy only runs if the migration
+# succeeded.
+#
+# WHY `workflow_dispatch` AND NOT `push: tags`
+# The manual gate has to hold on any GitHub plan. Environment "required
+# reviewers" are a paid feature on PRIVATE repositories, so on the Free plan a
+# tag push would sail straight through to production with no approval at all —
+# the environment would exist and enforce nothing. Requiring a human to start
+# the run makes the gate part of the trigger instead of an optional rule on top
+# of it. GitHub still records who dispatched it, so the audit trail is the same.
+#
+# Publishing is therefore two deliberate steps:
+#   git tag v1.2.0 && git push origin v1.2.0
+#   Actions → Release to production → Run workflow → pick the tag
+on:
+  workflow_dispatch:
+
+# Never cancel a release. A cancelled `db push` leaves the schema half applied
+# and nothing downstream knows it happened.
+concurrency:
+  group: production-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Migrate utopia-dev, then deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    # Kept even though the gate lives in the trigger. On a private repo on the
+    # Free plan this enforces nothing, but it costs nothing either: it groups
+    # the deployment history under "production", and the day this repo moves to
+    # a paid plan, adding "Required reviewers" here turns on a second approval
+    # with no change to this file.
+    environment: production
+
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD_PROD }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history: the ancestry check below needs real commits, not the
+          # single-commit tree a shallow clone produces.
+          fetch-depth: 0
+
+      # Two things the dispatcher could get wrong, both caught here.
+      #
+      # Running from a BRANCH would publish whatever its tip happens to be at
+      # that moment — a moving target, and nothing to point at afterwards when
+      # asking "what is in production?". A tag is immutable.
+      #
+      # And a tag can be created on ANY commit, including one that never went
+      # through a pull request. Requiring it to be an ancestor of main means it
+      # went through the PR flow and CI ran on it. Without this check, tagging
+      # is a hole straight around everything we built.
+      - name: Refuse anything that is not a tag on main
+        run: |
+          if [ "$GITHUB_REF_TYPE" != "tag" ]; then
+            echo "::error::Ran from ${GITHUB_REF_TYPE} '${GITHUB_REF_NAME}'. Pick a tag in the Run workflow dialog."
+            exit 1
+          fi
+
+          git fetch --no-tags origin main
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" FETCH_HEAD; then
+            echo "::error::${GITHUB_REF_NAME} points at a commit that is not on main. Merge it first."
+            exit 1
+          fi
+
+          echo "Releasing $GITHUB_REF_NAME ($GITHUB_SHA), confirmed on main."
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.110.0
+
+      - name: Link utopia-dev (production)
+        run: supabase link --project-ref "${{ secrets.SUPABASE_PROJECT_REF_PROD }}"
+
+      # Printed before anything is applied. On a production release this log is
+      # the record of exactly which migrations this version introduced.
+      - name: Show pending migrations
+        run: supabase db push --dry-run
+
+      - name: Apply migrations to production
+        run: supabase db push --yes
+
+      - name: Verify local and remote histories match
+        run: |
+          supabase migration list --linked --output-format json > estado.json
+          node -e '
+            const rows = JSON.parse(require("fs").readFileSync("estado.json", "utf8")).migrations
+            const pendientes = rows.filter((m) => m.local && !m.remote)
+            const huerfanas = rows.filter((m) => m.remote && !m.local)
+            if (pendientes.length || huerfanas.length) {
+              console.error("::error::Schema drift after push — NOT deploying code.")
+              if (pendientes.length) console.error("  Local only: " + pendientes.map((m) => m.local).join(", "))
+              if (huerfanas.length) console.error("  Remote only: " + huerfanas.map((m) => m.remote).join(", "))
+              process.exit(1)
+            }
+            console.log("utopia-dev is in sync: " + rows.length + " migrations.")
+          '
+
+      # Only now. Every step above must have passed, so the schema is always
+      # ahead of the code, never behind it. `vercel.json` disables automatic
+      # deploys for main precisely so this hook is the ONLY way production
+      # ships.
+      - name: Deploy to Vercel
+        run: |
+          curl --fail --silent --show-error --request POST \
+            "${{ secrets.VERCEL_DEPLOY_HOOK_URL }}" > /dev/null
+          echo "Vercel deploy triggered for $GITHUB_REF_NAME."
+
+      - name: Summary
+        run: |
+          {
+            echo "### Released ${GITHUB_REF_NAME}"
+            echo ""
+            echo "- Commit: \`${GITHUB_SHA}\`"
+            echo "- Migrations applied to utopia-dev and verified in sync"
+            echo "- Vercel production deploy triggered"
+          } >> "$GITHUB_STEP_SUMMARY"

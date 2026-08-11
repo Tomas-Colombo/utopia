@@ -30,7 +30,10 @@ jobs:
       # Read by the CLI directly, so neither the token nor the password ever
       # appears as a command-line argument.
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      # `_TEST`, spelled out. An unqualified `SUPABASE_DB_PASSWORD` sitting
+      # next to a `_PROD` one is a mix-up waiting to happen, and the failure
+      # mode is migrating the customer's database by accident.
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD_TEST }}
 
     steps:
       - uses: actions/checkout@v4
