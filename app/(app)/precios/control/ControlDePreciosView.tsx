@@ -120,6 +120,7 @@ export function ControlDePreciosView({
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value as Filter)}
+            aria-label="Estado de precio"
             className=""
           >
             <option value="todos">Todos</option>

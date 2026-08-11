@@ -1,9 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { createAnonTestClient, createServiceRoleTestClient } from '@/lib/dal/supabase-test'
-import { hasTestDb, withScopedTenant } from './_helpers'
+import { createServiceRoleTestClient } from '@/lib/dal/supabase-test'
+import {
+  createTenantWithUser,
+  createUserWithoutTenant,
+  hasTestDb,
+  signInAs,
+  withScopedTenant,
+} from './_helpers'
 
-/** DB testing postponed until end of Slice 8 — see apply-progress. */
-describe.skipIf(!hasTestDb)('tenant — 00002 (needs Supabase test project)', () => {
+describe.skipIf(!hasTestDb)('tenant — 00002', () => {
   it('the table exists (queryable as service_role)', async () => {
     const serviceRole = createServiceRoleTestClient()
     const { error } = await serviceRole.from('tenant').select('id_tenant').limit(1)
@@ -25,22 +30,30 @@ describe.skipIf(!hasTestDb)('tenant — 00002 (needs Supabase test project)', ()
     expect(second.error).not.toBeNull()
   })
 
-  it('SELECT returns only the requesting user\'s own tenant (REQ-MTD-09)', async () => {
-    // Fixture: two tenants, sign in a user whose JWT claims tenant A, and
-    // assert tenant B never appears in the result set.
-    const tenantAJwt = 'fixture-jwt-for-tenant-a'
-    const authenticated = createAnonTestClient(tenantAJwt)
+  it("SELECT returns only the requesting user's own tenant (REQ-MTD-09)", async () => {
+    const userA = await createTenantWithUser('tenant-select-a')
+    const tenantB = await createTenantWithUser('tenant-select-b')
 
-    const { data, error } = await authenticated.from('tenant').select('id_tenant')
+    const asUserA = await signInAs(userA)
+    const { data, error } = await asUserA.from('tenant').select('id_tenant')
+
     expect(error).toBeNull()
-    expect(Array.isArray(data)).toBe(true)
+    // Exactly one row, and it is A's — not "an array", which the previous
+    // version asserted and which a totally broken policy would also satisfy.
+    expect(data).toEqual([{ id_tenant: userA.tenantId }])
+    expect(data?.map((r) => r.id_tenant)).not.toContain(tenantB.tenantId)
   })
 
-  it('SELECT returns zero rows for a claim that matches no tenant', async () => {
-    const unknownTenantJwt = 'fixture-jwt-for-unknown-tenant'
-    const authenticated = createAnonTestClient(unknownTenantJwt)
+  it('SELECT returns zero rows for a session whose claims carry no tenant', async () => {
+    // A real, signed-in user with no `usuario` row: the Auth Hook finds
+    // nothing to read and strips `tenant_id` entirely, so `tenant_select_own`
+    // has no claim to match.
+    await createTenantWithUser('tenant-noclaim-neighbour')
+    const stranger = await createUserWithoutTenant('tenant-noclaim')
 
-    const { data, error } = await authenticated.from('tenant').select('id_tenant')
+    const asStranger = await signInAs(stranger)
+    const { data, error } = await asStranger.from('tenant').select('id_tenant')
+
     expect(error).toBeNull()
     expect(data).toEqual([])
   })

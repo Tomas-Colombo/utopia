@@ -1,27 +1,35 @@
 import { describe, expect, it } from 'vitest'
-import { createAnonTestClient, createServiceRoleTestClient } from '@/lib/dal/supabase-test'
-import { hasTestDb, withScopedTenant } from './_helpers'
+import { createServiceRoleTestClient } from '@/lib/dal/supabase-test'
+import { createTenantWithUser, hasTestDb, signInAs, unwrapFixture, withScopedTenant } from './_helpers'
 
-/** DB testing postponed until end of Slice 8 — see apply-progress. */
-describe.skipIf(!hasTestDb)('rol — 00005 (needs Supabase test project)', () => {
+describe.skipIf(!hasTestDb)('rol — 00005', () => {
   it('cross-tenant SELECT returns zero rows (REQ-AG-01)', async () => {
-    const otherTenantJwt = 'fixture-jwt-for-tenant-b'
-    const authenticated = createAnonTestClient(otherTenantJwt)
+    const userA = await createTenantWithUser('rol-cross-a')
+    const tenantB = await createTenantWithUser('rol-cross-b')
 
-    const { data, error } = await authenticated.from('rol').select('id_rol, nombre, permisos')
+    const asUserA = await signInAs(userA)
+    const { data, error } = await asUserA.from('rol').select('id_rol, nombre, permisos')
+
     expect(error).toBeNull()
-    expect(data).toEqual([])
+    // `createTenantWithUser` gives every tenant an 'Administrador' rol, so B's
+    // rol exists and is deliberately excluded here — while A's own rol IS
+    // visible. An assertion of `[]` would have been wrong: it would pass on a
+    // policy that hides everything, including your own rows.
+    expect(data?.map((r) => r.id_rol)).toEqual([userA.rolId])
+    expect(data?.map((r) => r.id_rol)).not.toContain(tenantB.rolId)
   })
 
   it('INSERT accepts the { [moduloCodigo]: string[] } permisos shape (REQ-AG-02)', async () => {
     const serviceRole = createServiceRoleTestClient()
 
-    const { data: tenant } = await serviceRole
-      .from('tenant')
-      .insert({ nombre_comercial: 'Rol shape', subdominio: withScopedTenant('rol-shape') })
-      .select('id_tenant')
-      .single()
-    if (!tenant) throw new Error('fixture insert failed: tenant is null')
+    const tenant = unwrapFixture(
+      'tenant insert',
+      await serviceRole
+        .from('tenant')
+        .insert({ nombre_comercial: 'Rol shape', subdominio: withScopedTenant('rol-shape') })
+        .select('id_tenant')
+        .single(),
+    )
 
     const permisos = { inventario: ['ver', 'crear', 'editar'], administracion: ['ver'] }
     const { data: rol, error } = await serviceRole
@@ -34,15 +42,17 @@ describe.skipIf(!hasTestDb)('rol — 00005 (needs Supabase test project)', () =>
     expect(rol?.permisos).toEqual(permisos)
   })
 
-  it('jsonb-path query permisos->\'inventario\' ? \'crear\' returns true (REQ-AG-02)', async () => {
+  it("jsonb-path query permisos->'inventario' ? 'crear' returns true (REQ-AG-02)", async () => {
     const serviceRole = createServiceRoleTestClient()
 
-    const { data: tenant } = await serviceRole
-      .from('tenant')
-      .insert({ nombre_comercial: 'Rol jsonb path', subdominio: withScopedTenant('rol-jsonb') })
-      .select('id_tenant')
-      .single()
-    if (!tenant) throw new Error('fixture insert failed: tenant is null')
+    const tenant = unwrapFixture(
+      'tenant insert',
+      await serviceRole
+        .from('tenant')
+        .insert({ nombre_comercial: 'Rol jsonb path', subdominio: withScopedTenant('rol-jsonb') })
+        .select('id_tenant')
+        .single(),
+    )
 
     await serviceRole.from('rol').insert({
       id_tenant: tenant.id_tenant,

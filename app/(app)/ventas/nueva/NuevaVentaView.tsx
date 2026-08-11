@@ -66,6 +66,14 @@ interface Grupo {
 }
 /** Set vacío estable — evita recrear uno por render en las filas sin selección. */
 const EMPTY_SET: Set<string> = new Set()
+/**
+ * Valores vacíos estables para los dos lookups del carrito. Con el carrito
+ * vacío se devuelven ESTOS, no literales nuevos: `descuentosDisponibles` es
+ * dependencia de dos `useMemo`, y un `[]` fresco por render los recalcularía
+ * siempre.
+ */
+const SIN_DESCUENTOS: DescuentoDisponible[] = []
+const SIN_STOCK: Record<string, number> = {}
 interface ReservaOption {
   id: string
   fecha: string
@@ -190,6 +198,16 @@ export function NuevaVentaView({
   const [cliResaltado, setCliResaltado] = useState(0)
 
   const [lineas, setLineas] = useState<LineaCarrito[]>([])
+
+  // El SET de productos del carrito (no las unidades): agregar otra unidad del
+  // mismo producto no cambia esta clave. Declarado acá arriba porque de él
+  // dependen los dos lookups del carrito, más abajo.
+  const productosEnCarrito = useMemo(
+    () => [...new Set(lineas.map((l) => l.id_producto))].sort().join(','),
+    [lineas],
+  )
+  const productosEnCarritoCount = productosEnCarrito ? productosEnCarrito.split(',').length : 0
+
   // Paso 2 del flujo: el cobro vive en un modal, no en la misma pantalla que
   // el carrito. Recién ahí aparece el botón de confirmar la venta.
   const [cobranzaOpen, setCobranzaOpen] = useState(false)
@@ -200,7 +218,13 @@ export function NuevaVentaView({
 
   // Tope físico de unidades por grupo (producto+talle). Evita que el vendedor
   // suba la cantidad de una fila más allá del stock real. Clave = grupo.key.
-  const [stockPorGrupo, setStockPorGrupo] = useState<Record<string, number>>({})
+  //
+  // Con el carrito vacío el valor se DERIVA vacío en vez de resetearse desde
+  // el efecto. Es lo mismo que se veía en pantalla, pero sin el estado
+  // intermedio: con un reset dentro del efecto, vaciar el carrito dejaba por
+  // un frame el tope del carrito anterior.
+  const [stockFetched, setStockPorGrupo] = useState<Record<string, number>>({})
+  const stockPorGrupo = productosEnCarrito ? stockFetched : SIN_STOCK
 
   // Descuentos. Ninguno se aplica solo: el vendedor los elige.
   //   - `descuentosDisponibles`: catálogo aplicable a los productos del carrito
@@ -209,7 +233,9 @@ export function NuevaVentaView({
   //     en el panel lateral (aplican a toda la venta según su alcance).
   //   - `descuentosProducto`: ids de descuentos de alcance=producto tildados en
   //     la fila, indexado por id_producto.
-  const [descuentosDisponibles, setDescuentosDisponibles] = useState<DescuentoDisponible[]>([])
+  // Derivado vacío con el carrito vacío, por el mismo motivo que `stockPorGrupo`.
+  const [descuentosFetched, setDescuentosDisponibles] = useState<DescuentoDisponible[]>([])
+  const descuentosDisponibles = productosEnCarrito ? descuentosFetched : SIN_DESCUENTOS
   const [descuentosPanel, setDescuentosPanel] = useState<Set<string>>(new Set())
   const [descuentosProducto, setDescuentosProducto] = useState<Record<string, Set<string>>>({})
 
@@ -280,16 +306,8 @@ export function NuevaVentaView({
   // Descuentos disponibles para los productos del carrito. Se refresca cuando
   // cambia el SET de productos (no en cada unidad): agregar otra unidad del
   // mismo producto no toca la lista.
-  const productosEnCarrito = useMemo(
-    () => [...new Set(lineas.map((l) => l.id_producto))].sort().join(','),
-    [lineas],
-  )
-  const productosEnCarritoCount = productosEnCarrito ? productosEnCarrito.split(',').length : 0
   useEffect(() => {
-    if (!productosEnCarrito) {
-      setDescuentosDisponibles([])
-      return
-    }
+    if (!productosEnCarrito) return
     let cancelled = false
     ;(async () => {
       try {
@@ -314,10 +332,7 @@ export function NuevaVentaView({
   // depende de la cantidad del carrito: el tope es el stock físico, que no
   // cambia por cargar/descargar (los ítems del carrito siguen 'disponible').
   useEffect(() => {
-    if (!productosEnCarrito) {
-      setStockPorGrupo({})
-      return
-    }
+    if (!productosEnCarrito) return
     let cancelled = false
     ;(async () => {
       try {
@@ -1125,7 +1140,7 @@ export function NuevaVentaView({
                 </tr>
               ) : (
                 grupos.map((g) => (
-                  <tr key={g.key} className="border-b border-border-2">
+                  <tr key={g.key} data-testid="linea-carrito" className="border-b border-border-2">
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="font-medium">{g.producto_nombre}</span>
@@ -1507,7 +1522,9 @@ export function NuevaVentaView({
           <div className="text-xs text-muted">
             Total · {lineas.length} ítem{lineas.length === 1 ? '' : 's'}
           </div>
-          <div className="font-mono text-xl font-semibold text-text">{money(total)}</div>
+          <div data-testid="venta-total" className="font-mono text-xl font-semibold text-text">
+            {money(total)}
+          </div>
         </div>
         <Button
           className="w-full sm:w-auto"

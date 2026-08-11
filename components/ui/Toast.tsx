@@ -104,6 +104,11 @@ function ToastItemView({ item, onDismiss }: { item: ToastItem; onDismiss: () => 
     <div
       role={item.variant === 'error' ? 'alert' : 'status'}
       aria-live={item.variant === 'error' ? 'assertive' : 'polite'}
+      // The live-region container also carries role="status", so an
+      // accessibility-only query cannot address a single toast. E2E targets
+      // this pair instead.
+      data-testid="toast"
+      data-variant={item.variant}
       className={`pointer-events-auto flex min-w-[260px] max-w-sm items-start gap-3 rounded-md px-4 py-3 text-sm shadow-lg ${VARIANT_CLASS[item.variant]}`}
     >
       <div className="flex-1">

@@ -52,10 +52,18 @@ export function SidebarClient({
     setCollapsed(window.localStorage.getItem(STORAGE_KEY) === '1')
   }, [])
 
-  // Close the mobile drawer on route change so a tap-through never leaves it open.
-  useEffect(() => {
+  // Close the mobile drawer on route change so a tap-through never leaves it
+  // open. Adjusted during render rather than in an effect: React re-runs this
+  // component immediately, before committing anything to the DOM, so the
+  // drawer is never painted open on the new route. An effect would paint the
+  // old state first and close it on the next frame — a visible flash of the
+  // previous page's open drawer. (react.dev, "You Might Not Need an Effect":
+  // adjusting state when a prop changes.)
+  const [drawerRoute, setDrawerRoute] = useState(pathname)
+  if (drawerRoute !== pathname) {
+    setDrawerRoute(pathname)
     setMobileOpen(false)
-  }, [pathname])
+  }
 
   // While the drawer is open: close on Escape and lock body scroll.
   useEffect(() => {

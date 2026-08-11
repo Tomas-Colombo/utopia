@@ -10,11 +10,18 @@ import { Input } from '@/components/ui/Input'
  * producto e ingreso.
  */
 export function TallesEditor({
+  id,
   value,
   onChange,
   placeholder = 'Ej: S, M, L, XL, 40, 42…',
   disabled,
 }: {
+  /**
+   * Id of the draft input. Callers that wrap this control in a `<Field>` MUST
+   * pass the same value as the field's `htmlFor`; without it the label points
+   * at nothing and the control has no accessible name.
+   */
+  id?: string
   value: string[]
   onChange: (talles: string[]) => void
   placeholder?: string
@@ -48,6 +55,7 @@ export function TallesEditor({
     <div className="space-y-2">
       <div className="flex gap-2">
         <Input
+          id={id}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={onKeyDown}

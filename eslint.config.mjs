@@ -12,7 +12,18 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Playwright artifacts: traces and reports contain bundled/minified JS.
+    "e2e/.artifacts/**",
+    "e2e/.report/**",
   ]),
+  {
+    // Playwright's fixture API takes a callback named `use`, which the React
+    // rule mistakes for a hook call. Nothing in `e2e/` is React.
+    files: ["e2e/**/*.ts", "playwright.config.ts"],
+    rules: {
+      "react-hooks/rules-of-hooks": "off",
+    },
+  },
 ]);
 
 export default eslintConfig;
