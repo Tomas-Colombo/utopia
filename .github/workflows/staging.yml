@@ -1,0 +1,80 @@
+name: Deploy schema to staging
+
+# Deliberately NOT `on: push`. This runs only after the CI workflow finished
+# successfully on main, so a migration can never reach a cloud database without
+# having passed lint, typecheck, the DB suites and the full e2e run first.
+# A direct push to main that fails CI deploys nothing.
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+
+# `cancel-in-progress: false` on purpose, unlike CI. Cancelling a run halfway
+# through `db push` would leave the schema partially migrated, and nothing in
+# the CLI would know it had happened.
+concurrency:
+  group: staging-schema
+  cancel-in-progress: false
+
+jobs:
+  push-schema:
+    name: supabase db push → utopia-test
+    # Only on green. `workflow_run` fires on failure and cancellation too.
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: staging
+
+    env:
+      # Read by the CLI directly, so neither the token nor the password ever
+      # appears as a command-line argument.
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The exact commit CI validated. Without this, `workflow_run` checks
+          # out the tip of the default branch, which may already have moved on
+          # — deploying a schema no run ever tested.
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - uses: supabase/setup-cli@v1
+        with:
+          # Same pin as ci.yml. The CLI decides how migrations are applied, so
+          # the version that validated the change is the version that ships it.
+          version: 2.110.0
+
+      - name: Link utopia-test
+        run: supabase link --project-ref "${{ secrets.SUPABASE_PROJECT_REF_TEST }}"
+
+      # Printed before anything is applied, so the run log is an audit record of
+      # exactly which migrations this deploy introduced.
+      - name: Show pending migrations
+        run: supabase db push --dry-run
+
+      - name: Apply migrations
+        run: supabase db push --yes
+
+      # `db push` succeeding is not quite proof: it reports success when there
+      # was nothing to do, including after a partial earlier failure. Comparing
+      # the histories is the real check.
+      - name: Verify local and remote histories match
+        run: |
+          # `--output-format json`, NOT `-o json`: the latter only formats
+          # status variables and prints a human table here, which JSON.parse
+          # then chokes on.
+          supabase migration list --linked --output-format json > estado.json
+          node -e '
+            const rows = JSON.parse(require("fs").readFileSync("estado.json", "utf8")).migrations
+            const pendientes = rows.filter((m) => m.local && !m.remote)
+            const huerfanas = rows.filter((m) => m.remote && !m.local)
+            if (pendientes.length || huerfanas.length) {
+              console.error("::error::Schema drift after push.")
+              if (pendientes.length) console.error("  Local only: " + pendientes.map((m) => m.local).join(", "))
+              if (huerfanas.length) console.error("  Remote only: " + huerfanas.map((m) => m.remote).join(", "))
+              process.exit(1)
+            }
+            console.log("utopia-test is in sync: " + rows.length + " migrations.")
+          '

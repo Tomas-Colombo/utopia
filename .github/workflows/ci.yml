@@ -1,0 +1,128 @@
+name: CI
+
+# Every pull request, plus main itself so a broken merge is caught even when
+# no PR is open against it.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# A new push to the same branch makes the previous run irrelevant. Without
+# this, a busy branch queues runs that nobody will read.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Lint · build · types · tests · e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Cheapest gate first: a lint error should not wait behind a Docker pull.
+      - name: Lint
+        run: pnpm lint
+
+      - uses: supabase/setup-cli@v1
+        with:
+          # Pinned, not `latest`: the local stack IS the test database, so the
+          # CLI version decides the Postgres image, the auth-hook wiring and the
+          # migration runner. Floating it would let CI drift away from the
+          # machine the change was written on, which is the one thing this whole
+          # setup exists to prevent.
+          version: 2.110.0
+
+      # Boots Postgres + Auth from `supabase/config.toml` and applies every
+      # migration plus `seed.sql`. Storage, Realtime, Edge Functions and
+      # analytics are disabled in that file (the app uses none of them), so this
+      # is a much smaller stack than a default `supabase start`.
+      - name: Start local Supabase
+        run: supabase start -x studio
+
+      # No secrets, on purpose. The local stack ships well-known demo keys, so
+      # nothing here is sensitive and no GitHub Secret has to exist for the test
+      # database. That is the main security win of running Supabase in the
+      # runner rather than pointing CI at a cloud project.
+      - name: Export Supabase credentials
+        run: |
+          # `supabase status` also prints human-readable lines (e.g. "Stopped
+          # services: [...]"), so keep only real KEY="value" assignments.
+          supabase status -o env | grep -E '^[A-Z_]+="' > supabase.env
+          . ./supabase.env
+
+          {
+            echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL"
+            echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$ANON_KEY"
+            echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
+            # `tests/db/*` and the e2e fixtures read the _TEST trio. Here they
+            # point at the same local stack: there is no other database to
+            # protect them from, and it is rebuilt for every run.
+            echo "NEXT_PUBLIC_SUPABASE_URL_TEST=$API_URL"
+            echo "NEXT_PUBLIC_SUPABASE_ANON_KEY_TEST=$ANON_KEY"
+            echo "SUPABASE_SERVICE_ROLE_KEY_TEST=$SERVICE_ROLE_KEY"
+          } >> "$GITHUB_ENV"
+
+          rm supabase.env
+
+      # `hasTestDb` (tests/db/_helpers.ts) turns the whole DB suite into skips
+      # when any _TEST variable is missing, and a skipped suite reports GREEN.
+      # Fail loudly here instead: a silent hole is worse than a red build.
+      - name: Assert the test database is reachable
+        run: |
+          for v in NEXT_PUBLIC_SUPABASE_URL_TEST \
+                   NEXT_PUBLIC_SUPABASE_ANON_KEY_TEST \
+                   SUPABASE_SERVICE_ROLE_KEY_TEST; do
+            if [ -z "${!v}" ]; then
+              echo "::error::$v is empty — the DB suites would silently skip."
+              exit 1
+            fi
+          done
+
+      # Must run AFTER the credentials exist: `next build` inlines every
+      # NEXT_PUBLIC_* value into the client bundle, so building first would ship
+      # `undefined` for the Supabase URL and key.
+      - name: Build
+        run: pnpm build
+
+      # And typecheck must run AFTER the build: `tsconfig.json` includes
+      # `.next/types/**/*.ts`, the generated route-type validators. Typechecking
+      # first would silently skip them — they would not exist yet.
+      - name: Typecheck
+        run: pnpm exec tsc --noEmit
+
+      - name: Unit and database tests
+        run: pnpm test
+
+      - name: Install Playwright browser
+        # Chromium only — see the rationale in playwright.config.ts.
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: End-to-end tests
+        run: pnpm exec playwright test
+
+      # Traces and screenshots are what make a red e2e run diagnosable without
+      # reproducing it locally. `trace: 'retain-on-failure'` means these are
+      # empty unless something actually failed.
+      - name: Upload Playwright artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            e2e/.report
+            e2e/.artifacts
+          retention-days: 7
+          if-no-files-found: ignore

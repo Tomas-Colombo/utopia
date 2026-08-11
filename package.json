@@ -7,10 +7,14 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "provision-tenant": "node --env-file=.env.local --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/provision-tenant.mts",
+    "provision-tenant": "node --env-file=.env.local --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/provision-tenant.mts",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:report": "playwright show-report e2e/.report"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.3",
@@ -24,6 +28,7 @@
     "unpdf": "^1.8.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^7.0.0",
     "@testing-library/react": "^16.3.2",
@@ -34,6 +39,7 @@
     "@types/three": "^0.185.4",
     "@vitest/coverage-v8": "^4.1.10",
     "axe-core": "^4.12.1",
+    "dotenv": "^17.4.2",
     "eslint": "^9",
     "eslint-config-next": "16.2.10",
     "jsdom": "^29.1.1",
