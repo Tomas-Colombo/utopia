@@ -101,7 +101,7 @@ export function NuevaCategoriaModal({
           label="Talles"
           hint="Talles/medidas de esta categoría (ej: S, M, L). Se usan al cargar el stock."
         >
-          <TallesEditor value={talles} onChange={setTalles} disabled={pending} />
+          <TallesEditor id="cm-talles" value={talles} onChange={setTalles} disabled={pending} />
         </Field>
       </form>
     </Modal>

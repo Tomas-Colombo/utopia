@@ -216,7 +216,7 @@ export function CategoriasView({ initial }: { initial: CategoriaRow[] }) {
             />
           </Field>
           <Field htmlFor="cat-talles" label="Talles" hint="Los talles/medidas de esta categoría (ej: S, M, L). Se usan al cargar productos e ingresos.">
-            <TallesEditor value={talles} onChange={setTalles} disabled={pending} />
+            <TallesEditor id="cat-talles" value={talles} onChange={setTalles} disabled={pending} />
           </Field>
         </div>
       </Modal>

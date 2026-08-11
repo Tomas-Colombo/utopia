@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useTransition } from 'react'
+import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Field } from '@/components/ui/Field'
@@ -48,15 +48,27 @@ export function EditarProductoModal({
   const [errors, setErrors] = useState<{ nombre?: string; categoria?: string }>({})
 
   // Al (re)abrir el modal con un producto distinto, resembramos el form.
-  useEffect(() => {
-    if (!open || !producto) return
-    setNombre(producto.nombre)
-    setIdCategoria(producto.id_categoria)
-    setStockMinimo(String(producto.stock_minimo))
-    setDescripcion(producto.descripcion ?? '')
-    setActivo(producto.activo)
-    setErrors({})
-  }, [open, producto])
+  //
+  // Se ajusta durante el render y no en un efecto: así el modal ya aparece con
+  // los datos del producto correcto. Con un efecto, el primer frame mostraba
+  // los valores del producto anterior y recién después se corregía.
+  //
+  // La clave incluye el estado `open` a propósito: al cerrar vuelve a `null`,
+  // de modo que reabrir el MISMO producto también resiembra y descarta los
+  // cambios que el usuario dejó sin guardar.
+  const seedKey = open && producto ? producto.id_producto : null
+  const [seededFor, setSeededFor] = useState<string | null>(null)
+  if (seedKey !== seededFor) {
+    setSeededFor(seedKey)
+    if (open && producto) {
+      setNombre(producto.nombre)
+      setIdCategoria(producto.id_categoria)
+      setStockMinimo(String(producto.stock_minimo))
+      setDescripcion(producto.descripcion ?? '')
+      setActivo(producto.activo)
+      setErrors({})
+    }
+  }
 
   function submit(e: React.FormEvent) {
     e.preventDefault()

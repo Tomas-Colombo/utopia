@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useTransition } from 'react'
+import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
@@ -32,9 +32,15 @@ export function AsignarTallesModal({
   const [pending, start] = useTransition()
   const [lineas, setLineas] = useState<LineaTalle[]>([])
 
-  useEffect(() => {
+  // Empty the draft every time the modal opens, so a cancelled distribution
+  // never reappears on the next open. Adjusted during render instead of in an
+  // effect: the reset lands before the first paint of the open modal, rather
+  // than showing the stale rows for one frame.
+  const [wasOpen, setWasOpen] = useState(open)
+  if (wasOpen !== open) {
+    setWasOpen(open)
     if (open) setLineas([])
-  }, [open])
+  }
 
   const total = lineas.reduce((a, l) => a + l.cantidad, 0)
   const restante = Math.max(0, disponiblesSinTalle - total)

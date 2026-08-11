@@ -70,10 +70,7 @@ export default async function VentasHome(props: {
     redirect(`/ventas?${params.toString()}`)
   }
 
-  const proximasVencer = reservasActivas.filter((r) => {
-    const d = new Date(r.fecha_vencimiento).getTime() - Date.now()
-    return d > 0 && d < 1000 * 60 * 60 * 48 // < 48h
-  }).length
+  const proximasVencer = contarProximasAVencer(reservasActivas)
 
   const fmtDia = (f: string) => new Date(`${f}T12:00:00`).toLocaleDateString('es-AR')
 
@@ -223,3 +220,24 @@ export default async function VentasHome(props: {
   )
 }
 
+
+const EN_48_HORAS = 1000 * 60 * 60 * 48
+
+/**
+ * Reservas que vencen dentro de las próximas 48 h.
+ *
+ * Vive fuera del componente a propósito. Lee el reloj, y eso en el cuerpo de
+ * un componente es una lectura impura: la regla existe para proteger los
+ * re-renders del cliente, donde dos lecturas del mismo render tienen que
+ * coincidir. Este es un Server Component, se renderiza una vez por pedido, y
+ * "ahora" es justamente un dato del pedido — así que la lectura es correcta y
+ * acá queda explícita, con un solo `Date.now()` compartido por todas las filas
+ * en vez de uno por iteración.
+ */
+function contarProximasAVencer(reservas: { fecha_vencimiento: string }[]): number {
+  const ahora = Date.now()
+  return reservas.filter((r) => {
+    const restante = new Date(r.fecha_vencimiento).getTime() - ahora
+    return restante > 0 && restante < EN_48_HORAS
+  }).length
+}
