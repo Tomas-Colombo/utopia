@@ -3,11 +3,10 @@ import { createServiceRoleTestClient } from '@/lib/dal/supabase-test'
 import { hasTestDb } from './_helpers'
 
 /**
- * DB testing is postponed until end of Slice 8 (no `utopia-test` cloud
- * project yet, `.env.local` has no `_TEST` keys) — so `hasTestDb` is false
- * in this environment and the block below is skipped. It still imports and
- * type-checks cleanly, proving the harness (`lib/dal/supabase-test.ts`,
- * `tests/db/_helpers.ts`) is wired correctly ahead of the real DB existing.
+ * These suites run against the LOCAL Supabase stack (`supabase start`), which
+ * is also what CI boots for every pull request. `hasTestDb` stays false — and
+ * the block below skips — whenever the `_TEST` env vars are absent, so a
+ * checkout without a running stack still type-checks and passes.
  *
  * Deviation note: uses `auth.admin.listUsers` (a real service_role-only
  * admin call) rather than a literal `select now()`, because plain
@@ -16,7 +15,7 @@ import { hasTestDb } from './_helpers'
  * `listUsers` still proves (a) network connectivity, (b) the service_role
  * key is valid, and (c) we're talking to a real Supabase Auth backend.
  */
-describe.skipIf(!hasTestDb)('DB smoke — service_role connects to utopia-test (needs Supabase test project)', () => {
+describe.skipIf(!hasTestDb)('DB smoke — service_role connects to the local stack', () => {
   it('service_role client authenticates and can call an admin-only endpoint', async () => {
     const supabase = createServiceRoleTestClient()
     const { data, error } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1 })
@@ -25,8 +24,16 @@ describe.skipIf(!hasTestDb)('DB smoke — service_role connects to utopia-test (
     expect(data).toBeDefined()
   })
 
-  it('the client is scoped to the _TEST project, never the production one', () => {
-    expect(process.env.NEXT_PUBLIC_SUPABASE_URL_TEST).toBeDefined()
-    expect(process.env.NEXT_PUBLIC_SUPABASE_URL_TEST).not.toBe(process.env.NEXT_PUBLIC_SUPABASE_URL)
+  it('the client is scoped to a throwaway database, never a cloud project', () => {
+    const testUrl = process.env.NEXT_PUBLIC_SUPABASE_URL_TEST
+    expect(testUrl).toBeDefined()
+
+    // Deliberately stricter than "different from the app's URL". That older
+    // check assumed the test database was a second CLOUD project, so it would
+    // have passed while pointing at a real one — it only caught reusing the
+    // SAME project. These suites write and delete with the service role, which
+    // bypasses RLS, so the only acceptable target is a disposable local stack.
+    // Any `*.supabase.co` host is a real project and must fail here.
+    expect(testUrl).not.toMatch(/supabase\.co/)
   })
 })

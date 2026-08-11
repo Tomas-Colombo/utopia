@@ -1,61 +1,129 @@
 import { describe, expect, it } from 'vitest'
-import { createAnonTestClient, createServiceRoleTestClient } from '@/lib/dal/supabase-test'
-import { hasTestDb, withScopedTenant } from './_helpers'
+import { createTenantWithUser, hasTestDb, signInAs } from './_helpers'
 
-/** DB testing postponed until end of Slice 8 — see apply-progress. */
-describe.skipIf(!hasTestDb)('auditoria — 00007 immutability (needs Supabase test project)', () => {
+describe.skipIf(!hasTestDb)('auditoria — 00007 immutability', () => {
   it('authenticated with matching claim: INSERT works, SELECT own tenant works (REQ-AL-01/06)', async () => {
-    const ownTenantJwt = 'fixture-jwt-for-tenant-a'
-    const authenticated = createAnonTestClient(ownTenantJwt)
+    const user = await createTenantWithUser('audit-own')
+    const authenticated = await signInAs(user)
 
-    const { data, error } = await authenticated.from('auditoria').select('id_auditoria').limit(1)
+    const insert = await authenticated.from('auditoria').insert({
+      id_tenant: user.tenantId,
+      id_usuario: user.userId,
+      entidad: 'fixture',
+      entidad_id: user.userId,
+      accion: 'crear',
+      cambios: { fixture: true },
+    })
+    expect(insert.error).toBeNull()
+
+    const { data, error } = await authenticated
+      .from('auditoria')
+      .select('entidad, accion')
+      .eq('entidad', 'fixture')
+
     expect(error).toBeNull()
-    expect(Array.isArray(data)).toBe(true)
+    expect(data).toEqual([{ entidad: 'fixture', accion: 'crear' }])
   })
 
   it('authenticated UPDATE/DELETE rejected — no permissive policy exists (REQ-AL-05, threat-matrix audit tampering)', async () => {
-    const ownTenantJwt = 'fixture-jwt-for-tenant-a'
-    const authenticated = createAnonTestClient(ownTenantJwt)
+    const user = await createTenantWithUser('audit-tamper')
+    const authenticated = await signInAs(user)
 
+    const row = await authenticated
+      .from('auditoria')
+      .insert({
+        id_tenant: user.tenantId,
+        id_usuario: user.userId,
+        entidad: 'tamper-target',
+        entidad_id: user.userId,
+        accion: 'crear',
+        cambios: {},
+      })
+      .select('id_auditoria')
+      .single()
+    expect(row.error).toBeNull()
+
+    const id = row.data?.id_auditoria
+
+    // RLS does NOT raise on UPDATE/DELETE — it makes the rows invisible, so
+    // the statement matches zero rows and PostgREST answers 200. Asserting
+    // `error !== null` (as this test used to) waits for a signal Postgres
+    // never sends. The property that actually matters is that the row did not
+    // change, so assert THAT, at the source, with a client that can see it.
     const update = await authenticated
       .from('auditoria')
       .update({ accion: 'tampered' })
-      .eq('id_auditoria', '00000000-0000-0000-0000-000000000000')
-    expect(update.error).not.toBeNull()
+      .eq('id_auditoria', id)
+      .select('id_auditoria')
+    expect(update.error).toBeNull()
+    expect(update.data).toEqual([])
 
     const del = await authenticated
       .from('auditoria')
       .delete()
-      .eq('id_auditoria', '00000000-0000-0000-0000-000000000000')
-    expect(del.error).not.toBeNull()
+      .eq('id_auditoria', id)
+      .select('id_auditoria')
+    expect(del.error).toBeNull()
+    expect(del.data).toEqual([])
+
+    const after = await user.serviceRole
+      .from('auditoria')
+      .select('accion')
+      .eq('id_auditoria', id)
+      .maybeSingle()
+    expect(after.data).not.toBeNull()
+    expect(after.data?.accion).toBe('crear')
   })
 
   it('cross-tenant SELECT returns zero rows (REQ-AL-06)', async () => {
-    const otherTenantJwt = 'fixture-jwt-for-tenant-b'
-    const authenticated = createAnonTestClient(otherTenantJwt)
+    const userA = await createTenantWithUser('audit-cross-a')
+    const tenantB = await createTenantWithUser('audit-cross-b')
 
-    const { data, error } = await authenticated
+    await tenantB.serviceRole.from('auditoria').insert({
+      id_tenant: tenantB.tenantId,
+      id_usuario: tenantB.userId,
+      entidad: 'cross-tenant-marker',
+      entidad_id: tenantB.userId,
+      accion: 'crear',
+      cambios: {},
+    })
+
+    const asUserA = await signInAs(userA)
+    const { data, error } = await asUserA
       .from('auditoria')
       .select('id_auditoria')
-      .eq('entidad', 'nonexistent-fixture-marker')
+      .eq('entidad', 'cross-tenant-marker')
+
     expect(error).toBeNull()
     expect(data).toEqual([])
   })
 
-  it('service_role UPDATE/DELETE STILL rejected — proves immutability is structural, not role-based', async () => {
-    const serviceRole = createServiceRoleTestClient()
+  it('service_role UPDATE/DELETE are NOT blocked — immutability guards `authenticated`, not the trusted role', async () => {
+    const user = await createTenantWithUser('audit-servicerole')
 
-    const { data: tenant } = await serviceRole
-      .from('tenant')
-      .insert({ nombre_comercial: 'Auditoria immutable', subdominio: withScopedTenant('audit-immutable') })
-      .select('id_tenant')
+    const row = await user.serviceRole
+      .from('auditoria')
+      .insert({
+        id_tenant: user.tenantId,
+        id_usuario: user.userId,
+        entidad: 'service-role-target',
+        entidad_id: user.userId,
+        accion: 'crear',
+        cambios: {},
+      })
+      .select('id_auditoria')
       .single()
-    if (!tenant) throw new Error('fixture insert failed: tenant is null')
+    expect(row.error).toBeNull()
 
-    // service_role bypasses RLS entirely, so this scenario documents that
-    // immutability is enforced against `authenticated`, not against
-    // service_role (which is trusted, server-only, and out of this guard's
-    // threat model). Structural denial is asserted in the prior two cases.
-    expect(tenant.id_tenant).toBeTruthy()
+    // Documents the actual boundary. service_role bypasses RLS entirely, so
+    // audit immutability is a guarantee against logged-in USERS; it is not a
+    // safe against a server-side key. The previous version of this test
+    // asserted nothing about service_role at all — it inserted a tenant and
+    // checked the id was truthy, under a name that promised the opposite.
+    const update = await user.serviceRole
+      .from('auditoria')
+      .update({ accion: 'editar' })
+      .eq('id_auditoria', row.data?.id_auditoria)
+    expect(update.error).toBeNull()
   })
 })

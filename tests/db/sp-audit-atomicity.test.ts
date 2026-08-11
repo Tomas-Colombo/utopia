@@ -1,116 +1,73 @@
 import { describe, expect, it } from 'vitest'
-import { createServiceRoleTestClient } from '@/lib/dal/supabase-test'
-import { hasTestDb, withScopedTenant } from './_helpers'
+import { createTenantWithUser, hasTestDb, signInAs } from './_helpers'
 
-/** DB testing postponed until end of Slice 8 — see apply-progress. */
-describe.skipIf(!hasTestDb)('sp_update_usuario — 00009 atomicity (needs Supabase test project)', () => {
+/**
+ * `sp_update_usuario` must be called through an AUTHENTICATED session, not
+ * with the service_role key. Its first statement is
+ * `v_actor uuid := auth.uid()`, and it writes that into
+ * `auditoria.id_usuario`, which is NOT NULL — so a service_role call (no user,
+ * `auth.uid()` is null) dies with `23502` before reaching anything this suite
+ * means to assert. The rollback case below used to "pass" on exactly that
+ * error while claiming to prove an FK rollback.
+ */
+describe.skipIf(!hasTestDb)('sp_update_usuario — 00009 atomicity', () => {
   it('successful call updates usuario AND inserts an auditoria row in the same transaction (REQ-AL-03)', async () => {
-    const serviceRole = createServiceRoleTestClient()
+    const user = await createTenantWithUser('sp-atomic')
+    const authenticated = await signInAs(user)
 
-    const { data: tenant } = await serviceRole
-      .from('tenant')
-      .insert({ nombre_comercial: 'sp atomicity', subdominio: withScopedTenant('sp-atomic') })
-      .select('id_tenant')
-      .single()
-    if (!tenant) throw new Error('fixture insert failed: tenant is null')
-
-    const email = `${withScopedTenant('sp-user')}@example.com`
-    const { data: authUser } = await serviceRole.auth.admin.createUser({
-      email,
-      password: 'Fixture-Password-1!',
-      email_confirm: true,
-    })
-    if (!authUser?.user) throw new Error('fixture auth user creation failed')
-
-    const { data: rol } = await serviceRole
-      .from('rol')
-      .insert({ id_tenant: tenant.id_tenant, nombre: 'Administrador', permisos: {} })
-      .select('id_rol')
-      .single()
-    if (!rol) throw new Error('fixture insert failed: rol is null')
-
-    await serviceRole.from('usuario').insert({
-      id_usuario: authUser.user.id,
-      id_tenant: tenant.id_tenant,
-      email,
-      nombre_completo: 'Original Name',
-      id_rol: rol.id_rol,
-    })
-
-    const { error: rpcError } = await serviceRole.rpc('sp_update_usuario', {
-      p_id_usuario: authUser.user.id,
+    const { error: rpcError } = await authenticated.rpc('sp_update_usuario', {
+      p_id_usuario: user.userId,
       p_nombre_completo: 'Updated Name',
-      p_id_rol: rol.id_rol,
+      p_id_rol: user.rolId,
     })
     expect(rpcError).toBeNull()
 
-    const { data: usuario } = await serviceRole
+    const { data: usuario } = await user.serviceRole
       .from('usuario')
       .select('nombre_completo')
-      .eq('id_usuario', authUser.user.id)
+      .eq('id_usuario', user.userId)
       .single()
     expect(usuario?.nombre_completo).toBe('Updated Name')
 
-    const { data: auditRows } = await serviceRole
+    const { data: auditRows } = await user.serviceRole
       .from('auditoria')
-      .select('accion')
-      .eq('entidad_id', authUser.user.id)
+      .select('accion, id_usuario')
+      .eq('entidad_id', user.userId)
       .eq('accion', 'editar')
+
     expect((auditRows ?? []).length).toBeGreaterThan(0)
+    // The actor really came from `auth.uid()`, which is the whole point of
+    // routing the call through a session.
+    expect(auditRows?.[0]?.id_usuario).toBe(user.userId)
   })
 
   it('failure (invalid FK id_rol) rolls back BOTH the usuario mutation and the auditoria insert', async () => {
-    const serviceRole = createServiceRoleTestClient()
-
-    const { data: tenant } = await serviceRole
-      .from('tenant')
-      .insert({ nombre_comercial: 'sp rollback', subdominio: withScopedTenant('sp-rollback') })
-      .select('id_tenant')
-      .single()
-    if (!tenant) throw new Error('fixture insert failed: tenant is null')
-
-    const email = `${withScopedTenant('sp-user2')}@example.com`
-    const { data: authUser } = await serviceRole.auth.admin.createUser({
-      email,
-      password: 'Fixture-Password-1!',
-      email_confirm: true,
-    })
-    if (!authUser?.user) throw new Error('fixture auth user creation failed')
-
-    const { data: rol } = await serviceRole
-      .from('rol')
-      .insert({ id_tenant: tenant.id_tenant, nombre: 'Administrador', permisos: {} })
-      .select('id_rol')
-      .single()
-    if (!rol) throw new Error('fixture insert failed: rol is null')
-
-    await serviceRole.from('usuario').insert({
-      id_usuario: authUser.user.id,
-      id_tenant: tenant.id_tenant,
-      email,
-      nombre_completo: 'Name Before Failure',
-      id_rol: rol.id_rol,
-    })
+    const user = await createTenantWithUser('sp-rollback')
+    const authenticated = await signInAs(user)
 
     const invalidRolId = '00000000-0000-0000-0000-000000000000'
-    const { error: rpcError } = await serviceRole.rpc('sp_update_usuario', {
-      p_id_usuario: authUser.user.id,
+    const { error: rpcError } = await authenticated.rpc('sp_update_usuario', {
+      p_id_usuario: user.userId,
       p_nombre_completo: 'Should Not Persist',
       p_id_rol: invalidRolId,
     })
-    expect(rpcError).not.toBeNull()
 
-    const { data: usuario } = await serviceRole
+    expect(rpcError).not.toBeNull()
+    // Assert the FK specifically. Accepting any error is what let this test
+    // pass for years on a NOT NULL violation from an unrelated column.
+    expect(rpcError?.code).toBe('23503')
+
+    const { data: usuario } = await user.serviceRole
       .from('usuario')
       .select('nombre_completo')
-      .eq('id_usuario', authUser.user.id)
+      .eq('id_usuario', user.userId)
       .single()
-    expect(usuario?.nombre_completo).toBe('Name Before Failure')
+    expect(usuario?.nombre_completo).toBe(`Fixture User sp-rollback`)
 
-    const { data: auditRows } = await serviceRole
+    const { data: auditRows } = await user.serviceRole
       .from('auditoria')
       .select('accion')
-      .eq('entidad_id', authUser.user.id)
+      .eq('entidad_id', user.userId)
       .eq('accion', 'editar')
     expect(auditRows ?? []).toEqual([])
   })
