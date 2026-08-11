@@ -26,7 +26,14 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          # Must be 22+, and not by preference: `@supabase/supabase-js`
+          # constructs its Realtime client inside `createClient` — even with
+          # realtime disabled in config.toml — and that needs the global
+          # `WebSocket`, which Node 20 does not have. On 20 the e2e setup dies
+          # at `e2e/support/supabase.ts` before a single spec runs.
+          # Read from .nvmrc so this can never drift from the version used
+          # locally; that drift is what put a 20 here in the first place.
+          node-version-file: .nvmrc
           cache: pnpm
 
       - name: Install dependencies
