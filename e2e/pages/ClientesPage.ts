@@ -1,7 +1,7 @@
 import { expect, type Locator, type Page } from '@playwright/test'
-import { alerta, AppShell, contenido } from './AppShell'
+import { alerta, AppShell } from './AppShell'
 
-/** `/clientes` list + `/clientes/nuevo` form. */
+/** `/clientes` list + its "Nuevo cliente" modal. */
 export class ClientesPage {
   readonly shell: AppShell
 
@@ -14,34 +14,48 @@ export class ClientesPage {
     await expect(this.shell.titulo).toHaveText('Clientes')
   }
 
+  /** The form lives in a modal over the list, not on its own route. */
   async abrirNuevo(): Promise<void> {
-    await this.page.getByRole('link', { name: 'Nuevo cliente' }).first().click()
-    await expect(this.shell.titulo).toHaveText('Nuevo cliente')
+    await this.page.getByRole('button', { name: 'Nuevo cliente' }).first().click()
+    await expect(this.modalNuevo).toBeVisible()
+  }
+
+  get modalNuevo(): Locator {
+    return this.page.getByRole('dialog')
   }
 
   /**
+   * Form fields are scoped to the modal, NOT to `main`: `Modal` portals to
+   * `document.body`, so a `main`-scoped locator finds nothing once the form
+   * moved out of its own route.
+   *
    * `<Field required>` appends a `*` marker inside the `<label>`, so the label
    * text is never exactly "Nombre". Anchored regexes match either shape.
    */
   get nombre(): Locator {
-    return contenido(this.page).getByLabel(/^Nombre/)
+    return this.modalNuevo.getByLabel(/^Nombre/)
+  }
+
+  /** Required since 00058: the book is ordered and searched by it. */
+  get apellido(): Locator {
+    return this.modalNuevo.getByLabel(/^Apellido/)
   }
 
   get telefono(): Locator {
-    return contenido(this.page).getByLabel('Teléfono')
+    return this.modalNuevo.getByLabel('Teléfono')
   }
 
   get email(): Locator {
-    return contenido(this.page).getByLabel('Email')
+    return this.modalNuevo.getByLabel('Email')
   }
 
   get guardar(): Locator {
-    return this.page.getByRole('button', { name: /Crear cliente|Guardando/ })
+    return this.modalNuevo.getByRole('button', { name: /Crear cliente|Guardando/ })
   }
 
   /** Inline validation message rendered by `<Field error>`. */
   get errorNombre(): Locator {
-    return alerta(this.page)
+    return alerta(this.modalNuevo)
   }
 
   get buscador(): Locator {
@@ -52,9 +66,15 @@ export class ClientesPage {
     return this.page.getByRole('row').filter({ hasText: nombre })
   }
 
-  async crear(nombre: string, extra: { telefono?: string; email?: string } = {}): Promise<void> {
+  async crear(
+    nombre: string,
+    extra: { apellido?: string; telefono?: string; email?: string } = {},
+  ): Promise<void> {
     await this.abrirNuevo()
     await this.nombre.fill(nombre)
+    // Required field: specs that do not care about it still need a value, or
+    // the form fails client-side validation before reaching the server.
+    await this.apellido.fill(extra.apellido ?? 'Apellido')
     if (extra.telefono) await this.telefono.fill(extra.telefono)
     if (extra.email) await this.email.fill(extra.email)
     await this.guardar.click()

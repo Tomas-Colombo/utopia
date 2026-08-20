@@ -1,11 +1,15 @@
 import 'server-only'
 import { createServerClient } from '@/lib/dal/supabase'
 import type {
+  AlertaCuotaVencida,
   AlertaReposicion,
   AlertaRotacionVencida,
+  CuentasPorCobrar,
   DashboardKpis,
   GananciaPorProductoRow,
+  IncobrablesPeriodo,
   PerfilProveedorRow,
+  ReporteCaja,
   ReporteFinanciero,
   RotacionRow,
 } from '@/lib/types/reportes'
@@ -175,4 +179,105 @@ export async function getReporteFinanciero(input: {
     cantidad_lineas: Number(r.cantidad_lineas ?? 0),
     ticket_promedio: Number(r.ticket_promedio ?? 0),
   }
+}
+
+// ─── Caja y deuda (00061) ────────────────────────────────────────────
+
+/**
+ * PERCIBIDO del período: lo que entró, medido sobre la fecha del PAGO.
+ *
+ * No reemplaza a `getReporteFinanciero`, que mide devengado sobre la fecha de
+ * la VENTA. Desde que una venta puede cobrarse en seis meses, las dos lecturas
+ * dejaron de coincidir y el panel necesita las dos.
+ */
+export async function getReporteCaja(input: {
+  desde: string
+  hasta: string
+}): Promise<ReporteCaja> {
+  const supabase = await createServerClient()
+  const { data, error } = await supabase.rpc('rf_reporte_caja', {
+    p_desde: input.desde,
+    p_hasta: input.hasta,
+  })
+  if (error) throw new Error(`rf_reporte_caja: ${error.message}`)
+  const r = (fila(data) ?? {}) as Record<string, unknown>
+  return {
+    cobrado_total: Number(r.cobrado_total ?? 0),
+    cobrado_contado: Number(r.cobrado_contado ?? 0),
+    cobrado_cuotas: Number(r.cobrado_cuotas ?? 0),
+    costo_cobro: Number(r.costo_cobro ?? 0),
+    neto_acreditado: Number(r.neto_acreditado ?? 0),
+    a_acreditar: Number(r.a_acreditar ?? 0),
+    cantidad_pagos: Number(r.cantidad_pagos ?? 0),
+  }
+}
+
+/**
+ * Deuda vigente. Sin período: es un saldo, no un flujo.
+ *
+ * `hoy` lo pasa el caller para que el KPI y el listado de `/cuotas` no puedan
+ * discrepar a caballo de la medianoche.
+ */
+export async function getCuentasPorCobrar(hoy: string): Promise<CuentasPorCobrar> {
+  const supabase = await createServerClient()
+  const { data, error } = await supabase.rpc('rf_cuentas_por_cobrar', { p_hoy: hoy })
+  if (error) throw new Error(`rf_cuentas_por_cobrar: ${error.message}`)
+  const r = (fila(data) ?? {}) as Record<string, unknown>
+  return {
+    a_cobrar: Number(r.a_cobrar ?? 0),
+    vence_este_mes: Number(r.vence_este_mes ?? 0),
+    vencido: Number(r.vencido ?? 0),
+    cuotas_pendientes: Number(r.cuotas_pendientes ?? 0),
+    cuotas_vencidas: Number(r.cuotas_vencidas ?? 0),
+    clientes_con_deuda: Number(r.clientes_con_deuda ?? 0),
+    planes_activos: Number(r.planes_activos ?? 0),
+  }
+}
+
+/** Pérdidas por incobrable del período, con el costo que quedó sin cubrir. */
+export async function getIncobrablesPeriodo(input: {
+  desde: string
+  hasta: string
+}): Promise<IncobrablesPeriodo> {
+  const supabase = await createServerClient()
+  const { data, error } = await supabase.rpc('rf_incobrables_periodo', {
+    p_desde: input.desde,
+    p_hasta: input.hasta,
+  })
+  if (error) throw new Error(`rf_incobrables_periodo: ${error.message}`)
+  const r = (fila(data) ?? {}) as Record<string, unknown>
+  return {
+    monto_incobrable: Number(r.monto_incobrable ?? 0),
+    costo_no_cubierto: Number(r.costo_no_cubierto ?? 0),
+    cuotas_incobrables: Number(r.cuotas_incobrables ?? 0),
+    ventas_afectadas: Number(r.ventas_afectadas ?? 0),
+    clientes_afectados: Number(r.clientes_afectados ?? 0),
+  }
+}
+
+/** Clientes con cuotas vencidas, el que más debe primero. */
+export async function listAlertasCuotasVencidas(
+  hoy: string,
+  limite = 20,
+): Promise<AlertaCuotaVencida[]> {
+  const supabase = await createServerClient()
+  const { data, error } = await supabase.rpc('rf_alertas_cuotas_vencidas', {
+    p_hoy: hoy,
+    p_limite: limite,
+  })
+  if (error) throw new Error(`rf_alertas_cuotas_vencidas: ${error.message}`)
+  return ((data ?? []) as Record<string, unknown>[]).map((r) => ({
+    id_cliente: String(r.id_cliente),
+    cliente_nombre: String(r.cliente_nombre ?? ''),
+    cliente_telefono: (r.cliente_telefono as string | null) ?? null,
+    cuotas_vencidas: Number(r.cuotas_vencidas ?? 0),
+    monto_vencido: Number(r.monto_vencido ?? 0),
+    vencimiento_mas_viejo: String(r.vencimiento_mas_viejo),
+    dias_vencido: Number(r.dias_vencido ?? 0),
+  }))
+}
+
+/** Las `rf_*` que devuelven `table(...)` de una sola fila llegan como array. */
+function fila(data: unknown): unknown {
+  return Array.isArray(data) ? data[0] : data
 }

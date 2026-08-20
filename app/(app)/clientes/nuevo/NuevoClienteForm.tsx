@@ -9,46 +9,71 @@ import { Textarea } from '@/components/ui/Textarea'
 import { useToast } from '@/components/ui/Toast'
 import { crearClienteAction } from '../../ventas/actions'
 
-export function NuevoClienteForm() {
+/**
+ * Alta de cliente. Se usa desde el modal del listado y desde la ruta
+ * `/clientes/nuevo`, que sobrevive para enlaces directos: `onSuccess` decide
+ * cuál de los dos cierres corresponde.
+ */
+export function NuevoClienteForm({ onSuccess }: { onSuccess?: () => void }) {
   const router = useRouter()
   const toast = useToast()
   const [pending, start] = useTransition()
 
   const [nombre, setNombre] = useState('')
+  const [apellido, setApellido] = useState('')
   const [telefono, setTelefono] = useState('')
   const [email, setEmail] = useState('')
   const [notas, setNotas] = useState('')
-  const [err, setErr] = useState<string | null>(null)
+  const [errNombre, setErrNombre] = useState<string | null>(null)
+  const [errApellido, setErrApellido] = useState<string | null>(null)
 
   function submit(e: React.FormEvent) {
     e.preventDefault()
-    if (nombre.trim().length < 2) return setErr('Nombre muy corto')
-    setErr(null)
+    const n = nombre.trim().length >= 2 ? null : 'Nombre muy corto'
+    const a = apellido.trim().length >= 2 ? null : 'Apellido muy corto'
+    setErrNombre(n)
+    setErrApellido(a)
+    if (n || a) return
+
     start(async () => {
       const res = await crearClienteAction({
         nombre,
+        apellido,
         telefono: telefono || null,
         email: email || null,
         notas: notas || null,
       })
       if (!res.ok) return toast.error('No se pudo crear', res.reason)
       toast.success('Cliente creado')
-      router.push('/clientes')
+      if (onSuccess) onSuccess()
+      else router.push('/clientes')
       router.refresh()
     })
   }
 
   return (
     <form onSubmit={submit} className="space-y-4">
-      <Field htmlFor="cn" label="Nombre" required error={err ?? undefined}>
-        <Input
-          id="cn"
-          value={nombre}
-          onChange={(e) => setNombre(e.target.value)}
-          autoFocus
-          invalid={!!err}
-        />
-      </Field>
+      {/* Apellido primero: es por donde se busca y por donde se ordena la
+          cartera. */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Field htmlFor="ca" label="Apellido" required error={errApellido ?? undefined}>
+          <Input
+            id="ca"
+            value={apellido}
+            onChange={(e) => setApellido(e.target.value)}
+            autoFocus
+            invalid={!!errApellido}
+          />
+        </Field>
+        <Field htmlFor="cn" label="Nombre" required error={errNombre ?? undefined}>
+          <Input
+            id="cn"
+            value={nombre}
+            onChange={(e) => setNombre(e.target.value)}
+            invalid={!!errNombre}
+          />
+        </Field>
+      </div>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field htmlFor="ct" label="Teléfono" hint="Se usa para link WhatsApp">
           <Input
@@ -66,7 +91,12 @@ export function NuevoClienteForm() {
         <Textarea id="cno" rows={3} value={notas} onChange={(e) => setNotas(e.target.value)} />
       </Field>
       <div className="flex justify-end gap-2 pt-2">
-        <Button variant="secondary" onClick={() => router.back()} disabled={pending}>
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={() => (onSuccess ? onSuccess() : router.back())}
+          disabled={pending}
+        >
           Cancelar
         </Button>
         <Button type="submit" disabled={pending}>

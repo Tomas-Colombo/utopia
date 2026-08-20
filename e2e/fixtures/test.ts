@@ -2,6 +2,7 @@ import { test as base } from '@playwright/test'
 import { AdministracionPage } from '../pages/AdministracionPage'
 import { AppShell } from '../pages/AppShell'
 import { ClientesPage } from '../pages/ClientesPage'
+import { ClienteDetallePage, CuotasPage } from '../pages/CuotasPage'
 import { GastosPage } from '../pages/GastosPage'
 import {
   CategoriasPage,
@@ -24,6 +25,8 @@ interface Fixtures {
   shell: AppShell
   login: LoginPage
   clientes: ClientesPage
+  cuotas: CuotasPage
+  clienteDetalle: ClienteDetallePage
   proveedores: ProveedoresPage
   inventario: InventarioPage
   nuevoProducto: NuevoProductoPage
@@ -60,6 +63,12 @@ export const test = base.extend<Fixtures, WorkerFixtures>({
   },
   clientes: async ({ page }, use) => {
     await use(new ClientesPage(page))
+  },
+  cuotas: async ({ page }, use) => {
+    await use(new CuotasPage(page))
+  },
+  clienteDetalle: async ({ page }, use) => {
+    await use(new ClienteDetallePage(page))
   },
   proveedores: async ({ page }, use) => {
     await use(new ProveedoresPage(page))

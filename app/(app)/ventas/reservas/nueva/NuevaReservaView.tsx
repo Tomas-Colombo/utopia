@@ -52,6 +52,7 @@ export function NuevaReservaView({
   const [creandoCliente, setCreandoCliente] = useState(false)
   const [guardandoCliente, startCliente] = useTransition()
   const [nuevoNombre, setNuevoNombre] = useState('')
+  const [nuevoApellido, setNuevoApellido] = useState('')
   const [nuevoTelefono, setNuevoTelefono] = useState('')
   const [errorCliente, setErrorCliente] = useState<string | null>(null)
   const [fechaVenc, setFechaVenc] = useState(() => {
@@ -266,21 +267,32 @@ export function NuevaReservaView({
 
   function crearCliente() {
     const nombre = nuevoNombre.trim()
+    const apellido = nuevoApellido.trim()
     if (nombre.length < 2) return setErrorCliente('Nombre muy corto')
+    if (apellido.length < 2) return setErrorCliente('Falta el apellido')
     setErrorCliente(null)
     startCliente(async () => {
       const res = await crearClienteAction({
         nombre,
+        apellido,
         telefono: nuevoTelefono.trim() || null,
       })
       if (!res.ok) return setErrorCliente(res.reason)
-      const nuevo: Cliente = { id: res.data!.id, nombre, telefono: nuevoTelefono.trim() || null }
+      // Mismo armado que la columna generada `nombre_completo` (00058), para
+      // que el cliente recien creado no se vea distinto al recargar.
+      const completo = `${nombre} ${apellido}`
+      const nuevo: Cliente = {
+        id: res.data!.id,
+        nombre: completo,
+        telefono: nuevoTelefono.trim() || null,
+      }
       setClientes((xs) => [...xs, nuevo].sort((a, b) => a.nombre.localeCompare(b.nombre)))
       setIdCliente(nuevo.id)
       setNuevoNombre('')
+      setNuevoApellido('')
       setNuevoTelefono('')
       setCreandoCliente(false)
-      toast.success('Cliente creado', nombre)
+      toast.success('Cliente creado', completo)
     })
   }
 
@@ -487,22 +499,41 @@ export function NuevaReservaView({
 
           {creandoCliente && (
             <div className="rounded-md border border-border bg-card-2 p-3 space-y-3">
-              <Field htmlFor="r-nc-nombre" label="Nombre" required error={errorCliente ?? undefined}>
-                <Input
-                  id="r-nc-nombre"
-                  autoFocus
-                  value={nuevoNombre}
-                  onChange={(e) => setNuevoNombre(e.target.value)}
-                  placeholder="Nombre y apellido"
-                  invalid={!!errorCliente}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault()
-                      crearCliente()
-                    }
-                  }}
-                />
-              </Field>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <Field
+                  htmlFor="r-nc-nombre"
+                  label="Nombre"
+                  required
+                  error={errorCliente ?? undefined}
+                >
+                  <Input
+                    id="r-nc-nombre"
+                    autoFocus
+                    value={nuevoNombre}
+                    onChange={(e) => setNuevoNombre(e.target.value)}
+                    invalid={!!errorCliente}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        crearCliente()
+                      }
+                    }}
+                  />
+                </Field>
+                <Field htmlFor="r-nc-apellido" label="Apellido" required>
+                  <Input
+                    id="r-nc-apellido"
+                    value={nuevoApellido}
+                    onChange={(e) => setNuevoApellido(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        crearCliente()
+                      }
+                    }}
+                  />
+                </Field>
+              </div>
               <Field htmlFor="r-nc-tel" label="Teléfono" hint="Se usa para link WhatsApp">
                 <Input
                   id="r-nc-tel"
@@ -522,7 +553,11 @@ export function NuevaReservaView({
                 size="sm"
                 className="w-full"
                 onClick={crearCliente}
-                disabled={guardandoCliente || nuevoNombre.trim().length < 2}
+                disabled={
+                  guardandoCliente ||
+                  nuevoNombre.trim().length < 2 ||
+                  nuevoApellido.trim().length < 2
+                }
               >
                 {guardandoCliente ? 'Creando…' : 'Crear y seleccionar'}
               </Button>

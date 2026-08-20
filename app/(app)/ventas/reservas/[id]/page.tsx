@@ -7,6 +7,7 @@ import { verifySession } from '@/lib/dal/session'
 import { getReservaConDetalle } from '@/lib/dal/reservas/reserva'
 import {
   ESTADO_RESERVA_LABEL,
+  nombreCliente,
   type EstadoReserva,
 } from '@/lib/types/ventas'
 import { ReservaDetalleActions } from './ReservaDetalleActions'
@@ -42,7 +43,7 @@ export default async function ReservaDetallePage(props: {
         <div className="rounded-lg border border-border bg-card p-4 grid grid-cols-2 gap-4 text-sm md:grid-cols-4">
           <div>
             <div className="text-xs uppercase font-mono text-muted">Cliente</div>
-            <div className="mt-1">{reserva.cliente?.nombre ?? 'Mostrador'}</div>
+            <div className="mt-1">{nombreCliente(reserva.cliente)}</div>
           </div>
           <div>
             <div className="text-xs uppercase font-mono text-muted">Fecha</div>

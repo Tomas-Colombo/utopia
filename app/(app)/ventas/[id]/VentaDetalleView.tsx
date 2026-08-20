@@ -11,18 +11,44 @@ import { Modal } from '@/components/ui/Modal'
 import { useToast } from '@/components/ui/Toast'
 import { formaPagoLabel } from '@/lib/types/precios'
 import {
+  CONCEPTO_RETENCION_LABEL,
+  desgloseCosto,
+  ESTADO_CUOTA_LABEL,
   MEDIO_PAGO_LABEL,
+  nombreCliente,
   TIPO_COMPROBANTE_LABEL,
+  type CuotaFinanciadaRow,
+  type EstadoCuota,
+  type PagoVentaRow,
+  type PerdidaIncobrable,
   type TipoComprobante,
   type VentaConDetalle,
 } from '@/lib/types/ventas'
+import { saldoCuota } from '@/lib/cuotas/generar-plan'
 import {
   anularVentaAction,
   devolverItemVentaAction,
   emitirComprobanteAction,
 } from '../actions'
 
-export function VentaDetalleView({ venta }: { venta: VentaConDetalle }) {
+const CUOTA_VARIANT: Record<EstadoCuota, 'success' | 'info' | 'warning' | 'danger' | 'neutral'> = {
+  pendiente: 'info',
+  parcial: 'warning',
+  pagada: 'success',
+  incobrable: 'danger',
+  anulada: 'neutral',
+}
+
+export function VentaDetalleView({
+  venta,
+  cuotas,
+  perdida,
+}: {
+  venta: VentaConDetalle
+  cuotas: CuotaFinanciadaRow[]
+  /** Solo viene si alguna cuota quedo incobrable. */
+  perdida: PerdidaIncobrable | null
+}) {
   const router = useRouter()
   const toast = useToast()
   const [pending, start] = useTransition()
@@ -36,6 +62,24 @@ export function VentaDetalleView({ venta }: { venta: VentaConDetalle }) {
   const readonly = venta.estado_venta === 'anulada'
   const tieneComprobante = venta.comprobantes.length > 0
   const total = Number(venta.total)
+
+  // Neto de la cobranza. Sólo se muestra si hubo algo que descontar: si el
+  // neto es igual al total, repetirlo abajo no informa nada.
+  const costoTotal = venta.pagos.reduce((a, p) => a + Number(p.costo_cobro), 0)
+  const netoTotal =
+    costoTotal > 0
+      ? venta.pagos.reduce((a, p) => a + Number(p.neto_acreditado ?? p.monto), 0)
+      : null
+  // La fecha en la que termina de acreditar todo: la más lejana de los pagos.
+  const fechaAcreditacion = (() => {
+    const fechas = venta.pagos.map((p) => p.fecha_acreditacion).filter((f): f is string => !!f)
+    if (fechas.length === 0) return null
+    const max = fechas.reduce((a, f) => (f > a ? f : a))
+    // Acreditación el mismo día = ya está en la cuenta, no hay nada que avisar.
+    return max <= venta.fecha.slice(0, 10)
+      ? null
+      : `acredita el ${new Date(`${max}T00:00:00`).toLocaleDateString('es-AR')}`
+  })()
 
   function anular() {
     setAnularOpen(false)
@@ -85,7 +129,7 @@ export function VentaDetalleView({ venta }: { venta: VentaConDetalle }) {
       <div className="rounded-lg border border-border bg-card p-4 grid grid-cols-2 gap-4 text-sm md:grid-cols-4">
         <div>
           <div className="text-xs uppercase font-mono text-muted">Cliente</div>
-          <div className="mt-1">{venta.cliente?.nombre ?? 'Mostrador'}</div>
+          <div className="mt-1">{nombreCliente(venta.cliente)}</div>
           {venta.cliente?.telefono && (
             <div className="text-xs text-muted">{venta.cliente.telefono}</div>
           )}
@@ -204,6 +248,9 @@ export function VentaDetalleView({ venta }: { venta: VentaConDetalle }) {
                 <div className="min-w-0">
                   <div className="font-medium">
                     {MEDIO_PAGO_LABEL[p.medio]}
+                    {p.cuotas != null && p.cuotas > 1 && (
+                      <span className="text-muted"> · {p.cuotas} cuotas</span>
+                    )}
                     {p.cuenta && <span className="text-muted"> · {p.cuenta.nombre}</span>}
                   </div>
                   {p.referencia && (
@@ -216,13 +263,172 @@ export function VentaDetalleView({ venta }: { venta: VentaConDetalle }) {
                       vuelto $ {Number(p.vuelto).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                     </div>
                   )}
+                  <DesgloseCobro pago={p} />
                 </div>
-                <span className="font-mono font-semibold whitespace-nowrap">
-                  $ {Number(p.monto).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
-                </span>
+                <div className="text-right whitespace-nowrap">
+                  <div className="font-mono font-semibold">
+                    $ {Number(p.monto).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+                  </div>
+                  {Number(p.costo_cobro) > 0 && (
+                    <div className="font-mono text-xs text-muted">
+                      neto $ {Number(p.neto_acreditado).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+                    </div>
+                  )}
+                </div>
               </li>
             ))}
           </ul>
+
+          {netoTotal !== null && (
+            <div className="mt-3 flex items-center justify-between border-t border-border pt-3 text-sm">
+              <span className="text-muted">
+                Neto acreditado
+                {fechaAcreditacion && ` · ${fechaAcreditacion}`}
+              </span>
+              <span className="font-mono font-semibold">
+                $ {netoTotal.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Plan de cuotas financiado por la casa. */}
+      {cuotas.length > 0 && (
+        <div className="rounded-lg border border-border bg-card p-4">
+          <h3 className="mb-3 font-display text-lg">Cuotas financiadas</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border text-left">
+                  <th className="px-2 py-2">Cuota</th>
+                  <th className="px-2 py-2">Vence</th>
+                  <th className="px-2 py-2 text-right">Monto</th>
+                  <th className="px-2 py-2 text-right">Pagado</th>
+                  <th className="px-2 py-2">Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {cuotas.map((c) => (
+                  <tr key={c.id_cuota_financiada} className="border-b border-border-2 last:border-0">
+                    <td className="px-2 py-2 font-mono text-xs">#{c.numero}</td>
+                    <td className="px-2 py-2">
+                      {new Date(`${c.fecha_vencimiento}T00:00:00`).toLocaleDateString('es-AR')}
+                    </td>
+                    <td className="px-2 py-2 text-right font-mono">{money(Number(c.monto))}</td>
+                    <td className="px-2 py-2 text-right font-mono text-muted">
+                      {Number(c.monto_pagado) > 0 ? money(Number(c.monto_pagado)) : '—'}
+                    </td>
+                    <td className="px-2 py-2">
+                      <Badge variant={CUOTA_VARIANT[c.estado]}>
+                        {ESTADO_CUOTA_LABEL[c.estado]}
+                      </Badge>
+                      {c.estado === 'incobrable' && c.motivo_incobrable && (
+                        <div className="mt-1 text-xs text-muted">{c.motivo_incobrable}</div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="border-t border-border bg-card-2">
+                  <td colSpan={2} className="px-2 py-2 font-semibold">
+                    Pendiente de cobro
+                  </td>
+                  <td colSpan={3} className="px-2 py-2 text-right font-mono font-semibold">
+                    {money(
+                      cuotas
+                        .filter((c) => c.estado === 'pendiente' || c.estado === 'parcial')
+                        .reduce((a, c) => a + saldoCuota(c), 0),
+                    )}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Perdida por incobrable. Dos numeros distintos: lo que no se cobro, y
+          cuanta plata hay que poner para cubrir la mercaderia. */}
+      {perdida && (
+        <div className="rounded-lg border border-alerta-ink bg-alerta-bg p-4">
+          <h3 className="mb-3 font-display text-lg text-alerta-ink">Perdida por incobrable</h3>
+
+          <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="rounded-md border border-border bg-card p-3">
+              <div className="font-mono text-xs uppercase text-muted">No cobrado</div>
+              <div className="mt-1 font-display text-xl">{money(perdida.monto_adeudado)}</div>
+              <div className="mt-1 text-xs text-muted">Ganancia que nunca entro</div>
+            </div>
+            <div className="rounded-md border border-border bg-card p-3">
+              <div className="font-mono text-xs uppercase text-muted">Cobrado</div>
+              <div className="mt-1 font-display text-xl">{money(perdida.total_cobrado)}</div>
+              <div className="mt-1 text-xs text-muted">
+                sobre un costo de {money(perdida.costo_total)}
+              </div>
+            </div>
+            <div className="rounded-md border border-alerta-ink bg-card p-3">
+              <div className="font-mono text-xs uppercase text-alerta-ink">
+                Costo no cubierto
+              </div>
+              <div className="mt-1 font-display text-xl text-alerta-ink">
+                {money(perdida.costo_no_cubierto)}
+              </div>
+              <div className="mt-1 text-xs text-muted">
+                {perdida.costo_no_cubierto > 0
+                  ? 'Plata que tenes que poner'
+                  : 'Lo cobrado alcanzo a cubrir la mercaderia'}
+              </div>
+            </div>
+          </div>
+
+          {perdida.detalle.length > 0 && (
+            <>
+              <div className="overflow-x-auto rounded-md border border-border bg-card">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border text-left">
+                      <th className="px-3 py-2">Producto</th>
+                      <th className="px-3 py-2">Proveedor</th>
+                      <th className="px-3 py-2 text-right">Costo</th>
+                      <th className="px-3 py-2 text-right">Cubierto</th>
+                      <th className="px-3 py-2 text-right">No cubierto</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {perdida.detalle.map((l) => (
+                      <tr key={l.id_detalle_venta} className="border-b border-border-2 last:border-0">
+                        <td className="px-3 py-2">
+                          <div className="font-medium">{l.producto_nombre ?? '—'}</div>
+                          <div className="text-xs text-muted capitalize">
+                            {l.tipo_ingreso_snapshot}
+                            {l.excluida_rendicion && ' · excluida de rendicion'}
+                          </div>
+                        </td>
+                        <td className="px-3 py-2 text-xs">
+                          {l.proveedor_nombre ?? <span className="text-muted-2">propio</span>}
+                        </td>
+                        <td className="px-3 py-2 text-right font-mono">{money(l.costo_linea)}</td>
+                        <td className="px-3 py-2 text-right font-mono text-muted">
+                          {money(l.costo_cubierto)}
+                        </td>
+                        <td className="px-3 py-2 text-right font-mono font-semibold text-alerta-ink">
+                          {money(l.costo_no_cubierto)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="mt-2 text-xs text-muted">
+                El reparto es proporcional al costo de cada linea. Es una
+                atribucion, no un hecho: la plata que el cliente pago no vino
+                asignada a un producto en particular. Sirve para saber a que
+                proveedor le vas a tener que pagar algo que nunca cobraste.
+              </p>
+            </>
+          )}
         </div>
       )}
 
@@ -313,4 +519,35 @@ export function VentaDetalleView({ venta }: { venta: VentaConDetalle }) {
       </Modal>
     </div>
   )
+}
+
+/**
+ * Desglose de lo que se llevó el procesador de un cobro. Lee el SNAPSHOT
+ * guardado en el pago (00057), no recalcula: el tarifario de hoy no es el que
+ * se aplicó cuando se vendió.
+ */
+function DesgloseCobro({ pago }: { pago: Pick<PagoVentaRow, 'desglose_costo'> }) {
+  const d = desgloseCosto(pago.desglose_costo)
+  if (!d || d.sin_tarifario || d.costo_total <= 0) return null
+  return (
+    <ul className="mt-1 space-y-0.5 text-xs text-muted">
+      <li>
+        Arancel {d.arancel_pct}% · −{money(d.arancel_monto)}
+      </li>
+      {d.iva_arancel_monto > 0 && (
+        <li>
+          IVA s/arancel {d.iva_arancel_pct}% · −{money(d.iva_arancel_monto)}
+        </li>
+      )}
+      {d.retenciones.map((r) => (
+        <li key={r.concepto}>
+          {CONCEPTO_RETENCION_LABEL[r.concepto]} {r.pct}% · −{money(r.monto)}
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+function money(n: number): string {
+  return `$ ${n.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`
 }

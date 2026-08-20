@@ -27,8 +27,10 @@ export class VentasPage {
  * `/ventas/nueva` — the cart.
  *
  * Two steps by design: the cart is built on the page, and confirmation only
- * exists inside the Cobranza modal. The page object mirrors that split so a
- * spec cannot accidentally "confirm" without going through collection.
+ * appears once the Cobro panel is expanded. The page object mirrors that
+ * split so a spec cannot accidentally "confirm" without going through
+ * collection. The panel is inline (it used to be a modal), so it is located
+ * by its `aria-label` rather than by the dialog role.
  */
 export class NuevaVentaPage {
   readonly shell: AppShell
@@ -64,15 +66,21 @@ export class NuevaVentaPage {
   }
 
   get continuarAlCobro(): Locator {
-    return this.page.getByRole('button', { name: /Continuar al cobro|Registrando/ })
+    return this.page.getByRole('button', { name: 'Continuar al cobro' })
   }
 
-  get modalCobranza(): Locator {
-    return this.page.getByRole('dialog')
+  /** The inline collection panel, revealed by `continuarAlCobro`. */
+  get panelCobro(): Locator {
+    return this.page.getByRole('region', { name: 'Cobro' })
   }
 
+  /**
+   * Lives in the sticky action bar, NOT inside the panel: the panel is long
+   * and the bar keeps the close-the-sale action reachable. Only rendered once
+   * the panel is open, so it still cannot be clicked from the cart step.
+   */
   get confirmar(): Locator {
-    return this.modalCobranza.getByRole('button', { name: /^Confirmar venta/ })
+    return this.page.getByRole('button', { name: /^Confirmar venta|Registrando/ })
   }
 
   /**
@@ -98,7 +106,7 @@ export class NuevaVentaPage {
 
   async cobrarYConfirmar(): Promise<void> {
     await this.continuarAlCobro.click()
-    await expect(this.modalCobranza).toBeVisible()
+    await expect(this.panelCobro).toBeVisible()
     await expect(this.confirmar).toBeEnabled()
     await this.confirmar.click()
   }

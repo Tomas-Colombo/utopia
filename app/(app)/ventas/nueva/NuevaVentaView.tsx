@@ -6,8 +6,8 @@ import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Field } from '@/components/ui/Field'
 import { Input } from '@/components/ui/Input'
-import { Modal } from '@/components/ui/Modal'
 import { NumberInput } from '@/components/ui/NumberInput'
+import { Select } from '@/components/ui/Select'
 import { Textarea } from '@/components/ui/Textarea'
 import { useToast } from '@/components/ui/Toast'
 import { QrScanner } from '@/components/inventario/QrScanner'
@@ -32,6 +32,7 @@ import {
 } from '@/lib/types/precios'
 import type { ProductoConDetalle } from '@/lib/types/inventario'
 import type {
+  ArancelCobroRow,
   CuentaDestinoRow,
   LineaCarrito,
   ReservaDeProducto,
@@ -41,8 +42,10 @@ import {
   cobranzaCuadra,
   normalizarPagos,
   nuevoPago,
+  sumaPagos,
   type PagoBorrador,
 } from './CobranzaPanel'
+import { generarPlanCuotas } from '@/lib/cuotas/generar-plan'
 import { registrarVentaAction, crearClienteAction } from '../actions'
 
 interface ClienteOption { id: string; nombre: string; telefono: string | null }
@@ -114,6 +117,7 @@ export function NuevaVentaView({
   reservasPorProducto,
   cuentas,
   planesCuotas,
+  aranceles,
   precargaReserva,
 }: {
   clientes: ClienteOption[]
@@ -124,6 +128,8 @@ export function NuevaVentaView({
   cuentas: CuentaDestinoRow[]
   /** Planes que el tenant configuró en Precios. Sólo los activos se ofrecen. */
   planesCuotas: PlanCuotasRow[]
+  /** Tarifario vigente (00057): con qué se calcula el neto en el preview. */
+  aranceles: ArancelCobroRow[]
   precargaReserva: PrecargaReserva | null
 }) {
   const router = useRouter()
@@ -138,12 +144,16 @@ export function NuevaVentaView({
   const [creandoCliente, setCreandoCliente] = useState(false)
   const [guardandoCliente, startCliente] = useTransition()
   const [nuevoNombre, setNuevoNombre] = useState('')
+  const [nuevoApellido, setNuevoApellido] = useState('')
   const [nuevoTelefono, setNuevoTelefono] = useState('')
   const [errorCliente, setErrorCliente] = useState<string | null>(null)
   // La venta se ata a UNA reserva. Vacío = venta suelta, y en ese caso el
   // campo ni se muestra: aparece recién cuando se carga un ítem reservado.
   const [idReserva, setIdReserva] = useState<string>(precargaReserva?.idReserva ?? '')
   const [observaciones, setObservaciones] = useState(precargaReserva?.observaciones ?? '')
+  // La nota arranca colapsada salvo que la reserva ya haya traído uno: si hay
+  // texto, esconderlo detrás de un botón lo haría invisible.
+  const [notaAbierta, setNotaAbierta] = useState(false)
 
   const [qrInput, setQrInput] = useState('')
   const [buscando, setBuscando] = useState(false)
@@ -208,9 +218,17 @@ export function NuevaVentaView({
   )
   const productosEnCarritoCount = productosEnCarrito ? productosEnCarrito.split(',').length : 0
 
-  // Paso 2 del flujo: el cobro vive en un modal, no en la misma pantalla que
-  // el carrito. Recién ahí aparece el botón de confirmar la venta.
+  // Paso 2 del flujo: el cobro se despliega debajo del carrito. Recién ahí
+  // aparece el botón de confirmar la venta.
   const [cobranzaOpen, setCobranzaOpen] = useState(false)
+  const cobroRef = useRef<HTMLElement>(null)
+
+  // Financiación propia (00059). Arranca apagada: la mayoría de las ventas se
+  // cobran en el momento, y un toggle prendido por default convertiría un
+  // olvido en una deuda.
+  const [financiar, setFinanciar] = useState(false)
+  const [finCuotas, setFinCuotas] = useState(3)
+  const [finPrimerVenc, setFinPrimerVenc] = useState(() => enUnMes())
 
   // Cobranza: cómo se reparte el cobro entre cuentas. Arranca con un pago
   // único, que siempre vale el total (ver normalizarPagos).
@@ -878,31 +896,69 @@ export function NuevaVentaView({
 
   function crearCliente() {
     const nombre = nuevoNombre.trim()
+    const apellido = nuevoApellido.trim()
     if (nombre.length < 2) return setErrorCliente('Nombre muy corto')
+    // Obligatorio igual que en el alta completa: la cartera se ordena y se
+    // busca por apellido, y con cuotas financiadas es como se rastrea la deuda.
+    if (apellido.length < 2) return setErrorCliente('Falta el apellido')
     setErrorCliente(null)
     startCliente(async () => {
       const res = await crearClienteAction({
+        apellido,
         nombre,
         telefono: nuevoTelefono.trim() || null,
       })
       if (!res.ok) return setErrorCliente(res.reason)
+      // Mismo armado que la columna generada `nombre_completo` (00058):
+      // nombre y después apellido. Si divergen, el cliente recién creado se
+      // vería distinto que al recargar la página.
+      const completo = `${nombre} ${apellido}`
       const nuevo: ClienteOption = {
         id: res.data!.id,
-        nombre,
+        nombre: completo,
         telefono: nuevoTelefono.trim() || null,
       }
       setClientes((xs) => [...xs, nuevo].sort((a, b) => a.nombre.localeCompare(b.nombre)))
       setIdCliente(nuevo.id)
       setCliInput(nuevo.nombre)
       setNuevoNombre('')
+      setNuevoApellido('')
       setNuevoTelefono('')
       setCreandoCliente(false)
-      toast.success('Cliente creado', nombre)
+      toast.success('Cliente creado', completo)
+    })
+  }
+
+  /**
+   * Abre el cobro y lo trae a la vista. Sin el scroll, en una pantalla con el
+   * carrito largo el panel se despliega fuera de cuadro y el botón parece no
+   * haber hecho nada.
+   */
+  // Lo que el cliente NO paga hoy queda financiado. El anticipo es cualquier
+  // pago cargado en la cobranza: no hay un campo aparte para eso.
+  const anticipo = financiar ? sumaPagos(pagos) : 0
+  const aFinanciar = redondear2(total - anticipo)
+  const planPreview =
+    financiar && aFinanciar > 0
+      ? generarPlanCuotas({
+          montoAFinanciar: aFinanciar,
+          cuotas: finCuotas,
+          primerVencimiento: finPrimerVenc,
+        })
+      : []
+
+  function abrirCobro() {
+    setCobranzaOpen(true)
+    requestAnimationFrame(() => {
+      cobroRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     })
   }
 
   function confirmar() {
-    setCobranzaOpen(false)
+    // El panel NO se cierra acá. Con el modal, cerrarlo era descartar el
+    // diálogo; en línea sólo esconde el botón que dice "Registrando…" y, si
+    // el server rechaza la venta, deja al vendedor sin la cobranza que acaba
+    // de armar. Si sale bien, igual navegamos al detalle.
     start(async () => {
       const res = await registrarVentaAction({
         // Se manda la unión de descuentos por línea; el server valida cada
@@ -912,21 +968,32 @@ export function NuevaVentaView({
         idCliente: idCliente || null,
         idReserva: idReserva || null,
         observaciones: observaciones || null,
-        pagos: pagosNormalizados.map((p) => {
-          const recibido = Number(p.recibido.replace(',', '.'))
-          return {
-            medio: p.medio,
-            id_cuenta_destino: p.idCuenta,
-            monto: p.monto,
-            // El vuelto lo calcula la DB a partir de esto; sólo se manda si
-            // el vendedor lo cargó y es coherente.
-            monto_recibido:
-              p.medio === 'efectivo' && Number.isFinite(recibido) && recibido >= p.monto
-                ? recibido
-                : null,
-            referencia: p.referencia.trim() || null,
-          }
-        }),
+        financiacion: financiar
+          ? { cuotas: finCuotas, primer_vencimiento: finPrimerVenc }
+          : null,
+        // Con financiación y sin anticipo el panel deja un pago en $0: el SP
+        // lo rechaza con `pago-monto-invalido`. Se descartan acá — un pago de
+        // cero no es una forma de cobrar, es la ausencia de cobro.
+        pagos: pagosNormalizados
+          .filter((p) => p.monto > 0)
+          .map((p) => {
+            const recibido = Number(p.recibido.replace(',', '.'))
+            return {
+              medio: p.medio,
+              id_cuenta_destino: p.idCuenta,
+              monto: p.monto,
+              // El SP lo exige en credito y lo rechaza en el resto; ya viene
+              // normalizado por `normalizarPagos`.
+              cuotas: p.cuotas,
+              // El vuelto lo calcula la DB a partir de esto; solo se manda si
+              // el vendedor lo cargo y es coherente.
+              monto_recibido:
+                p.medio === 'efectivo' && Number.isFinite(recibido) && recibido >= p.monto
+                  ? recibido
+                  : null,
+              referencia: p.referencia.trim() || null,
+            }
+          }),
       })
       if (!res.ok) return toast.error('No se pudo registrar la venta', traducirReason(res.reason))
       toast.success('Venta registrada', `Total $ ${total.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`)
@@ -992,11 +1059,15 @@ export function NuevaVentaView({
   // La cobranza tiene que cerrar contra el total ANTES de mandar: el SP la
   // rechaza igual, pero avisar acá es más barato que un error después de
   // haber tocado stock.
-  const pagosNormalizados = normalizarPagos(pagos, total, cuentas)
-  const cobranzaOk =
-    cuentas.length > 0 &&
-    pagosNormalizados.every((p) => p.idCuenta) &&
-    cobranzaCuadra(pagosNormalizados, total)
+  // Con financiación el pago del día NO tiene que cubrir el total: lo que
+  // falta es justamente la deuda. Lo que sí tiene que pasar es que quede algo
+  // por financiar (si no, es una venta al contado con el toggle prendido) y
+  // que haya cliente al que atribuirle la deuda.
+  const pagosNormalizados = normalizarPagos(pagos, total, cuentas, financiar)
+  const cuentasOk = cuentas.length > 0 && pagosNormalizados.every((p) => p.idCuenta)
+  const cobranzaOk = financiar
+    ? cuentasOk && aFinanciar > 0 && !!idCliente && !!finPrimerVenc
+    : cuentasOk && cobranzaCuadra(pagosNormalizados, total)
   const puedeConfirmar = lineas.length > 0 && !pending && cobranzaOk
 
   return (
@@ -1275,50 +1346,15 @@ export function NuevaVentaView({
         </div>
       </section>
 
-      {/* Paso 1 (cont.) — datos de la venta. Grilla responsive en vez de una
-          columna lateral angosta: en tablet entran de a dos y en desktop de a
-          cuatro, así el bloque no empuja el carrito hacia arriba. */}
-      <section className="rounded-lg border border-border bg-card p-4">
-        <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-          <h2 className="text-sm font-semibold text-text">Detalles de la venta</h2>
-          <span className="text-xs text-muted">
-            Todo opcional — aplica a la venta completa
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 gap-x-4 gap-y-4 sm:grid-cols-2 xl:grid-cols-4">
-          {/* Cuotas, no "forma de pago": lo único que decide acá el vendedor es
-              si la venta se financia. Sin cuotas = precio de lista; el medio
-              real de cobro (efectivo, transferencia) se elige abajo, en
-              Cobranza, y no toca el precio. */}
-          <Field
-            htmlFor="v-fp"
-            label="Cuotas"
-            hint="Sin cuotas, precio de lista. Con cuotas se aplica el recargo configurado en Precios."
-          >
-            <select
-              id="v-fp"
-              value={formaPago === 'efectivo' ? '' : formaPago}
-              onChange={(e) => setFormaPago((e.target.value || 'efectivo') as FormaPago)}
-              className="w-full"
-            >
-              <option value="">— Sin cuotas —</option>
-              {planesCuotas
-                .filter((p) => p.activo)
-                .map((p) => (
-                  <option key={p.cuotas} value={formaPagoDeCuotas(p.cuotas)}>
-                    {p.cuotas} cuotas
-                  </option>
-                ))}
-            </select>
-            {totalRecargo > 0 && (
-              <p className="mt-1 text-xs text-terracota">
-                Recargo por {formaPagoLabel(formaPago)}: +{money(totalRecargo)} — ya
-                incluido en el total.
-              </p>
-            )}
-          </Field>
-
+      {/* Paso 1 (cont.) — lo que aplica a la venta completa y NO decide cómo
+          se cobra. Las cuotas y el cliente viven en el paso de cobro: son
+          decisiones del cierre, no de la carga del carrito, y acá sólo
+          competían por atención con el buscador de productos. */}
+      {/* Sin caja propia: con las cuotas y el cliente mudados al cobro, acá
+          quedan un chip condicional, los descuentos y un enlace. Un panel con
+          borde alrededor de eso es marco sin cuadro. */}
+      <section>
+        <div className="grid grid-cols-1 items-start gap-x-4 gap-y-3 sm:grid-cols-2 xl:grid-cols-4">
           {/* El campo Reserva NO se elige a mano: aparece solo cuando la venta
               se enganchó a una reserva (por precarga o por cargar un ítem
               reservado). Sin eso sería una decisión más para tomar en el
@@ -1360,228 +1396,423 @@ export function NuevaVentaView({
             />
           )}
 
-          <Field
-            htmlFor="v-cli"
-            label="Cliente (opcional)"
-            hint="Buscá por nombre o teléfono. Vacío = Mostrador."
-          >
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <Input
-                  id="v-cli"
-                  value={cliInput}
-                  placeholder="— Mostrador —"
-                  onChange={(e) => {
-                    setCliInput(e.target.value)
-                    setCliOpen(true)
-                    setCliResaltado(0)
-                    // Cambiar el texto invalida la selección anterior; se vuelve
-                    // a Mostrador hasta que el usuario elija de la lista.
-                    if (idCliente) setIdCliente('')
-                  }}
-                  onFocus={() => {
-                    setCliOpen(true)
-                    setCliResaltado(0)
-                  }}
-                  onBlur={() => setTimeout(() => setCliOpen(false), 120)}
-                  onKeyDown={onCliKeyDown}
-                  role="combobox"
-                  aria-expanded={cliOpen}
-                  aria-autocomplete="list"
-                  autoComplete="off"
-                />
-                {cliOpen && (
-                  <ul
-                    role="listbox"
-                    className="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md border border-border bg-card-2 shadow"
-                  >
-                    <li
-                      role="option"
-                      aria-selected={cliResaltado === 0}
-                      onMouseDown={(e) => {
-                        e.preventDefault()
-                        seleccionarCliente('', '')
-                      }}
-                      onMouseEnter={() => setCliResaltado(0)}
-                      className={`cursor-pointer px-3 py-2 text-sm italic ${
-                        cliResaltado === 0 ? 'bg-pink-bg text-text' : 'text-muted'
-                      }`}
-                    >
-                      — Mostrador —
-                    </li>
-                    {cliSugerencias.length === 0 ? (
-                      <li className="px-3 py-2 text-xs text-muted">
-                        Sin coincidencias
-                      </li>
-                    ) : (
-                      cliSugerencias.map((c, i) => {
-                        const idx = i + 1 // +1 por el Mostrador
-                        const activo = idx === cliResaltado
-                        return (
-                          <li
-                            key={c.id}
-                            role="option"
-                            aria-selected={activo}
-                            onMouseDown={(e) => {
-                              e.preventDefault()
-                              seleccionarCliente(c.id, c.nombre)
-                            }}
-                            onMouseEnter={() => setCliResaltado(idx)}
-                            className={`flex cursor-pointer items-center justify-between gap-2 px-3 py-2 text-sm ${
-                              activo ? 'bg-pink-bg text-text' : 'text-text'
-                            }`}
-                          >
-                            <span>{c.nombre}</span>
-                            {c.telefono && (
-                              <span className="shrink-0 font-mono text-xs text-muted">
-                                {c.telefono}
-                              </span>
-                            )}
-                          </li>
-                        )
-                      })
-                    )}
-                  </ul>
-                )}
-              </div>
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => {
-                  setCreandoCliente((v) => !v)
-                  setErrorCliente(null)
-                }}
-                aria-expanded={creandoCliente}
-              >
-                {creandoCliente ? 'Cerrar' : '+ Nuevo'}
-              </Button>
-            </div>
-          </Field>
-
-          {creandoCliente && (
-            <div className="rounded-md border border-border bg-card-2 p-3 space-y-3 sm:col-span-2 xl:col-span-4">
-              <Field htmlFor="v-nc-nombre" label="Nombre" required error={errorCliente ?? undefined}>
-                <Input
-                  id="v-nc-nombre"
-                  autoFocus
-                  value={nuevoNombre}
-                  onChange={(e) => setNuevoNombre(e.target.value)}
-                  placeholder="Nombre y apellido"
-                  invalid={!!errorCliente}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault()
-                      crearCliente()
-                    }
-                  }}
-                />
-              </Field>
-              <Field htmlFor="v-nc-tel" label="Teléfono" hint="Se usa para link WhatsApp">
-                <Input
-                  id="v-nc-tel"
-                  value={nuevoTelefono}
-                  onChange={(e) => setNuevoTelefono(e.target.value)}
-                  placeholder="+54 9 11 ..."
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault()
-                      crearCliente()
-                    }
-                  }}
-                />
-              </Field>
-              <Button
-                type="button"
-                size="sm"
-                className="w-full"
-                onClick={crearCliente}
-                disabled={guardandoCliente || nuevoNombre.trim().length < 2}
-              >
-                {guardandoCliente ? 'Creando…' : 'Crear y seleccionar'}
-              </Button>
-            </div>
-          )}
-
+          {/* Nota de la venta. Colapsada por defecto: se usa en una venta de
+              cada veinte, y como campo fijo ocupaba una fila entera del
+              bloque para quedar vacía casi siempre. */}
           <div className="sm:col-span-2 xl:col-span-4">
-            <Field htmlFor="v-obs" label="Observaciones">
-              <Textarea
-                id="v-obs"
-                rows={2}
-                value={observaciones}
-                onChange={(e) => setObservaciones(e.target.value)}
-              />
-            </Field>
+            {notaAbierta || observaciones ? (
+              <Field htmlFor="v-obs" label="Nota">
+                <Textarea
+                  id="v-obs"
+                  rows={2}
+                  autoFocus={notaAbierta && !observaciones}
+                  value={observaciones}
+                  onChange={(e) => setObservaciones(e.target.value)}
+                  onBlur={() => {
+                    if (!observaciones.trim()) setNotaAbierta(false)
+                  }}
+                  placeholder="Queda guardada en la venta"
+                />
+              </Field>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setNotaAbierta(true)}
+                className="text-xs text-muted underline-offset-2 hover:text-text hover:underline"
+              >
+                + Agregar nota
+              </button>
+            )}
           </div>
         </div>
       </section>
 
-      {/* Barra de acción: queda pegada abajo mientras se carga el carrito, así
-          el total y el paso siguiente están siempre a un toque de distancia. */}
-      <div className="sticky bottom-4 z-10 flex flex-col gap-3 rounded-lg border border-border bg-card p-4 shadow-lg sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <div className="text-xs text-muted">
-            Total · {lineas.length} ítem{lineas.length === 1 ? '' : 's'}
-          </div>
-          <div data-testid="venta-total" className="font-mono text-xl font-semibold text-text">
-            {money(total)}
-          </div>
-        </div>
-        <Button
-          className="w-full sm:w-auto"
-          size="lg"
-          onClick={() => setCobranzaOpen(true)}
-          disabled={lineas.length === 0 || pending}
+      {/* Paso 2 — cobro. Desplegable en línea, no modal: acá adentro se
+          eligen cuotas y cliente, y ambos re-cotizan el carrito. Un diálogo
+          que tapa la tabla mientras cambian los precios de las líneas que
+          está tapando obliga a cerrarlo para verificar qué pasó. */}
+      {cobranzaOpen && (
+        <section
+          ref={cobroRef}
+          className="rounded-lg border border-pink-strong/40 bg-card p-4 space-y-4"
+          aria-label="Cobro"
         >
-          {pending ? 'Registrando…' : 'Continuar al cobro'}
-        </Button>
-      </div>
-
-      {/* Paso 2 — cobranza. El botón de confirmar sólo existe acá adentro. */}
-      <Modal
-        open={cobranzaOpen}
-        title="Cobranza"
-        size="lg"
-        onClose={() => setCobranzaOpen(false)}
-        footer={
-          <>
-            <Button
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="font-display text-lg text-text">Cobro</h2>
+            <button
               type="button"
-              variant="secondary"
               onClick={() => setCobranzaOpen(false)}
               disabled={pending}
+              className="text-xs text-muted underline-offset-2 hover:text-text hover:underline disabled:opacity-50"
             >
-              Volver
-            </Button>
-            <Button type="button" onClick={confirmar} disabled={!puedeConfirmar}>
-              {pending ? 'Registrando…' : `Confirmar venta · ${money(total)}`}
-            </Button>
-          </>
-        }
-      >
-        <div className="space-y-4">
-          <div className="flex items-center justify-between rounded-md border border-border bg-card-2 px-3 py-2">
-            <span className="text-sm text-muted">
-              {lineas.length} ítem{lineas.length === 1 ? '' : 's'}
-              {formaPago !== 'efectivo' ? ` · ${formaPagoLabel(formaPago)}` : ''}
-            </span>
-            <span className="font-mono text-lg font-semibold text-text">{money(total)}</span>
+              Volver al carrito
+            </button>
           </div>
 
-          <CobranzaPanel
-            cuentas={cuentas}
-            pagos={pagosNormalizados}
-            total={total}
-            disabled={pending}
-            onChange={setPagos}
-          />
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            {/* Cuotas: define cómo se PRECIA la venta (dispara el recargo de
+                Precios). Distinto del plan de cada pago con tarjeta, que sólo
+                define qué arancel aplica. */}
+            <Field
+              htmlFor="v-fp"
+              label="Cuotas"
+              hint="Sin cuotas, precio de lista. Con cuotas se aplica el recargo configurado en Precios."
+            >
+              <Select
+                id="v-fp"
+                value={formaPago === 'efectivo' ? '' : formaPago}
+                onChange={(e) => setFormaPago((e.target.value || 'efectivo') as FormaPago)}
+                disabled={pending}
+              >
+                <option value="">— Sin cuotas —</option>
+                {planesCuotas
+                  .filter((p) => p.activo)
+                  .map((p) => (
+                    <option key={p.cuotas} value={formaPagoDeCuotas(p.cuotas)}>
+                      {p.cuotas} cuotas
+                    </option>
+                  ))}
+              </Select>
+              {totalRecargo > 0 && (
+                <p className="mt-1 text-xs text-terracota">
+                  Recargo por {formaPagoLabel(formaPago)}: +{money(totalRecargo)} — ya
+                  incluido en el total.
+                </p>
+              )}
+            </Field>
+          </div>
+
+          {/* Financiación propia: la tienda le fía al cliente. Va ANTES de los
+              pagos porque cambia lo que significa la cobranza de abajo — con
+              el toggle prendido, lo que se carga ahí es el anticipo. */}
+          <div className="border-t border-border pt-4">
+            <label className="inline-flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={financiar}
+                onChange={(e) => setFinanciar(e.target.checked)}
+                disabled={pending}
+                className="rounded border-border"
+              />
+              <span className="font-medium text-text">Financiar en cuotas</span>
+              <span className="text-muted">— el cliente queda debiendo</span>
+            </label>
+
+            {financiar && (
+              <div className="mt-3 space-y-3 rounded-md border border-terracota/40 bg-card-2 p-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <Field htmlFor="v-fin-cuotas" label="Cuotas" required>
+                    <Select
+                      id="v-fin-cuotas"
+                      value={finCuotas}
+                      onChange={(e) => setFinCuotas(Number(e.target.value))}
+                      disabled={pending}
+                    >
+                      {Array.from({ length: 24 }, (_, i) => i + 1).map((n) => (
+                        <option key={n} value={n}>
+                          {n === 1 ? '1 pago' : `${n} cuotas`}
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+                  <Field
+                    htmlFor="v-fin-venc"
+                    label="Primer vencimiento"
+                    required
+                    hint="Las siguientes van mes a mes desde esta fecha."
+                  >
+                    <Input
+                      id="v-fin-venc"
+                      type="date"
+                      value={finPrimerVenc}
+                      onChange={(e) => setFinPrimerVenc(e.target.value)}
+                      disabled={pending}
+                    />
+                  </Field>
+                </div>
+
+                {!idCliente && (
+                  <p className="rounded-md border border-alerta-ink bg-alerta-bg px-3 py-2 text-xs text-alerta-ink">
+                    Una venta financiada necesita cliente: sin eso perdés el
+                    rastro de quién te debe. Elegilo abajo.
+                  </p>
+                )}
+
+                {aFinanciar <= 0 ? (
+                  <p className="text-xs text-terracota">
+                    Los pagos de hoy cubren todo el total: no queda nada para
+                    financiar.
+                  </p>
+                ) : (
+                  <div className="space-y-1 text-sm">
+                    {anticipo > 0 && (
+                      <div className="flex items-center justify-between text-muted">
+                        <span>Anticipo de hoy</span>
+                        <span className="font-mono">{money(anticipo)}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between font-medium">
+                      <span>A financiar</span>
+                      <span className="font-mono">{money(aFinanciar)}</span>
+                    </div>
+                    {planPreview.length > 0 && (
+                      <p className="pt-1 text-xs text-muted">
+                        {planPreview.length}{' '}
+                        {planPreview.length === 1 ? 'cuota' : 'cuotas'} de{' '}
+                        <span className="font-mono">{money(planPreview[0].monto)}</span>
+                        {planPreview.length > 1 &&
+                          planPreview[planPreview.length - 1].monto !== planPreview[0].monto && (
+                            <>
+                              {' '}(la última,{' '}
+                              <span className="font-mono">
+                                {money(planPreview[planPreview.length - 1].monto)}
+                              </span>
+                              )
+                            </>
+                          )}{' '}
+                        · del {fechaCorta(planPreview[0].vencimiento)} al{' '}
+                        {fechaCorta(planPreview[planPreview.length - 1].vencimiento)}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="border-t border-border pt-4">
+            {financiar && (
+              <p className="mb-3 rounded-md border border-border bg-card-2 px-3 py-2 text-xs text-muted">
+                Cargá acá sólo lo que el cliente paga HOY. Si no deja nada, borrá
+                el monto: el resto se financia.
+              </p>
+            )}
+            <CobranzaPanel
+              cuentas={cuentas}
+              pagos={pagosNormalizados}
+              total={financiar ? anticipo : total}
+              montoLibre={financiar}
+              disabled={pending}
+              aranceles={aranceles}
+              planesCuotas={planesCuotas}
+              onChange={setPagos}
+            />
+          </div>
+
+          {/* El cliente va DESPUÉS de los pagos: es el medio de cobro el que
+              decide si hace falta. Una venta al contado se cierra sin tocarlo,
+              y ponerlo antes obligaba a decidir sobre un dato del que todavía
+              no se sabe si importa. */}
+          <div className="border-t border-border pt-4">
+            <Field
+              htmlFor="v-cli"
+              label="Cliente"
+              hint="Buscá por nombre o teléfono. Vacío = Mostrador."
+            >
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Input
+                    id="v-cli"
+                    value={cliInput}
+                    placeholder="— Mostrador —"
+                    onChange={(e) => {
+                      setCliInput(e.target.value)
+                      setCliOpen(true)
+                      setCliResaltado(0)
+                      // Cambiar el texto invalida la selección anterior; se
+                      // vuelve a Mostrador hasta que se elija de la lista.
+                      if (idCliente) setIdCliente('')
+                    }}
+                    onFocus={() => {
+                      setCliOpen(true)
+                      setCliResaltado(0)
+                    }}
+                    onBlur={() => setTimeout(() => setCliOpen(false), 120)}
+                    onKeyDown={onCliKeyDown}
+                    role="combobox"
+                    aria-expanded={cliOpen}
+                    aria-autocomplete="list"
+                    autoComplete="off"
+                    disabled={pending}
+                  />
+                  {cliOpen && (
+                    <ul
+                      role="listbox"
+                      className="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md border border-border bg-card-2 shadow"
+                    >
+                      <li
+                        role="option"
+                        aria-selected={cliResaltado === 0}
+                        onMouseDown={(e) => {
+                          e.preventDefault()
+                          seleccionarCliente('', '')
+                        }}
+                        onMouseEnter={() => setCliResaltado(0)}
+                        className={`cursor-pointer px-3 py-2 text-sm italic ${
+                          cliResaltado === 0 ? 'bg-pink-bg text-text' : 'text-muted'
+                        }`}
+                      >
+                        — Mostrador —
+                      </li>
+                      {cliSugerencias.length === 0 ? (
+                        <li className="px-3 py-2 text-xs text-muted">Sin coincidencias</li>
+                      ) : (
+                        cliSugerencias.map((c, i) => {
+                          const idx = i + 1 // +1 por el Mostrador
+                          const activo = idx === cliResaltado
+                          return (
+                            <li
+                              key={c.id}
+                              role="option"
+                              aria-selected={activo}
+                              onMouseDown={(e) => {
+                                e.preventDefault()
+                                seleccionarCliente(c.id, c.nombre)
+                              }}
+                              onMouseEnter={() => setCliResaltado(idx)}
+                              className={`flex cursor-pointer items-center justify-between gap-2 px-3 py-2 text-sm ${
+                                activo ? 'bg-pink-bg text-text' : 'text-text'
+                              }`}
+                            >
+                              <span>{c.nombre}</span>
+                              {c.telefono && (
+                                <span className="shrink-0 font-mono text-xs text-muted">
+                                  {c.telefono}
+                                </span>
+                              )}
+                            </li>
+                          )
+                        })
+                      )}
+                    </ul>
+                  )}
+                </div>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => {
+                    setCreandoCliente((v) => !v)
+                    setErrorCliente(null)
+                  }}
+                  aria-expanded={creandoCliente}
+                  disabled={pending}
+                >
+                  {creandoCliente ? 'Cerrar' : '+ Nuevo'}
+                </Button>
+              </div>
+            </Field>
+
+            {creandoCliente && (
+              <div className="mt-3 space-y-3 rounded-md border border-border bg-card-2 p-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <Field
+                    htmlFor="v-nc-nombre"
+                    label="Nombre"
+                    required
+                    error={errorCliente ?? undefined}
+                  >
+                    <Input
+                      id="v-nc-nombre"
+                      autoFocus
+                      value={nuevoNombre}
+                      onChange={(e) => setNuevoNombre(e.target.value)}
+                      invalid={!!errorCliente}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          crearCliente()
+                        }
+                      }}
+                    />
+                  </Field>
+                  <Field htmlFor="v-nc-apellido" label="Apellido" required>
+                    <Input
+                      id="v-nc-apellido"
+                      value={nuevoApellido}
+                      onChange={(e) => setNuevoApellido(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          crearCliente()
+                        }
+                      }}
+                    />
+                  </Field>
+                </div>
+                <Field htmlFor="v-nc-tel" label="Teléfono" hint="Se usa para link WhatsApp">
+                  <Input
+                    id="v-nc-tel"
+                    value={nuevoTelefono}
+                    onChange={(e) => setNuevoTelefono(e.target.value)}
+                    placeholder="+54 9 11 ..."
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        crearCliente()
+                      }
+                    }}
+                  />
+                </Field>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={crearCliente}
+                  disabled={
+                    guardandoCliente ||
+                    nuevoNombre.trim().length < 2 ||
+                    nuevoApellido.trim().length < 2
+                  }
+                >
+                  {guardandoCliente ? 'Creando…' : 'Crear y seleccionar'}
+                </Button>
+              </div>
+            )}
+          </div>
 
           <p className="rounded-md border border-border bg-card-2 p-3 text-xs text-muted">
             Al confirmar se marcan los ítems como vendidos y se revalida en el
             server el precio, el estado de cada ítem y la reserva. No se puede
             deshacer sin anular la venta.
           </p>
+        </section>
+      )}
+
+      {/* Barra de acción: queda pegada abajo mientras se carga el carrito, así
+          el total y el paso siguiente están siempre a un toque de distancia.
+          Con el cobro abierto pasa a ser el botón de confirmar: el panel es
+          largo y obligar a scrollear hasta el final para cerrar la venta es
+          exactamente lo que el modal hacía bien. */}
+      <div className="sticky bottom-4 z-10 flex flex-col gap-3 rounded-lg border border-border bg-card p-4 shadow-lg sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <div className="text-xs text-muted">
+            Total · {lineas.length} ítem{lineas.length === 1 ? '' : 's'}
+            {formaPago !== 'efectivo' ? ` · ${formaPagoLabel(formaPago)}` : ''}
+          </div>
+          <div data-testid="venta-total" className="font-mono text-xl font-semibold text-text">
+            {money(total)}
+          </div>
         </div>
-      </Modal>
+        {cobranzaOpen ? (
+          <Button
+            className="w-full sm:w-auto"
+            size="lg"
+            type="button"
+            onClick={confirmar}
+            disabled={!puedeConfirmar}
+          >
+            {pending ? 'Registrando…' : `Confirmar venta · ${money(total)}`}
+          </Button>
+        ) : (
+          <Button
+            className="w-full sm:w-auto"
+            size="lg"
+            onClick={abrirCobro}
+            disabled={lineas.length === 0 || pending}
+          >
+            Continuar al cobro
+          </Button>
+        )}
+      </div>
     </div>
   )
 }
@@ -1922,4 +2153,21 @@ function traducirReason(reason: string, extra?: Record<string, unknown>): string
   if (reason === 'lineas-vacias') return 'Agregá al menos un ítem al carrito.'
   if (reason === 'elegir-talle') return 'Elegí un talle disponible.'
   return reason
+}
+
+/** Hoy + 1 mes, en ISO local. Default razonable del primer vencimiento. */
+function enUnMes(): string {
+  const d = new Date()
+  d.setMonth(d.getMonth() + 1)
+  return d.toLocaleDateString('en-CA')
+}
+
+function redondear2(n: number): number {
+  return Math.round((n + Number.EPSILON) * 100) / 100
+}
+
+/** `2026-09-10` → `10/09`. Para el resumen del plan, donde el año es ruido. */
+function fechaCorta(iso: string): string {
+  const [, m, d] = iso.split('-')
+  return `${d}/${m}`
 }

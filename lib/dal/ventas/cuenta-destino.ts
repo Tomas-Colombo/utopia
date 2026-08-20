@@ -24,12 +24,44 @@ export async function listCuentasDestino(opts?: {
   return (data ?? []) as CuentaDestinoRow[]
 }
 
+/**
+ * Página del listado con `total`, para el pager de `/ventas/cuentas`.
+ * Mismo contrato que `listVentasPaginado`: el orden lo fija el server para
+ * que la predeterminada quede siempre visible arriba de todo.
+ */
+export async function listCuentasDestinoPaginado(opts: {
+  page: number
+  pageSize: number
+  soloActivas?: boolean
+}): Promise<{ rows: CuentaDestinoRow[]; total: number }> {
+  const supabase = await createServerClient()
+  const from = (Math.max(1, opts.page) - 1) * opts.pageSize
+  const to = from + opts.pageSize - 1
+
+  let q = supabase
+    .from('cuenta_destino')
+    .select('*', { count: 'exact' })
+    .order('es_predeterminada', { ascending: false })
+    .order('nombre', { ascending: true })
+    .range(from, to)
+  if (opts.soloActivas) q = q.eq('activo', true)
+
+  const { data, count, error } = await q
+  if (error) throw new Error(`listCuentasDestinoPaginado: ${error.message}`)
+  return { rows: (data ?? []) as CuentaDestinoRow[], total: count ?? 0 }
+}
+
 export async function createCuentaDestino(input: {
   id_tenant: string
   nombre: string
   tipo: TipoCuentaDestino
   titular?: string | null
   identificador?: string | null
+  // Retenciones (00057). Opcionales: la DB las deja en 0.
+  ret_iva_pct?: number
+  ret_ganancias_pct?: number
+  ret_iibb_pct?: number
+  imp_deb_cred_pct?: number
 }): Promise<CuentaDestinoRow> {
   const supabase = await createServerClient()
   const { data, error } = await supabase
@@ -40,6 +72,10 @@ export async function createCuentaDestino(input: {
       tipo: input.tipo,
       titular: input.titular ?? null,
       identificador: input.identificador ?? null,
+      ret_iva_pct: input.ret_iva_pct ?? 0,
+      ret_ganancias_pct: input.ret_ganancias_pct ?? 0,
+      ret_iibb_pct: input.ret_iibb_pct ?? 0,
+      imp_deb_cred_pct: input.imp_deb_cred_pct ?? 0,
     })
     .select('*')
     .single()
@@ -55,6 +91,12 @@ export async function updateCuentaDestino(
     titular?: string | null
     identificador?: string | null
     activo?: boolean
+    // Retenciones (00057). Van en la cuenta y no en el tarifario porque
+    // dependen de la situación fiscal del comercio, no del plan de cuotas.
+    ret_iva_pct?: number
+    ret_ganancias_pct?: number
+    ret_iibb_pct?: number
+    imp_deb_cred_pct?: number
   },
 ): Promise<void> {
   const supabase = await createServerClient()

@@ -3,6 +3,7 @@ import { AuthorizationError } from '@/lib/dal/errors'
 import { requireModuleRole } from '@/lib/dal/guard'
 import { verifySession } from '@/lib/dal/session'
 import { listVentasPeriodo } from '@/lib/dal/ventas/venta'
+import { nombreCliente } from '@/lib/types/ventas'
 import {
   esFechaValida,
   inicioDelDia,
@@ -50,7 +51,7 @@ export async function GET(req: NextRequest) {
     ['Fecha', 'Cliente', 'Forma de pago', 'Líneas', 'Total', 'Estado'],
     ...ventas.map((v) => [
       new Date(v.fecha).toLocaleString('es-AR'),
-      v.cliente?.nombre ?? 'Mostrador',
+      nombreCliente(v.cliente),
       formaPagoLabel(v.forma_pago),
       String(v.lineas_count),
       numero(Number(v.total)),
