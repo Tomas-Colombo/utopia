@@ -19,13 +19,14 @@ import {
   type MedioPago,
   type TipoCuentaDestino,
 } from '@/lib/types/ventas'
-import type { PlanCuotasRow } from '@/lib/types/precios'
+import type { PlanCuotasRow, RecargoCuotasRow } from '@/lib/types/precios'
 import {
   actualizarCuentaDestinoAction,
   crearCuentaDestinoAction,
-  marcarCuentaPredeterminadaAction,
 } from '../actions'
+import { Modal } from '@/components/ui/Modal'
 import { ArancelesPanel } from './ArancelesPanel'
+import { RecargosPanel } from './RecargosPanel'
 
 const TIPOS: TipoCuentaDestino[] = ['efectivo', 'banco', 'billetera_virtual']
 
@@ -66,6 +67,7 @@ export function CuentasView({
   cuentas,
   aranceles,
   planesCuotas,
+  recargos,
   page,
   pageSize,
   total,
@@ -73,6 +75,7 @@ export function CuentasView({
   cuentas: CuentaDestinoRow[]
   aranceles: ArancelCobroRow[]
   planesCuotas: PlanCuotasRow[]
+  recargos: RecargoCuotasRow[]
   page: number
   pageSize: number
   total: number
@@ -97,6 +100,14 @@ export function CuentasView({
   })
   const [retenciones, setRetenciones] = useState({ ...RETENCIONES_VACIAS })
 
+  // El costo de cobro arranca CERRADO y por medio. Una billetera que sólo
+  // recibe transferencias no tiene por qué mirar tres bloques de tarjeta: el
+  // formulario tiene que pedir lo que esta cuenta cobra, no todo lo que
+  // alguna cuenta podría cobrar. Y sigue siendo opcional — se completa
+  // después desde el tarifario de la cuenta.
+  const [costoAbierto, setCostoAbierto] = useState(false)
+  const [mediosActivos, setMediosActivos] = useState<MedioPago[]>([])
+
   // Cuenta cuyo tarifario detallado está abierto. Vive abajo de la tabla y no
   // dentro de una fila: `Table` renderiza filas planas, y meterle una fila
   // expandible rompería el markup que le da el rol ARIA correcto.
@@ -116,6 +127,8 @@ export function CuentasView({
       tarjeta_credito: { ...ARANCEL_VACIO },
     })
     setRetenciones({ ...RETENCIONES_VACIAS })
+    setCostoAbierto(false)
+    setMediosActivos([])
   }
 
   function crear() {
@@ -124,8 +137,8 @@ export function CuentasView({
 
     // Sólo viajan los medios con arancel cargado: una fila en blanco no es
     // "0%", es "todavía no lo sé".
-    const filas = cobraArancel
-      ? MEDIOS_CON_COSTO.flatMap((m) => {
+    const filas = cobraArancel && costoAbierto
+      ? mediosActivos.flatMap((m) => {
           const b = arancelesNuevos[m]
           const pct = num(b.arancelPct)
           if (pct === null) return []
@@ -146,7 +159,7 @@ export function CuentasView({
         tipo,
         titular: titular || null,
         identificador: identificador || null,
-        retenciones: cobraArancel
+        retenciones: cobraArancel && costoAbierto
           ? {
               ret_iva_pct: num(retenciones.ret_iva_pct) ?? 0,
               ret_ganancias_pct: num(retenciones.ret_ganancias_pct) ?? 0,
@@ -183,15 +196,6 @@ export function CuentasView({
     })
   }
 
-  function hacerPredeterminada(row: CuentaDestinoRow) {
-    start(async () => {
-      const res = await marcarCuentaPredeterminadaAction({ id: row.id_cuenta_destino })
-      if (!res.ok) return toast.error('No se pudo actualizar', explicar(res.reason))
-      toast.success('Cuenta predeterminada', row.nombre)
-      router.refresh()
-    })
-  }
-
   function goToPage(nextPage: number) {
     const params = new URLSearchParams()
     if (nextPage > 1) params.set('page', String(nextPage))
@@ -199,7 +203,7 @@ export function CuentasView({
     // Cambiar de página deja el panel de detalle apuntando a una cuenta que
     // ya no está en pantalla.
     setDetalle(null)
-    start(() => router.push(qs ? `/ventas/cuentas?${qs}` : '/ventas/cuentas'))
+    start(() => router.push(qs ? `/precios/cuentas?${qs}` : '/precios/cuentas'))
   }
 
   const columns: Column<CuentaDestinoRow>[] = [
@@ -254,29 +258,21 @@ export function CuentasView({
             <Button
               variant="ghost"
               size="sm"
-              onClick={() =>
-                setDetalle(detalle === c.id_cuenta_destino ? null : c.id_cuenta_destino)
-              }
-              aria-expanded={detalle === c.id_cuenta_destino}
+              onClick={() => setDetalle(c.id_cuenta_destino)}
               disabled={pending}
             >
-              {detalle === c.id_cuenta_destino ? 'Cerrar costo' : 'Costo de cobro'}
+              Costo de cobro
             </Button>
           )}
+          {/* La predeterminada no se elige a mano. Es la caja del local desde
+              el alta del tenant (00047) y sólo se usa como red: una venta que
+              no detalla su cobranza. El flujo de venta ya exige destino en
+              cada pago, así que el botón era una decisión sin consecuencia
+              que igual se podía apretar por error. */}
           {!c.es_predeterminada && (
-            <>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => hacerPredeterminada(c)}
-                disabled={pending}
-              >
-                Predeterminada
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => toggleActivo(c)} disabled={pending}>
-                {c.activo ? 'Desactivar' : 'Activar'}
-              </Button>
-            </>
+            <Button variant="ghost" size="sm" onClick={() => toggleActivo(c)} disabled={pending}>
+              {c.activo ? 'Desactivar' : 'Activar'}
+            </Button>
           )}
         </div>
       ),
@@ -289,8 +285,8 @@ export function CuentasView({
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-2">
         <p className="text-sm text-muted">
-          Los lugares donde entra la plata de las ventas. La predeterminada se
-          usa cuando una venta no detalla su cobranza.
+          Los lugares donde entra la plata de las ventas. La caja del local es
+          la predeterminada: la red para una venta que no detalle su cobranza.
         </p>
         <Button
           type="button"
@@ -351,25 +347,71 @@ export function CuentasView({
             </Field>
           </div>
 
-          {cobraArancel && (
+          {cobraArancel && !costoAbierto && (
+            <button
+              type="button"
+              onClick={() => setCostoAbierto(true)}
+              className="w-full rounded-md border border-dashed border-border bg-card-2 p-3 text-left text-xs text-muted hover:border-rosa hover:text-text"
+            >
+              <span className="font-medium">+ Cargar costo de cobro</span> — comisiones,
+              retenciones y días de acreditación. Opcional: se puede completar
+              después desde el tarifario de la cuenta.
+            </button>
+          )}
+
+          {cobraArancel && costoAbierto && (
             <div className="space-y-4 rounded-md border border-border bg-card-2 p-4">
-              <div>
-                <h3 className="text-sm font-semibold text-text">Costo de cobro</h3>
-                <p className="mt-1 text-xs text-muted">
-                  Opcional, se puede completar después. Los porcentajes tienen
-                  que salir de tu liquidación real. Un medio sin arancel
-                  registra sus cobros con costo cero.
-                </p>
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <h3 className="text-sm font-semibold text-text">Costo de cobro</h3>
+                  <p className="mt-1 text-xs text-muted">
+                    Tildá sólo los medios que esta cuenta cobra. Los porcentajes
+                    tienen que salir de tu liquidación real; un medio sin
+                    arancel registra sus cobros con costo cero.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    setCostoAbierto(false)
+                    setMediosActivos([])
+                  }}
+                >
+                  Quitar
+                </Button>
               </div>
 
               <div className="space-y-3">
                 <span className="text-xs uppercase font-mono text-muted">Aranceles</span>
-                {MEDIOS_CON_COSTO.map((m) => (
+                {/* El medio se tilda primero. Sin esto, dar de alta una
+                    billetera obligaba a pasar por delante de débito y crédito
+                    para llegar a la única fila que importaba. */}
+                <div className="flex flex-wrap gap-3">
+                  {MEDIOS_CON_COSTO.map((m) => (
+                    <label key={m} className="flex items-center gap-2 text-sm text-text">
+                      <input
+                        type="checkbox"
+                        checked={mediosActivos.includes(m)}
+                        onChange={(e) =>
+                          setMediosActivos((xs) =>
+                            e.target.checked ? [...xs, m] : xs.filter((x) => x !== m),
+                          )
+                        }
+                      />
+                      {MEDIO_PAGO_LABEL[m]}
+                    </label>
+                  ))}
+                </div>
+                {MEDIOS_CON_COSTO.filter((m) => mediosActivos.includes(m)).map((m) => (
                   <div key={m} className="grid grid-cols-1 items-end gap-3 sm:grid-cols-4">
                     <span className="text-sm text-text sm:pb-2">{MEDIO_PAGO_LABEL[m]}</span>
                     <Field htmlFor={`na-${m}-pct`} label="Arancel %">
                       <NumberInput
                         id={`na-${m}-pct`}
+                        min={0}
+                        max={100}
                         value={arancelesNuevos[m].arancelPct}
                         onChange={(e) =>
                           setArancelesNuevos((s) => ({
@@ -384,6 +426,8 @@ export function CuentasView({
                     <Field htmlFor={`na-${m}-iva`} label="IVA s/arancel %">
                       <NumberInput
                         id={`na-${m}-iva`}
+                        min={0}
+                        max={100}
                         value={arancelesNuevos[m].ivaArancelPct}
                         onChange={(e) =>
                           setArancelesNuevos((s) => ({
@@ -397,6 +441,7 @@ export function CuentasView({
                     <Field htmlFor={`na-${m}-dias`} label="Días">
                       <NumberInput
                         id={`na-${m}-dias`}
+                        min={0}
                         value={arancelesNuevos[m].diasAcreditacion}
                         onChange={(e) =>
                           setArancelesNuevos((s) => ({
@@ -425,6 +470,8 @@ export function CuentasView({
                     <Field key={campo} htmlFor={`nr-${campo}`} label={label}>
                       <NumberInput
                         id={`nr-${campo}`}
+                        min={0}
+                        max={100}
                         value={retenciones[campo]}
                         onChange={(e) =>
                           setRetenciones((r) => ({ ...r, [campo]: e.target.value }))
@@ -466,13 +513,31 @@ export function CuentasView({
         disabled={pending}
       />
 
-      {cuentaDetalle && (
-        <ArancelesPanel
-          cuenta={cuentaDetalle}
-          aranceles={aranceles}
-          planesCuotas={planesCuotas}
-        />
-      )}
+      <RecargosPanel
+        cuentas={cuentas}
+        recargos={recargos}
+        aranceles={aranceles}
+        planesCuotas={planesCuotas}
+      />
+
+      {/* El tarifario va en modal y no debajo de la tabla: la lista pagina, y
+          un panel anclado abajo obligaba a scrollear hasta el final para ver
+          de qué cuenta hablaba. */}
+      <Modal
+        open={cuentaDetalle !== null}
+        title={`Costo de cobro · ${cuentaDetalle?.nombre ?? ''}`}
+        onClose={() => setDetalle(null)}
+        size="xl"
+      >
+        {cuentaDetalle && (
+          <ArancelesPanel
+            cuenta={cuentaDetalle}
+            aranceles={aranceles}
+            recargos={recargos}
+            planesCuotas={planesCuotas}
+          />
+        )}
+      </Modal>
     </div>
   )
 }

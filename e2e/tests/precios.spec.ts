@@ -56,14 +56,18 @@ test.describe('Precios · reglas', () => {
     await expect(page).toHaveURL(/\/precios\/reglas\/nueva$/)
   })
 
-  test('un recargo sin forma de pago no se puede guardar', async ({ reglas }) => {
+  // Desde 00063 el recargo por cuotas no es una regla de precio: vive en
+  // `recargo_cuotas`, en Precios y Cuentas, donde se lo puede enfrentar con el
+  // arancel que pretende cubrir. Que el tipo ya no se ofrezca ES el contrato:
+  // si reaparece, vuelven a existir dos lugares para definir un recargo.
+  test('el tipo Recargo ya no se ofrece como regla de precio', async ({ reglas }) => {
     await reglas.abrirNueva()
-    await reglas.nombre.fill(unique('Recargo sin fp'))
-    await reglas.tipoRegla.selectOption({ label: 'Recargo' })
-    await reglas.porcentaje.fill('12')
-    await reglas.guardar.click()
 
-    await expect(reglas.error).toHaveText('Un recargo requiere forma de pago')
+    const tipos = await reglas.tipoRegla
+      .locator('option')
+      .allTextContents()
+
+    expect(tipos).toEqual(['Margen', 'Descuento'])
   })
 
   test('rechaza un alcance por categoría sin categoría elegida', async ({ reglas }) => {

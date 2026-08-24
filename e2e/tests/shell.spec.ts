@@ -8,7 +8,7 @@ const RUTAS: Array<{ link: string; titulo: string }> = [
   { link: 'Ventas', titulo: 'Ventas' },
   { link: 'Inventario', titulo: 'Inventario' },
   { link: 'Ingresos', titulo: 'Ingresos de mercadería' },
-  { link: 'Precios', titulo: 'Precios' },
+  { link: 'Precios y Cuentas', titulo: 'Precios y Cuentas' },
   { link: 'Clientes', titulo: 'Clientes' },
   { link: 'Proveedores', titulo: 'Proveedores' },
   { link: 'Devoluciones prov.', titulo: 'Devoluciones a proveedor' },

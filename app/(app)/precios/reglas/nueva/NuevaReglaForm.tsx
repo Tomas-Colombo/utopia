@@ -10,15 +10,11 @@ import { useToast } from '@/components/ui/Toast'
 import {
   ALCANCE_LABEL,
   TIPO_REGLA_LABEL,
-  formaPagoDeCuotas,
   type AlcanceRegla,
-  type FormaPago,
-  type PlanCuotasRow,
   type TipoRegla,
   type TipoValorRegla,
 } from '@/lib/types/precios'
 import { createReglaAction } from '../../actions'
-import { PlanesCuotasModal } from '../../PlanesCuotasModal'
 
 export interface Ref { id: string; nombre: string; sku?: string | null }
 
@@ -26,14 +22,12 @@ export function NuevaReglaForm({
   categorias,
   proveedores,
   productos,
-  planesCuotas,
   onSuccess,
   onCancel,
 }: {
   categorias: Ref[]
   proveedores: Ref[]
   productos: Ref[]
-  planesCuotas: PlanCuotasRow[]
   /** Set when the form runs inside a modal: closes it instead of navigating. */
   onSuccess?: () => void
   onCancel?: () => void
@@ -51,23 +45,15 @@ export function NuevaReglaForm({
   const [idProducto, setIdProducto] = useState('')
   const [idCategoria, setIdCategoria] = useState('')
   const [idProveedor, setIdProveedor] = useState('')
-  const [formaPago, setFormaPago] = useState<FormaPago | ''>('')
   const [acumulable, setAcumulable] = useState(false)
   const [prioridad, setPrioridad] = useState('0')
   const [fechaInicio, setFechaInicio] = useState('')
   const [fechaHasta, setFechaHasta] = useState('')
   const [error, setError] = useState<string | null>(null)
 
-  // Los planes viven en el server, pero el modal los puede cambiar sin salir
-  // del formulario: se copian a estado local y se refrescan desde la action.
-  const [planes, setPlanes] = useState(planesCuotas)
-  const [cuotasOpen, setCuotasOpen] = useState(false)
-  const planesActivos = planes.filter((p) => p.activo)
 
-  // Cuando el usuario cambia tipo_regla, resetear forma_pago si dejó de ser recargo.
   function handleTipoRegla(t: TipoRegla) {
     setTipoRegla(t)
-    if (t !== 'recargo') setFormaPago('')
     if (t !== 'descuento') setAcumulable(false)
   }
   function handleAlcance(a: AlcanceRegla) {
@@ -102,11 +88,6 @@ export function NuevaReglaForm({
     if (alcance === 'categoria' && !idCategoria) return setError('Elegí una categoría')
     if (alcance === 'proveedor' && !idProveedor) return setError('Elegí un proveedor')
 
-    // forma_pago solo en recargo
-    if (tipoRegla === 'recargo' && !formaPago) {
-      return setError('Un recargo requiere forma de pago')
-    }
-
     start(async () => {
       const res = await createReglaAction({
         nombre: nombre.trim(),
@@ -117,7 +98,8 @@ export function NuevaReglaForm({
         id_producto: alcance === 'producto' ? idProducto : null,
         id_categoria: alcance === 'categoria' ? idCategoria : null,
         id_proveedor: alcance === 'proveedor' ? idProveedor : null,
-        forma_pago: tipoRegla === 'recargo' ? (formaPago || null) : null,
+        // Margen y descuento nunca dependieron de la forma de pago.
+        forma_pago: null,
         prioridad: Number(prioridad || 0),
         acumulable: tipoRegla === 'descuento' ? acumulable : false,
         fecha_inicio: fechaInicio || null,
@@ -131,18 +113,7 @@ export function NuevaReglaForm({
     })
   }
 
-  // Si el plan que estaba elegido se da de baja desde el modal, la selección
-  // deja de ser válida y se limpia.
-  function handlePlanesChange(next: PlanCuotasRow[]) {
-    setPlanes(next)
-    const sigueActivo = next.some(
-      (p) => p.activo && formaPagoDeCuotas(p.cuotas) === formaPago,
-    )
-    if (formaPago && formaPago !== 'efectivo' && !sigueActivo) setFormaPago('')
-  }
-
   return (
-    <>
     <form onSubmit={submit} className="space-y-4">
       <Field htmlFor="r-nombre" label="Nombre" required>
         <Input
@@ -162,7 +133,11 @@ export function NuevaReglaForm({
             onChange={(e) => handleTipoRegla(e.target.value as TipoRegla)}
             className="w-full"
           >
-            {(['margen', 'descuento', 'recargo'] as TipoRegla[]).map((t) => (
+            {/* 'recargo' ya no se ofrece: desde 00063 el recargo por cuotas vive en
+        `recargo_cuotas`, en Precios y Cuentas, donde se lo puede enfrentar
+        con el arancel que pretende cubrir. El valor del enum sigue en la DB
+        para que las reglas viejas se puedan seguir leyendo. */}
+    {(['margen', 'descuento'] as TipoRegla[]).map((t) => (
               <option key={t} value={t}>
                 {TIPO_REGLA_LABEL[t]}
               </option>
@@ -259,43 +234,6 @@ export function NuevaReglaForm({
         </div>
       )}
 
-      {tipoRegla === 'recargo' && (
-        <Field htmlFor="r-fp" label="Forma de pago" required hint="Solo aplica a recargos (RF-09)">
-          <div className="flex items-center gap-2">
-            <select
-              id="r-fp"
-              value={formaPago}
-              onChange={(e) => setFormaPago(e.target.value as FormaPago | '')}
-              className="w-full"
-            >
-              <option value="">— Elegí forma de pago —</option>
-              <option value="efectivo">Efectivo</option>
-              {planesActivos.map((p) => (
-                <option key={p.cuotas} value={formaPagoDeCuotas(p.cuotas)}>
-                  {p.cuotas} cuotas
-                </option>
-              ))}
-            </select>
-            {/* Sin plan de cuotas no hay recargo por cuotas que crear: el
-                acceso al alta vive acá para no perder el formulario. */}
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setCuotasOpen(true)}
-              className="shrink-0"
-            >
-              + Cuotas
-            </Button>
-          </div>
-          {planesActivos.length === 0 && (
-            <p className="mt-1 text-xs text-muted">
-              No hay planes de cuotas cargados — agregá uno con <b>+ Cuotas</b> para
-              poder cobrarle un recargo.
-            </p>
-          )}
-        </Field>
-      )}
-
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field htmlFor="r-tv" label="Tipo de valor" required>
           <select
@@ -389,13 +327,5 @@ export function NuevaReglaForm({
         </Button>
       </div>
     </form>
-
-    <PlanesCuotasModal
-      open={cuotasOpen}
-      onClose={() => setCuotasOpen(false)}
-      planes={planes}
-      onChange={handlePlanesChange}
-    />
-    </>
   )
 }

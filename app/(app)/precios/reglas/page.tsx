@@ -33,7 +33,6 @@ export default async function ReglasPage() {
               nombre: p.nombre,
               sku: p.sku,
             }))}
-            planesCuotas={planesCuotas}
           />
         }
       />

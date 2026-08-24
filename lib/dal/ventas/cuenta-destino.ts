@@ -25,7 +25,7 @@ export async function listCuentasDestino(opts?: {
 }
 
 /**
- * Página del listado con `total`, para el pager de `/ventas/cuentas`.
+ * Página del listado con `total`, para el pager de `/precios/cuentas`.
  * Mismo contrato que `listVentasPaginado`: el orden lo fija el server para
  * que la predeterminada quede siempre visible arriba de todo.
  */

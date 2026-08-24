@@ -204,16 +204,6 @@ export default async function VentasHome(props: {
               Ver reservas activas, cancelar, convertir en venta.
             </p>
           </Link>
-          <Link
-            href="/ventas/cuentas"
-            className="rounded-lg border border-border bg-card p-5 hover:bg-card-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
-          >
-            <div className="text-sm text-muted">Configurar</div>
-            <div className="mt-1 font-display text-xl">Cuentas de cobro</div>
-            <p className="mt-2 text-sm text-muted">
-              Dónde entra la plata: caja, banco, billetera virtual.
-            </p>
-          </Link>
         </section>
 
         <section className="rounded-lg border border-border bg-card">
