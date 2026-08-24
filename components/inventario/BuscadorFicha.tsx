@@ -13,16 +13,17 @@ import {
 import type { ProductoConDetalle } from '@/lib/types/inventario'
 
 /**
- * STUB: entrada manual de código QR + búsqueda por nombre. El botón "Abrir
- * cámara" queda deshabilitado hasta integrar una librería de escaneo
- * (Etapa 3.5 o Etapa 5).
+ * Buscador unificado de la ficha de un ítem: el mismo input acepta QR, SKU o
+ * nombre. Mientras se escribe aparecen sugerencias por NOMBRE (nunca por SKU,
+ * para no abrir un ítem equivocado); Enter selecciona la resaltada. Sin
+ * sugerencias, el texto se resuelve como código vía
+ * `/inventario/buscar/{codigo}` (QR o SKU).
  *
- * Buscador unificado: el mismo input acepta QR, SKU o nombre. Mientras se
- * escribe aparecen sugerencias por NOMBRE (nunca por SKU, para no abrir un
- * ítem equivocado); Enter selecciona la resaltada. Sin sugerencias, el texto
- * se resuelve como código vía `/inventario/buscar/{codigo}` (QR o SKU).
+ * El botón "Abrir cámara" está deshabilitado en esta pantalla. `QrScanner`
+ * (@zxing) ya funciona y se usa en venta nueva y en reservas, así que la
+ * cámara acá es cuestión de cablearla, no de integrar nada.
  */
-export function CameraScanStub({ productos }: { productos: ProductoConDetalle[] }) {
+export function BuscadorFicha({ productos }: { productos: ProductoConDetalle[] }) {
   const router = useRouter()
   const [qr, setQr] = useState('')
   const [error, setError] = useState<string | null>(null)
