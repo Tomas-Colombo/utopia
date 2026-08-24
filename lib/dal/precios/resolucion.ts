@@ -1,6 +1,7 @@
 import 'server-only'
 import { createServerClient } from '@/lib/dal/supabase'
 import type {
+  MedioPagoRecargo,
   DescuentoDisponible,
   FormaPago,
   PreciosResumen,
@@ -21,12 +22,22 @@ export async function calcularSnapshotPrecio(input: {
   idProducto: string
   formaPago?: FormaPago
   idsDescuentos?: string[]
+  /**
+   * Quién financia (00064). Define QUÉ recargo por cuotas aplica. Omitirlo
+   * resuelve contra el comodín, que es el comportamiento anterior a 00063.
+   */
+  idCuentaDestino?: string | null
+  medio?: MedioPagoRecargo | null
+  propia?: boolean
 }): Promise<SnapshotPrecio> {
   const supabase = await createServerClient()
   const { data, error } = await supabase.rpc('sp_calcular_precio_venta_snapshot', {
     p_id_producto: input.idProducto,
     p_forma_pago: input.formaPago ?? 'efectivo',
     p_ids_descuentos: input.idsDescuentos ?? [],
+    p_id_cuenta_destino: input.idCuentaDestino ?? null,
+    p_medio: input.medio ?? null,
+    p_propia: input.propia ?? false,
   })
   if (error) throw new Error(`sp_calcular_precio_venta_snapshot: ${error.message}`)
   return data as SnapshotPrecio
