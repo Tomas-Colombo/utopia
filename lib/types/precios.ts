@@ -40,6 +40,46 @@ export function formaPagoLabel(fp: string | null | undefined): string {
   return n === null ? fp : `${n} cuotas`
 }
 
+/**
+ * Un recargo por cuotas (`recargo_cuotas`, 00063). Espejo de `ArancelCobroRow`:
+ * misma llave `(cuenta, medio, cuotas)`, flecha opuesta — el arancel baja lo
+ * que cobra el comercio, el recargo sube lo que paga el cliente.
+ *
+ * CUIDADO CON LA UNIDAD: en `porcentaje`, `valor` es 10 para "+10%", igual que
+ * `ArancelCobroRow.arancel_pct` — y distinto de `ReglaPrecioRow.valor`, que
+ * usa 0.10 para lo mismo.
+ */
+export interface RecargoCuotasRow {
+  id_recargo_cuotas: string
+  id_tenant: string
+  cuotas: number
+  /** `null` = comodín: cualquier cuenta sin fila propia. */
+  id_cuenta_destino: string | null
+  /** `null` = comodín: cualquier medio. */
+  medio: MedioPagoRecargo | null
+  /** `true` = lo financia el comercio. Sin cuenta ni medio, y sin comodín. */
+  propia: boolean
+  tipo_valor: TipoValorRegla
+  valor: number
+  vigente_desde: string
+  /** `null` = vigente. No se borran: se cierra la vigencia. */
+  vigente_hasta: string | null
+  notas: string | null
+  created_at: string
+  updated_at: string
+}
+
+/**
+ * Los medios que puede nombrar un recargo. Es el mismo juego que `MedioPago`
+ * de `lib/types/ventas`, redeclarado acá para que este módulo no dependa del
+ * de ventas — la dirección del import es precios → ventas, no al revés.
+ */
+export type MedioPagoRecargo =
+  | 'efectivo'
+  | 'transferencia'
+  | 'tarjeta_debito'
+  | 'tarjeta_credito'
+
 /** Un plan de cuotas ofrecido por el tenant (`plan_cuotas`, 00052). */
 export interface PlanCuotasRow {
   id_tenant: string
@@ -146,11 +186,28 @@ export interface DescuentoAplicado {
 }
 
 /** El recargo por forma de pago aplicado, si hubo. */
+/**
+ * Recargo aplicado, tal como queda en el snapshot de la línea.
+ *
+ * Conviven DOS formatos y hay que tolerar los dos: las ventas anteriores a
+ * 00064 traen `id_regla` (apuntaba a `regla_precio`), las posteriores traen
+ * `id_recargo_cuotas` más el financiador que lo resolvió. La clave del
+ * desglose no cambió a propósito — renombrarla habría dejado ilegible el
+ * historial.
+ */
 export interface RecargoAplicado {
-  id_regla: string
+  /** Sólo en ventas anteriores a 00064. */
+  id_regla?: string
+  /** Desde 00064. */
+  id_recargo_cuotas?: string
   tipo_valor: TipoValorRegla
+  /** En el formato nuevo, 10 = +10%. En el viejo, 0.10 para lo mismo. */
   valor: number
   forma_pago: FormaPago
+  /** Desde 00064: quién financiaba cuando se resolvió el recargo. */
+  propia?: boolean
+  id_cuenta_destino?: string | null
+  medio?: MedioPagoRecargo | null
   monto: number
 }
 
