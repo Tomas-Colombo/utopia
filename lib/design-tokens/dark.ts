@@ -4,7 +4,7 @@ import type { DesignTokens } from './tokens'
  * Derived dark-theme design tokens — the "platino" palette, mirroring the
  * `:root[data-theme="dark"]` block in `app/globals.css`. That stylesheet is
  * what the browser actually renders; this module exists so the jsdom contrast
- * suite (`tests/a11y/demo-contrast.test.tsx`) can assert against real hex
+ * suite (`tests/a11y/design-system-contrast.test.tsx`) can assert against real hex
  * values, since Vitest never runs the Tailwind PostCSS build. KEEP THE TWO IN
  * STEP — a drift here turns the a11y test into a false green.
  *
