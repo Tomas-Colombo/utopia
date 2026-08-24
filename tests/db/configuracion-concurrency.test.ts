@@ -8,8 +8,6 @@ import { hasTestDb, withScopedTenant } from './_helpers'
  * fired via `Promise.allSettled` — the composite PK on `configuracion`
  * (design §4.4) MUST let exactly one succeed and reject the other,
  * proving DB-level concurrency safety (no silent last-write-wins).
- *
- * DB testing postponed until end of Slice 8 — see apply-progress.
  */
 describe.skipIf(!hasTestDb)('configuracion — concurrent duplicate INSERT (REQ-TI-11)', () => {
   it('exactly one of two concurrent INSERTs on the same (id_tenant, seccion, clave) succeeds', async () => {

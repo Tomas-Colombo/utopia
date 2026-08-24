@@ -3,10 +3,10 @@ import { createAnonTestClient, createServiceRoleTestClient } from '@/lib/dal/sup
 import { hasTestDb, withScopedTenant } from './_helpers'
 
 /**
- * DB testing is postponed until end of Slice 8 — see apply-progress. This
- * suite type-checks and imports cleanly now; it will actually run once
- * `utopia-test` exists and migrations 00001 (+00002, for the enum-on-table
- * assertions below) are applied.
+ * Needs migrations 00001 and 00002 applied on the target project (00002 for
+ * the enum-on-table assertions below). The suite type-checks and imports
+ * cleanly with or without a database; `hasTestDb` decides whether the
+ * assertions actually run.
  */
 describe.skipIf(!hasTestDb)('helpers-behavior — 00001 extensions & enums (needs Supabase test project)', () => {
   it('auth_tenant_id() returns NULL for an authenticated client with no tenant_id claim', async () => {
