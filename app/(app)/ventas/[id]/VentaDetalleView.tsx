@@ -20,7 +20,6 @@ import {
   type CuotaFinanciadaRow,
   type EstadoCuota,
   type PagoVentaRow,
-  type PerdidaIncobrable,
   type TipoComprobante,
   type VentaConDetalle,
 } from '@/lib/types/ventas'
@@ -42,12 +41,9 @@ const CUOTA_VARIANT: Record<EstadoCuota, 'success' | 'info' | 'warning' | 'dange
 export function VentaDetalleView({
   venta,
   cuotas,
-  perdida,
 }: {
   venta: VentaConDetalle
   cuotas: CuotaFinanciadaRow[]
-  /** Solo viene si alguna cuota quedo incobrable. */
-  perdida: PerdidaIncobrable | null
 }) {
   const router = useRouter()
   const toast = useToast()
@@ -172,10 +168,6 @@ export function VentaDetalleView({
               <th className="px-4 py-3">Producto</th>
               <th className="px-4 py-3">QR</th>
               <th className="px-4 py-3 text-right">Precio</th>
-              <th className="px-4 py-3 text-right">Costo</th>
-              <th className="px-4 py-3 text-right">Prov.</th>
-              <th className="px-4 py-3 text-right">Ganancia</th>
-              <th className="px-4 py-3">Rendición</th>
               {!readonly && <th className="px-4 py-3"></th>}
             </tr>
           </thead>
@@ -187,35 +179,10 @@ export function VentaDetalleView({
                   {l.producto?.sku && (
                     <div className="text-xs font-mono text-muted">{l.producto.sku}</div>
                   )}
-                  <div className="text-xs text-muted capitalize">
-                    {l.tipo_ingreso_snapshot}
-                  </div>
                 </td>
                 <td className="px-4 py-3 font-mono text-xs">{l.item?.qr_code ?? '—'}</td>
                 <td className="px-4 py-3 text-right font-mono">
                   $ {Number(l.precio_venta).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
-                </td>
-                <td className="px-4 py-3 text-right font-mono text-muted">
-                  $ {Number(l.costo_snapshot).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
-                </td>
-                <td className="px-4 py-3 text-right font-mono">
-                  $ {Number(l.monto_proveedor).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
-                </td>
-                <td className="px-4 py-3 text-right font-mono">
-                  <span className={Number(l.monto_ganancia) < 0 ? 'text-alerta-ink' : 'text-success'}>
-                    $ {Number(l.monto_ganancia).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
-                  </span>
-                </td>
-                <td className="px-4 py-3">
-                  {l.id_rendicion ? (
-                    <Badge variant="success">Rendida</Badge>
-                  ) : l.excluida_rendicion ? (
-                    <Badge variant="neutral">Excluida</Badge>
-                  ) : l.monto_proveedor > 0 ? (
-                    <Badge variant="warning">Pendiente</Badge>
-                  ) : (
-                    <span className="text-muted-2">—</span>
-                  )}
                 </td>
                 {!readonly && (
                   <td className="px-4 py-3 text-right">
@@ -346,89 +313,6 @@ export function VentaDetalleView({
               </tfoot>
             </table>
           </div>
-        </div>
-      )}
-
-      {/* Perdida por incobrable. Dos numeros distintos: lo que no se cobro, y
-          cuanta plata hay que poner para cubrir la mercaderia. */}
-      {perdida && (
-        <div className="rounded-lg border border-alerta-ink bg-alerta-bg p-4">
-          <h3 className="mb-3 font-display text-lg text-alerta-ink">Perdida por incobrable</h3>
-
-          <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <div className="rounded-md border border-border bg-card p-3">
-              <div className="font-mono text-xs uppercase text-muted">No cobrado</div>
-              <div className="mt-1 font-display text-xl">{money(perdida.monto_adeudado)}</div>
-              <div className="mt-1 text-xs text-muted">Ganancia que nunca entro</div>
-            </div>
-            <div className="rounded-md border border-border bg-card p-3">
-              <div className="font-mono text-xs uppercase text-muted">Cobrado</div>
-              <div className="mt-1 font-display text-xl">{money(perdida.total_cobrado)}</div>
-              <div className="mt-1 text-xs text-muted">
-                sobre un costo de {money(perdida.costo_total)}
-              </div>
-            </div>
-            <div className="rounded-md border border-alerta-ink bg-card p-3">
-              <div className="font-mono text-xs uppercase text-alerta-ink">
-                Costo no cubierto
-              </div>
-              <div className="mt-1 font-display text-xl text-alerta-ink">
-                {money(perdida.costo_no_cubierto)}
-              </div>
-              <div className="mt-1 text-xs text-muted">
-                {perdida.costo_no_cubierto > 0
-                  ? 'Plata que tenes que poner'
-                  : 'Lo cobrado alcanzo a cubrir la mercaderia'}
-              </div>
-            </div>
-          </div>
-
-          {perdida.detalle.length > 0 && (
-            <>
-              <div className="overflow-x-auto rounded-md border border-border bg-card">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border text-left">
-                      <th className="px-3 py-2">Producto</th>
-                      <th className="px-3 py-2">Proveedor</th>
-                      <th className="px-3 py-2 text-right">Costo</th>
-                      <th className="px-3 py-2 text-right">Cubierto</th>
-                      <th className="px-3 py-2 text-right">No cubierto</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {perdida.detalle.map((l) => (
-                      <tr key={l.id_detalle_venta} className="border-b border-border-2 last:border-0">
-                        <td className="px-3 py-2">
-                          <div className="font-medium">{l.producto_nombre ?? '—'}</div>
-                          <div className="text-xs text-muted capitalize">
-                            {l.tipo_ingreso_snapshot}
-                            {l.excluida_rendicion && ' · excluida de rendicion'}
-                          </div>
-                        </td>
-                        <td className="px-3 py-2 text-xs">
-                          {l.proveedor_nombre ?? <span className="text-muted-2">propio</span>}
-                        </td>
-                        <td className="px-3 py-2 text-right font-mono">{money(l.costo_linea)}</td>
-                        <td className="px-3 py-2 text-right font-mono text-muted">
-                          {money(l.costo_cubierto)}
-                        </td>
-                        <td className="px-3 py-2 text-right font-mono font-semibold text-alerta-ink">
-                          {money(l.costo_no_cubierto)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <p className="mt-2 text-xs text-muted">
-                El reparto es proporcional al costo de cada linea. Es una
-                atribucion, no un hecho: la plata que el cliente pago no vino
-                asignada a un producto en particular. Sirve para saber a que
-                proveedor le vas a tener que pagar algo que nunca cobraste.
-              </p>
-            </>
-          )}
         </div>
       )}
 

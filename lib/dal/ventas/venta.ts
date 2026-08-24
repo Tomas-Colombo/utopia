@@ -182,6 +182,15 @@ export async function spRegistrarVenta(input: RegistrarVentaInput): Promise<stri
           primer_vencimiento: input.financiacion.primer_vencimiento,
         }
       : null) as unknown as object,
+    // null = sin financiador declarado: el recargo se resuelve contra el
+    // comodín. Con `propia`, el SP ignora cuenta y medio.
+    p_financiador: (input.financiador
+      ? {
+          id_cuenta_destino: input.financiador.id_cuenta_destino ?? null,
+          medio: input.financiador.medio ?? null,
+          propia: input.financiador.propia ?? false,
+        }
+      : null) as unknown as object,
   })
   if (error) throw new Error(`sp_registrar_venta: ${error.message}`)
   return data as string

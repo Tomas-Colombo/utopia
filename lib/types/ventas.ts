@@ -317,6 +317,19 @@ export interface RegistrarVentaInput {
    * obligatorio.
    */
   financiacion?: FinanciacionInput | null
+  /**
+   * Quién financia esta venta (00064). Define QUÉ recargo por cuotas se aplicó
+   * al precificar, y a qué cuenta va el pago cuando no se detalla la cobranza.
+   * Omitirlo resuelve el recargo comodín.
+   */
+  financiador?: FinanciadorInput | null
+}
+
+/** Quién financia. Con `propia`, cuenta y medio se ignoran: no hay procesador. */
+export interface FinanciadorInput {
+  id_cuenta_destino?: string | null
+  medio?: MedioPago | null
+  propia?: boolean
 }
 
 // ─── Reserva ─────────────────────────────────────────────────────────

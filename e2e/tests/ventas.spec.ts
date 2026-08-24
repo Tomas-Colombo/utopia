@@ -121,10 +121,10 @@ test.describe('Ventas · carrito', () => {
   })
 })
 
-test.describe('Ventas · cuentas de cobro', () => {
+test.describe('Precios · cuentas de cobro', () => {
   test('crea una cuenta de cobro y rechaza un nombre corto', async ({ page, shell }) => {
-    await page.goto('/ventas/cuentas')
-    await expect(shell.titulo).toHaveText('Cuentas de cobro')
+    await page.goto('/precios/cuentas')
+    await expect(shell.titulo).toHaveText('Cuentas y recargos')
 
     await page.getByRole('button', { name: 'Nueva cuenta' }).click()
 

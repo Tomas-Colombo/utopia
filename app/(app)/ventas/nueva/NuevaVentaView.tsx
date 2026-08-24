@@ -24,11 +24,12 @@ import {
 } from '@/lib/inventario/producto-match'
 import {
   formaPagoDeCuotas,
-  formaPagoLabel,
   type DescuentoDisponible,
   type DesgloseVenta,
   type FormaPago,
+  type MedioPagoRecargo,
   type PlanCuotasRow,
+  type RecargoCuotasRow,
 } from '@/lib/types/precios'
 import type { ProductoConDetalle } from '@/lib/types/inventario'
 import type {
@@ -39,7 +40,6 @@ import type {
 } from '@/lib/types/ventas'
 import {
   CobranzaPanel,
-  cobranzaCuadra,
   normalizarPagos,
   nuevoPago,
   sumaPagos,
@@ -118,6 +118,7 @@ export function NuevaVentaView({
   cuentas,
   planesCuotas,
   aranceles,
+  recargos,
   precargaReserva,
 }: {
   clientes: ClienteOption[]
@@ -130,6 +131,11 @@ export function NuevaVentaView({
   planesCuotas: PlanCuotasRow[]
   /** Tarifario vigente (00057): con qué se calcula el neto en el preview. */
   aranceles: ArancelCobroRow[]
+  /**
+   * Recargos vigentes (00063). Acá NO se usan para precificar — eso lo hace
+   * el server en cada lookup — sino para saber qué planes ofrece cada cuenta.
+   */
+  recargos: RecargoCuotasRow[]
   precargaReserva: PrecargaReserva | null
 }) {
   const router = useRouter()
@@ -137,8 +143,44 @@ export function NuevaVentaView({
   const [pending, start] = useTransition()
 
   const [clientes, setClientes] = useState<ClienteOption[]>(clientesIniciales)
-  const [formaPago, setFormaPago] = useState<FormaPago>('efectivo')
   const [idCliente, setIdCliente] = useState<string>(precargaReserva?.idCliente ?? '')
+
+  /**
+   * Mete el financiador en una query de lookup. Desde 00063 el recargo depende
+   * de por dónde entra la plata, así que el precio de CADA línea cambia con
+   * esto — no alcanza con mandar forma_pago.
+   */
+  function aplicarFinanciador(qs: URLSearchParams): void {
+    if (finPropia) qs.set('fin_propia', '1')
+    else if (finCuenta) {
+      qs.set('fin_cuenta', finCuenta)
+      if (finMedio) qs.set('fin_medio', finMedio)
+    }
+  }
+
+  // Arma la URL del lookup con el contexto común (forma de pago, reserva) y las
+  // unidades a saltear. `excluir` es lo que permite cargar dos unidades del
+  // mismo producto y talle: sin eso el server devuelve siempre la misma (FIFO)
+  // y la segunda rebota como duplicada.
+  // `reservaOverride` existe porque `setIdReserva` no impacta hasta el próximo
+  // render: cuando la venta adopta una reserva en el mismo tick en que carga
+  // el ítem, hay que mandarla explícita o el server la rebota por reservada.
+  function lookupUrl(
+    query: Record<string, string | null | undefined>,
+    excluir: string[] = [],
+    reservaOverride?: string | null,
+  ): string {
+    const qs = new URLSearchParams()
+    for (const [k, v] of Object.entries(query)) if (v) qs.set(k, v)
+    qs.set('forma_pago', formaPago)
+    aplicarFinanciador(qs)
+    const rid = reservaOverride ?? idReserva
+    if (rid) qs.set('id_reserva', rid)
+    if (excluir.length > 0) qs.set('excluir', excluir.join(','))
+    // Descuentos elegidos: se mandan todos; el server filtra por producto.
+    if (descuentosKey) qs.set('descuentos', descuentosKey)
+    return `/api/ventas/lookup-item?${qs.toString()}`
+  }
 
   // Alta rápida de cliente en línea
   const [creandoCliente, setCreandoCliente] = useState(false)
@@ -223,16 +265,70 @@ export function NuevaVentaView({
   const [cobranzaOpen, setCobranzaOpen] = useState(false)
   const cobroRef = useRef<HTMLElement>(null)
 
-  // Financiación propia (00059). Arranca apagada: la mayoría de las ventas se
-  // cobran en el momento, y un toggle prendido por default convertiría un
-  // olvido en una deuda.
-  const [financiar, setFinanciar] = useState(false)
-  const [finCuotas, setFinCuotas] = useState(3)
   const [finPrimerVenc, setFinPrimerVenc] = useState(() => enUnMes())
 
   // Cobranza: cómo se reparte el cobro entre cuentas. Arranca con un pago
   // único, que siempre vale el total (ver normalizarPagos).
   const [pagos, setPagos] = useState<PagoBorrador[]>(() => [nuevoPago(cuentas, 0)])
+
+  // Plan del local para lo que el cliente quede debiendo. 1 = un solo pago al
+  // vencimiento, el fiado de toda la vida.
+  const [cuotasLocal, setCuotasLocal] = useState<number>(1)
+
+  /**
+   * Qué campo quedó marcado al intentar confirmar. `null` = todavía no lo
+   * intentó, y en ese caso NADA se pinta de rojo: marcar en rojo un campo que
+   * el vendedor todavía no llegó a llenar es regañarlo por ir en orden.
+   */
+  const [faltante, setFaltante] = useState<'cliente' | 'vencimiento' | null>(null)
+
+  const total = useMemo(
+    () => lineas.reduce((a, l) => a + (l.precio_final ?? 0), 0),
+    [lineas],
+  )
+
+  // ─── Deuda: consecuencia, no decisión ───
+  // No hay checkbox de "financiar". Lo que el cliente no paga hoy, lo debe.
+  // Antes había que declararlo ANTES de cargar los pagos, lo que permitía las
+  // dos incoherencias obvias: prender el toggle y cobrar todo igual, o
+  // cobrar de menos con el toggle apagado y perder el rastro de la deuda.
+  const pagosNormalizados = normalizarPagos(pagos, total, cuentas, aranceles)
+  const anticipo = sumaPagos(pagosNormalizados)
+  const aFinanciar = redondear2(total - anticipo)
+  const hayDeuda = lineas.length > 0 && aFinanciar > 0.005
+
+  // ─── Quién financia, DERIVADO de la cobranza ───
+  // Ya no hay un selector de cuotas aparte. El plan sale de donde entra la
+  // plata, que es la única fuente que no puede contradecirse con ella misma:
+  //
+  //   - un pago con tarjeta de crédito en N cuotas → financia esa cuenta;
+  //   - si no, y el cliente se va debiendo en N     → financia el local.
+  //
+  // Nada de esto es estado: si lo fuera habría que sincronizarlo, y
+  // desincronizado es exactamente el bug que este rediseño vino a matar.
+  //
+  // Con DOS pagos con tarjeta en cuotas distintas precifica el primero: el
+  // recargo es uno por venta (`venta.forma_pago`), mientras que el arancel sí
+  // se cobra por pago y cada uno paga el suyo.
+  const pagoEnCuotas =
+    pagosNormalizados.find(
+      (p) => p.medio === 'tarjeta_credito' && (p.cuotas ?? 1) > 1,
+    ) ?? null
+  // Sin deuda no hay plan del local aunque haya quedado marcado: el recargo
+  // del local sólo existe si el local efectivamente presta la plata.
+  const cuotasDeuda = hayDeuda ? cuotasLocal : 1
+  const finPropia = pagoEnCuotas === null && cuotasDeuda > 1
+  const finCuenta = pagoEnCuotas?.idCuenta ?? null
+  const finMedio: MedioPagoRecargo | null = pagoEnCuotas ? 'tarjeta_credito' : null
+  const finCuotas = pagoEnCuotas?.cuotas ?? (finPropia ? cuotasDeuda : null)
+  // La forma de pago sigue siendo la que precifica en la DB. Se DERIVA de las
+  // cuotas en vez de elegirse aparte.
+  const formaPago: FormaPago = finCuotas ? formaPagoDeCuotas(finCuotas) : 'efectivo'
+  // Clave de refetch: cambia cuando cambia CUALQUIERA de las tres cosas que
+  // mueven el precio de una línea (plan, financiador, medio).
+  const finKey = finCuotas
+    ? `${finPropia ? 'propia' : finCuenta}:${finCuotas}`
+    : ''
 
   // Tope físico de unidades por grupo (producto+talle). Evita que el vendedor
   // suba la cantidad de una fila más allá del stock real. Clave = grupo.key.
@@ -301,11 +397,11 @@ export function NuevaVentaView({
       const refreshed: LineaCarrito[] = []
       for (const l of lineas) {
         try {
-          const r = await fetch(
-            `/api/ventas/lookup-item?qr=${encodeURIComponent(l.qr_code)}&forma_pago=${formaPago}${
-              idReserva ? `&id_reserva=${encodeURIComponent(idReserva)}` : ''
-            }${descuentosKey ? `&descuentos=${encodeURIComponent(descuentosKey)}` : ''}`,
-          )
+          const qs = new URLSearchParams({ qr: l.qr_code, forma_pago: formaPago })
+          aplicarFinanciador(qs)
+          if (idReserva) qs.set('id_reserva', idReserva)
+          if (descuentosKey) qs.set('descuentos', descuentosKey)
+          const r = await fetch(`/api/ventas/lookup-item?${qs.toString()}`)
           const data = await r.json()
           if (data.ok) refreshed.push(data.linea as LineaCarrito)
           else refreshed.push(l) // dejo la vieja si falla
@@ -319,7 +415,7 @@ export function NuevaVentaView({
       cancelled = true
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formaPago, idReserva, descuentosKey])
+  }, [finKey, idReserva, descuentosKey])
 
   // Descuentos disponibles para los productos del carrito. Se refresca cuando
   // cambia el SET de productos (no en cada unidad): agregar otra unidad del
@@ -379,11 +475,6 @@ export function NuevaVentaView({
       cancelled = true
     }
   }, [productosEnCarrito, idReserva])
-
-  const total = useMemo(
-    () => lineas.reduce((a, l) => a + (l.precio_final ?? 0), 0),
-    [lineas],
-  )
 
   // ── Reservas ───────────────────────────────────────────────────────
   // Reservar NO cambia el estado del ítem: la unidad sigue 'disponible' y por
@@ -576,29 +667,6 @@ export function NuevaVentaView({
     setSugerenciasOpen(false)
     setQrInput(p.nombre)
     void agregarPorProducto(p.id_producto)
-  }
-
-  // Arma la URL del lookup con el contexto común (forma de pago, reserva) y las
-  // unidades a saltear. `excluir` es lo que permite cargar dos unidades del
-  // mismo producto y talle: sin eso el server devuelve siempre la misma (FIFO)
-  // y la segunda rebota como duplicada.
-  // `reservaOverride` existe porque `setIdReserva` no impacta hasta el próximo
-  // render: cuando la venta adopta una reserva en el mismo tick en que carga
-  // el ítem, hay que mandarla explícita o el server la rebota por reservada.
-  function lookupUrl(
-    query: Record<string, string | null | undefined>,
-    excluir: string[] = [],
-    reservaOverride?: string | null,
-  ): string {
-    const qs = new URLSearchParams()
-    for (const [k, v] of Object.entries(query)) if (v) qs.set(k, v)
-    qs.set('forma_pago', formaPago)
-    const rid = reservaOverride ?? idReserva
-    if (rid) qs.set('id_reserva', rid)
-    if (excluir.length > 0) qs.set('excluir', excluir.join(','))
-    // Descuentos elegidos: se mandan todos; el server filtra por producto.
-    if (descuentosKey) qs.set('descuentos', descuentosKey)
-    return `/api/ventas/lookup-item?${qs.toString()}`
   }
 
   /** Ítems ya cargados, opcionalmente sin el de `exceptoQr` (el que se edita). */
@@ -824,7 +892,11 @@ export function NuevaVentaView({
     if (reservaAdoptada) setIdReserva(reservaAdoptada)
 
     setSelectorTalle(null)
-    const running: string[] = []
+    // Se REASIGNA en vez de mutar con push. Es lo mismo funcionalmente —son
+    // unos pocos ids—, pero el `push` sobre una lista que cruza varios `await`
+    // le impide al compilador de React descartar que se esté mutando algo del
+    // render, y lo rechaza. Reasignar no deja esa duda.
+    let running: string[] = []
     for (const p of pedidos) {
       for (let i = 0; i < p.cant; i++) {
         const linea = await agregarPorProducto(
@@ -835,7 +907,7 @@ export function NuevaVentaView({
           reservaAdoptada,
         )
         if (!linea) return
-        running.push(linea.id_item)
+        running = [...running, linea.id_item]
       }
     }
   }
@@ -934,18 +1006,38 @@ export function NuevaVentaView({
    * carrito largo el panel se despliega fuera de cuadro y el botón parece no
    * haber hecho nada.
    */
-  // Lo que el cliente NO paga hoy queda financiado. El anticipo es cualquier
-  // pago cargado en la cobranza: no hay un campo aparte para eso.
-  const anticipo = financiar ? sumaPagos(pagos) : 0
-  const aFinanciar = redondear2(total - anticipo)
-  const planPreview =
-    financiar && aFinanciar > 0
-      ? generarPlanCuotas({
-          montoAFinanciar: aFinanciar,
-          cuotas: finCuotas,
-          primerVencimiento: finPrimerVenc,
-        })
-      : []
+  const planPreview = hayDeuda
+    ? generarPlanCuotas({
+        montoAFinanciar: aFinanciar,
+        cuotas: cuotasDeuda,
+        primerVencimiento: finPrimerVenc,
+      })
+    : []
+
+  /**
+   * Planes que el local puede ofrecer sobre la deuda. Son los mismos que
+   * configuró el tenant; el 1 (un pago al vencimiento) no vive en
+   * `plan_cuotas` porque no es un plan, es la ausencia de plan.
+   */
+  const planesLocal = useMemo(
+    () =>
+      planesCuotas
+        .filter((p) => p.activo)
+        .map((p) => p.cuotas)
+        .sort((a, b) => a - b),
+    [planesCuotas],
+  )
+
+  /**
+   * Sube al campo que falta y lo enfoca. La deuda se descubre abajo pero el
+   * cliente se pide arriba: sin este salto, el vendedor tiene que buscarlo a
+   * mano después de leer el aviso.
+   */
+  function enfocarCampo(id: string): void {
+    const el = document.getElementById(id)
+    el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    ;(el as HTMLInputElement | null)?.focus()
+  }
 
   function abrirCobro() {
     setCobranzaOpen(true)
@@ -955,6 +1047,29 @@ export function NuevaVentaView({
   }
 
   function confirmar() {
+    // Lo que falta se MARCA, no se explica en un toast que se va solo. El
+    // vendedor tiene que poder ver el campo en rojo y arreglarlo ahí mismo.
+    if (hayDeuda && !idCliente) {
+      setFaltante('cliente')
+      enfocarCampo('v-cli')
+      return
+    }
+    if (hayDeuda && !finPrimerVenc) {
+      setFaltante('vencimiento')
+      enfocarCampo('v-fin-venc')
+      return
+    }
+    if (seExcedio) {
+      // Sin campo que marcar: el exceso ya está en rojo dentro del panel y el
+      // arreglo es bajar un monto, no llenar algo que falta.
+      toast.error(
+        'La cobranza no cierra',
+        `Estás cobrando ${money(anticipo - total)} de más.`,
+      )
+      return
+    }
+    setFaltante(null)
+
     // El panel NO se cierra acá. Con el modal, cerrarlo era descartar el
     // diálogo; en línea sólo esconde el botón que dice "Registrando…" y, si
     // el server rechaza la venta, deja al vendedor sin la cobranza que acaba
@@ -968,12 +1083,23 @@ export function NuevaVentaView({
         idCliente: idCliente || null,
         idReserva: idReserva || null,
         observaciones: observaciones || null,
-        financiacion: financiar
-          ? { cuotas: finCuotas, primer_vencimiento: finPrimerVenc }
+        // Deuda derivada: si no se cobró todo, lo que falta se parte en las
+        // MISMAS cuotas con las que se vendió.
+        financiacion: hayDeuda
+          ? { cuotas: cuotasDeuda, primer_vencimiento: finPrimerVenc }
           : null,
-        // Con financiación y sin anticipo el panel deja un pago en $0: el SP
-        // lo rechaza con `pago-monto-invalido`. Se descartan acá — un pago de
-        // cero no es una forma de cobrar, es la ausencia de cobro.
+        // Quién financia (00064). Define qué recargo se aplicó al precificar
+        // y a qué cuenta va el pago cuando la cobranza no se detalla.
+        financiador: finCuotas
+          ? {
+              id_cuenta_destino: finCuenta,
+              medio: finMedio,
+              propia: finPropia,
+            }
+          : null,
+        // Sin anticipo el panel deja un pago en $0: el SP lo rechaza con
+        // `pago-monto-invalido`. Se descartan acá — un pago de cero no es una
+        // forma de cobrar, es la ausencia de cobro.
         pagos: pagosNormalizados
           .filter((p) => p.monto > 0)
           .map((p) => {
@@ -1032,6 +1158,9 @@ export function NuevaVentaView({
     setIdCliente(id)
     setCliInput(id ? nombre : '')
     setCliOpen(false)
+    // Mostrador (id vacío) NO despinta el campo: sigue sin haber a quién
+    // cobrarle la deuda, que es justo lo que la marca está señalando.
+    if (id) setFaltante((f) => (f === 'cliente' ? null : f))
   }
 
   function onCliKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -1056,19 +1185,20 @@ export function NuevaVentaView({
     }
   }
 
-  // La cobranza tiene que cerrar contra el total ANTES de mandar: el SP la
-  // rechaza igual, pero avisar acá es más barato que un error después de
-  // haber tocado stock.
-  // Con financiación el pago del día NO tiene que cubrir el total: lo que
-  // falta es justamente la deuda. Lo que sí tiene que pasar es que quede algo
-  // por financiar (si no, es una venta al contado con el toggle prendido) y
-  // que haya cliente al que atribuirle la deuda.
-  const pagosNormalizados = normalizarPagos(pagos, total, cuentas, financiar)
+  // La cobranza se valida ANTES de mandar: el SP la rechaza igual, pero
+  // avisar acá es más barato que un error después de haber tocado stock.
   const cuentasOk = cuentas.length > 0 && pagosNormalizados.every((p) => p.idCuenta)
-  const cobranzaOk = financiar
-    ? cuentasOk && aFinanciar > 0 && !!idCliente && !!finPrimerVenc
-    : cuentasOk && cobranzaCuadra(pagosNormalizados, total)
-  const puedeConfirmar = lineas.length > 0 && !pending && cobranzaOk
+  // Cobrar de más nunca es válido; cobrar de menos sí, y es deuda. Lo que la
+  // deuda exige es cliente (si no, no se sabe quién debe) y vencimiento.
+  const seExcedio = anticipo - total > 0.005
+  // El botón NO se deshabilita por lo que el vendedor puede arreglar. Un
+  // botón gris no dice QUÉ falta: hay que salir a buscarlo por la pantalla, y
+  // en el caso del cliente el campo está arriba de todo, fuera de cuadro.
+  // Apretar y que se marque el campo que falta es la forma de enterarse.
+  //
+  // Lo único que sigue bloqueando es lo que el vendedor no puede resolver
+  // desde acá: un carrito vacío o un tenant sin cuentas cargadas.
+  const puedeConfirmar = lineas.length > 0 && !pending && cuentasOk
 
   return (
     <div className="space-y-5">
@@ -1322,7 +1452,7 @@ export function NuevaVentaView({
                   {totalRecargo > 0 && (
                     <tr>
                       <td colSpan={3} className="px-4 py-0.5 pb-2 text-right text-sm font-medium text-terracota">
-                        Recargo · {formaPagoLabel(formaPago)}
+                        Recargo · {finCuotas} cuotas
                       </td>
                       <td className="px-4 py-0.5 pb-2 text-right font-mono text-sm font-semibold text-terracota">
                         +{money(totalRecargo)}
@@ -1449,331 +1579,341 @@ export function NuevaVentaView({
             </button>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            {/* Cuotas: define cómo se PRECIA la venta (dispara el recargo de
-                Precios). Distinto del plan de cada pago con tarjeta, que sólo
-                define qué arancel aplica. */}
-            <Field
-              htmlFor="v-fp"
-              label="Cuotas"
-              hint="Sin cuotas, precio de lista. Con cuotas se aplica el recargo configurado en Precios."
-            >
-              <Select
-                id="v-fp"
-                value={formaPago === 'efectivo' ? '' : formaPago}
-                onChange={(e) => setFormaPago((e.target.value || 'efectivo') as FormaPago)}
-                disabled={pending}
+          {/* ─── Paso 2 · Cliente ──────────────────────────────────────
+              Va arriba de la cobranza, no al final. Antes vivía después de
+              los pagos, con el argumento de que el medio de cobro decide si
+              hace falta. Ya no aplica: con la deuda derivada del faltante, el
+              cliente puede volverse obligatorio recién abajo, y tenerlo al
+              fondo obligaba a bajar, descubrirlo y volver a subir. */}
+          <div className="space-y-3 border-t border-border pt-4">
+            <h3 className="text-sm font-medium text-text">Cliente</h3>
+            <div className="max-w-xl">
+              <div>
+              <Field
+                htmlFor="v-cli"
+                label="Cliente"
+                required={hayDeuda}
+                hint="Buscá por nombre o teléfono. Vacío = Mostrador."
+                error={
+                  faltante === 'cliente'
+                    ? 'Elegí el cliente: queda debiendo y sin esto no se sabe quién.'
+                    : undefined
+                }
               >
-                <option value="">— Sin cuotas —</option>
-                {planesCuotas
-                  .filter((p) => p.activo)
-                  .map((p) => (
-                    <option key={p.cuotas} value={formaPagoDeCuotas(p.cuotas)}>
-                      {p.cuotas} cuotas
-                    </option>
-                  ))}
-              </Select>
-              {totalRecargo > 0 && (
-                <p className="mt-1 text-xs text-terracota">
-                  Recargo por {formaPagoLabel(formaPago)}: +{money(totalRecargo)} — ya
-                  incluido en el total.
-                </p>
-              )}
-            </Field>
-          </div>
-
-          {/* Financiación propia: la tienda le fía al cliente. Va ANTES de los
-              pagos porque cambia lo que significa la cobranza de abajo — con
-              el toggle prendido, lo que se carga ahí es el anticipo. */}
-          <div className="border-t border-border pt-4">
-            <label className="inline-flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={financiar}
-                onChange={(e) => setFinanciar(e.target.checked)}
-                disabled={pending}
-                className="rounded border-border"
-              />
-              <span className="font-medium text-text">Financiar en cuotas</span>
-              <span className="text-muted">— el cliente queda debiendo</span>
-            </label>
-
-            {financiar && (
-              <div className="mt-3 space-y-3 rounded-md border border-terracota/40 bg-card-2 p-3">
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <Field htmlFor="v-fin-cuotas" label="Cuotas" required>
-                    <Select
-                      id="v-fin-cuotas"
-                      value={finCuotas}
-                      onChange={(e) => setFinCuotas(Number(e.target.value))}
-                      disabled={pending}
-                    >
-                      {Array.from({ length: 24 }, (_, i) => i + 1).map((n) => (
-                        <option key={n} value={n}>
-                          {n === 1 ? '1 pago' : `${n} cuotas`}
-                        </option>
-                      ))}
-                    </Select>
-                  </Field>
-                  <Field
-                    htmlFor="v-fin-venc"
-                    label="Primer vencimiento"
-                    required
-                    hint="Las siguientes van mes a mes desde esta fecha."
-                  >
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
                     <Input
-                      id="v-fin-venc"
-                      type="date"
-                      value={finPrimerVenc}
-                      onChange={(e) => setFinPrimerVenc(e.target.value)}
+                      id="v-cli"
+                      invalid={faltante === 'cliente'}
+                      value={cliInput}
+                      placeholder="— Mostrador —"
+                      onChange={(e) => {
+                        setCliInput(e.target.value)
+                        setCliOpen(true)
+                        setCliResaltado(0)
+                        // Cambiar el texto invalida la selección anterior; se
+                        // vuelve a Mostrador hasta que se elija de la lista.
+                        if (idCliente) setIdCliente('')
+                      }}
+                      onFocus={() => {
+                        setCliOpen(true)
+                        setCliResaltado(0)
+                      }}
+                      onBlur={() => setTimeout(() => setCliOpen(false), 120)}
+                      onKeyDown={onCliKeyDown}
+                      role="combobox"
+                      aria-expanded={cliOpen}
+                      aria-autocomplete="list"
+                      autoComplete="off"
                       disabled={pending}
                     />
-                  </Field>
-                </div>
-
-                {!idCliente && (
-                  <p className="rounded-md border border-alerta-ink bg-alerta-bg px-3 py-2 text-xs text-alerta-ink">
-                    Una venta financiada necesita cliente: sin eso perdés el
-                    rastro de quién te debe. Elegilo abajo.
-                  </p>
-                )}
-
-                {aFinanciar <= 0 ? (
-                  <p className="text-xs text-terracota">
-                    Los pagos de hoy cubren todo el total: no queda nada para
-                    financiar.
-                  </p>
-                ) : (
-                  <div className="space-y-1 text-sm">
-                    {anticipo > 0 && (
-                      <div className="flex items-center justify-between text-muted">
-                        <span>Anticipo de hoy</span>
-                        <span className="font-mono">{money(anticipo)}</span>
-                      </div>
-                    )}
-                    <div className="flex items-center justify-between font-medium">
-                      <span>A financiar</span>
-                      <span className="font-mono">{money(aFinanciar)}</span>
-                    </div>
-                    {planPreview.length > 0 && (
-                      <p className="pt-1 text-xs text-muted">
-                        {planPreview.length}{' '}
-                        {planPreview.length === 1 ? 'cuota' : 'cuotas'} de{' '}
-                        <span className="font-mono">{money(planPreview[0].monto)}</span>
-                        {planPreview.length > 1 &&
-                          planPreview[planPreview.length - 1].monto !== planPreview[0].monto && (
-                            <>
-                              {' '}(la última,{' '}
-                              <span className="font-mono">
-                                {money(planPreview[planPreview.length - 1].monto)}
-                              </span>
-                              )
-                            </>
-                          )}{' '}
-                        · del {fechaCorta(planPreview[0].vencimiento)} al{' '}
-                        {fechaCorta(planPreview[planPreview.length - 1].vencimiento)}
-                      </p>
+                    {cliOpen && (
+                      <ul
+                        role="listbox"
+                        className="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md border border-border bg-card-2 shadow"
+                      >
+                        <li
+                          role="option"
+                          aria-selected={cliResaltado === 0}
+                          onMouseDown={(e) => {
+                            e.preventDefault()
+                            seleccionarCliente('', '')
+                          }}
+                          onMouseEnter={() => setCliResaltado(0)}
+                          className={`cursor-pointer px-3 py-2 text-sm italic ${
+                            cliResaltado === 0 ? 'bg-pink-bg text-text' : 'text-muted'
+                          }`}
+                        >
+                          — Mostrador —
+                        </li>
+                        {cliSugerencias.length === 0 ? (
+                          <li className="px-3 py-2 text-xs text-muted">Sin coincidencias</li>
+                        ) : (
+                          cliSugerencias.map((c, i) => {
+                            const idx = i + 1 // +1 por el Mostrador
+                            const activo = idx === cliResaltado
+                            return (
+                              <li
+                                key={c.id}
+                                role="option"
+                                aria-selected={activo}
+                                onMouseDown={(e) => {
+                                  e.preventDefault()
+                                  seleccionarCliente(c.id, c.nombre)
+                                }}
+                                onMouseEnter={() => setCliResaltado(idx)}
+                                className={`flex cursor-pointer items-center justify-between gap-2 px-3 py-2 text-sm ${
+                                  activo ? 'bg-pink-bg text-text' : 'text-text'
+                                }`}
+                              >
+                                <span>{c.nombre}</span>
+                                {c.telefono && (
+                                  <span className="shrink-0 font-mono text-xs text-muted">
+                                    {c.telefono}
+                                  </span>
+                                )}
+                              </li>
+                            )
+                          })
+                        )}
+                      </ul>
                     )}
                   </div>
-                )}
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => {
+                      setCreandoCliente((v) => !v)
+                      setErrorCliente(null)
+                    }}
+                    aria-expanded={creandoCliente}
+                    disabled={pending}
+                  >
+                    {creandoCliente ? 'Cerrar' : '+ Nuevo'}
+                  </Button>
+                </div>
+              </Field>
+
+              {creandoCliente && (
+                <div className="mt-3 space-y-3 rounded-md border border-border bg-card-2 p-3">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <Field
+                      htmlFor="v-nc-nombre"
+                      label="Nombre"
+                      required
+                      error={errorCliente ?? undefined}
+                    >
+                      <Input
+                        id="v-nc-nombre"
+                        autoFocus
+                        value={nuevoNombre}
+                        onChange={(e) => setNuevoNombre(e.target.value)}
+                        invalid={!!errorCliente}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            crearCliente()
+                          }
+                        }}
+                      />
+                    </Field>
+                    <Field htmlFor="v-nc-apellido" label="Apellido" required>
+                      <Input
+                        id="v-nc-apellido"
+                        value={nuevoApellido}
+                        onChange={(e) => setNuevoApellido(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            crearCliente()
+                          }
+                        }}
+                      />
+                    </Field>
+                  </div>
+                  <Field htmlFor="v-nc-tel" label="Teléfono" hint="Se usa para link WhatsApp">
+                    <Input
+                      id="v-nc-tel"
+                      value={nuevoTelefono}
+                      onChange={(e) => setNuevoTelefono(e.target.value)}
+                      placeholder="+54 9 11 ..."
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          crearCliente()
+                        }
+                      }}
+                    />
+                  </Field>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={crearCliente}
+                    disabled={
+                      guardandoCliente ||
+                      nuevoNombre.trim().length < 2 ||
+                      nuevoApellido.trim().length < 2
+                    }
+                  >
+                    {guardandoCliente ? 'Creando…' : 'Crear y seleccionar'}
+                  </Button>
+                </div>
+              )}
               </div>
-            )}
+            </div>
           </div>
 
-          <div className="border-t border-border pt-4">
-            {financiar && (
-              <p className="mb-3 rounded-md border border-border bg-card-2 px-3 py-2 text-xs text-muted">
-                Cargá acá sólo lo que el cliente paga HOY. Si no deja nada, borrá
-                el monto: el resto se financia.
-              </p>
-            )}
+          {/* ─── Paso 3 · Medios de cobro ──────────────────────────────
+              Acá se decide TODO lo que depende de por dónde entra el dinero,
+              incluido el plan de cuotas de cada tarjeta. El recargo del plan
+              elegido ya viene dentro del total: por eso se lo desagrega
+              debajo del panel, y no arriba junto a un selector que ya no
+              existe. */}
+          <div className="space-y-3 border-t border-border pt-4">
+            <h3 className="text-sm font-medium text-text">Medios de cobro</h3>
             <CobranzaPanel
               cuentas={cuentas}
               pagos={pagosNormalizados}
-              total={financiar ? anticipo : total}
-              montoLibre={financiar}
+              total={total}
               disabled={pending}
               aranceles={aranceles}
+              recargos={recargos}
               planesCuotas={planesCuotas}
               onChange={setPagos}
             />
-          </div>
-
-          {/* El cliente va DESPUÉS de los pagos: es el medio de cobro el que
-              decide si hace falta. Una venta al contado se cierra sin tocarlo,
-              y ponerlo antes obligaba a decidir sobre un dato del que todavía
-              no se sabe si importa. */}
-          <div className="border-t border-border pt-4">
-            <Field
-              htmlFor="v-cli"
-              label="Cliente"
-              hint="Buscá por nombre o teléfono. Vacío = Mostrador."
-            >
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Input
-                    id="v-cli"
-                    value={cliInput}
-                    placeholder="— Mostrador —"
-                    onChange={(e) => {
-                      setCliInput(e.target.value)
-                      setCliOpen(true)
-                      setCliResaltado(0)
-                      // Cambiar el texto invalida la selección anterior; se
-                      // vuelve a Mostrador hasta que se elija de la lista.
-                      if (idCliente) setIdCliente('')
-                    }}
-                    onFocus={() => {
-                      setCliOpen(true)
-                      setCliResaltado(0)
-                    }}
-                    onBlur={() => setTimeout(() => setCliOpen(false), 120)}
-                    onKeyDown={onCliKeyDown}
-                    role="combobox"
-                    aria-expanded={cliOpen}
-                    aria-autocomplete="list"
-                    autoComplete="off"
-                    disabled={pending}
-                  />
-                  {cliOpen && (
-                    <ul
-                      role="listbox"
-                      className="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md border border-border bg-card-2 shadow"
-                    >
-                      <li
-                        role="option"
-                        aria-selected={cliResaltado === 0}
-                        onMouseDown={(e) => {
-                          e.preventDefault()
-                          seleccionarCliente('', '')
-                        }}
-                        onMouseEnter={() => setCliResaltado(0)}
-                        className={`cursor-pointer px-3 py-2 text-sm italic ${
-                          cliResaltado === 0 ? 'bg-pink-bg text-text' : 'text-muted'
-                        }`}
-                      >
-                        — Mostrador —
-                      </li>
-                      {cliSugerencias.length === 0 ? (
-                        <li className="px-3 py-2 text-xs text-muted">Sin coincidencias</li>
-                      ) : (
-                        cliSugerencias.map((c, i) => {
-                          const idx = i + 1 // +1 por el Mostrador
-                          const activo = idx === cliResaltado
-                          return (
-                            <li
-                              key={c.id}
-                              role="option"
-                              aria-selected={activo}
-                              onMouseDown={(e) => {
-                                e.preventDefault()
-                                seleccionarCliente(c.id, c.nombre)
-                              }}
-                              onMouseEnter={() => setCliResaltado(idx)}
-                              className={`flex cursor-pointer items-center justify-between gap-2 px-3 py-2 text-sm ${
-                                activo ? 'bg-pink-bg text-text' : 'text-text'
-                              }`}
-                            >
-                              <span>{c.nombre}</span>
-                              {c.telefono && (
-                                <span className="shrink-0 font-mono text-xs text-muted">
-                                  {c.telefono}
-                                </span>
-                              )}
-                            </li>
-                          )
-                        })
-                      )}
-                    </ul>
-                  )}
-                </div>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => {
-                    setCreandoCliente((v) => !v)
-                    setErrorCliente(null)
-                  }}
-                  aria-expanded={creandoCliente}
-                  disabled={pending}
-                >
-                  {creandoCliente ? 'Cerrar' : '+ Nuevo'}
-                </Button>
-              </div>
-            </Field>
-
-            {creandoCliente && (
-              <div className="mt-3 space-y-3 rounded-md border border-border bg-card-2 p-3">
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <Field
-                    htmlFor="v-nc-nombre"
-                    label="Nombre"
-                    required
-                    error={errorCliente ?? undefined}
-                  >
-                    <Input
-                      id="v-nc-nombre"
-                      autoFocus
-                      value={nuevoNombre}
-                      onChange={(e) => setNuevoNombre(e.target.value)}
-                      invalid={!!errorCliente}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault()
-                          crearCliente()
-                        }
-                      }}
-                    />
-                  </Field>
-                  <Field htmlFor="v-nc-apellido" label="Apellido" required>
-                    <Input
-                      id="v-nc-apellido"
-                      value={nuevoApellido}
-                      onChange={(e) => setNuevoApellido(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault()
-                          crearCliente()
-                        }
-                      }}
-                    />
-                  </Field>
-                </div>
-                <Field htmlFor="v-nc-tel" label="Teléfono" hint="Se usa para link WhatsApp">
-                  <Input
-                    id="v-nc-tel"
-                    value={nuevoTelefono}
-                    onChange={(e) => setNuevoTelefono(e.target.value)}
-                    placeholder="+54 9 11 ..."
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault()
-                        crearCliente()
-                      }
-                    }}
-                  />
-                </Field>
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={crearCliente}
-                  disabled={
-                    guardandoCliente ||
-                    nuevoNombre.trim().length < 2 ||
-                    nuevoApellido.trim().length < 2
-                  }
-                >
-                  {guardandoCliente ? 'Creando…' : 'Crear y seleccionar'}
-                </Button>
-              </div>
+            {totalRecargo > 0 && (
+              <p className="text-xs text-terracota">
+                Recargo por {finCuotas} cuotas: +{money(totalRecargo)} — ya
+                incluido en el total.
+              </p>
+            )}
+            {finCuotas !== null && totalRecargo === 0 && lineas.length > 0 && (
+              <p className="text-xs text-muted">
+                Sin recargo configurado para este plan: se vende al precio de
+                lista. Se carga en Precios y Cuentas.
+              </p>
             )}
           </div>
 
-          <p className="rounded-md border border-border bg-card-2 p-3 text-xs text-muted">
-            Al confirmar se marcan los ítems como vendidos y se revalida en el
-            server el precio, el estado de cada ítem y la reserva. No se puede
-            deshacer sin anular la venta.
-          </p>
+          {/* ─── Deuda ─────────────────────────────────────────────────────
+              No hay checkbox que prender: aparece SOLA cuando lo cobrado no
+              llega al total. Antes era una decisión previa que se podía
+              olvidar (y la deuda quedaba sin registrar) o dejar prendida por
+              error (y se fiaba una venta ya cobrada). */}
+          {hayDeuda && (
+            <div className="space-y-3 rounded-md border border-terracota/40 bg-card-2 p-3">
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <h3 className="text-sm font-medium text-text">
+                  Crédito del local
+                </h3>
+                <span className="font-mono font-semibold text-terracota">
+                  {money(aFinanciar)}
+                </span>
+              </div>
+
+              <p className="text-xs text-muted">
+                {anticipo > 0
+                  ? `Paga hoy ${money(anticipo)} de ${money(total)}. El resto queda en cuenta del local.`
+                  : 'Se lleva la compra sin pagar nada hoy: queda en cuenta del local.'}
+              </p>
+
+              {/* En cuántas partes lo cobra el local. Es el único lugar
+                  donde se elige un plan que no pasa por ningún procesador:
+                  acá el riesgo de crédito lo toma el comercio, y por eso el
+                  recargo sale de su propia fila del tarifario. */}
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <Field
+                  htmlFor="v-fin-cuotas"
+                  label="Plan"
+                  hint={
+                    // Con una tarjeta en cuotas la venta YA se cotizó con el
+                    // recargo de esa tarjeta: el plan del local sólo parte la
+                    // deuda, no vuelve a mover el precio.
+                    pagoEnCuotas
+                      ? 'La venta ya se cotizó con el plan de la tarjeta. Este sólo divide la deuda.'
+                      : 'El recargo del plan se suma al precio de la venta.'
+                  }
+                >
+                  <Select
+                    id="v-fin-cuotas"
+                    value={cuotasLocal}
+                    onChange={(e) => setCuotasLocal(Number(e.target.value))}
+                    disabled={pending}
+                  >
+                    <option value={1}>Un pago al vencimiento</option>
+                    {planesLocal.map((c) => (
+                      <option key={c} value={c}>
+                        {c} cuotas
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+
+                <Field
+                  htmlFor="v-fin-venc"
+                  label="Primer vencimiento"
+                  required
+                  hint="Las siguientes van mes a mes desde esta fecha."
+                  error={
+                    faltante === 'vencimiento'
+                      ? 'Poné la fecha de la primera cuota.'
+                      : undefined
+                  }
+                >
+                  <Input
+                    id="v-fin-venc"
+                    type="date"
+                    invalid={faltante === 'vencimiento'}
+                    value={finPrimerVenc}
+                    onChange={(e) => {
+                      setFinPrimerVenc(e.target.value)
+                      if (e.target.value) {
+                        setFaltante((f) => (f === 'vencimiento' ? null : f))
+                      }
+                    }}
+                    disabled={pending}
+                  />
+                </Field>
+              </div>
+
+              {planPreview.length > 0 && (
+                <p className="text-xs text-muted">
+                  {planPreview.length}{' '}
+                  {planPreview.length === 1 ? 'cuota' : 'cuotas'} de{' '}
+                  <span className="font-mono">{money(planPreview[0].monto)}</span>
+                  {planPreview.length > 1 &&
+                    planPreview[planPreview.length - 1].monto !== planPreview[0].monto && (
+                      <>
+                        {' '}(la última,{' '}
+                        <span className="font-mono">
+                          {money(planPreview[planPreview.length - 1].monto)}
+                        </span>
+                        )
+                      </>
+                    )}{' '}
+                  · del {fechaCorta(planPreview[0].vencimiento)} al{' '}
+                  {fechaCorta(planPreview[planPreview.length - 1].vencimiento)}
+                </p>
+              )}
+
+              {!idCliente && (
+                <p className="rounded-md border border-alerta-ink bg-alerta-bg px-3 py-2 text-xs text-alerta-ink">
+                  Falta el cliente: sin eso perdés el rastro de quién te debe.{' '}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFaltante('cliente')
+                      enfocarCampo('v-cli')
+                    }}
+                    className="font-medium underline underline-offset-2"
+                  >
+                    Elegirlo arriba
+                  </button>
+                </p>
+              )}
+            </div>
+          )}
+
         </section>
       )}
 
@@ -1786,8 +1926,13 @@ export function NuevaVentaView({
         <div>
           <div className="text-xs text-muted">
             Total · {lineas.length} ítem{lineas.length === 1 ? '' : 's'}
-            {formaPago !== 'efectivo' ? ` · ${formaPagoLabel(formaPago)}` : ''}
+            {finCuotas !== null ? ` · ${finCuotas} cuotas` : ''}
           </div>
+          {hayDeuda && (
+            <div className="text-xs text-terracota">
+              Queda debiendo {money(aFinanciar)}
+            </div>
+          )}
           <div data-testid="venta-total" className="font-mono text-xl font-semibold text-text">
             {money(total)}
           </div>

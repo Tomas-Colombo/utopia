@@ -10,6 +10,7 @@ import { listProductosConDetalle } from '@/lib/dal/inventario/producto'
 import { listCuentasDestino } from '@/lib/dal/ventas/cuenta-destino'
 import { listArancelesCobro } from '@/lib/dal/ventas/arancel'
 import { listPlanesCuotas } from '@/lib/dal/precios/cuotas'
+import { listRecargosCuotas } from '@/lib/dal/precios/recargo'
 import { nombreCliente } from '@/lib/types/ventas'
 import { NuevaVentaView, type PrecargaReserva } from './NuevaVentaView'
 
@@ -28,6 +29,7 @@ export default async function NuevaVentaPage(props: {
     reservasPorProducto,
     planesCuotas,
     aranceles,
+    recargos,
   ] = await Promise.all([
     listClientes({ soloActivos: true }),
     listReservas({ estado: 'activa' }),
@@ -36,6 +38,7 @@ export default async function NuevaVentaPage(props: {
     listReservasActivasPorProducto(),
     listPlanesCuotas({ soloActivos: true }),
     listArancelesCobro(),
+    listRecargosCuotas(),
   ])
 
   // Acceso directo desde Reservas: la venta arranca con TODO lo que tenía la
@@ -80,6 +83,7 @@ export default async function NuevaVentaPage(props: {
           cuentas={cuentas}
           planesCuotas={planesCuotas}
           aranceles={aranceles}
+          recargos={recargos}
           precargaReserva={precarga}
         />
       </main>

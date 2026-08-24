@@ -3,7 +3,7 @@ import { Topbar } from '@/components/shell/Topbar'
 import { Badge } from '@/components/ui/Badge'
 import { verifySession } from '@/lib/dal/session'
 import { getVentaConDetalle } from '@/lib/dal/ventas/venta'
-import { getPerdidaIncobrableVenta, listCuotasPorVenta } from '@/lib/dal/cuotas/cuota'
+import { listCuotasPorVenta } from '@/lib/dal/cuotas/cuota'
 import { VentaDetalleView } from './VentaDetalleView'
 
 export default async function VentaDetallePage(props: {
@@ -15,11 +15,6 @@ export default async function VentaDetallePage(props: {
   if (!venta) notFound()
 
   const cuotas = await listCuotasPorVenta(id)
-  // La pérdida sólo se consulta si hay algo que perder: el SP recorre las
-  // líneas y no tiene sentido pagarlo en cada venta al contado.
-  const perdida = cuotas.some((c) => c.estado === 'incobrable')
-    ? await getPerdidaIncobrableVenta(id)
-    : null
 
   return (
     <>
@@ -34,7 +29,7 @@ export default async function VentaDetallePage(props: {
         }
       />
       <main className="flex-1 p-6">
-        <VentaDetalleView venta={venta} cuotas={cuotas} perdida={perdida} />
+        <VentaDetalleView venta={venta} cuotas={cuotas} />
       </main>
     </>
   )

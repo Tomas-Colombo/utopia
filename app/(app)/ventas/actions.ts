@@ -21,27 +21,17 @@ import {
   spVencerReservas,
 } from '@/lib/dal/reservas/reserva'
 import {
-  createCuentaDestino,
-  setCuentaPredeterminada,
-  updateCuentaDestino,
-} from '@/lib/dal/ventas/cuenta-destino'
-import {
-  cerrarVigenciaArancel,
-  createArancelCobro,
-  updateArancelCobro,
-} from '@/lib/dal/ventas/arancel'
-import {
   spCobrarCuota,
   spMarcarCuotaIncobrable,
 } from '@/lib/dal/cuotas/cuota'
 import type { FormaPago } from '@/lib/types/precios'
 import type {
   FinanciacionInput,
+  FinanciadorInput,
   MedioPago,
   PagoInput,
   ResultadoIncobrable,
   TipoComprobante,
-  TipoCuentaDestino,
 } from '@/lib/types/ventas'
 
 type ActionResult<T = unknown> = { ok: true; data?: T } | { ok: false; reason: string }
@@ -72,6 +62,7 @@ export async function registrarVentaAction(input: {
   pagos?: PagoInput[]
   /** Financiación propia (00059). Exige cliente. */
   financiacion?: FinanciacionInput | null
+  financiador?: FinanciadorInput | null
 }): Promise<ActionResult<{ id: string }>> {
   const g = await guarded('ventas', 'crear')
   if (!g.ok) return { ok: false, reason: g.error }
@@ -90,6 +81,7 @@ export async function registrarVentaAction(input: {
       observaciones: input.observaciones ?? null,
       pagos: input.pagos,
       financiacion: input.financiacion ?? null,
+      financiador: input.financiador ?? null,
     })
     revalidatePath('/ventas')
     revalidatePath('/inventario/productos')
@@ -208,237 +200,6 @@ export async function vencerReservasAction(): Promise<ActionResult<{ vencidas: n
   }
 }
 
-// ─── Cuentas destino ─────────────────────────────────────────────────
-
-/**
- * Alta de cuenta con su costo de cobro en un solo paso. Separarlo obligaba a
- * crear la cuenta, buscarla en la tabla y volver a entrar para configurarla —
- * tres pantallas para una sola decisión, y una cuenta a medio configurar en
- * el medio.
- *
- * Los aranceles se cargan después de la cuenta porque la referencian. Si uno
- * falla, la cuenta YA quedó creada: se devuelve `ok` con `arancelesFallidos`
- * para avisarlo, en vez de dejar al usuario sin cuenta por un porcentaje mal
- * tipeado.
- */
-export async function crearCuentaDestinoAction(input: {
-  nombre: string
-  tipo: TipoCuentaDestino
-  titular?: string | null
-  identificador?: string | null
-  retenciones?: {
-    ret_iva_pct: number
-    ret_ganancias_pct: number
-    ret_iibb_pct: number
-    imp_deb_cred_pct: number
-  }
-  aranceles?: Array<{
-    medio: MedioPago
-    arancelPct: number
-    ivaArancelPct: number
-    diasAcreditacion: number
-  }>
-}): Promise<ActionResult<{ id: string; arancelesFallidos: number }>> {
-  const g = await guarded('ventas', 'crear')
-  if (!g.ok) return { ok: false, reason: g.error }
-  if (input.nombre.trim().length < 2) return { ok: false, reason: 'nombre-invalido' }
-
-  const ret = input.retenciones
-  if (ret) {
-    for (const pct of Object.values(ret)) {
-      if (!porcentajeValido(pct)) return { ok: false, reason: 'porcentaje-invalido' }
-    }
-  }
-  for (const a of input.aranceles ?? []) {
-    if (!porcentajeValido(a.arancelPct) || !porcentajeValido(a.ivaArancelPct)) {
-      return { ok: false, reason: 'porcentaje-invalido' }
-    }
-    if (a.diasAcreditacion < 0) return { ok: false, reason: 'dias-invalidos' }
-  }
-
-  try {
-    const row = await createCuentaDestino({
-      id_tenant: g.tenantId,
-      nombre: input.nombre.trim(),
-      tipo: input.tipo,
-      titular: input.titular?.trim() || null,
-      identificador: input.identificador?.trim() || null,
-      ...(ret ?? {}),
-    })
-
-    let arancelesFallidos = 0
-    for (const a of input.aranceles ?? []) {
-      try {
-        await createArancelCobro(g.tenantId, {
-          id_cuenta_destino: row.id_cuenta_destino,
-          medio: a.medio,
-          // Comodín: aplica a cualquier plan. El tarifario por plan se afina
-          // después, desde el panel de la cuenta.
-          cuotas: null,
-          arancel_pct: a.arancelPct,
-          iva_arancel_pct: a.ivaArancelPct,
-          dias_acreditacion: a.diasAcreditacion,
-        })
-      } catch {
-        arancelesFallidos++
-      }
-    }
-
-    revalidatePath('/ventas/cuentas')
-    revalidatePath('/ventas/nueva')
-    return { ok: true, data: { id: row.id_cuenta_destino, arancelesFallidos } }
-  } catch (e) {
-    return { ok: false, reason: (e as Error).message }
-  }
-}
-
-export async function actualizarCuentaDestinoAction(input: {
-  id: string
-  patch: {
-    nombre?: string
-    tipo?: TipoCuentaDestino
-    titular?: string | null
-    identificador?: string | null
-    activo?: boolean
-    ret_iva_pct?: number
-    ret_ganancias_pct?: number
-    ret_iibb_pct?: number
-    imp_deb_cred_pct?: number
-  }
-}): Promise<ActionResult> {
-  const g = await guarded('ventas', 'editar')
-  if (!g.ok) return { ok: false, reason: g.error }
-  for (const pct of [
-    input.patch.ret_iva_pct,
-    input.patch.ret_ganancias_pct,
-    input.patch.ret_iibb_pct,
-    input.patch.imp_deb_cred_pct,
-  ]) {
-    if (pct !== undefined && !porcentajeValido(pct)) {
-      return { ok: false, reason: 'porcentaje-invalido' }
-    }
-  }
-  try {
-    await updateCuentaDestino(input.id, input.patch)
-    revalidatePath('/ventas/cuentas')
-    revalidatePath('/ventas/nueva')
-    return { ok: true }
-  } catch (e) {
-    return { ok: false, reason: (e as Error).message }
-  }
-}
-
-// ─── Aranceles de cobro (00057) ──────────────────────────────────────
-
-/** Un porcentaje de arancel/retención: no negativo y no mayor a 100. */
-function porcentajeValido(n: number): boolean {
-  return Number.isFinite(n) && n >= 0 && n <= 100
-}
-
-export async function crearArancelCobroAction(input: {
-  idCuentaDestino: string
-  medio: MedioPago
-  cuotas?: number | null
-  arancelPct: number
-  ivaArancelPct?: number
-  diasAcreditacion?: number
-  notas?: string | null
-}): Promise<ActionResult<{ id: string }>> {
-  const g = await guarded('ventas', 'crear')
-  if (!g.ok) return { ok: false, reason: g.error }
-  if (!porcentajeValido(input.arancelPct)) return { ok: false, reason: 'porcentaje-invalido' }
-  if (input.ivaArancelPct !== undefined && !porcentajeValido(input.ivaArancelPct)) {
-    return { ok: false, reason: 'porcentaje-invalido' }
-  }
-  if (input.diasAcreditacion !== undefined && input.diasAcreditacion < 0) {
-    return { ok: false, reason: 'dias-invalidos' }
-  }
-  // El plan de cuotas sólo tiene sentido en crédito: en cualquier otro medio
-  // haría que el lookup del tarifario no matchee nunca.
-  if (input.cuotas != null && input.medio !== 'tarjeta_credito') {
-    return { ok: false, reason: 'cuotas-medio-invalido' }
-  }
-  try {
-    const row = await createArancelCobro(g.tenantId, {
-      id_cuenta_destino: input.idCuentaDestino,
-      medio: input.medio,
-      cuotas: input.cuotas ?? null,
-      arancel_pct: input.arancelPct,
-      iva_arancel_pct: input.ivaArancelPct,
-      dias_acreditacion: input.diasAcreditacion,
-      notas: input.notas ?? null,
-    })
-    revalidatePath('/ventas/cuentas')
-    revalidatePath('/ventas/nueva')
-    return { ok: true, data: { id: row.id_arancel_cobro } }
-  } catch (e) {
-    return { ok: false, reason: (e as Error).message }
-  }
-}
-
-export async function actualizarArancelCobroAction(input: {
-  id: string
-  patch: {
-    arancel_pct?: number
-    iva_arancel_pct?: number
-    dias_acreditacion?: number
-    notas?: string | null
-  }
-}): Promise<ActionResult> {
-  const g = await guarded('ventas', 'editar')
-  if (!g.ok) return { ok: false, reason: g.error }
-  if (input.patch.arancel_pct !== undefined && !porcentajeValido(input.patch.arancel_pct)) {
-    return { ok: false, reason: 'porcentaje-invalido' }
-  }
-  if (
-    input.patch.iva_arancel_pct !== undefined &&
-    !porcentajeValido(input.patch.iva_arancel_pct)
-  ) {
-    return { ok: false, reason: 'porcentaje-invalido' }
-  }
-  if (input.patch.dias_acreditacion !== undefined && input.patch.dias_acreditacion < 0) {
-    return { ok: false, reason: 'dias-invalidos' }
-  }
-  try {
-    await updateArancelCobro(input.id, input.patch)
-    revalidatePath('/ventas/cuentas')
-    revalidatePath('/ventas/nueva')
-    return { ok: true }
-  } catch (e) {
-    return { ok: false, reason: (e as Error).message }
-  }
-}
-
-export async function cerrarVigenciaArancelAction(input: {
-  id: string
-  hasta?: string
-}): Promise<ActionResult> {
-  const g = await guarded('ventas', 'editar')
-  if (!g.ok) return { ok: false, reason: g.error }
-  try {
-    await cerrarVigenciaArancel(input.id, input.hasta ?? new Date().toISOString().slice(0, 10))
-    revalidatePath('/ventas/cuentas')
-    revalidatePath('/ventas/nueva')
-    return { ok: true }
-  } catch (e) {
-    return { ok: false, reason: (e as Error).message }
-  }
-}
-
-export async function marcarCuentaPredeterminadaAction(input: {
-  id: string
-}): Promise<ActionResult> {
-  const g = await guarded('ventas', 'editar')
-  if (!g.ok) return { ok: false, reason: g.error }
-  try {
-    await setCuentaPredeterminada(input.id)
-    revalidatePath('/ventas/cuentas')
-    revalidatePath('/ventas/nueva')
-    return { ok: true }
-  } catch (e) {
-    return { ok: false, reason: (e as Error).message }
-  }
-}
 
 // ─── Clientes ────────────────────────────────────────────────────────
 

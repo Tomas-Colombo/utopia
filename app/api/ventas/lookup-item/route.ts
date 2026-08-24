@@ -10,12 +10,12 @@ import {
 import { findProductoBySku } from '@/lib/dal/inventario/producto'
 import { calcularSnapshotPrecio } from '@/lib/dal/precios/resolucion'
 import { createServerClient } from '@/lib/dal/supabase'
-import type { FormaPago } from '@/lib/types/precios'
+import type { FormaPago, MedioPagoRecargo } from '@/lib/types/precios'
 import type { ItemProductoRow } from '@/lib/types/inventario'
 import type { LineaCarrito } from '@/lib/types/ventas'
 
 /**
- * GET /api/ventas/lookup-item?code=<qr-o-sku>&forma_pago=<fp>
+ * GET /api/ventas/lookup-item?code=<qr-o-sku>&forma_pago=<fp>&fin_cuenta=&fin_medio=&fin_propia=
  *
  * Endpoint interno del carrito de venta. Acepta:
  *   - `code`: QR exacto del ítem, o SKU del producto (`REM-0007` /
@@ -63,6 +63,15 @@ export async function GET(req: NextRequest) {
   // No es lo mismo que "no vino talle" (eso sería el gate de desambiguación).
   const sinTalleParam = params.get('sin_talle') === '1'
   const formaPago = (params.get('forma_pago') as FormaPago | null) ?? 'efectivo'
+  // Financiador (00064): define qué recargo por cuotas se aplica. Viaja acá
+  // porque el precio de CADA línea depende de él, igual que de forma_pago.
+  // Sin estos parámetros el snapshot resuelve el comodín, que es lo que hacía
+  // antes de que el recargo pudiera distinguir por destino.
+  const finPropia = params.get('fin_propia') === '1'
+  const finCuenta = finPropia ? null : (params.get('fin_cuenta')?.trim() || null)
+  const finMedio = finPropia
+    ? null
+    : ((params.get('fin_medio')?.trim() || null) as MedioPagoRecargo | null)
   const idReservaCtx = params.get('id_reserva')?.trim() ?? null
   // Descuentos elegidos por el vendedor. Se mandan TODOS juntos; el snapshot
   // valida cada uno contra el producto (alcance + vigencia) e ignora los que
@@ -258,6 +267,9 @@ export async function GET(req: NextRequest) {
     idProducto: item.id_producto,
     formaPago,
     idsDescuentos,
+    idCuentaDestino: finCuenta,
+    medio: finMedio,
+    propia: finPropia,
   })
 
   if (!snap.ok) {
