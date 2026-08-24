@@ -13,6 +13,7 @@ import { saldoCuota } from '@/lib/cuotas/generar-plan'
 import { nombreCliente } from '@/lib/types/ventas'
 import { ClienteDetalleView } from './ClienteDetalleView'
 import { CuotasClienteView } from './CuotasClienteView'
+import { hoyISO } from '@/lib/utils/hoy'
 
 /**
  * Ficha del cliente: quién es, cuánto compró y cuánto debe.
@@ -31,7 +32,7 @@ export default async function ClienteDetallePage(props: {
 
   // `hoy` una sola vez: "vencida" tiene que significar lo mismo en el KPI y
   // en cada fila de la tabla de abajo.
-  const hoy = new Date().toLocaleDateString('en-CA')
+  const hoy = hoyISO()
 
   const [cliente, ventas, reservas, cuotas, cuentas] = await Promise.all([
     getCliente(id),

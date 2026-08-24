@@ -112,19 +112,25 @@ export function CuotasView({
       key: 'vencido',
       label: 'Vencido',
       align: 'right',
-      render: (d) =>
-        d.vencido > 0 ? (
+      // El monto solo no distingue dos días de atraso de tres meses, y esa
+      // diferencia ES la gestión: uno es un recordatorio y el otro una
+      // llamada. Por eso la antigüedad de la cuota más vieja va debajo del
+      // monto, y no escondida en la ficha del cliente.
+      render: (d) => {
+        if (d.vencido <= 0) return <span className="text-muted-2">—</span>
+        const atraso = d.vencida_desde ? diasHasta(d.vencida_desde, hoy) : 0
+        return (
           <div>
             <span className="font-mono font-semibold text-alerta-ink">
               {money(d.vencido)}
             </span>
             <div className="text-xs text-muted">
               {d.vencidas} cuota{d.vencidas === 1 ? '' : 's'}
+              {atraso > 0 && ` · ${textoAtraso(atraso)}`}
             </div>
           </div>
-        ) : (
-          <span className="text-muted-2">—</span>
-        ),
+        )
+      },
     },
     {
       key: 'proximo',
@@ -135,11 +141,24 @@ export function CuotasView({
         }
         if (!d.proximo_vencimiento) return <span className="text-muted-2">—</span>
         const dias = diasHasta(hoy, d.proximo_vencimiento)
+        // Hoy y mañana son los dos días en los que todavía se puede hacer
+        // algo, y por eso son los únicos que llevan chapa. Antes vencía hoy y
+        // se leía igual que "en 23 días": texto chico y gris.
+        if (dias <= 1) {
+          return (
+            <div className="space-y-1">
+              <Badge variant={dias === 0 ? 'warning' : 'info'}>
+                {dias === 0 ? 'Vence hoy' : 'Vence mañana'}
+              </Badge>
+              <div className="text-xs text-muted">{fecha(d.proximo_vencimiento)}</div>
+            </div>
+          )
+        }
         return (
           <div>
             <div>{fecha(d.proximo_vencimiento)}</div>
             <div className="text-xs text-muted">
-              {dias === 0 ? 'hoy' : `en ${dias} día${dias === 1 ? '' : 's'}`}
+              en {dias} día{dias === 1 ? '' : 's'}
             </div>
           </div>
         )
@@ -211,6 +230,20 @@ export function CuotasView({
       />
     </div>
   )
+}
+
+/**
+ * Atraso legible. Los días sueltos importan la primera semana; después lo que
+ * se lee es la magnitud, y "hace 97 días" obliga a dividir mentalmente.
+ */
+function textoAtraso(dias: number): string {
+  if (dias < 7) return `hace ${dias} día${dias === 1 ? '' : 's'}`
+  if (dias < 60) {
+    const semanas = Math.floor(dias / 7)
+    return `hace ${semanas} semana${semanas === 1 ? '' : 's'}`
+  }
+  const meses = Math.floor(dias / 30)
+  return `hace ${meses} meses`
 }
 
 /** Días desde `hoy` hasta `iso`. Negativo = ya venció. */

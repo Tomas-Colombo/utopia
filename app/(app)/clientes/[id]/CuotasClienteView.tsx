@@ -227,10 +227,16 @@ export function CuotasClienteView({
       label: 'Estado',
       render: (c) => {
         const vencida = esDeuda(c.estado) && c.fecha_vencimiento < hoy
+        // Vencer HOY no es estar vencida — el cliente tiene el día entero —
+        // pero tampoco es "pendiente" a secas: es la única que hay que cobrar
+        // antes de que cierre el local.
+        const venceHoy = esDeuda(c.estado) && c.fecha_vencimiento === hoy
         return (
           <div>
-            <Badge variant={vencida ? 'danger' : VARIANT[c.estado]}>
-              {vencida ? 'Vencida' : ESTADO_CUOTA_LABEL[c.estado]}
+            <Badge
+              variant={vencida ? 'danger' : venceHoy ? 'warning' : VARIANT[c.estado]}
+            >
+              {vencida ? 'Vencida' : venceHoy ? 'Vence hoy' : ESTADO_CUOTA_LABEL[c.estado]}
             </Badge>
             {c.estado === 'incobrable' && c.motivo_incobrable && (
               <div className="mt-1 text-xs text-muted">{c.motivo_incobrable}</div>

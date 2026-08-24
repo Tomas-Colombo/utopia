@@ -14,7 +14,6 @@ test.describe('Clientes', () => {
   })
 
   test('rechaza un nombre demasiado corto sin llamar al servidor', async ({
-    page,
     clientes,
   }) => {
     await clientes.abrir()
@@ -23,8 +22,10 @@ test.describe('Clientes', () => {
     await clientes.guardar.click()
 
     await expect(clientes.errorNombre).toHaveText('Nombre muy corto')
-    // Client-side guard: no navigation, so nothing was persisted.
-    await expect(page).toHaveURL(/\/clientes\/nuevo$/)
+    // Client-side guard: the modal stays open, so nothing was persisted. The
+    // form has no route of its own — it is a modal over /clientes — so the URL
+    // says nothing about whether the submit went through.
+    await expect(clientes.modalNuevo).toBeVisible()
   })
 
   test('el buscador filtra por nombre y avisa cuando no hay coincidencias', async ({

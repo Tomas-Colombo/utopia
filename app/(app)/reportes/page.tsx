@@ -13,6 +13,7 @@ import Link from 'next/link'
 import { ReportesPeriodoForm } from './ReportesPeriodoForm'
 import { RotacionTable } from './RotacionTable'
 import { PerfilProveedoresTable } from './PerfilProveedoresTable'
+import { hoyISO } from '@/lib/utils/hoy'
 
 /**
  * §L112: "pantalla que reúne las métricas necesarias para controlar el
@@ -40,13 +41,13 @@ export default async function ReportesPage(props: {
     : finMes.toISOString()
 
   // Una sola lectura de la fecha para todo lo que dependa de "hoy".
-  const hoyISO = hoy.toLocaleDateString('en-CA')
+  const hoyDelNegocio = hoyISO()
 
   const [financiero, caja, porCobrar, incobrables, rotacion, proveedores] =
     await Promise.all([
       getReporteFinanciero({ desde: desdeISO, hasta: hastaISO }),
       getReporteCaja({ desde: desdeISO, hasta: hastaISO }),
-      getCuentasPorCobrar(hoyISO),
+      getCuentasPorCobrar(hoyDelNegocio),
       getIncobrablesPeriodo({ desde: desdeISO, hasta: hastaISO }),
       getRotacion({ desde: desdeISO, hasta: hastaISO }),
       listPerfilProveedor(),

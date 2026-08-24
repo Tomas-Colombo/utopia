@@ -2,6 +2,7 @@ import { Topbar } from '@/components/shell/Topbar'
 import { Kpi } from '@/components/ui/Kpi'
 import { verifySession } from '@/lib/dal/session'
 import { listDeudores } from '@/lib/dal/cuotas/cuota'
+import { hoyISO } from '@/lib/utils/hoy'
 import {
   FILTRO_ESTADO_CUOTAS_LABEL,
   type FiltroEstadoCuotas,
@@ -35,7 +36,7 @@ export default async function CuotasPage(props: {
 
   const estado = parseEstado(sp.estado)
   const page = Math.max(1, Number(sp.page ?? '1') || 1)
-  const hoy = new Date().toLocaleDateString('en-CA') // YYYY-MM-DD local
+  const hoy = hoyISO()
 
   const { rows, resumen } = await listDeudores({ estado, search: sp.q, hoy })
 
@@ -50,22 +51,45 @@ export default async function CuotasPage(props: {
       <Topbar title="Cuotas" session={session} />
       <main className="flex-1 space-y-6 p-6">
         {/* KPIs del conjunto FILTRADO, no del total global: un contador que
-            ignora el filtro activo miente sobre lo que se está mirando. */}
+            ignora el filtro activo miente sobre lo que se está mirando.
+
+            El orden es el de urgencia, de izquierda a derecha: lo que ya está
+            vencido, lo que vence hoy, lo que viene, y el total. "Vencido"
+            arranca la fila porque es lo único que ya salió mal. */}
         <section className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          <Kpi label="A cobrar" value={money(resumen.aCobrar)} variant="highlight" />
-          <Kpi label="Vence este mes" value={money(resumen.venceEsteMes)} variant="nested" />
+          {/* Caja de alerta cuando hay mora: el mismo número en gris se lee
+              como un dato más de la fila. */}
           <Kpi
             label="Vencido"
             value={money(resumen.vencido)}
-            variant="nested"
+            variant={resumen.vencido > 0 ? 'alert' : 'nested'}
             tone={resumen.vencido > 0 ? undefined : 'muted'}
-            sub={resumen.vencido > 0 ? 'Requiere gestión' : undefined}
+            sub={
+              resumen.vencido > 0
+                ? `${resumen.clientesVencidos} cliente${resumen.clientesVencidos === 1 ? '' : 's'} · requiere gestión`
+                : 'Nadie atrasado'
+            }
           />
+          {/* Vencer hoy todavía se puede cobrar: es aviso, no alarma. Pero
+              tiene que VERSE, que es justamente lo que faltaba: hasta ahora
+              una cuota que vencía hoy no aparecía en ningún indicador. */}
           <Kpi
-            label="Clientes con deuda"
-            value={String(resumen.clientesConDeuda)}
+            label="Vence hoy"
+            value={money(resumen.venceHoy)}
+            variant={resumen.venceHoy > 0 ? 'highlight' : 'nested'}
+            tone={resumen.venceHoy > 0 ? undefined : 'muted'}
+            sub={
+              resumen.venceManana > 0
+                ? `Mañana ${money(resumen.venceManana)}`
+                : 'Mañana no vence nada'
+            }
+          />
+          <Kpi label="Vence este mes" value={money(resumen.venceEsteMes)} variant="nested" />
+          <Kpi
+            label="A cobrar"
+            value={money(resumen.aCobrar)}
             variant="nested"
-            tone="muted"
+            sub={`${resumen.clientesConDeuda} cliente${resumen.clientesConDeuda === 1 ? '' : 's'} con deuda`}
           />
         </section>
 

@@ -1,5 +1,6 @@
 import 'server-only'
 import { createServerClient } from '@/lib/dal/supabase'
+import { hoyISO } from '@/lib/utils/hoy'
 import type {
   CuotaFinanciadaRow,
   CuotaListada,
@@ -174,11 +175,6 @@ export async function listCuotasPorCliente(
   return ((data ?? []) as unknown as CuotaCruda[])
 }
 
-/** Fecha local del server en ISO. Solo como default; el caller deberia pasarla. */
-function hoyISO(): string {
-  return new Date().toLocaleDateString('en-CA')
-}
-
 /** Las cuotas de una venta, para el detalle. */
 export async function listCuotasPorVenta(idVenta: string): Promise<CuotaFinanciadaRow[]> {
   const supabase = await createServerClient()
@@ -256,6 +252,17 @@ export function inicioDeMes(iso: string): string {
   return `${iso.slice(0, 7)}-01`
 }
 
+/**
+ * `2026-08-20` + 1 → `2026-08-21`. Suma en UTC y devuelve el ISO local del
+ * calendario: la fecha de vencimiento es una FECHA, no un instante, y pasarla
+ * por un huso la corre un dia en media Argentina.
+ */
+export function sumarDias(iso: string, dias: number): string {
+  const [a, m, d] = iso.split('-').map(Number)
+  const t = new Date(Date.UTC(a, m - 1, d + dias))
+  return t.toISOString().slice(0, 10)
+}
+
 /** `2026-08-20` → `2026-08-31`. */
 export function finDeMes(iso: string): string {
   const [a, m] = iso.split('-').map(Number)
@@ -272,10 +279,16 @@ function redondear2(n: number): number {
 /** KPIs del conjunto filtrado completo, no de la página visible. */
 export interface ResumenCuotas {
   aCobrar: number
+  /** Vence HOY. No está vencido todavía, pero es lo que hay que llamar hoy. */
+  venceHoy: number
+  /** Vence mañana: el aviso que llega a tiempo para poder hacer algo. */
+  venceManana: number
   venceEsteMes: number
   vencido: number
   incobrable: number
   clientesConDeuda: number
+  /** Clientes con al menos una cuota vencida. */
+  clientesVencidos: number
   filas: number
 }
 
@@ -296,6 +309,14 @@ export interface DeudorRow {
   vencido: number
   /** La proxima que vence sin estar vencida. `null` si todas vencieron. */
   proximo_vencimiento: string | null
+  /**
+   * La cuota vencida MAS VIEJA. `null` si no debe nada atrasado.
+   *
+   * Es el dato que decide la gestion: dos dias de atraso es un recordatorio,
+   * noventa es una llamada de cobranza. Sin esto, "vencido $50.000" se lee
+   * igual en los dos casos.
+   */
+  vencida_desde: string | null
   /** Ventas financiadas distintas: dos compras en cuotas son dos planes. */
   planes: number
 }
@@ -347,12 +368,16 @@ export async function listDeudores(
 
   const inicio = inicioDeMes(f.hoy)
   const fin = finDeMes(f.hoy)
+  const manana = sumarDias(f.hoy, 1)
   const porCliente = new Map<string, DeudorRow & { _planes: Set<string> }>()
 
   let aCobrar = 0
+  let venceHoy = 0
+  let venceManana = 0
   let venceEsteMes = 0
   let vencido = 0
   let incobrable = 0
+  let clientesVencidos = 0
 
   for (const c of acc) {
     const saldo = Number(c.monto) - Number(c.monto_pagado)
@@ -364,10 +389,17 @@ export async function listDeudores(
     if (c.estado !== 'pendiente' && c.estado !== 'parcial') continue
 
     aCobrar += saldo
+    // Vencer HOY no es estar vencida: el cliente tiene todo el dia para
+    // pagar. Por eso hoy suma a su propio contador y no a `vencido` — meterla
+    // ahi inflaria la mora con plata que todavia nadie debe.
     const estaVencida = c.fecha_vencimiento < f.hoy
     if (estaVencida) vencido += saldo
-    else if (c.fecha_vencimiento >= inicio && c.fecha_vencimiento <= fin) {
-      venceEsteMes += saldo
+    else {
+      if (c.fecha_vencimiento === f.hoy) venceHoy += saldo
+      else if (c.fecha_vencimiento === manana) venceManana += saldo
+      if (c.fecha_vencimiento >= inicio && c.fecha_vencimiento <= fin) {
+        venceEsteMes += saldo
+      }
     }
 
     let d = porCliente.get(c.id_cliente)
@@ -380,6 +412,7 @@ export async function listDeudores(
         adeudado: 0,
         vencido: 0,
         proximo_vencimiento: null,
+        vencida_desde: null,
         planes: 0,
         _planes: new Set<string>(),
       }
@@ -391,6 +424,9 @@ export async function listDeudores(
     if (estaVencida) {
       d.vencidas++
       d.vencido = redondear2(d.vencido + saldo)
+      if (d.vencida_desde === null || c.fecha_vencimiento < d.vencida_desde) {
+        d.vencida_desde = c.fecha_vencimiento
+      }
     } else if (
       d.proximo_vencimiento === null ||
       c.fecha_vencimiento < d.proximo_vencimiento
@@ -398,6 +434,8 @@ export async function listDeudores(
       d.proximo_vencimiento = c.fecha_vencimiento
     }
   }
+
+  for (const d of porCliente.values()) if (d.vencidas > 0) clientesVencidos++
 
   const rows = [...porCliente.values()].map(({ _planes, ...d }) => ({
     ...d,
@@ -415,10 +453,13 @@ export async function listDeudores(
     rows,
     resumen: {
       aCobrar: redondear2(aCobrar),
+      venceHoy: redondear2(venceHoy),
+      venceManana: redondear2(venceManana),
       venceEsteMes: redondear2(venceEsteMes),
       vencido: redondear2(vencido),
       incobrable: redondear2(incobrable),
       clientesConDeuda: porCliente.size,
+      clientesVencidos,
       filas: acc.length,
     },
   }

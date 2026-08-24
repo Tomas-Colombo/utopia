@@ -17,6 +17,7 @@ import {
 } from '@/lib/fechas'
 import { VentasFiltros } from './VentasFiltros'
 import { VentasPaginacion } from './VentasPaginacion'
+import { hoyISO } from '@/lib/utils/hoy'
 
 const PAGE_SIZE = 50
 
@@ -60,14 +61,14 @@ export default async function VentasHome(props: {
 
   // La alerta de deuda NO se recorta por el período del filtro: una cuota
   // vencida en julio sigue vencida aunque estés mirando agosto.
-  const hoyISO = new Date().toLocaleDateString('en-CA')
+  const hoy = hoyISO()
 
   const [{ rows: ventas, total }, resumen, reservasActivas, alertasCuotas] =
     await Promise.all([
       listVentasPaginado({ ...periodo, page: pagina, pageSize: PAGE_SIZE }),
       resumenVentasPeriodo(periodo),
       listReservas({ estado: 'activa' }),
-      listAlertasCuotasVencidas(hoyISO),
+      listAlertasCuotasVencidas(hoy),
     ])
 
   const totalVencido = alertasCuotas.reduce((a, x) => a + x.monto_vencido, 0)

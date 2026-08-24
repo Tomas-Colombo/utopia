@@ -1,5 +1,5 @@
 import { expect, type Locator, type Page } from '@playwright/test'
-import { alerta, AppShell } from './AppShell'
+import { AppShell } from './AppShell'
 
 /** `/clientes` list + its "Nuevo cliente" modal. */
 export class ClientesPage {
@@ -53,9 +53,15 @@ export class ClientesPage {
     return this.modalNuevo.getByRole('button', { name: /Crear cliente|Guardando/ })
   }
 
-  /** Inline validation message rendered by `<Field error>`. */
+  /**
+   * Inline validation message for the NAME field, rendered by `<Field error>`.
+   *
+   * Anchored to `#cn-error` on purpose: since 00058 the form also validates
+   * `apellido`, so a modal-wide `[role="alert"]` query matches two elements and
+   * Playwright rejects it under strict mode.
+   */
   get errorNombre(): Locator {
-    return alerta(this.modalNuevo)
+    return this.modalNuevo.locator('#cn-error')
   }
 
   get buscador(): Locator {
