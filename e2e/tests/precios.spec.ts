@@ -42,18 +42,21 @@ test.describe('Precios · reglas', () => {
     await expect(page).toHaveURL(/\/precios\/reglas\/nueva$/)
   })
 
-  test('rechaza un porcentaje por encima del máximo permitido', async ({ page, reglas }) => {
+  test('rechaza un porcentaje por encima del máximo permitido', async ({ reglas }) => {
     await reglas.abrirNueva()
     await reglas.nombre.fill(unique('Regla absurda'))
-    await reglas.porcentaje.fill('900')
-    await reglas.guardar.click()
 
-    // The input declares `max={500}`, so native constraint validation blocks
-    // the submit before the action ever runs — nothing is persisted and the
-    // form stays put.
-    const valido = await reglas.porcentaje.evaluate((el: HTMLInputElement) => el.checkValidity())
-    expect(valido).toBe(false)
-    await expect(page).toHaveURL(/\/precios\/reglas\/nueva$/)
+    // A valid value first, on purpose: the rejection now happens at the
+    // keystroke rather than at submit. `NumberInput` drops anything above its
+    // `max={500}` instead of emitting it, so the field keeps what it already
+    // had. Asserting against a value that was typed here — instead of against
+    // an empty field — is what tells "the input refused it" apart from "the
+    // input never received it", which is how this test used to pass while
+    // measuring nothing.
+    await reglas.porcentaje.fill('10')
+    await reglas.porcentaje.fill('900')
+
+    await expect(reglas.porcentaje).toHaveValue('10')
   })
 
   // Desde 00063 el recargo por cuotas no es una regla de precio: vive en
