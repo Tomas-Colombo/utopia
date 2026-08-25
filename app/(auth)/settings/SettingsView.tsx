@@ -5,8 +5,9 @@ import { PasswordChangeForm } from './PasswordChangeForm'
 export interface SettingsViewProps {
   email: string
   /**
-   * Placeholder until Slice 8 adds `rolId`/role name to `Session` (guard
-   * work). Real role display is out of Slice 7's scope.
+   * Display name of the user's role. The caller resolves it from the session
+   * and substitutes a readable label when no role is assigned, so this view
+   * never has to render an empty cell.
    */
   roleName: string
 }

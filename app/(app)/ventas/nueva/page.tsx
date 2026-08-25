@@ -8,7 +8,10 @@ import {
 } from '@/lib/dal/reservas/reserva'
 import { listProductosConDetalle } from '@/lib/dal/inventario/producto'
 import { listCuentasDestino } from '@/lib/dal/ventas/cuenta-destino'
+import { listArancelesCobro } from '@/lib/dal/ventas/arancel'
 import { listPlanesCuotas } from '@/lib/dal/precios/cuotas'
+import { listRecargosCuotas } from '@/lib/dal/precios/recargo'
+import { nombreCliente } from '@/lib/types/ventas'
 import { NuevaVentaView, type PrecargaReserva } from './NuevaVentaView'
 
 export default async function NuevaVentaPage(props: {
@@ -25,6 +28,8 @@ export default async function NuevaVentaPage(props: {
     cuentas,
     reservasPorProducto,
     planesCuotas,
+    aranceles,
+    recargos,
   ] = await Promise.all([
     listClientes({ soloActivos: true }),
     listReservas({ estado: 'activa' }),
@@ -32,6 +37,8 @@ export default async function NuevaVentaPage(props: {
     listCuentasDestino({ soloActivas: true }),
     listReservasActivasPorProducto(),
     listPlanesCuotas({ soloActivos: true }),
+    listArancelesCobro(),
+    listRecargosCuotas(),
   ])
 
   // Acceso directo desde Reservas: la venta arranca con TODO lo que tenía la
@@ -45,7 +52,7 @@ export default async function NuevaVentaPage(props: {
       precarga = {
         idReserva: reserva.id_reserva,
         idCliente: reserva.cliente?.id_cliente ?? null,
-        clienteNombre: reserva.cliente?.nombre ?? null,
+        clienteNombre: reserva.cliente ? nombreCliente(reserva.cliente) : null,
         observaciones: reserva.observaciones,
         qrs: reserva.lineas
           .filter((l) => l.estado === 'activa' && l.item?.estado_item === 'disponible')
@@ -61,20 +68,22 @@ export default async function NuevaVentaPage(props: {
         <NuevaVentaView
           clientes={clientes.map((c) => ({
             id: c.id_cliente,
-            nombre: c.nombre,
+            nombre: nombreCliente(c),
             telefono: c.telefono,
           }))}
           reservasActivas={reservasActivas.map((r) => ({
             id: r.id_reserva,
             fecha: r.fecha,
             fecha_vencimiento: r.fecha_vencimiento,
-            cliente_nombre: r.cliente?.nombre ?? null,
+            cliente_nombre: r.cliente ? nombreCliente(r.cliente) : null,
             items_count: r.items_count,
           }))}
           productos={productos.filter((p) => p.stock_disponible > 0)}
           reservasPorProducto={reservasPorProducto}
           cuentas={cuentas}
           planesCuotas={planesCuotas}
+          aranceles={aranceles}
+          recargos={recargos}
           precargaReserva={precarga}
         />
       </main>

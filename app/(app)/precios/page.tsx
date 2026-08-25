@@ -45,7 +45,7 @@ export default async function PreciosHome(props: {
 
   return (
     <>
-      <Topbar title="Precios" session={session} />
+      <Topbar title="Precios y Cuentas" session={session} />
       <main className="flex-1 p-6 space-y-6">
         <section className="grid grid-cols-2 gap-4 md:grid-cols-4">
           <Kpi label="Reglas activas" value={reglas.length.toString()} />
@@ -62,7 +62,7 @@ export default async function PreciosHome(props: {
           <Kpi label="Con margen aplicado" value={conRegla.toString()} />
         </section>
 
-        <section className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        <section className="grid grid-cols-1 gap-3 md:grid-cols-3">
           <Link
             href="/precios/reglas"
             className="rounded-lg border border-border bg-card p-5 hover:bg-card-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
@@ -71,6 +71,18 @@ export default async function PreciosHome(props: {
             <div className="mt-1 font-display text-xl">Reglas de precios</div>
             <p className="mt-2 text-sm text-muted">
               Margen, descuentos, recargos por forma de pago. Cascada: producto &gt; categoría &gt; proveedor &gt; global.
+            </p>
+          </Link>
+          <Link
+            href="/precios/cuentas"
+            className="rounded-lg border border-border bg-card p-5 hover:bg-card-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
+          >
+            <div className="text-sm text-muted">Configurar</div>
+            <div className="mt-1 font-display text-xl">Cuentas de cobro</div>
+            <p className="mt-2 text-sm text-muted">
+              Dónde entra la plata: caja, banco, billetera virtual. Y el
+              tarifario de cada una: cuánto retiene el procesador y en cuántos
+              días acredita.
             </p>
           </Link>
           <Link

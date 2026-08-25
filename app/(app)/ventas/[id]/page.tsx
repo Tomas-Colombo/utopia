@@ -3,6 +3,7 @@ import { Topbar } from '@/components/shell/Topbar'
 import { Badge } from '@/components/ui/Badge'
 import { verifySession } from '@/lib/dal/session'
 import { getVentaConDetalle } from '@/lib/dal/ventas/venta'
+import { listCuotasPorVenta } from '@/lib/dal/cuotas/cuota'
 import { VentaDetalleView } from './VentaDetalleView'
 
 export default async function VentaDetallePage(props: {
@@ -12,6 +13,8 @@ export default async function VentaDetallePage(props: {
   const { id } = await props.params
   const venta = await getVentaConDetalle(id)
   if (!venta) notFound()
+
+  const cuotas = await listCuotasPorVenta(id)
 
   return (
     <>
@@ -26,7 +29,7 @@ export default async function VentaDetallePage(props: {
         }
       />
       <main className="flex-1 p-6">
-        <VentaDetalleView venta={venta} />
+        <VentaDetalleView venta={venta} cuotas={cuotas} />
       </main>
     </>
   )

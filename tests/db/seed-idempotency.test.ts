@@ -13,7 +13,6 @@ const SEEDED_MODULO_CODES = [
   'administracion',
 ]
 
-/** DB testing postponed until end of Slice 8 — see apply-progress. */
 describe.skipIf(!hasTestDb)('seed idempotency — modulo catalog (REQ-MTD-12, spec 3.5)', () => {
   it('running the seed insert twice does not change the row count', async () => {
     const serviceRole = createServiceRoleTestClient()

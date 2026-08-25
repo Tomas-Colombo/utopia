@@ -1,6 +1,7 @@
 import { Topbar } from '@/components/shell/Topbar'
 import { verifySession } from '@/lib/dal/session'
 import { listClientes } from '@/lib/dal/clientes/cliente'
+import { nombreCliente } from '@/lib/types/ventas'
 import { listProductosConDetalle } from '@/lib/dal/inventario/producto'
 import { NuevaReservaView } from './NuevaReservaView'
 
@@ -17,7 +18,7 @@ export default async function NuevaReservaPage() {
         <NuevaReservaView
           clientes={clientes.map((c) => ({
             id: c.id_cliente,
-            nombre: c.nombre,
+            nombre: nombreCliente(c),
             telefono: c.telefono,
           }))}
           productos={productos.filter((p) => p.stock_disponible > 0)}

@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button'
 import { useToast } from '@/components/ui/Toast'
 import {
   ESTADO_RESERVA_LABEL,
+  nombreCliente,
   type EstadoReserva,
   type ReservaRow,
 } from '@/lib/types/ventas'
@@ -80,7 +81,7 @@ export function ReservasClient({ rows }: { rows: Row[] }) {
             <tbody>
               {rows.map((r) => (
                 <tr key={r.id_reserva} className="border-b border-border-2">
-                  <td className="px-4 py-3">{r.cliente?.nombre ?? 'Mostrador'}</td>
+                  <td className="px-4 py-3">{nombreCliente(r.cliente)}</td>
                   <td className="px-4 py-3">{new Date(r.fecha).toLocaleDateString('es-AR')}</td>
                   <td className="px-4 py-3">
                     {new Date(r.fecha_vencimiento).toLocaleDateString('es-AR')}

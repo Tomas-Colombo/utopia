@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { GuiaReglas } from '@/components/precios/GuiaReglas'
-import type { PlanCuotasRow } from '@/lib/types/precios'
 import { NuevaReglaForm, type Ref } from './nueva/NuevaReglaForm'
 
 /**
@@ -16,12 +15,10 @@ export function NuevaReglaModalButton({
   categorias,
   proveedores,
   productos,
-  planesCuotas,
 }: {
   categorias: Ref[]
   proveedores: Ref[]
   productos: Ref[]
-  planesCuotas: PlanCuotasRow[]
 }) {
   const [open, setOpen] = useState(false)
 
@@ -56,7 +53,6 @@ export function NuevaReglaModalButton({
             categorias={categorias}
             proveedores={proveedores}
             productos={productos}
-            planesCuotas={planesCuotas}
             onSuccess={() => setOpen(false)}
             onCancel={() => setOpen(false)}
           />

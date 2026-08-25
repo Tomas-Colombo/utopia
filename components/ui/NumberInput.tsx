@@ -119,13 +119,37 @@ export const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
       )
     }
 
+    /**
+     * Dos arreglos sobre el `onChange` nativo:
+     *
+     *  - El cero precargado se queda pegado adelante. Un campo que arranca en
+     *    "0" y recibe "10" tipeado a mano termina valiendo "010", porque el
+     *    input es controlado y el caller guarda el string tal cual. Se limpia
+     *    acá y no en cada caller: es el mismo bug en los veinte formularios.
+     *  - Con `min`, tipear un número por debajo NO se emite. El `min` nativo
+     *    sólo limita las flechitas y la validación de submit: a mano se puede
+     *    escribir "-5" en un campo de retención, y el server lo rechaza
+     *    después de que el operador llenó todo el formulario.
+     */
+    function handleChange(e: ChangeEvent<HTMLInputElement>) {
+      const el = e.currentTarget
+      const limpio = el.value.replace(/^(-?)0+(?=\d)/, '$1')
+      if (min !== undefined && limpio !== '' && Number(limpio) < Number(min)) return
+      if (max !== undefined && limpio !== '' && Number(limpio) > Number(max)) return
+      if (limpio === el.value) return onChange?.(e)
+      onChange?.({
+        ...e,
+        target: { ...el, value: limpio, name: el.name, id: el.id },
+      } as unknown as ChangeEvent<HTMLInputElement>)
+    }
+
     return (
       <input
         ref={setRef}
         type="number"
         inputMode="decimal"
         value={value}
-        onChange={onChange}
+        onChange={handleChange}
         min={min}
         max={max}
         step={step}

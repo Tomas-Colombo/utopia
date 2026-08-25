@@ -9,13 +9,13 @@ import type {
 
 export async function listReservas(opts?: {
   estado?: EstadoReserva
-}): Promise<Array<ReservaRow & { cliente: { id_cliente: string; nombre: string } | null; items_count: number }>> {
+}): Promise<Array<ReservaRow & { cliente: { id_cliente: string; nombre: string; nombre_completo: string } | null; items_count: number }>> {
   const supabase = await createServerClient()
   let q = supabase
     .from('reserva')
     .select(`
       *,
-      cliente:cliente(id_cliente, nombre),
+      cliente:cliente(id_cliente, nombre, nombre_completo),
       lineas:detalle_reserva(id_detalle_reserva)
     `)
     .order('fecha', { ascending: false })
@@ -24,7 +24,7 @@ export async function listReservas(opts?: {
   if (error) throw new Error(`listReservas: ${error.message}`)
   return ((data ?? []) as unknown as Array<
     ReservaRow & {
-      cliente: { id_cliente: string; nombre: string } | null
+      cliente: { id_cliente: string; nombre: string; nombre_completo: string } | null
       lineas: Array<{ id_detalle_reserva: string }>
     }
   >).map((r) => {
@@ -56,7 +56,7 @@ export async function listReservasActivasPorProducto(): Promise<
       reserva:reserva!inner(
         fecha_vencimiento,
         estado_reserva,
-        cliente:cliente(nombre)
+        cliente:cliente(nombre, nombre_completo)
       )
     `)
     .eq('estado', 'activa')
@@ -68,7 +68,7 @@ export async function listReservasActivasPorProducto(): Promise<
     id_reserva: string
     reserva: {
       fecha_vencimiento: string
-      cliente: { nombre: string } | null
+      cliente: { nombre: string; nombre_completo: string } | null
     } | null
   }>
 
@@ -96,7 +96,7 @@ export async function getReservaConDetalle(id: string): Promise<ReservaConDetall
     .from('reserva')
     .select(`
       *,
-      cliente:cliente(id_cliente, nombre, telefono),
+      cliente:cliente(id_cliente, nombre, nombre_completo, telefono),
       lineas:detalle_reserva(
         *,
         producto:producto(id_producto, nombre, sku),

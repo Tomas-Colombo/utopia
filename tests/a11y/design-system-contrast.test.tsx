@@ -3,7 +3,7 @@ import { cleanup, render } from '@testing-library/react'
 import axe from 'axe-core'
 import { lightTokens, type ThemeTokenKey } from '@/lib/design-tokens/tokens'
 import { darkTokens } from '@/lib/design-tokens/dark'
-import DemoPage from '../../app/demo/page'
+import { DesignSystemSurface } from './DesignSystemSurface'
 
 afterEach(() => {
   cleanup()
@@ -40,7 +40,7 @@ const TOKEN_CLASS_SUFFIX: Record<ThemeTokenKey, string> = {
 
 /**
  * Builds a minimal literal-color stylesheet mapping the Tailwind utility
- * classes the demo tree actually renders to REAL hex values from
+ * classes the fixture tree actually renders to REAL hex values from
  * `lib/design-tokens/*` (single source of truth).
  *
  * WHY this exists: Vitest/jsdom never runs the Tailwind 4 PostCSS build, so
@@ -173,12 +173,12 @@ function findContrastFailures(container: HTMLElement, minRatio = 4.5): ContrastF
   return failures
 }
 
-describe('demo screen accessibility — color contrast (REQ-DS-04/17)', () => {
+describe('design system accessibility — color contrast (REQ-DS-04/17)', () => {
   it('has zero AA (>=4.5:1) color-contrast failures in the light theme', async () => {
     document.documentElement.setAttribute('data-theme', 'light')
     injectStylesheet(buildTokenStylesheet(lightTokens))
 
-    const { container } = render(<DemoPage />)
+    const { container } = render(<DesignSystemSurface />)
 
     // Also run axe-core for structural a11y coverage (roles, labels, ARIA
     // attribute validity) — NOT relied on for color-contrast in this
@@ -192,7 +192,7 @@ describe('demo screen accessibility — color contrast (REQ-DS-04/17)', () => {
     document.documentElement.setAttribute('data-theme', 'dark')
     injectStylesheet(buildTokenStylesheet(darkTokens))
 
-    const { container } = render(<DemoPage />)
+    const { container } = render(<DesignSystemSurface />)
 
     await axe.run(container, { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa'] } })
 

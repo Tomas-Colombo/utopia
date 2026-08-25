@@ -50,6 +50,10 @@ export interface ClienteRow {
   id_cliente: string
   id_tenant: string
   nombre: string
+  /** Opcional (00058). NULL en los clientes anteriores a esa migración. */
+  apellido: string | null
+  /** Generada por la DB: `nombre apellido`. Para MOSTRAR, no para ordenar. */
+  nombre_completo: string
   telefono: string | null
   email: string | null
   notas: string | null
@@ -61,10 +65,32 @@ export interface ClienteRow {
 export interface ClienteInsert {
   id_tenant: string
   nombre: string
+  apellido?: string | null
   telefono?: string | null
   email?: string | null
   notas?: string | null
   activo?: boolean
+}
+
+/**
+ * Cómo se ordena una cartera de clientes. El alfabético por apellido usa
+ * `apellido` + `nombre`, NO `nombre_completo`: son criterios distintos y el
+ * segundo no se puede derivar del primero.
+ */
+export type OrdenClientes = 'apellido_asc' | 'apellido_desc' | 'nombre_asc'
+
+export const ORDEN_CLIENTES_LABEL: Record<OrdenClientes, string> = {
+  apellido_asc: 'Apellido (A-Z)',
+  apellido_desc: 'Apellido (Z-A)',
+  nombre_asc: 'Nombre (A-Z)',
+}
+
+/** El nombre que se muestra. `nombre_completo` cuando está, con fallback. */
+export function nombreCliente(
+  c: { nombre: string; nombre_completo?: string | null } | null | undefined,
+): string {
+  if (!c) return 'Mostrador'
+  return c.nombre_completo?.trim() || c.nombre
 }
 
 // ─── Venta ───────────────────────────────────────────────────────────
@@ -105,7 +131,7 @@ export interface DetalleVentaRow {
 }
 
 export interface VentaConDetalle extends VentaRow {
-  cliente: Pick<ClienteRow, 'id_cliente' | 'nombre' | 'telefono'> | null
+  cliente: Pick<ClienteRow, 'id_cliente' | 'nombre' | 'nombre_completo' | 'telefono'> | null
   lineas: Array<
     DetalleVentaRow & {
       producto: { id_producto: string; nombre: string; sku: string | null } | null
@@ -127,6 +153,13 @@ export interface CuentaDestinoRow {
   identificador: string | null
   activo: boolean
   es_predeterminada: boolean
+  /** Retenciones (00057). Dependen de la situación fiscal del comercio, no
+   *  del plan de cuotas: por eso viven acá y no en el tarifario. */
+  ret_iva_pct: number
+  ret_ganancias_pct: number
+  ret_iibb_pct: number
+  /** Impuesto a los débitos y créditos. Sólo si la plata toca un banco. */
+  imp_deb_cred_pct: number
   created_at: string
   updated_at: string
 }
@@ -138,11 +171,19 @@ export interface PagoVentaRow {
   id_cuenta_destino: string
   medio: MedioPago
   monto: number
+  /** Cuotas de ESTE pago (00057). Sólo con `tarjeta_credito`. */
+  cuotas: number | null
   /** Sólo efectivo: lo que el cliente entregó. */
   monto_recibido: number | null
   /** Columna generada por la DB (`monto_recibido - monto`). */
   vuelto: number | null
   referencia: string | null
+  /** Lo que se lleva el procesador. Snapshot: no recalcular al leer. */
+  costo_cobro: number
+  neto_acreditado: number | null
+  fecha_acreditacion: string | null
+  /** `{}` en los pagos anteriores a 00057 — normalizar con `desgloseCosto()`. */
+  desglose_costo: DesgloseCostoGuardado
   created_at: string
 }
 
@@ -151,8 +192,100 @@ export interface PagoInput {
   medio: MedioPago
   id_cuenta_destino: string
   monto: number
+  /** Requerido con `tarjeta_credito`, prohibido en el resto (lo valida el SP). */
+  cuotas?: number | null
   monto_recibido?: number | null
   referencia?: string | null
+}
+
+// ─── Costo de cobro (00057) ──────────────────────────────────────────
+
+/** Tarifario de un procesador para (cuenta, medio, plan de cuotas). */
+export interface ArancelCobroRow {
+  id_arancel_cobro: string
+  id_tenant: string
+  id_cuenta_destino: string
+  medio: MedioPago
+  /** `null` = comodín: aplica a cualquier plan de ese medio. */
+  cuotas: number | null
+  arancel_pct: number
+  /** IVA SOBRE EL ARANCEL, no sobre la venta. */
+  iva_arancel_pct: number
+  dias_acreditacion: number
+  vigente_desde: string
+  /** `null` = vigente. Los aranceles no se borran: se cierra la vigencia. */
+  vigente_hasta: string | null
+  notas: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface ArancelCobroInsert {
+  id_cuenta_destino: string
+  medio: MedioPago
+  cuotas?: number | null
+  arancel_pct: number
+  iva_arancel_pct?: number
+  dias_acreditacion?: number
+  vigente_desde?: string
+  notas?: string | null
+}
+
+export type ConceptoRetencion = 'iva' | 'ganancias' | 'iibb' | 'imp_deb_cred'
+
+export const CONCEPTO_RETENCION_LABEL: Record<ConceptoRetencion, string> = {
+  iva: 'Retención IVA',
+  ganancias: 'Retención Ganancias',
+  iibb: 'Retención IIBB',
+  imp_deb_cred: 'Impuesto débitos y créditos',
+}
+
+export interface RetencionAplicada {
+  concepto: ConceptoRetencion
+  pct: number
+  monto: number
+}
+
+/**
+ * Desglose del costo de un cobro, tal como lo devuelve
+ * `sp_calcular_costo_cobro` y como queda persistido en `pago_venta`.
+ *
+ * `sin_tarifario: true` no es un error: significa que ese medio todavía no
+ * tiene arancel cargado y el pago se registró con costo 0. La venta nunca se
+ * bloquea por esto.
+ */
+export type DesgloseCosto =
+  | {
+      sin_tarifario: true
+      costo_total: number
+      neto: number
+      dias_acreditacion: number
+    }
+  | {
+      sin_tarifario: false
+      id_arancel_cobro: string
+      arancel_pct: number
+      arancel_monto: number
+      iva_arancel_pct: number
+      iva_arancel_monto: number
+      retenciones: RetencionAplicada[]
+      costo_total: number
+      neto: number
+      dias_acreditacion: number
+    }
+
+/**
+ * Lo que puede venir en la columna: un desglose real, o `{}` para los pagos
+ * anteriores a 00057. Se mantiene aparte de `DesgloseCosto` para que el
+ * narrowing por `sin_tarifario` siga funcionando en el resto del código.
+ */
+export type DesgloseCostoGuardado = DesgloseCosto | Record<string, never>
+
+/** `{}` de un pago viejo → `null`. Cualquier otra cosa es un desglose real. */
+export function desgloseCosto(d: DesgloseCostoGuardado): DesgloseCosto | null {
+  return d && typeof (d as DesgloseCosto).sin_tarifario === 'boolean'
+    ? (d as DesgloseCosto)
+    : null
 }
 
 export interface ComprobanteRow {
@@ -178,6 +311,25 @@ export interface RegistrarVentaInput {
    * cuenta predeterminada. Si viene, la suma DEBE dar el total de la venta.
    */
   pagos?: PagoInput[]
+  /**
+   * Financiación propia. Si viene, lo que no cubran los `pagos` del día queda
+   * como deuda del cliente en `cuota_financiada` — y `id_cliente` pasa a ser
+   * obligatorio.
+   */
+  financiacion?: FinanciacionInput | null
+  /**
+   * Quién financia esta venta (00064). Define QUÉ recargo por cuotas se aplicó
+   * al precificar, y a qué cuenta va el pago cuando no se detalla la cobranza.
+   * Omitirlo resuelve el recargo comodín.
+   */
+  financiador?: FinanciadorInput | null
+}
+
+/** Quién financia. Con `propia`, cuenta y medio se ignoran: no hay procesador. */
+export interface FinanciadorInput {
+  id_cuenta_destino?: string | null
+  medio?: MedioPago | null
+  propia?: boolean
 }
 
 // ─── Reserva ─────────────────────────────────────────────────────────
@@ -208,7 +360,7 @@ export interface DetalleReservaRow {
 }
 
 export interface ReservaConDetalle extends ReservaRow {
-  cliente: Pick<ClienteRow, 'id_cliente' | 'nombre' | 'telefono'> | null
+  cliente: Pick<ClienteRow, 'id_cliente' | 'nombre' | 'nombre_completo' | 'telefono'> | null
   lineas: Array<
     DetalleReservaRow & {
       producto: { id_producto: string; nombre: string; sku: string | null } | null
@@ -248,4 +400,138 @@ export interface LineaCarrito {
   desactualizado: boolean
   desglose: DesgloseVenta
   advertencia: string | null // e.g. "reservado por otro cliente"
+}
+
+// ─── Financiación propia (00059) ─────────────────────────────────────
+
+/**
+ * Quién asume el riesgo de crédito. Dato explícito, no inferido del medio de
+ * pago: un cliente puede pagar 6 cuotas en efectivo (financia el comercio) o
+ * con tarjeta en 6 (financia el banco).
+ */
+export type TipoFinanciacion = 'ninguna' | 'externa' | 'propia'
+
+export type EstadoCuota = 'pendiente' | 'parcial' | 'pagada' | 'incobrable' | 'anulada'
+
+export const ESTADO_CUOTA_LABEL: Record<EstadoCuota, string> = {
+  pendiente: 'Pendiente',
+  parcial: 'Parcial',
+  pagada: 'Pagada',
+  incobrable: 'Incobrable',
+  anulada: 'Anulada',
+}
+
+/** Los estados que todavía representan plata a cobrar. */
+export const ESTADOS_CON_DEUDA: EstadoCuota[] = ['pendiente', 'parcial']
+
+export interface CuotaFinanciadaRow {
+  id_cuota_financiada: string
+  id_tenant: string
+  id_venta: string
+  /** NOT NULL: una deuda sin cliente es una deuda perdida. */
+  id_cliente: string
+  numero: number
+  monto: number
+  monto_pagado: number
+  fecha_vencimiento: string
+  estado: EstadoCuota
+  fecha_cobro: string | null
+  fecha_incobrable: string | null
+  id_usuario_incobrable: string | null
+  motivo_incobrable: string | null
+  created_at: string
+  updated_at: string
+}
+
+/** Una cuota como la ve el panel de control: con su cliente y su venta. */
+export type CuotaListada = CuotaFinanciadaRow & {
+  cliente: Pick<ClienteRow, 'id_cliente' | 'nombre' | 'apellido' | 'nombre_completo' | 'telefono'> | null
+  venta: { id_venta: string; fecha: string; total: number } | null
+}
+
+/** Lo que la UI manda para financiar una venta. */
+export interface FinanciacionInput {
+  cuotas: number
+  /** ISO `YYYY-MM-DD`. Las siguientes van mes a mes desde acá. */
+  primer_vencimiento: string
+}
+
+/**
+ * Una línea del reparto del costo no cubierto. Es una ATRIBUCIÓN proporcional
+ * al costo, no un hecho: la plata es fungible y no hay tal cosa como "esta
+ * cuota pagó la remera y no el pantalón".
+ */
+export interface LineaCostoNoCubierto {
+  id_detalle_venta: string
+  producto_nombre: string | null
+  producto_sku: string | null
+  tipo_ingreso_snapshot: string
+  id_proveedor: string | null
+  proveedor_nombre: string | null
+  costo_linea: number
+  costo_cubierto: number
+  costo_no_cubierto: number
+  /** Excluida de rendición ⇒ no se le paga al proveedor: no sale del bolsillo. */
+  excluida_rendicion: boolean
+  rendida: boolean
+}
+
+/** Respuesta de `sp_perdida_incobrable_venta`. */
+export interface PerdidaIncobrable {
+  /** Lo que no se cobró de las cuotas marcadas incobrables. */
+  monto_adeudado: number
+  total_cobrado: number
+  costo_total: number
+  /** `max(0, costo_total − total_cobrado)`: plata que hay que poner. */
+  costo_no_cubierto: number
+  detalle: LineaCostoNoCubierto[]
+}
+
+// ─── Filtros del panel de cuotas ─────────────────────────────────────
+
+/** Los recortes que ofrece el panel de control. */
+export type FiltroEstadoCuotas =
+  | 'todas'
+  | 'con_deuda'
+  | 'vencidas'
+  | 'vence_este_mes'
+  | 'parciales'
+  | 'pagadas'
+  | 'incobrables'
+
+export type OrdenCuotas =
+  | 'vencimiento_asc'
+  | 'vencimiento_desc'
+  | 'apellido_asc'
+  | 'monto_desc'
+
+export const FILTRO_ESTADO_CUOTAS_LABEL: Record<FiltroEstadoCuotas, string> = {
+  todas: 'Todas',
+  con_deuda: 'Con deuda',
+  vencidas: 'Vencidas',
+  vence_este_mes: 'Vence este mes',
+  parciales: 'Parciales',
+  pagadas: 'Pagadas',
+  incobrables: 'Incobrables',
+}
+
+export const ORDEN_CUOTAS_LABEL: Record<OrdenCuotas, string> = {
+  vencimiento_asc: 'Vencimiento (más próximo)',
+  vencimiento_desc: 'Vencimiento (más lejano)',
+  apellido_asc: 'Apellido (A-Z)',
+  monto_desc: 'Monto adeudado',
+}
+
+/**
+ * Resultado de `sp_marcar_cuota_incobrable`. Da por perdida la cuota elegida
+ * Y todas las POSTERIORES del mismo plan que sigan abiertas: si el cliente no
+ * pagó la 3, la 4 no se va a cobrar sola.
+ */
+export interface ResultadoIncobrable {
+  /** `null` sólo si el saldo era 0, que no debería pasar. */
+  id_gasto: string | null
+  cuotas_afectadas: number
+  monto_total: number
+  desde: number
+  hasta: number
 }

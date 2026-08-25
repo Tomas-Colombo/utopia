@@ -56,7 +56,12 @@ test.describe('Ingresos de mercadería', () => {
     ).toBeVisible()
   })
 
-  test('rechaza una línea con cantidad cero', async ({ page, shell, seed }) => {
+  // Emptied, not zeroed: the quantity field declares `min={1}`, and since
+  // `NumberInput` started dropping out-of-range keystrokes a literal "0" never
+  // reaches the form state — the field just keeps its previous value and the
+  // line stays valid. Clearing it is the one way left to reach the guard,
+  // which reads `Number(cantidad || 0) <= 0` and so treats empty as zero.
+  test('rechaza una línea sin cantidad', async ({ page, shell, seed }) => {
     await page.goto('/inventario/ingresos/nuevo')
     await contenido(page).getByLabel(/^Tipo de ingreso/).selectOption({ label: 'Compra (paga al ingresar)' })
 
@@ -64,7 +69,7 @@ test.describe('Ingresos de mercadería', () => {
     await page.getByPlaceholder('Producto').fill(unique('Cantidad cero'))
     await contenido(page).getByLabel('Categoría del producto nuevo')
       .selectOption({ label: seed.categoriaSimple.nombre })
-    await contenido(page).getByLabel('Cantidad').fill('0')
+    await contenido(page).getByLabel('Cantidad').fill('')
 
     await page.getByRole('button', { name: /^(Guardar|Guardando)/ }).click()
 

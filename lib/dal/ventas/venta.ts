@@ -9,7 +9,7 @@ import type {
 
 /** Una venta como la ve el listado: con cliente y cantidad de líneas. */
 export type VentaListada = VentaRow & {
-  cliente: { id_cliente: string; nombre: string } | null
+  cliente: { id_cliente: string; nombre: string; nombre_completo: string } | null
   lineas_count: number
 }
 
@@ -31,12 +31,12 @@ const CHUNK_PERIODO = 1000
 
 const SELECT_LISTADO = `
   *,
-  cliente:cliente(id_cliente, nombre),
+  cliente:cliente(id_cliente, nombre, nombre_completo),
   lineas:detalle_venta(id_detalle_venta)
 `
 
 type VentaCruda = VentaRow & {
-  cliente: { id_cliente: string; nombre: string } | null
+  cliente: { id_cliente: string; nombre: string; nombre_completo: string } | null
   lineas: Array<{ id_detalle_venta: string }>
 }
 
@@ -127,7 +127,7 @@ export async function getVentaConDetalle(id: string): Promise<VentaConDetalle | 
     .from('venta')
     .select(`
       *,
-      cliente:cliente(id_cliente, nombre, telefono),
+      cliente:cliente(id_cliente, nombre, nombre_completo, telefono),
       lineas:detalle_venta(
         *,
         producto:producto(id_producto, nombre, sku),
@@ -168,9 +168,28 @@ export async function spRegistrarVenta(input: RegistrarVentaInput): Promise<stri
           medio: p.medio,
           id_cuenta_destino: p.id_cuenta_destino,
           monto: p.monto,
+          // Define qué fila del tarifario aplica (00057). El SP exige que
+          // venga con `tarjeta_credito` y que NO venga con el resto.
+          cuotas: p.cuotas ?? null,
           monto_recibido: p.monto_recibido ?? null,
           referencia: p.referencia ?? null,
         }))
+      : null) as unknown as object,
+    // null = venta sin financiación propia. El SP exige cliente si viene.
+    p_financiacion: (input.financiacion
+      ? {
+          cuotas: input.financiacion.cuotas,
+          primer_vencimiento: input.financiacion.primer_vencimiento,
+        }
+      : null) as unknown as object,
+    // null = sin financiador declarado: el recargo se resuelve contra el
+    // comodín. Con `propia`, el SP ignora cuenta y medio.
+    p_financiador: (input.financiador
+      ? {
+          id_cuenta_destino: input.financiador.id_cuenta_destino ?? null,
+          medio: input.financiador.medio ?? null,
+          propia: input.financiador.propia ?? false,
+        }
       : null) as unknown as object,
   })
   if (error) throw new Error(`sp_registrar_venta: ${error.message}`)

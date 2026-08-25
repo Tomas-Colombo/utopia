@@ -32,6 +32,25 @@ comment header at the top of the file (see "Rollback" below).
 `supabase/seed.sql` is applied the same way, after all migrations for a given
 slice have landed, to both `utopia-test` and `utopia-dev`.
 
+`supabase/seeds/seed_dev.sql` is a different thing: it is the **reseed**
+script, run after emptying a development database so nobody has to retype
+categories, suppliers, customers, payment accounts and pricing rules by hand.
+It is not a migration, never runs against production, and is idempotent —
+re-running it completes whatever is missing instead of duplicating rows. The
+target tenants are the `v_subs` array on the first lines of the file.
+
+It is gitignored on purpose: it seeds one developer's local database, not a
+shared fixture. That is why `config.toml` reaches it through the glob
+`./seeds/*.sql` rather than naming the file — a missing literal path breaks
+`supabase start`, while a glob that matches nothing is a no-op, so CI keeps
+booting without it.
+
+Products are deliberately out of scope (they come from the PDF importer), but
+the **development admin user is not**: §12 writes it straight into
+`auth.users`, so a `db reset` leaves the app loggable-into with no manual step.
+Onboarding a real customer is still `npm run provision-tenant`, which also
+creates the tenant and generates a random temporary password.
+
 ## Rollback
 
 Every migration file's down-step is documented as a comment header at the top

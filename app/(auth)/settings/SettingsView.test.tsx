@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { SettingsView } from './SettingsView'
 
-describe('SettingsView (smoke — Slice 7 agility mode)', () => {
+describe('SettingsView (smoke)', () => {
   it('renders profile info and the password change form', () => {
     render(<SettingsView email="user@example.com" roleName="Owner" />)
 

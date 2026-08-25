@@ -1,5 +1,6 @@
 import 'server-only'
 import { createServerClient } from '@/lib/dal/supabase'
+import { nombreCliente } from '@/lib/types/ventas'
 import type {
   EstadoRendicion,
   PreviewLineaRendicion,
@@ -49,7 +50,7 @@ export async function getRendicionConDetalle(id: string): Promise<RendicionConDe
       precio_venta,
       costo_snapshot,
       monto_proveedor,
-      venta:venta(fecha, cliente:cliente(nombre)),
+      venta:venta(fecha, cliente:cliente(nombre, nombre_completo)),
       producto:producto(nombre, sku),
       item:item_producto(qr_code)
     `)
@@ -63,7 +64,7 @@ export async function getRendicionConDetalle(id: string): Promise<RendicionConDe
     precio_venta: number
     costo_snapshot: number
     monto_proveedor: number
-    venta: { fecha: string; cliente: { nombre: string } | null } | null
+    venta: { fecha: string; cliente: { nombre: string; nombre_completo: string } | null } | null
     producto: { nombre: string; sku: string | null } | null
     item: { qr_code: string } | null
   }>).map((l) => ({
@@ -76,7 +77,7 @@ export async function getRendicionConDetalle(id: string): Promise<RendicionConDe
     precio_venta: Number(l.precio_venta),
     costo_snapshot: Number(l.costo_snapshot),
     monto_proveedor: Number(l.monto_proveedor),
-    cliente_nombre: l.venta?.cliente?.nombre ?? null,
+    cliente_nombre: l.venta?.cliente ? nombreCliente(l.venta.cliente) : null,
   }))
 
   return {

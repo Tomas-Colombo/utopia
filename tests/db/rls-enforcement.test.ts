@@ -18,7 +18,6 @@ const TENANT_SCOPED_TABLES = [
   'auditoria',
 ] as const
 
-/** DB testing postponed until end of Slice 8 — see apply-progress. */
 describe.skipIf(!hasTestDb)('RLS enforcement — no tenant_id claim (needs Supabase test project)', () => {
   // Created lazily inside each test (not at describe-body scope) so this
   // module still imports + collects cleanly when `hasTestDb` is false and

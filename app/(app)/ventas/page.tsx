@@ -6,6 +6,9 @@ import { Kpi } from '@/components/ui/Kpi'
 import { verifySession } from '@/lib/dal/session'
 import { listVentasPaginado, resumenVentasPeriodo } from '@/lib/dal/ventas/venta'
 import { listReservas } from '@/lib/dal/reservas/reserva'
+import { listAlertasCuotasVencidas } from '@/lib/dal/reportes/reportes'
+import { waMeLink } from '@/lib/utils/waMeLink'
+import { nombreCliente } from '@/lib/types/ventas'
 import {
   esFechaValida,
   inicioDelDia,
@@ -14,6 +17,7 @@ import {
 } from '@/lib/fechas'
 import { VentasFiltros } from './VentasFiltros'
 import { VentasPaginacion } from './VentasPaginacion'
+import { hoyISO } from '@/lib/utils/hoy'
 
 const PAGE_SIZE = 50
 
@@ -55,11 +59,19 @@ export default async function VentasHome(props: {
     hastaExclusivo: inicioDelDiaSiguiente(hasta),
   }
 
-  const [{ rows: ventas, total }, resumen, reservasActivas] = await Promise.all([
-    listVentasPaginado({ ...periodo, page: pagina, pageSize: PAGE_SIZE }),
-    resumenVentasPeriodo(periodo),
-    listReservas({ estado: 'activa' }),
-  ])
+  // La alerta de deuda NO se recorta por el período del filtro: una cuota
+  // vencida en julio sigue vencida aunque estés mirando agosto.
+  const hoy = hoyISO()
+
+  const [{ rows: ventas, total }, resumen, reservasActivas, alertasCuotas] =
+    await Promise.all([
+      listVentasPaginado({ ...periodo, page: pagina, pageSize: PAGE_SIZE }),
+      resumenVentasPeriodo(periodo),
+      listReservas({ estado: 'activa' }),
+      listAlertasCuotasVencidas(hoy),
+    ])
+
+  const totalVencido = alertasCuotas.reduce((a, x) => a + x.monto_vencido, 0)
 
   // `?pagina=` fuera de rango (link viejo, o el período se achicó): mando a la
   // última página real en vez de mostrar una tabla vacía que miente.
@@ -87,6 +99,75 @@ export default async function VentasHome(props: {
       />
       <main className="flex-1 p-6 space-y-6">
         <VentasFiltros desde={desde} hasta={hasta} />
+
+        {/* Alerta de deuda vencida. Vive acá y no sólo en /cuotas porque es
+            la pantalla que se mira todos los días: una deuda vencida que hay
+            que ir a buscar a otra sección no se cobra.
+
+            Una fila por CLIENTE, no por cuota: a la persona se la llama una
+            vez por todo lo que debe. Con el link de WhatsApp al lado, que es
+            lo que se hace efectivamente con esta información. */}
+        {alertasCuotas.length > 0 && (
+          <section className="rounded-lg border border-alerta-ink bg-card p-4">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <h3 className="font-display text-lg text-alerta-ink">Cuotas vencidas</h3>
+              <span className="text-xs text-muted">
+                {alertasCuotas.length} cliente{alertasCuotas.length === 1 ? '' : 's'} ·{' '}
+                <span className="font-mono">
+                  $ {totalVencido.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+                </span>
+              </span>
+            </div>
+            <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+              {alertasCuotas.slice(0, 6).map((a) => {
+                const wa = waMeLink(a.cliente_telefono)
+                return (
+                  <div
+                    key={a.id_cliente}
+                    className="flex items-center justify-between gap-2 rounded-md bg-card-2 px-3 py-2 text-sm"
+                  >
+                    <div className="min-w-0">
+                      <Link
+                        href={`/clientes/${a.id_cliente}?from=cuotas`}
+                        className="block truncate font-medium hover:underline"
+                      >
+                        {a.cliente_nombre}
+                      </Link>
+                      <div className="truncate text-xs text-muted">
+                        {a.cuotas_vencidas} cuota{a.cuotas_vencidas === 1 ? '' : 's'} ·
+                        hace {a.dias_vencido} día{a.dias_vencido === 1 ? '' : 's'}
+                        {wa && (
+                          <>
+                            {' · '}
+                            <a
+                              href={wa}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-pink-strong hover:underline"
+                            >
+                              WhatsApp
+                            </a>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <span className="shrink-0 font-mono font-semibold text-alerta-ink">
+                      $ {a.monto_vencido.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+                    </span>
+                  </div>
+                )
+              })}
+              {alertasCuotas.length > 6 && (
+                <Link
+                  href="/cuotas?estado=vencidas"
+                  className="pt-1 text-center text-xs text-muted hover:underline md:col-span-2"
+                >
+                  +{alertasCuotas.length - 6} más — ver todas
+                </Link>
+              )}
+            </div>
+          </section>
+        )}
 
         <section className="grid grid-cols-2 gap-4 md:grid-cols-4">
           <Kpi label="Ventas del período" value={resumen.registradas.toString()} />
@@ -121,16 +202,6 @@ export default async function VentasHome(props: {
             <div className="mt-1 font-display text-xl">Reservas</div>
             <p className="mt-2 text-sm text-muted">
               Ver reservas activas, cancelar, convertir en venta.
-            </p>
-          </Link>
-          <Link
-            href="/ventas/cuentas"
-            className="rounded-lg border border-border bg-card p-5 hover:bg-card-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
-          >
-            <div className="text-sm text-muted">Configurar</div>
-            <div className="mt-1 font-display text-xl">Cuentas de cobro</div>
-            <p className="mt-2 text-sm text-muted">
-              Dónde entra la plata: caja, banco, billetera virtual.
             </p>
           </Link>
         </section>
@@ -180,7 +251,7 @@ export default async function VentasHome(props: {
                   {ventas.map((v) => (
                     <tr key={v.id_venta} className="border-b border-border-2">
                       <td className="px-4 py-3">{new Date(v.fecha).toLocaleString('es-AR')}</td>
-                      <td className="px-4 py-3">{v.cliente?.nombre ?? 'Mostrador'}</td>
+                      <td className="px-4 py-3">{nombreCliente(v.cliente)}</td>
                       <td className="px-4 py-3 capitalize">{v.forma_pago.replace('_', ' ')}</td>
                       <td className="px-4 py-3 text-right font-mono">{v.lineas_count}</td>
                       <td className="px-4 py-3 text-right font-mono">

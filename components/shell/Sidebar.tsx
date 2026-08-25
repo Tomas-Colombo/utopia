@@ -34,9 +34,12 @@ const NAV_ITEMS: readonly NavItem[] = [
   // Ingresos vive bajo el módulo 'inventario' (mismo permiso) — es sub-módulo
   // funcional: historial de ingresos + alta de un ingreso nuevo.
   { href: '/inventario/ingresos', label: 'Ingresos', icon: 'ingresos', moduloCodigo: 'inventario', group: 'OPERACIONES' },
-  { href: '/precios', label: 'Precios', icon: 'precios', moduloCodigo: 'precios', group: 'OPERACIONES' },
+  { href: '/precios', label: 'Precios y Cuentas', icon: 'precios', moduloCodigo: 'precios', group: 'OPERACIONES' },
   // Clientes vive bajo el módulo 'ventas' (mismo permiso) — es sub-módulo funcional.
   { href: '/clientes', label: 'Clientes', icon: 'clientes', moduloCodigo: 'ventas', group: 'OPERACIONES' },
+  // Cuotas va pegado a Clientes a propósito: la deuda se mira por cliente, y
+  // el salto entre las dos pantallas es constante. Mismo permiso que ventas.
+  { href: '/cuotas', label: 'Cuotas', icon: 'cuotas', moduloCodigo: 'ventas', group: 'OPERACIONES' },
   // Proveedores vive bajo el módulo 'inventario' (mismo permiso) — es sub-módulo funcional.
   { href: '/proveedores', label: 'Proveedores', icon: 'proveedores', moduloCodigo: 'inventario', group: 'OPERACIONES' },
   // Módulo `consignaciones` en DB, pero UI-visible como "Devoluciones a

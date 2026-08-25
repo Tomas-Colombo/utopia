@@ -42,28 +42,35 @@ test.describe('Precios · reglas', () => {
     await expect(page).toHaveURL(/\/precios\/reglas\/nueva$/)
   })
 
-  test('rechaza un porcentaje por encima del máximo permitido', async ({ page, reglas }) => {
+  test('rechaza un porcentaje por encima del máximo permitido', async ({ reglas }) => {
     await reglas.abrirNueva()
     await reglas.nombre.fill(unique('Regla absurda'))
-    await reglas.porcentaje.fill('900')
-    await reglas.guardar.click()
 
-    // The input declares `max={500}`, so native constraint validation blocks
-    // the submit before the action ever runs — nothing is persisted and the
-    // form stays put.
-    const valido = await reglas.porcentaje.evaluate((el: HTMLInputElement) => el.checkValidity())
-    expect(valido).toBe(false)
-    await expect(page).toHaveURL(/\/precios\/reglas\/nueva$/)
+    // A valid value first, on purpose: the rejection now happens at the
+    // keystroke rather than at submit. `NumberInput` drops anything above its
+    // `max={500}` instead of emitting it, so the field keeps what it already
+    // had. Asserting against a value that was typed here — instead of against
+    // an empty field — is what tells "the input refused it" apart from "the
+    // input never received it", which is how this test used to pass while
+    // measuring nothing.
+    await reglas.porcentaje.fill('10')
+    await reglas.porcentaje.fill('900')
+
+    await expect(reglas.porcentaje).toHaveValue('10')
   })
 
-  test('un recargo sin forma de pago no se puede guardar', async ({ reglas }) => {
+  // Desde 00063 el recargo por cuotas no es una regla de precio: vive en
+  // `recargo_cuotas`, en Precios y Cuentas, donde se lo puede enfrentar con el
+  // arancel que pretende cubrir. Que el tipo ya no se ofrezca ES el contrato:
+  // si reaparece, vuelven a existir dos lugares para definir un recargo.
+  test('el tipo Recargo ya no se ofrece como regla de precio', async ({ reglas }) => {
     await reglas.abrirNueva()
-    await reglas.nombre.fill(unique('Recargo sin fp'))
-    await reglas.tipoRegla.selectOption({ label: 'Recargo' })
-    await reglas.porcentaje.fill('12')
-    await reglas.guardar.click()
 
-    await expect(reglas.error).toHaveText('Un recargo requiere forma de pago')
+    const tipos = await reglas.tipoRegla
+      .locator('option')
+      .allTextContents()
+
+    expect(tipos).toEqual(['Margen', 'Descuento'])
   })
 
   test('rechaza un alcance por categoría sin categoría elegida', async ({ reglas }) => {

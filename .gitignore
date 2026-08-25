@@ -57,3 +57,11 @@ next-env.d.ts
 #carpeta
 utopia-intructivo/
 supabase/.temp/
+
+seed_dev.sql
+
+# Fingerprint que `gentle-ai skill-registry refresh` reescribe en cada prompt.
+# Es cache derivada de las skills instaladas en ESTA maquina: commitearla
+# ensucia el arbol constantemente y no le sirve a nadie mas. El indice
+# legible (.atl/skill-registry.md) si se versiona.
+.atl/.skill-registry.cache.json

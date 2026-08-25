@@ -110,8 +110,12 @@ jobs:
       - name: Typecheck
         run: pnpm exec tsc --noEmit
 
+      # `--coverage` is the point of this step, not a nicety: the thresholds in
+      # `vitest.config.mts` only mean something if a gate runs them. Plain
+      # `pnpm test` had been running here while the thresholds sat unchecked,
+      # so they drifted for months without anyone finding out.
       - name: Unit and database tests
-        run: pnpm test
+        run: pnpm test --coverage
 
       - name: Install Playwright browser
         # Chromium only — see the rationale in playwright.config.ts.

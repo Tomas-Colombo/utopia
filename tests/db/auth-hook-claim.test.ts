@@ -13,7 +13,6 @@ function decodeJwtPayload(jwt: string): Record<string, unknown> {
   return JSON.parse(json) as Record<string, unknown>
 }
 
-/** DB testing postponed until end of Slice 8 — see apply-progress. */
 describe.skipIf(!hasTestDb)('auth hook — 00008 tenant_id claim (needs Supabase test project + hook registered)', () => {
   it('signed-in user with a matching usuario row gets tenant_id claim on the JWT (REQ-AUTH-02/03)', async () => {
     const serviceRole = createServiceRoleTestClient()
