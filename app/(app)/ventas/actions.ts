@@ -24,6 +24,8 @@ import {
   spCobrarCuota,
   spMarcarCuotaIncobrable,
 } from '@/lib/dal/cuotas/cuota'
+import { primerReason } from '@/lib/validation/administracion'
+import { anularVentaSchema } from '@/lib/validation/ventas'
 import type { FormaPago } from '@/lib/types/precios'
 import type {
   FinanciacionInput,
@@ -100,8 +102,12 @@ export async function anularVentaAction(input: {
 }): Promise<ActionResult> {
   const g = await guarded('ventas', 'editar')
   if (!g.ok) return { ok: false, reason: g.error }
+
+  const parsed = anularVentaSchema.safeParse(input)
+  if (!parsed.success) return { ok: false, reason: primerReason(parsed.error) }
+
   try {
-    await spAnularVenta(input.idVenta, input.motivo)
+    await spAnularVenta(parsed.data.idVenta, parsed.data.motivo)
     revalidatePath('/ventas')
     revalidatePath(`/ventas/${input.idVenta}`)
     revalidatePath('/inventario/productos')

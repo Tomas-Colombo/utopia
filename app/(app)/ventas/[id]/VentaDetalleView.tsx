@@ -8,6 +8,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Field } from '@/components/ui/Field'
 import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
+import { Textarea } from '@/components/ui/Textarea'
 import { useToast } from '@/components/ui/Toast'
 import { formaPagoLabel } from '@/lib/types/precios'
 import {
@@ -50,6 +51,10 @@ export function VentaDetalleView({
   const [pending, start] = useTransition()
 
   const [anularOpen, setAnularOpen] = useState(false)
+  // Motivo de anulación. El SP lo guarda en `venta.motivo_anulacion` y esta
+  // misma vista lo muestra más abajo; hasta ahora nada lo capturaba, así que
+  // ese cartel no podía aparecer nunca. Es opcional (`p_motivo default null`).
+  const [motivoAnulacion, setMotivoAnulacion] = useState('')
   const [devolverOpen, setDevolverOpen] = useState<string | null>(null)
   const [comprobanteOpen, setComprobanteOpen] = useState(false)
   const [tipoComp, setTipoComp] = useState<TipoComprobante>('ticket')
@@ -79,9 +84,16 @@ export function VentaDetalleView({
 
   function anular() {
     setAnularOpen(false)
+    const motivo = motivoAnulacion.trim()
     start(async () => {
-      const res = await anularVentaAction({ idVenta: venta.id_venta })
+      const res = await anularVentaAction({
+        idVenta: venta.id_venta,
+        // Vacío va como `undefined`, no como `''`: `spAnularVenta` lo manda como
+        // NULL y la vista distingue "sin motivo" de "motivo en blanco".
+        motivo: motivo || undefined,
+      })
       if (!res.ok) return toast.error('No se pudo anular', res.reason)
+      setMotivoAnulacion('')
       toast.success('Venta anulada')
       router.refresh()
     })
@@ -351,8 +363,26 @@ export function VentaDetalleView({
         confirmLabel="Sí, anular"
         cancelLabel="Cancelar"
         onConfirm={anular}
-        onCancel={() => setAnularOpen(false)}
-      />
+        onCancel={() => {
+          setAnularOpen(false)
+          setMotivoAnulacion('')
+        }}
+      >
+        <Field
+          htmlFor="motivo-anulacion"
+          label="Motivo (opcional)"
+          hint="Queda guardado en la venta y en la auditoría."
+        >
+          <Textarea
+            id="motivo-anulacion"
+            rows={2}
+            maxLength={300}
+            value={motivoAnulacion}
+            onChange={(e) => setMotivoAnulacion(e.target.value)}
+            placeholder="Ej: el cliente se arrepintió"
+          />
+        </Field>
+      </ConfirmDialog>
       <ConfirmDialog
         open={!!devolverOpen}
         title="Devolución del cliente"

@@ -126,4 +126,33 @@ describe('ConfirmDialog', () => {
       'danger',
     )
   })
+
+  it('renders no extra slot when children are omitted', () => {
+    renderDialog()
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+  })
+
+  it('renders children between the description and the buttons', () => {
+    renderDialog({
+      children: (
+        <label>
+          Reason
+          <input />
+        </label>
+      ),
+    })
+    expect(screen.getByRole('textbox')).toBeInTheDocument()
+  })
+
+  it('keeps children inside the focus trap', async () => {
+    // The slot exists so a destructive confirm can also collect a value, so a
+    // field rendered in it has to be reachable by keyboard from the buttons.
+    const user = userEvent.setup()
+    renderDialog({ children: <input aria-label="Reason" /> })
+
+    // Initial focus is the confirm button, which the trap treats as last, so
+    // Tab wraps to the first focusable — the field in the slot.
+    await user.tab()
+    expect(document.activeElement).toBe(screen.getByLabelText('Reason'))
+  })
 })
