@@ -24,6 +24,7 @@ import {
   cerrarVigenciaRecargoAction,
   crearRecargoCuotasAction,
 } from '../actions'
+import { mensajeDeError } from '@/lib/errores/mensajes'
 
 /** Los medios que pueden financiar. El débito no tiene planes de cuotas. */
 const MEDIOS_FINANCIABLES: MedioPagoRecargo[] = ['tarjeta_credito', 'transferencia']
@@ -111,7 +112,7 @@ export function RecargosPanel({
     const destino = parseFinanciador(financiador)
     start(async () => {
       const res = await crearRecargoCuotasAction({ cuotas, valor, ...destino })
-      if (!res.ok) return setError(explicar(res.reason))
+      if (!res.ok) return setError(mensajeDeError(res.reason))
       toast.success('Recargo creado')
       setCreando(false)
       setValor(0)
@@ -125,7 +126,7 @@ export function RecargosPanel({
         id,
         hasta: new Date().toISOString().slice(0, 10),
       })
-      if (!res.ok) return toast.error(explicar(res.reason))
+      if (!res.ok) return toast.error(mensajeDeError(res.reason))
       toast.success('Recargo dado de baja')
       router.refresh()
     })
@@ -365,16 +366,4 @@ function parseFinanciador(v: string): {
 
 function pct(n: number): string {
   return n.toLocaleString('es-AR', { maximumFractionDigits: 2 })
-}
-
-function explicar(reason: string): string {
-  if (reason === 'cuotas-invalidas') return 'El plan de cuotas no es válido.'
-  if (reason === 'valor-invalido') return 'El recargo tiene que estar entre 0 y 100.'
-  if (reason === 'propia-con-procesador') {
-    return 'El crédito del local no pasa por ninguna cuenta.'
-  }
-  if (reason === 'recargo-duplicado') {
-    return 'Ya hay un recargo vigente para ese plan y ese financiador. Dalo de baja primero.'
-  }
-  return reason
 }

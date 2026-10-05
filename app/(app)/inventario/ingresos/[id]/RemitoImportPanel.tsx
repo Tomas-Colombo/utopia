@@ -15,6 +15,7 @@ import type { CategoriaRow, ProductoConDetalle } from '@/lib/types/inventario'
 import { buscarMatchNombre, indexarPorNombre } from '@/lib/inventario/producto-match'
 import { MAX_PDF_BYTES } from '@/lib/inventario/limites'
 import { importarRemitoAction, parseRemitoPdfAction } from '../../actions'
+import { mensajeDeError } from '@/lib/errores/mensajes'
 
 export type DetalleImportado = {
   id_detalle: string
@@ -90,7 +91,7 @@ export function RemitoImportPanel({
     start(async () => {
       const res = await parseRemitoPdfAction(fd)
       if (fileRef.current) fileRef.current.value = ''
-      if (!res.ok) return toast.error('No se pudo leer el PDF', res.reason)
+      if (!res.ok) return toast.error('No se pudo leer el PDF', mensajeDeError(res.reason))
       const parsed = res.data!
       if (parsed.lineas.length === 0) {
         toast.error('No se detectaron productos', parsed.advertencias[0] ?? 'Revisá el formato del PDF')
@@ -181,7 +182,7 @@ export function RemitoImportPanel({
           talles: f.talles.length > 0 ? f.talles : undefined,
         })),
       })
-      if (!res.ok) return toast.error('No se pudo importar', res.reason)
+      if (!res.ok) return toast.error('No se pudo importar', mensajeDeError(res.reason))
       const { creados, vinculados, detalles } = res.data!
       toast.success('Importado', `${creados} nuevos · ${vinculados} vinculados`)
       onImported(detalles)

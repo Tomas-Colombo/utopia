@@ -15,6 +15,7 @@ import {
   type TipoValorRegla,
 } from '@/lib/types/precios'
 import { createReglaAction } from '@/app/(app)/precios/actions'
+import { mensajeDeError } from '@/lib/errores/mensajes'
 
 export interface Ref { id: string; nombre: string; sku?: string | null }
 
@@ -105,7 +106,7 @@ export function NuevaReglaForm({
         fecha_inicio: fechaInicio || null,
         fecha_hasta: fechaHasta || null,
       })
-      if (!res.ok) return toast.error('No se pudo crear', res.reason)
+      if (!res.ok) return toast.error('No se pudo crear', mensajeDeError(res.reason))
       toast.success('Regla creada')
       if (onSuccess) onSuccess()
       else router.push('/precios/reglas')

@@ -7,6 +7,7 @@ import { Modal } from '@/components/ui/Modal'
 import { useToast } from '@/components/ui/Toast'
 import { StockTalleLoader, type LineaTalle } from '@/components/inventario/StockTalleLoader'
 import { asignarTallesProductoAction } from '../actions'
+import { mensajeDeError } from '@/lib/errores/mensajes'
 
 /**
  * Reasigna retroactivamente talles a ítems que se cargaron sin talle y
@@ -59,7 +60,7 @@ export function AsignarTallesModal({
     }
     start(async () => {
       const res = await asignarTallesProductoAction({ idProducto, distribucion })
-      if (!res.ok) return toast.error('No se pudieron asignar los talles', res.reason)
+      if (!res.ok) return toast.error('No se pudieron asignar los talles', mensajeDeError(res.reason))
       toast.success('Talles asignados', `${res.data?.actualizados ?? 0} unidad(es) actualizada(s)`)
       onClose()
       router.refresh()

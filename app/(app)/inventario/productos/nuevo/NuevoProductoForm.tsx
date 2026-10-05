@@ -17,6 +17,7 @@ import {
 import type { CategoriaRow, ProductoConDetalle, ProveedorRow } from '@/lib/types/inventario'
 import { buscarMatchNombre, indexarPorNombre } from '@/lib/inventario/producto-match'
 import { createProductoAction } from '../../actions'
+import { mensajeDeError } from '@/lib/errores/mensajes'
 
 export function NuevoProductoForm({
   categorias,
@@ -89,7 +90,7 @@ export function NuevoProductoForm({
         idProveedor: idProveedor || null,
         stock: stockFinal,
       })
-      if (!res.ok) return toast.error('No se pudo crear', res.reason)
+      if (!res.ok) return toast.error('No se pudo crear', mensajeDeError(res.reason))
       const items = res.data?.itemsCreados ?? 0
       toast.success('Producto creado', items > 0 ? `${items} ítem(s) de stock generados` : undefined)
       router.push('/inventario')

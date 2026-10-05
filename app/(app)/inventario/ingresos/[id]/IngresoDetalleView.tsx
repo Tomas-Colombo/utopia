@@ -26,6 +26,7 @@ import {
   type ProductoNombreValue,
 } from '@/components/inventario/ProductoNombreCombobox'
 import { buscarMatchNombre, indexarPorNombre } from '@/lib/inventario/producto-match'
+import { mensajeDeError } from '@/lib/errores/mensajes'
 
 type Ingreso = IngresoMercaderiaRow & {
   proveedor: Pick<ProveedorRow, 'id_proveedor' | 'nombre' | 'telefono'> | null
@@ -113,7 +114,7 @@ export function IngresoDetalleView({
           },
         ],
       })
-      if (!res.ok) return toast.error('No se pudo agregar', res.reason)
+      if (!res.ok) return toast.error('No se pudo agregar', mensajeDeError(res.reason))
       onImported(res.data!.detalles)
       setLinea({ nombre: '', idProducto: '', esNuevo: true })
       setIdCategoriaAdd(catInicial)
@@ -129,7 +130,7 @@ export function IngresoDetalleView({
         idIngreso: ingreso.id_ingreso,
         idDetalle,
       })
-      if (!res.ok) return toast.error('No se pudo eliminar', res.reason)
+      if (!res.ok) return toast.error('No se pudo eliminar', mensajeDeError(res.reason))
       setDetalles((d) => d.filter((x) => x.id_detalle !== idDetalle))
     })
   }
@@ -138,7 +139,7 @@ export function IngresoDetalleView({
     setConfirmOpen(false)
     start(async () => {
       const res = await confirmarIngresoAction({ idIngreso: ingreso.id_ingreso })
-      if (!res.ok) return toast.error('No se pudo confirmar', res.reason)
+      if (!res.ok) return toast.error('No se pudo confirmar', mensajeDeError(res.reason))
       toast.success(`Ingreso confirmado`, `Se generaron ${res.data?.itemsGenerados ?? 0} ítems con QR único`)
       router.refresh()
     })

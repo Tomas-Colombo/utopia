@@ -17,6 +17,7 @@ import {
   confirmarConsignacionAction,
   eliminarConsignacionAction,
 } from './actions'
+import { mensajeDeError } from '@/lib/errores/mensajes'
 
 const VARIANT: Record<EstadoConsignacion, 'success' | 'neutral'> = {
   activa: 'success',
@@ -60,7 +61,7 @@ export function ConsignacionesTableClient({
     if (!row) return
     start(async () => {
       const res = await confirmarConsignacionAction({ idConsignacion: row.id_consignacion })
-      if (!res.ok) return toast.error('No se pudo confirmar', traducir(res.reason))
+      if (!res.ok) return toast.error('No se pudo confirmar', mensajeDeError(res.reason))
       toast.success(`Lote confirmado · ${res.data!.confirmados} ítem(s) devueltos`)
       router.refresh()
     })
@@ -72,7 +73,7 @@ export function ConsignacionesTableClient({
     if (!row) return
     start(async () => {
       const res = await cerrarConsignacionAction({ idConsignacion: row.id_consignacion })
-      if (!res.ok) return toast.error('No se pudo cerrar', traducir(res.reason))
+      if (!res.ok) return toast.error('No se pudo cerrar', mensajeDeError(res.reason))
       toast.success('Consignación cerrada')
       router.refresh()
     })
@@ -84,7 +85,7 @@ export function ConsignacionesTableClient({
     if (!row) return
     start(async () => {
       const res = await eliminarConsignacionAction({ idConsignacion: row.id_consignacion })
-      if (!res.ok) return toast.error('No se pudo eliminar', traducir(res.reason))
+      if (!res.ok) return toast.error('No se pudo eliminar', mensajeDeError(res.reason))
       const n = res.data!.reestockeados
       toast.success(
         'Consignación eliminada',
@@ -221,11 +222,3 @@ export function ConsignacionesTableClient({
   )
 }
 
-function traducir(reason: string): string {
-  if (reason.startsWith('quedan-pendientes'))
-    return 'Quedan ítems pendientes de devolver o cancelar.'
-  if (reason === 'consignacion-no-activa') return 'La consignación ya está cerrada.'
-  if (reason === 'consignacion-not-found') return 'La consignación ya no existe.'
-  if (reason === 'no-permission') return 'Tu rol no tiene permiso para esta acción.'
-  return reason
-}

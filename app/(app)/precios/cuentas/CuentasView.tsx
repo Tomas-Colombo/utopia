@@ -27,6 +27,7 @@ import {
 import { Modal } from '@/components/ui/Modal'
 import { ArancelesPanel } from './ArancelesPanel'
 import { RecargosPanel } from './RecargosPanel'
+import { mensajeDeError } from '@/lib/errores/mensajes'
 
 const TIPOS: TipoCuentaDestino[] = ['efectivo', 'banco', 'billetera_virtual']
 
@@ -169,7 +170,7 @@ export function CuentasView({
           : undefined,
         aranceles: filas,
       })
-      if (!res.ok) return setError(explicar(res.reason))
+      if (!res.ok) return setError(mensajeDeError(res.reason))
       resetForm()
       setCreando(false)
       const fallidos = res.data?.arancelesFallidos ?? 0
@@ -191,7 +192,7 @@ export function CuentasView({
         id: row.id_cuenta_destino,
         patch: { activo: !row.activo },
       })
-      if (!res.ok) return toast.error('No se pudo actualizar', explicar(res.reason))
+      if (!res.ok) return toast.error('No se pudo actualizar', mensajeDeError(res.reason))
       router.refresh()
     })
   }
@@ -546,12 +547,4 @@ export function CuentasView({
 function num(raw: string): number | null {
   const n = Number(raw.replace(',', '.'))
   return raw.trim() !== '' && Number.isFinite(n) ? n : null
-}
-
-function explicar(reason: string): string {
-  if (reason === 'nombre-invalido') return 'El nombre es muy corto.'
-  if (reason === 'porcentaje-invalido') return 'Los porcentajes tienen que estar entre 0 y 100.'
-  if (reason === 'dias-invalidos') return 'Los días de acreditación no pueden ser negativos.'
-  if (reason.includes('cuenta_destino_nombre_uk')) return 'Ya existe una cuenta con ese nombre.'
-  return reason
 }

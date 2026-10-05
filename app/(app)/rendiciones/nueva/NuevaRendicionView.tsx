@@ -13,6 +13,7 @@ import {
   generarRendicionAction,
   reincluirDetalleAction,
 } from '../actions'
+import { mensajeDeError } from '@/lib/errores/mensajes'
 
 interface Prov { id: string; nombre: string; tipo: string }
 
@@ -59,7 +60,7 @@ export function NuevaRendicionView({
   function excluir(idDetalle: string) {
     start(async () => {
       const res = await excluirDetalleAction({ idDetalle })
-      if (!res.ok) return toast.error('No se pudo excluir', res.reason)
+      if (!res.ok) return toast.error('No se pudo excluir', mensajeDeError(res.reason))
       setExcluidos((s) => new Set(s).add(idDetalle))
       toast.info('Línea excluida', 'No aparecerá en futuras rendiciones')
     })
@@ -68,7 +69,7 @@ export function NuevaRendicionView({
   function reincluir(idDetalle: string) {
     start(async () => {
       const res = await reincluirDetalleAction({ idDetalle })
-      if (!res.ok) return toast.error('No se pudo reincluir', res.reason)
+      if (!res.ok) return toast.error('No se pudo reincluir', mensajeDeError(res.reason))
       setExcluidos((s) => {
         const n = new Set(s)
         n.delete(idDetalle)
@@ -84,7 +85,7 @@ export function NuevaRendicionView({
         idProveedor: idProvSeleccionado,
         observaciones: obs || null,
       })
-      if (!res.ok) return toast.error('No se pudo generar', traducir(res.reason))
+      if (!res.ok) return toast.error('No se pudo generar', mensajeDeError(res.reason))
       toast.success('Rendición generada', `Total $ ${total.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`)
       router.push(`/rendiciones/${res.data!.id}`)
       router.refresh()
@@ -258,11 +259,4 @@ export function NuevaRendicionView({
       />
     </div>
   )
-}
-
-function traducir(reason: string): string {
-  if (reason === 'sin-lineas-pendientes')
-    return 'No hay líneas pendientes de rendir para este proveedor en este momento.'
-  if (reason === 'no-tenant') return 'Sesión sin tenant.'
-  return reason
 }

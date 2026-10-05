@@ -17,6 +17,7 @@ import {
   toggleCategoriaActivaAction,
   updateCategoriaAction,
 } from '../actions'
+import { mensajeDeError } from '@/lib/errores/mensajes'
 
 export function CategoriasView({ initial }: { initial: CategoriaRow[] }) {
   const [rows, setRows] = useState<CategoriaRow[]>(initial)
@@ -69,7 +70,7 @@ export function CategoriasView({ initial }: { initial: CategoriaRow[] }) {
           descripcion: descripcion || null,
           talles,
         })
-        if (!res.ok) return toast.error('No se pudo guardar', res.reason)
+        if (!res.ok) return toast.error('No se pudo guardar', mensajeDeError(res.reason))
         toast.success('Categoría actualizada')
         setRows((r) =>
           r.map((c) =>
@@ -87,7 +88,7 @@ export function CategoriasView({ initial }: { initial: CategoriaRow[] }) {
         descripcion: descripcion || null,
         talles,
       })
-      if (!res.ok) return toast.error('No se pudo crear', res.reason)
+      if (!res.ok) return toast.error('No se pudo crear', mensajeDeError(res.reason))
       toast.success('Categoría creada')
       const now = new Date().toISOString()
       setRows((r) => [
@@ -113,7 +114,7 @@ export function CategoriasView({ initial }: { initial: CategoriaRow[] }) {
         id: row.id_categoria,
         activa: !row.activa,
       })
-      if (!res.ok) return toast.error('No se pudo actualizar', res.reason)
+      if (!res.ok) return toast.error('No se pudo actualizar', mensajeDeError(res.reason))
       setRows((rs) =>
         rs.map((r) => (r.id_categoria === row.id_categoria ? { ...r, activa: !r.activa } : r)),
       )

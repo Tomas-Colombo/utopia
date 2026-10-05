@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
 import { useToast } from '@/components/ui/Toast'
 import { crearClienteAction } from '../../ventas/actions'
+import { mensajeDeError } from '@/lib/errores/mensajes'
 
 /**
  * Alta de cliente. Se usa desde el modal del listado y desde la ruta
@@ -43,7 +44,7 @@ export function NuevoClienteForm({ onSuccess }: { onSuccess?: () => void }) {
         email: email || null,
         notas: notas || null,
       })
-      if (!res.ok) return toast.error('No se pudo crear', res.reason)
+      if (!res.ok) return toast.error('No se pudo crear', mensajeDeError(res.reason))
       toast.success('Cliente creado')
       if (onSuccess) onSuccess()
       else router.push('/clientes')

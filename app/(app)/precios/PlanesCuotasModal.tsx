@@ -7,6 +7,7 @@ import { NumberInput } from '@/components/ui/NumberInput'
 import { useToast } from '@/components/ui/Toast'
 import { CUOTAS_MAX, CUOTAS_MIN, type PlanCuotasRow } from '@/lib/types/precios'
 import { crearPlanCuotasAction, setPlanCuotasActivoAction } from './actions'
+import { mensajeDeError } from '@/lib/errores/mensajes'
 
 export interface PlanesCuotasModalProps {
   open: boolean
@@ -41,7 +42,7 @@ export function PlanesCuotasModal({ open, onClose, planes, onChange }: PlanesCuo
     setError(null)
     start(async () => {
       const res = await crearPlanCuotasAction(n)
-      if (!res.ok) return toast.error('No se pudo agregar', res.reason)
+      if (!res.ok) return toast.error('No se pudo agregar', mensajeDeError(res.reason))
       onChange(res.data!.planes)
       setNuevo('')
       toast.success(`${n} cuotas disponible`)
@@ -51,7 +52,7 @@ export function PlanesCuotasModal({ open, onClose, planes, onChange }: PlanesCuo
   function alternar(plan: PlanCuotasRow) {
     start(async () => {
       const res = await setPlanCuotasActivoAction(plan.cuotas, !plan.activo)
-      if (!res.ok) return toast.error('No se pudo actualizar', res.reason)
+      if (!res.ok) return toast.error('No se pudo actualizar', mensajeDeError(res.reason))
       onChange(res.data!.planes)
     })
   }

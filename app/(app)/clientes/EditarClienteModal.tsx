@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/Textarea'
 import { useToast } from '@/components/ui/Toast'
 import type { ClienteRow } from '@/lib/types/ventas'
 import { updateClienteAction } from '../ventas/actions'
+import { mensajeDeError } from '@/lib/errores/mensajes'
 
 /**
  * Edición de cliente en modal. Se usa desde el listado y desde la ficha: es
@@ -80,7 +81,12 @@ function FormularioEditar({
           notas: notas.trim() || null,
         },
       })
-      if (!res.ok) return toast.error('No se pudo guardar', explicar(res.reason))
+      if (!res.ok) {
+        return toast.error(
+          'No se pudo guardar',
+          mensajeDeError(res.reason, { accion: 'editar clientes' }),
+        )
+      }
       toast.success('Cliente actualizado')
       onClose()
       router.refresh()
@@ -154,12 +160,4 @@ function FormularioEditar({
       </div>
     </form>
   )
-}
-
-function explicar(reason: string): string {
-  if (reason.includes('cliente_tenant_email_uk')) {
-    return 'Ya hay otro cliente con ese email.'
-  }
-  if (reason === 'no-permission') return 'Tu rol no puede editar clientes.'
-  return reason
 }

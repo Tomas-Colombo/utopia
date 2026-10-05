@@ -47,6 +47,7 @@ import {
 } from './CobranzaPanel'
 import { generarPlanCuotas } from '@/lib/cuotas/generar-plan'
 import { registrarVentaAction, crearClienteAction } from '../actions'
+import { mensajeDeError } from '@/lib/errores/mensajes'
 
 interface ClienteOption { id: string; nombre: string; telefono: string | null }
 /** Grupo del carrito: N unidades del mismo producto+talle en una sola fila. */
@@ -746,7 +747,7 @@ export function NuevaVentaView({
       }
 
       if (!data.ok) {
-        setErrorBusqueda(traducirReason(data.reason, data))
+        setErrorBusqueda(mensajeDeError(data.reason, { extra: data }))
         return
       }
       const nueva = data.linea as LineaCarrito
@@ -831,7 +832,7 @@ export function NuevaVentaView({
           })
           return null
         }
-        setErrorBusqueda(traducirReason(data.reason, data))
+        setErrorBusqueda(mensajeDeError(data.reason, { extra: data }))
         return null
       }
       const nueva = data.linea as LineaCarrito
@@ -878,7 +879,7 @@ export function NuevaVentaView({
         setErrorBusqueda(
           data.ok
             ? 'Este producto no maneja talles.'
-            : traducirReason(data.reason, data),
+            : mensajeDeError(data.reason, { extra: data }),
         )
         return
       }
@@ -1032,7 +1033,7 @@ export function NuevaVentaView({
         nombre,
         telefono: nuevoTelefono.trim() || null,
       })
-      if (!res.ok) return setErrorCliente(res.reason)
+      if (!res.ok) return setErrorCliente(mensajeDeError(res.reason))
       // Mismo armado que la columna generada `nombre_completo` (00058):
       // nombre y después apellido. Si divergen, el cliente recién creado se
       // vería distinto que al recargar la página.
@@ -1173,7 +1174,7 @@ export function NuevaVentaView({
             }
           }),
       })
-      if (!res.ok) return toast.error('No se pudo registrar la venta', traducirReason(res.reason))
+      if (!res.ok) return toast.error('No se pudo registrar la venta', mensajeDeError(res.reason))
       toast.success('Venta registrada', `Total $ ${total.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`)
       router.push(`/ventas/${res.data!.id}`)
       router.refresh()
@@ -2332,30 +2333,6 @@ function esReasonDeReserva(reason: string): boolean {
   )
 }
 
-function traducirReason(reason: string, extra?: Record<string, unknown>): string {
-  if (reason.startsWith('item-not-found')) return 'No se encontró un ítem con ese QR en este tenant.'
-  if (reason.startsWith('item-no-disponible')) {
-    const est = extra?.estado ? ` (estado: ${extra.estado})` : ''
-    return `El ítem no está disponible${est}.`
-  }
-  if (reason.startsWith('item-en-reserva')) return 'El ítem está reservado por otra reserva. Cargá esa reserva o cancelala primero.'
-  if (reason.startsWith('item-en-otra-reserva')) return 'El ítem pertenece a otra reserva distinta a la que cargaste.'
-  if (reason.startsWith('item-ya-reservado')) return 'El ítem ya está en una reserva activa.'
-  if (reason === 'sku-sin-stock') return 'Ese SKU no tiene unidades disponibles en stock.'
-  if (reason === 'sku-sin-stock-libre') {
-    // Con `id_reserva` el rebote es por una reserva ajena a la venta actual:
-    // el auto-enganche ya se intentó y no aplicaba (la venta está atada a
-    // otra reserva, o hay más de una en juego).
-    return extra?.id_reserva
-      ? 'Las unidades que quedan están tomadas por otra reserva. Desvinculá la reserva actual o cobrá esa reserva aparte.'
-      : 'No quedan unidades libres: están reservadas o ya las cargaste en el carrito.'
-  }
-  if (reason === 'sin-precio-lista') return 'El producto no tiene precio de venta. Fijalo en Precios → Control de precios.'
-  if (reason === 'reserva-no-activa') return 'La reserva ya no está activa (fue cancelada, vencida o convertida).'
-  if (reason === 'lineas-vacias') return 'Agregá al menos un ítem al carrito.'
-  if (reason === 'elegir-talle') return 'Elegí un talle disponible.'
-  return reason
-}
 
 /** Hoy + 1 mes, en ISO local. Default razonable del primer vencimiento. */
 function enUnMes(): string {

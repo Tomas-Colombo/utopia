@@ -18,6 +18,7 @@ import { BuscadorProductos, type SugerenciaProducto } from '@/components/inventa
 import { normalizar } from '@/lib/inventario/producto-match'
 import type { ItemElegibleConsignacion } from '@/lib/dal/consignaciones/consignacion'
 import { crearConsignacionAction } from '../actions'
+import { mensajeDeError } from '@/lib/errores/mensajes'
 
 interface Prov { id: string; nombre: string; tipo: string }
 
@@ -106,7 +107,11 @@ export function NuevaConsignacionForm({
       .then((r) => r.json())
       .then((data: { ok: boolean; items?: ItemElegibleConsignacion[]; reason?: string }) => {
         if (!vigente) return
-        if (!data.ok) return setErrorCarga(data.reason ?? 'No se pudieron cargar los ítems')
+        if (!data.ok) {
+          return setErrorCarga(
+            data.reason ? mensajeDeError(data.reason) : 'No se pudieron cargar los ítems.',
+          )
+        }
         setElegibles(data.items ?? [])
       })
       .catch((e: Error) => vigente && setErrorCarga(e.message))
@@ -302,7 +307,12 @@ export function NuevaConsignacionForm({
         items: carrito.map((c) => c.id_item),
         motivo: motivo || null,
       })
-      if (!res.ok) return toast.error('No se pudo crear', traducirAlta(res.reason))
+      if (!res.ok) {
+        return toast.error(
+          'No se pudo crear',
+          mensajeDeError(res.reason, { accion: 'crear consignaciones' }),
+        )
+      }
       toast.success(`Consignación creada con ${carrito.length} ítem(s)`)
       router.push(`/consignaciones/${res.data!.id}`)
       router.refresh()
@@ -460,16 +470,3 @@ export function NuevaConsignacionForm({
   )
 }
 
-function traducirAlta(reason: string): string {
-  if (reason === 'consignacion-vacia') return 'El lote no puede quedar vacío.'
-  if (reason === 'proveedor-requerido') return 'Elegí un proveedor.'
-  if (reason.startsWith('item-no-disponible')) return 'Un ítem dejó de estar disponible.'
-  if (reason.startsWith('item-no-es-consignacion'))
-    return 'Un ítem no es de consignación (fue comprado directamente).'
-  if (reason.startsWith('item-otro-proveedor')) return 'Un ítem pertenece a otro proveedor.'
-  if (reason.startsWith('item-ya-en-consignacion-pendiente'))
-    return 'Un ítem ya está apartado en otra consignación.'
-  if (reason.startsWith('item-en-reserva')) return 'Un ítem está en una reserva activa.'
-  if (reason === 'no-permission') return 'Tu rol no puede crear consignaciones.'
-  return reason
-}

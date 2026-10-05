@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/Textarea'
 import { useToast } from '@/components/ui/Toast'
 import { registrarGastoAction } from '../../rendiciones/actions'
 import { NuevaCategoriaGastoModal } from './NuevaCategoriaGastoModal'
+import { mensajeDeError } from '@/lib/errores/mensajes'
 
 interface Cat { id: string; nombre: string }
 
@@ -51,7 +52,7 @@ export function NuevoGastoForm({ categorias }: { categorias: Cat[] }) {
         fecha: fecha ? new Date(fecha).toISOString() : null,
         comprobanteRef: comprobante || null,
       })
-      if (!res.ok) return toast.error('No se pudo registrar', res.reason)
+      if (!res.ok) return toast.error('No se pudo registrar', mensajeDeError(res.reason))
       toast.success('Gasto registrado')
       router.push('/gastos')
       router.refresh()

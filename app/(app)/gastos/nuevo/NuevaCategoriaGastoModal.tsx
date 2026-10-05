@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import { useToast } from '@/components/ui/Toast'
 import { createCategoriaGastoAction } from '../../rendiciones/actions'
+import { mensajeDeError } from '@/lib/errores/mensajes'
 
 /**
  * Alta rápida de categoría de gasto desde el formulario "Nuevo gasto".
@@ -46,7 +47,7 @@ export function NuevaCategoriaGastoModal({
     setErrNombre(null)
     start(async () => {
       const res = await createCategoriaGastoAction({ nombre })
-      if (!res.ok) return toast.error('No se pudo crear', res.reason)
+      if (!res.ok) return toast.error('No se pudo crear', mensajeDeError(res.reason))
       if (!res.data) return toast.error('No se pudo crear')
       toast.success('Categoría creada')
       onCreated({ id: res.data.id, nombre: nombre.trim() })

@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/Textarea'
 import { useToast } from '@/components/ui/Toast'
 import type { ProveedorRow, TipoProveedor } from '@/lib/types/inventario'
 import { createProveedorAction } from '../../actions'
+import { mensajeDeError } from '@/lib/errores/mensajes'
 
 const TIPOS: { value: TipoProveedor; label: string }[] = [
   { value: 'mayorista', label: 'Mayorista' },
@@ -77,7 +78,7 @@ export function NuevoProveedorModal({
         dias_rotacion: dias ? Number(dias) : null,
         notas: notas || null,
       })
-      if (!res.ok) return toast.error('No se pudo crear', res.reason)
+      if (!res.ok) return toast.error('No se pudo crear', mensajeDeError(res.reason))
       if (!res.data) return toast.error('No se pudo crear')
       toast.success('Proveedor creado')
       onCreated({

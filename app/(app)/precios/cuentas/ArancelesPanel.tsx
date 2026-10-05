@@ -32,6 +32,7 @@ import {
   crearArancelCobroAction,
   crearRecargoCuotasAction,
 } from '../actions'
+import { mensajeDeError } from '@/lib/errores/mensajes'
 
 /** Los medios que pueden tener costo. El efectivo no paga arancel. */
 const MEDIOS_CON_COSTO: MedioPago[] = ['transferencia', 'tarjeta_debito', 'tarjeta_credito']
@@ -151,7 +152,7 @@ export function ArancelesPanel({
         diasAcreditacion: num(dias) ?? 0,
         notas: notas.trim() || null,
       })
-      if (!res.ok) return setError(explicarArancel(res.reason))
+      if (!res.ok) return setError(mensajeDeError(res.reason))
       setCreando(false)
       setArancelPct('')
       setCuotas('')
@@ -170,7 +171,7 @@ export function ArancelesPanel({
     }
     start(async () => {
       const res = await actualizarCuentaDestinoAction({ id: cuenta.id_cuenta_destino, patch })
-      if (!res.ok) return toast.error('No se pudo guardar', explicarArancel(res.reason))
+      if (!res.ok) return toast.error('No se pudo guardar', mensajeDeError(res.reason))
       setEditandoRet(false)
       toast.success('Retenciones actualizadas')
       router.refresh()
@@ -196,7 +197,7 @@ export function ArancelesPanel({
           dias_acreditacion: num(borrador.dias) ?? 0,
         },
       })
-      if (!res.ok) return toast.error('No se pudo guardar', explicarArancel(res.reason))
+      if (!res.ok) return toast.error('No se pudo guardar', mensajeDeError(res.reason))
       setEditando(null)
       toast.success('Arancel actualizado')
       router.refresh()
@@ -215,7 +216,7 @@ export function ArancelesPanel({
         tipoValor: 'porcentaje',
         valor: v,
       })
-      if (!res.ok) return setErrorRec(explicarArancel(res.reason))
+      if (!res.ok) return setErrorRec(mensajeDeError(res.reason))
       setCreandoRec(false)
       setRecValor('')
       toast.success('Recargo cargado')
@@ -226,7 +227,7 @@ export function ArancelesPanel({
   function guardarRecargo(id: string) {
     start(async () => {
       const res = await actualizarRecargoCuotasAction({ id, valor: num(recBorrador) ?? 0 })
-      if (!res.ok) return toast.error('No se pudo guardar', explicarArancel(res.reason))
+      if (!res.ok) return toast.error('No se pudo guardar', mensajeDeError(res.reason))
       setEditandoRec(null)
       toast.success('Recargo actualizado')
       router.refresh()
@@ -236,7 +237,7 @@ export function ArancelesPanel({
   function bajaRecargo(id: string) {
     start(async () => {
       const res = await cerrarVigenciaRecargoAction({ id, hasta: hoyISO() })
-      if (!res.ok) return toast.error('No se pudo dar de baja', explicarArancel(res.reason))
+      if (!res.ok) return toast.error('No se pudo dar de baja', mensajeDeError(res.reason))
       toast.success('Recargo dado de baja')
       router.refresh()
     })
@@ -248,7 +249,7 @@ export function ArancelesPanel({
     if (!a) return
     start(async () => {
       const res = await cerrarVigenciaArancelAction({ id: a.id_arancel_cobro })
-      if (!res.ok) return toast.error('No se pudo cerrar', explicarArancel(res.reason))
+      if (!res.ok) return toast.error('No se pudo cerrar', mensajeDeError(res.reason))
       toast.success('Arancel dado de baja', 'Ya podés cargar el nuevo valor')
       router.refresh()
     })
@@ -864,14 +865,4 @@ function num(raw: string): number | null {
 
 function redondear(n: number): number {
   return Math.round(n * 1000) / 1000
-}
-
-function explicarArancel(reason: string): string {
-  if (reason === 'porcentaje-invalido') return 'El porcentaje tiene que estar entre 0 y 100.'
-  if (reason === 'dias-invalidos') return 'Los días de acreditación no pueden ser negativos.'
-  if (reason === 'cuotas-medio-invalido') return 'El plan de cuotas sólo aplica a tarjeta de crédito.'
-  if (reason.includes('arancel_cobro_vigente_uk')) {
-    return 'Ya hay un arancel vigente para ese medio y plan. Dalo de baja antes de cargar el nuevo.'
-  }
-  return reason
 }

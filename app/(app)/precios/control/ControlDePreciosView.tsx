@@ -8,6 +8,7 @@ import { FilterBar } from '@/components/ui/FilterBar'
 import { useToast } from '@/components/ui/Toast'
 import type { ProductoConPrecioStatus } from '@/lib/types/precios'
 import { recalcularBatchAction, recalcularPrecioAction } from '../actions'
+import { mensajeDeError } from '@/lib/errores/mensajes'
 
 type Filter = 'todos' | 'desactualizados' | 'sin-precio' | 'sin-regla'
 
@@ -58,7 +59,7 @@ export function ControlDePreciosView({
   function recalcularUno(id: string) {
     start(async () => {
       const res = await recalcularPrecioAction(id)
-      if (!res.ok) return toast.error('No se pudo recalcular', res.reason)
+      if (!res.ok) return toast.error('No se pudo recalcular', mensajeDeError(res.reason))
       toast.success('Precio actualizado')
       setRows((rs) =>
         rs.map((r) =>
@@ -81,7 +82,7 @@ export function ControlDePreciosView({
     if (ids.length === 0) return toast.error('Seleccioná al menos uno')
     start(async () => {
       const res = await recalcularBatchAction(ids)
-      if (!res.ok) return toast.error('No se pudo recalcular', res.reason)
+      if (!res.ok) return toast.error('No se pudo recalcular', mensajeDeError(res.reason))
       const map = res.data!.resultados
       const okCount = Object.values(map).filter((v) => v != null).length
       toast.success(`Actualizados ${okCount} / ${ids.length}`)

@@ -7,13 +7,7 @@ import { Field } from '@/components/ui/Field'
 import { Input } from '@/components/ui/Input'
 import { useToast } from '@/components/ui/Toast'
 import { invitarUsuarioAction } from '../../actions'
-
-const REASON_LABEL: Record<string, string> = {
-  'email-invalido': 'El email no es válido',
-  'nombre-corto': 'El nombre es muy corto',
-  'rol-requerido': 'Elegí un rol',
-  'password-corto': 'La contraseña debe tener al menos 8 caracteres',
-}
+import { mensajeDeError } from '@/lib/errores/mensajes'
 
 /** Crypto-random temp password, avoiding ambiguous chars (0/O, 1/l/I). */
 function generarPassword(): string {
@@ -49,7 +43,7 @@ export function InvitarUsuarioForm({
         password,
       })
       if (!res.ok) {
-        const msg = REASON_LABEL[res.reason] ?? res.reason
+        const msg = mensajeDeError(res.reason, { accion: 'invitar usuarios' })
         setErr(msg)
         return toast.error('No se pudo invitar', msg)
       }

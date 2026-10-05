@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/Textarea'
 import { useToast } from '@/components/ui/Toast'
 import type { CategoriaRow, ProductoRow } from '@/lib/types/inventario'
 import { updateProductoAction } from '../../actions'
+import { mensajeDeError } from '@/lib/errores/mensajes'
 
 export function EditarProductoForm({
   producto,
@@ -46,7 +47,7 @@ export function EditarProductoForm({
         descripcion: descripcion.trim() || null,
         activo,
       })
-      if (!res.ok) return toast.error('No se pudo guardar', res.reason)
+      if (!res.ok) return toast.error('No se pudo guardar', mensajeDeError(res.reason))
       toast.success('Producto actualizado')
       router.push('/inventario')
       router.refresh()

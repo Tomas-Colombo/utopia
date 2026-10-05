@@ -7,6 +7,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useToast } from '@/components/ui/Toast'
 import type { EstadoItem } from '@/lib/types/inventario'
 import { transicionItemAction } from '../../actions'
+import { mensajeDeError } from '@/lib/errores/mensajes'
 
 /**
  * Acciones disponibles según estado actual del ítem. Sincronizado con
@@ -104,7 +105,7 @@ export function FichaActions({
         estadoHasta: accion.destino,
         tipoMovimiento: accion.tipoMovimiento,
       })
-      if (!res.ok) return toast.error('No se pudo transicionar', res.reason)
+      if (!res.ok) return toast.error('No se pudo transicionar', mensajeDeError(res.reason))
       toast.success('Estado actualizado')
       router.refresh()
     })

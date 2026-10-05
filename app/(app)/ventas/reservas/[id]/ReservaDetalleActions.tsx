@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useToast } from '@/components/ui/Toast'
 import { cancelarReservaAction } from '../../actions'
+import { mensajeDeError } from '@/lib/errores/mensajes'
 
 export function ReservaDetalleActions({ idReserva }: { idReserva: string }) {
   const router = useRouter()
@@ -17,7 +18,7 @@ export function ReservaDetalleActions({ idReserva }: { idReserva: string }) {
     setConfirm(false)
     start(async () => {
       const res = await cancelarReservaAction({ idReserva })
-      if (!res.ok) return toast.error('No se pudo cancelar', res.reason)
+      if (!res.ok) return toast.error('No se pudo cancelar', mensajeDeError(res.reason))
       toast.success('Reserva cancelada')
       router.refresh()
     })

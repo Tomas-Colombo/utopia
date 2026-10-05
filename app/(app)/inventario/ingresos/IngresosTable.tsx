@@ -9,17 +9,7 @@ import { Pagination } from '@/components/ui/Pagination'
 import { useToast } from '@/components/ui/Toast'
 import type { IngresoConResumen } from '@/lib/types/inventario'
 import { cancelarIngresoAction } from '../actions'
-
-/** Traduce los errores del RPC a mensajes de negocio. */
-function explicar(reason: string): string {
-  if (reason.includes('items-movidos')) {
-    const n = reason.match(/movidos:\s*(\d+)/)?.[1]
-    return `No se puede cancelar: ${n ?? 'algunos'} ítem(s) ya se movieron (vendidos, reservados o apartados). Revertí esas operaciones primero.`
-  }
-  if (reason.includes('ya-cancelado')) return 'Este ingreso ya estaba cancelado.'
-  if (reason.includes('permission')) return 'No tenés permiso para cancelar ingresos.'
-  return reason
-}
+import { mensajeDeError } from '@/lib/errores/mensajes'
 
 export function IngresosTable({
   initial,
@@ -51,7 +41,12 @@ export function IngresosTable({
     if (!row) return
     start(async () => {
       const res = await cancelarIngresoAction({ idIngreso: row.id_ingreso })
-      if (!res.ok) return toast.error('No se pudo cancelar', explicar(res.reason))
+      if (!res.ok) {
+        return toast.error(
+          'No se pudo cancelar',
+          mensajeDeError(res.reason, { accion: 'cancelar ingresos' }),
+        )
+      }
       // Cancelar borra el ingreso de verdad: sale de la lista en ambos casos.
       setRows((rs) => rs.filter((r) => r.id_ingreso !== row.id_ingreso))
       if (res.data?.modo === 'borrador') {

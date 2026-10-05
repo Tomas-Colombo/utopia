@@ -16,6 +16,7 @@ import {
 } from '@/lib/types/precios'
 import { bajaReglaAction } from '../actions'
 import { PlanesCuotasModal } from '../PlanesCuotasModal'
+import { mensajeDeError } from '@/lib/errores/mensajes'
 
 const TIPO_VARIANT: Record<TipoRegla, 'success' | 'info' | 'warning'> = {
   margen: 'info',
@@ -63,7 +64,7 @@ export function ReglasView({
     setConfirm(null)
     start(async () => {
       const res = await bajaReglaAction(r.id_regla)
-      if (!res.ok) return toast.error('No se pudo dar de baja', res.reason)
+      if (!res.ok) return toast.error('No se pudo dar de baja', mensajeDeError(res.reason))
       toast.success('Regla dada de baja')
       setRows((rs) => rs.filter((x) => x.id_regla !== r.id_regla))
       router.refresh()

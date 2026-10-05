@@ -57,6 +57,9 @@ export default defineConfig({
         'lib/cobros/**',
         'lib/cuotas/**',
         'lib/design-tokens/**',
+        // El catalogo de mensajes al operador: logica pura, y es lo que garantiza
+        // que ningun slug crudo llegue a la UI. Va medido.
+        'lib/errores/**',
         'lib/inventario/**',
         'lib/precios/**',
         'lib/tenant/**',

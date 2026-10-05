@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/Textarea'
 import { useToast } from '@/components/ui/Toast'
 import type { CategoriaRow, ProductoRow } from '@/lib/types/inventario'
 import { updateProductoAction } from '@/app/(app)/inventario/actions'
+import { mensajeDeError } from '@/lib/errores/mensajes'
 
 /** Campos mínimos que la UI toca para editar un producto. Toma `ProductoRow`
  *  o cualquier subtipo (p. ej. `ProductoConDetalle` de la tabla). */
@@ -87,7 +88,7 @@ export function EditarProductoModal({
         descripcion: descripcion.trim() || null,
         activo,
       })
-      if (!res.ok) return toast.error('No se pudo guardar', res.reason)
+      if (!res.ok) return toast.error('No se pudo guardar', mensajeDeError(res.reason))
       toast.success('Producto actualizado')
       onClose()
       router.refresh()

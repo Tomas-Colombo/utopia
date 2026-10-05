@@ -30,6 +30,7 @@ import {
   devolverItemVentaAction,
   emitirComprobanteAction,
 } from '../actions'
+import { mensajeDeError } from '@/lib/errores/mensajes'
 
 const CUOTA_VARIANT: Record<EstadoCuota, 'success' | 'info' | 'warning' | 'danger' | 'neutral'> = {
   pendiente: 'info',
@@ -92,7 +93,7 @@ export function VentaDetalleView({
         // NULL y la vista distingue "sin motivo" de "motivo en blanco".
         motivo: motivo || undefined,
       })
-      if (!res.ok) return toast.error('No se pudo anular', res.reason)
+      if (!res.ok) return toast.error('No se pudo anular', mensajeDeError(res.reason))
       setMotivoAnulacion('')
       toast.success('Venta anulada')
       router.refresh()
@@ -108,7 +109,7 @@ export function VentaDetalleView({
         idDetalleVenta: id,
         idVenta: venta.id_venta,
       })
-      if (!res.ok) return toast.error('No se pudo devolver', res.reason)
+      if (!res.ok) return toast.error('No se pudo devolver', mensajeDeError(res.reason))
       toast.success('Ítem devuelto por cliente')
       router.refresh()
     })
@@ -123,7 +124,7 @@ export function VentaDetalleView({
         tipo: tipoComp,
         numero: numeroComp,
       })
-      if (!res.ok) return toast.error('No se pudo emitir', res.reason)
+      if (!res.ok) return toast.error('No se pudo emitir', mensajeDeError(res.reason))
       toast.success('Comprobante emitido')
       setComprobanteOpen(false)
       setNumeroComp('')

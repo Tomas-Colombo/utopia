@@ -9,6 +9,7 @@ import { NumberInput } from '@/components/ui/NumberInput'
 import { Textarea } from '@/components/ui/Textarea'
 import { useToast } from '@/components/ui/Toast'
 import { registrarAjusteInventarioAction } from '@/app/(app)/consignaciones/actions'
+import { mensajeDeError } from '@/lib/errores/mensajes'
 
 /**
  * Ajuste de inventario (Planificacion.txt Etapa 6 §108, Ejecucion §L86).
@@ -49,7 +50,7 @@ export function AjusteInventarioAction({
         observaciones: obs,
         darDeBaja,
       })
-      if (!res.ok) return toast.error('No se pudo registrar', res.reason)
+      if (!res.ok) return toast.error('No se pudo registrar', mensajeDeError(res.reason))
       toast.success('Ajuste registrado')
       setOpen(false)
       setObs('')
