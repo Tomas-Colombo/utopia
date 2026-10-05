@@ -16,7 +16,7 @@ import {
   listAlertaRotacionVencida,
 } from '@/lib/dal/reportes/reportes'
 import { AlertasReposicion } from './AlertasReposicion'
-import { ProductosTableClient } from './productos/ProductosTableClient'
+import { ProductosTableClient } from '@/components/inventario/ProductosTableClient'
 
 /**
  * Home del módulo Inventario. Muestra el listado de productos directamente

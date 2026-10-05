@@ -14,7 +14,7 @@ import type {
   ProductoRow,
 } from '@/lib/types/inventario'
 import { AsignarTallesModal } from '../../AsignarTallesModal'
-import { EditarProductoModal } from '../../EditarProductoModal'
+import { EditarProductoModal } from '@/components/inventario/EditarProductoModal'
 
 type Proveedor = { id_proveedor: string; nombre: string } | null
 

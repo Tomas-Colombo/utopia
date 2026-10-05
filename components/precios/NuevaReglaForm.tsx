@@ -14,7 +14,7 @@ import {
   type TipoRegla,
   type TipoValorRegla,
 } from '@/lib/types/precios'
-import { createReglaAction } from '../../actions'
+import { createReglaAction } from '@/app/(app)/precios/actions'
 
 export interface Ref { id: string; nombre: string; sku?: string | null }
 

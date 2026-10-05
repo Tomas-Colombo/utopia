@@ -10,7 +10,7 @@ import { NumberInput } from '@/components/ui/NumberInput'
 import { Textarea } from '@/components/ui/Textarea'
 import { useToast } from '@/components/ui/Toast'
 import type { CategoriaRow, ProductoRow } from '@/lib/types/inventario'
-import { updateProductoAction } from '../actions'
+import { updateProductoAction } from '@/app/(app)/inventario/actions'
 
 /** Campos mínimos que la UI toca para editar un producto. Toma `ProductoRow`
  *  o cualquier subtipo (p. ej. `ProductoConDetalle` de la tabla). */
