@@ -60,6 +60,10 @@ export default defineConfig({
         'lib/inventario/**',
         'lib/precios/**',
         'lib/tenant/**',
+        // Validación de payloads de Server Actions: lógica pura, sin DB ni
+        // request de Next, y es la puerta de entrada de datos no confiables.
+        // Va medida para que el piso la proteja.
+        'lib/validation/**',
         'lib/utils/**',
         'lib/fechas.ts',
         'components/ui/**',

@@ -119,7 +119,7 @@ export function RolesModal({ roles }: { roles: RolRow[] }) {
                 if (!res.ok) {
                   return toast.error(
                     vista.rol ? 'No se pudo guardar' : 'No se pudo crear',
-                    res.reason,
+                    traducir(res.reason),
                   )
                 }
                 toast.success(vista.rol ? 'Rol actualizado' : 'Rol creado')
@@ -269,9 +269,35 @@ function RolForm({
   )
 }
 
+/**
+ * Los `reason` son slugs kebab estables (ver `lib/validation/administracion`).
+ * Los de validación de esquema no deberían verse nunca desde esta UI — el
+ * editor arma los permisos desde el catálogo — así que aparecen sólo si el
+ * payload llegó manipulado. Igual se traducen: un toast con `modulo-desconocido`
+ * crudo no le dice nada a nadie.
+ */
 function traducir(reason: string): string {
   if (reason.startsWith('rol-en-uso')) {
     return 'No se puede eliminar: hay usuarios con este rol asignado.'
+  }
+  if (reason.startsWith('nombre-corto')) return 'El nombre necesita al menos 2 caracteres.'
+  if (reason.startsWith('nombre-largo')) return 'El nombre no puede pasar de 60 caracteres.'
+  if (
+    reason.startsWith('modulo-desconocido') ||
+    reason.startsWith('accion-invalida') ||
+    reason.startsWith('acciones-duplicadas') ||
+    reason.startsWith('permisos-no-array') ||
+    reason.startsWith('permisos-no-objeto')
+  ) {
+    return 'Los permisos enviados no son válidos. Recargá la página y probá de nuevo.'
+  }
+  if (
+    reason.startsWith('campo-desconocido') ||
+    reason.startsWith('payload-invalido') ||
+    reason.startsWith('nombre-invalido') ||
+    reason.startsWith('id-rol-invalido')
+  ) {
+    return 'Los datos enviados no son válidos. Recargá la página y probá de nuevo.'
   }
   return reason
 }
