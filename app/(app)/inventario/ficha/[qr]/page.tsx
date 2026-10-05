@@ -115,6 +115,7 @@ export default async function FichaItemPage(props: {
 
             <FichaActions
               idItem={detalle.id_item}
+              qr={qr}
               estadoActual={detalle.estado_item}
             />
 
