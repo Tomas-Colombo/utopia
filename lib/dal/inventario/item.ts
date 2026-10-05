@@ -138,6 +138,64 @@ export async function spAsignarTallesAProducto(input: {
   return { actualizados: Number(data ?? 0) }
 }
 
+/** Lo único que necesita una etiqueta física: el código y qué producto es. */
+export interface ItemParaEtiqueta {
+  qr_code: string
+  talle: string | null
+  nombre: string
+  sku: string | null
+}
+
+/** Tope de etiquetas por hoja. Ver `ETIQUETAS_MAX` en la ruta de impresión. */
+export const ETIQUETAS_MAX = 200
+
+/**
+ * Ítems para imprimir etiquetas, por sus QR, en UN round-trip.
+ *
+ * Existe porque la ruta de impresión resolvía cada etiqueta con
+ * `findItemByQr` + `getItemConDetalle`: tres queries por etiqueta y en serie
+ * (la primera traía el ítem sólo para sacar el `id_item`, la segunda volvía a
+ * traer el MISMO ítem con joins, y la tercera el historial de movimientos).
+ * Cien etiquetas eran trescientos round-trips secuenciales para imprimir un
+ * nombre y un talle.
+ *
+ * `getItemConDetalle` es el cargador de la ficha y seguirá trayendo el
+ * historial, el proveedor y la categoría, porque la ficha los muestra. Una
+ * etiqueta no.
+ *
+ * Los QR que no existen (o son de otro tenant, que RLS oculta) simplemente no
+ * vienen en el resultado. El llamador compara contra lo que pidió: una hoja de
+ * etiquetas a la que le faltan tres tiene que avisarlo, no imprimirse corta.
+ */
+export async function listItemsParaEtiquetas(qrs: string[]): Promise<ItemParaEtiqueta[]> {
+  if (qrs.length === 0) return []
+  const supabase = await createServerClient()
+  const { data, error } = await supabase
+    .from('item_producto')
+    .select('qr_code, talle, producto:producto(nombre, sku)')
+    .in('qr_code', qrs.slice(0, ETIQUETAS_MAX))
+  if (error) throw new Error(`listItemsParaEtiquetas: ${error.message}`)
+
+  const filas = (data ?? []) as unknown as Array<{
+    qr_code: string
+    talle: string | null
+    producto: { nombre: string; sku: string | null } | null
+  }>
+
+  // Se devuelven en el orden en que los pidieron, no en el que los dio la DB:
+  // la hoja impresa tiene que coincidir con lo que el operador seleccionó.
+  const porQr = new Map(filas.map((f) => [f.qr_code, f]))
+  return qrs
+    .map((qr) => porQr.get(qr))
+    .filter((f): f is (typeof filas)[number] => f !== undefined && f.producto !== null)
+    .map((f) => ({
+      qr_code: f.qr_code,
+      talle: f.talle,
+      nombre: f.producto!.nombre,
+      sku: f.producto!.sku,
+    }))
+}
+
 export async function listItemsByProducto(idProducto: string): Promise<ItemProductoRow[]> {
   const supabase = await createServerClient()
   const { data, error } = await supabase

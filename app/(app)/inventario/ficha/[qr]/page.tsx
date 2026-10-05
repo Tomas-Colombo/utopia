@@ -69,10 +69,17 @@ export default async function FichaItemPage(props: {
           {/* QR + estado */}
           <aside className="rounded-lg border border-border bg-card p-4">
             <QrDisplay value={detalle.qr_code} size={220} />
-            <div className="mt-4 flex items-center justify-center">
+            <div className="mt-4 flex flex-col items-center gap-3">
               <Badge variant={ESTADO_VARIANT[detalle.estado_item]}>
                 {ESTADO_LABEL[detalle.estado_item]}
               </Badge>
+              <Link
+                href={`/inventario/imprimir-etiquetas?qrs=${encodeURIComponent(detalle.qr_code)}`}
+                target="_blank"
+                className="w-full text-center rounded-md bg-card-3 border border-border px-3 py-2 text-sm font-semibold hover:bg-card-hover"
+              >
+                Imprimir Etiqueta
+              </Link>
             </div>
           </aside>
 
