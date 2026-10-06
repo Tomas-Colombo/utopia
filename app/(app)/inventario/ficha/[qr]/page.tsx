@@ -6,6 +6,7 @@ import { QrDisplay } from '@/components/inventario/QrDisplay'
 import { verifySession } from '@/lib/dal/session'
 import { findItemByQr, getItemConDetalle } from '@/lib/dal/inventario/item'
 import type { EstadoItem } from '@/lib/types/inventario'
+import { EscanearOtro } from './EscanearOtro'
 import { FichaActions } from './FichaActions'
 
 const ESTADO_LABEL: Record<EstadoItem, string> = {
@@ -80,6 +81,7 @@ export default async function FichaItemPage(props: {
               >
                 Imprimir Etiqueta
               </Link>
+              <EscanearOtro />
             </div>
           </aside>
 
