@@ -10,7 +10,7 @@ stack:
   runtime:
     platform: "Node.js"
     frontend: "Next.js 16.2.10 (breaking changes — MUST read node_modules/next/dist/docs/ before coding)"
-    backend: "Supabase (Postgres) + Vercel [planned, not yet integrated]"
+    backend: "Supabase (Postgres) + Vercel"
   
   core_dependencies:
     - "React 19.2.4"
@@ -24,23 +24,15 @@ stack:
   
   database:
     engine: "PostgreSQL (Supabase)"
-    orm: "[planned — no ORM installed yet]"
-    migrations: "[planned]"
+    orm: "None (by decision, 100 SPs carry the business logic)"
+    migrations: "supabase/migrations (65 applied)"
 
 testing:
-  strict_tdd: false
-  test_runner: null
-  test_command: null
-  
-  # KNOWN GAP: No test framework currently installed
-  # Project brief REQUIRES:
-  #   - RLS isolation tests (Row Level Security)
-  #   - Concurrency tests (optimistic locking at DB level)
-  #   - Integration tests for atomic transactions
-  # Status: Will be added in early phase (blocking SDD change work)
-  
-  coverage_target: null
-  test_location: "tests/" # placeholder
+  strict_tdd: true
+  test_runner: "vitest"
+  test_command: "pnpm test"
+  coverage_target: "thresholds in vitest.config.mts over a deliberate subset of pure logic; DAL/routes covered by tests/db and e2e"
+  test_location: "tests/, e2e/, and collocated *.test.ts"
 
 conventions:
   # HARD PROJECT CONVENTION (from AGENTS.md)

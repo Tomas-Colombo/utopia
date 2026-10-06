@@ -2,8 +2,8 @@
 
 **Project**: utopia  
 **Version**: 0.1.0  
-**Status**: Phase 1 initialization  
-**Stack**: Next.js 16 + React 19 + TypeScript 5 + Tailwind CSS 4 + Supabase (planned)
+**Status**: in production use; 65+ migrations applied. Current rules live in `AGENTS.md`; this file is historical context.  
+**Stack**: Next.js 16 + React 19 + TypeScript 5 + Tailwind CSS 4 + Supabase (wired)
 
 ## Executive Summary
 
@@ -77,31 +77,7 @@ Examples of known breakage areas:
 - Image optimization
 - Font loading
 
-### Testing is Blocking ⚠️
 
-**KNOWN GAP**: No test framework currently installed.
-
-Project brief explicitly requires:
-- RLS isolation tests (verify row-level security enforcement)
-- Concurrency tests (validate optimistic locking + conflict detection)
-- Transaction tests (ensure atomic operations complete or rollback together)
-
-**Consequence**: Cannot begin SDD change work until test infrastructure is installed and RLS test harness is operational.
-
-**Phase 1a Task**: Install Vitest + testing libraries + Supabase test mode + RLS test patterns.
-
-### Supabase Not Yet Integrated ⚠️
-
-**Current State**: No Supabase dependencies installed; project uses skeleton Next.js config.
-
-**Required Before Phase 1b**:
-- Supabase project setup (PostgreSQL instance + API key)
-- supabase-js client library
-- Authentication strategy (Session-based? JWT? SSO?)
-- RLS policy templates for all tables
-- Database migration system (Supabase Migration CLI or similar)
-
-**Phase 1a Task**: Spike Supabase integration and auth model; design RLS policy structure.
 
 ## Delivery Strategy
 
@@ -116,32 +92,18 @@ Project brief explicitly requires:
 ```
 utopia/
 ├── app/                          # Next.js App Router
-│   ├── layout.tsx               # Root layout
-│   ├── page.tsx                 # Home page
-│   ├── globals.css              # Global styles
-│   └── favicon.ico
+├── components/                   # UI components
+├── e2e/                          # Playwright specs
+├── lib/                          # Domain logic
+│   └── dal/                      # Data Access Layer
+├── tests/                        # Vitest DB and unit specs
 ├── public/                       # Static assets
+├── supabase/
+│   └── migrations/               # SQL migrations (65 applied)
 ├── utopia-intructivo/           # Source of truth docs
-│   ├── DiagramaDeClases.drawio  # Data model diagram
-│   ├── Utopía Sistema Oficial.html  # Visual identity
-│   └── Ejecucion Utopia (reorganizado).docx.txt
-├── node_modules/
-├── .next/                        # Build output
-├── openspec/                     # SDD artifacts (THIS SESSION)
-│   ├── config.yaml              # Stack, conventions, testing
-│   ├── testing-capabilities.md  # Test framework status
-│   ├── project-context.md       # This document
-│   └── (future: proposals, specs, designs, tasks)
-├── .git/
+├── openspec/                     # SDD artifacts
 ├── package.json
-├── package-lock.json
-├── tsconfig.json
-├── next.config.ts
-├── eslint.config.mjs
-├── postcss.config.mjs
-├── README.md
-├── AGENTS.md                     # Hard Next.js 16 compatibility rule
-└── CLAUDE.md                     # Claude context (if present)
+└── README.md
 ```
 
 ## Next Steps (Recommended SDD Flow)

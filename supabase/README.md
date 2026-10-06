@@ -1,9 +1,17 @@
-# Supabase — Migrations & Manual Apply Workflow
+# Supabase — Migrations
 
-This project uses **two Supabase cloud projects on the free tier** — `utopia-dev`
-and `utopia-test` — and does **not** depend on the Supabase CLI or Docker.
-Migrations are plain SQL files applied by hand through each project's dashboard
-SQL Editor.
+Migrations are plain SQL files in `supabase/migrations/`. They are applied by
+the Supabase CLI, not by hand:
+
+- **Local / CI**: `supabase start` (needs Docker) applies them to a throwaway
+  stack. `.github/workflows/ci.yml` does exactly this before the DB tests.
+- **Test project** (`utopia-test`): `staging.yml` runs `supabase link` +
+  `supabase db push`.
+- **Production**: `release.yml` runs `supabase db push` after a dry run.
+
+Do not paste migrations into a dashboard SQL Editor: it bypasses the migration
+history that `db push` relies on. The "Manual apply order" section below is the
+legacy workflow, kept only until it is removed; the CLI path above wins.
 
 ## Migration naming convention
 

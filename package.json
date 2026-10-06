@@ -10,6 +10,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
     "provision-tenant": "node --env-file=.env.local --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/provision-tenant.mts",
     "test": "vitest run",
     "test:watch": "vitest",

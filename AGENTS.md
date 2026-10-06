@@ -4,162 +4,144 @@
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 <!-- END:nextjs-agent-rules -->
 
-# What this project is
+# What this is
 
-Utopía is a multi-tenant SaaS for running a clothing store: inventory,
-pricing, sales, instalments, consignment, expenses. One deployment serves many
-tenants; the product is meant to be resold, so nothing may be hardcoded to one
-store.
+Utopía: multi-tenant SaaS to run a clothing store (inventory, pricing, sales,
+instalments, consignment, expenses). Resold product: nothing hardcoded to one
+store. Next.js 16 App Router + React 19 + TS 5 + Tailwind 4 + Supabase
+(Postgres + RLS). Package manager **pnpm**. Windows host: only `rg` installed
+(no `bat`, `fd`, `sd`, `eza`, `jq`, `brew`).
 
-Next.js 16 (App Router) + React 19 + TypeScript 5 + Tailwind 4 + Supabase
-(Postgres with RLS). Package manager is **pnpm**. Windows host: only `rg` is
-installed — no `bat`, `fd`, `sd`, `eza`, `jq` or `brew`.
+This file is the single source of truth for every agent (Claude, Codex,
+Copilot). Personal preferences live in the provider's memory, never here.
+`CLAUDE.md` is only `@AGENTS.md`. Where docs disagree with code, the code wins.
 
-**Do not trust the other docs in this repo.** `README.md` is still
-`create-next-app` boilerplate and claims migrations "land starting in Slice 4";
-there are 65 of them. `openspec/project-context.md` says the status is "Phase 1
-initialization" and Supabase is "planned"; it is fully wired. Both describe an
-earlier project. This file and the code are the current truth.
+# Commands
 
-# Tenant isolation is the one invariant
+| Need | Command | Needs |
+| --- | --- | --- |
+| Dev server | `pnpm dev` | `.env.local` |
+| Typecheck | `pnpm typecheck` | — |
+| Lint | `pnpm lint` | — |
+| Unit tests (use while working) | `npx vitest run --exclude 'tests/db/**'` | — |
+| DB tests | `npx vitest run tests/db` | `supabase start` + Docker |
+| Unit + DB | `pnpm test` | `supabase start` + Docker |
+| E2E | `pnpm test:e2e` | dev server + DB |
+| Coverage | `pnpm test:coverage` | — |
+| Build | `pnpm build` | — |
+| New customer | `pnpm provision-tenant` | `.env.local` |
 
-Every domain table carries `id_tenant` and is protected by RLS policies that
-filter by the `tenant_id` claim on the JWT. A query without an explicit tenant
-filter is still safe, because RLS adds it — but **RLS is the only thing doing
-it**. The service-role key bypasses RLS entirely; it belongs to
-`lib/dal/supabase*.ts` (which gates it), `scripts/provision-tenant.mts`,
-`tests/db/` and `e2e/`. Never reach for it from a route, an action or a
-component.
+**Gate before saying "done"**:
+`pnpm typecheck && pnpm lint && npx vitest run --exclude 'tests/db/**' && pnpm build`.
+CI is the real gate: lint → local Supabase → build → typecheck → unit + DB
+tests with coverage → Playwright. Skipping DB tests locally is fine; CI won't.
 
-RLS filters by tenant and **nothing else**. There is no per-user policy: any
-user with a Supabase session sees the whole tenant. Per-user and per-module
-restriction is an application concern, enforced by the guards below.
+Without Docker, DB suites fail with `ECONNREFUSED 127.0.0.1:54321` — report it
+as **not verified**, never as passing. DB suites skip silently when
+`.env.local` is missing, which reads like passing: check the test count.
 
-# Layers
+# Architecture (non-negotiable)
 
 ```
-app/**           routes, pages, Server Actions   — no SQL
-components/**    UI                              — no SQL
-lib/dal/**       the ONLY place that queries Supabase
-supabase/        migrations + stored procedures  — business invariants live here
+app/**         routes, pages, Server Actions   — no SQL
+components/**  UI                               — no SQL
+lib/dal/**     the ONLY place that queries Supabase
+supabase/      migrations + stored procedures  — business invariants live here
 ```
 
-Writes go through stored procedures (`sp_*`) called from `lib/dal`, not through
-table writes from the app. The procedures own atomicity and the invariants; a
-multi-table operation assembled in TypeScript is a bug waiting for a crash
-between two awaits.
+- **Tenant isolation is the one invariant.** Every domain table has
+  `id_tenant`; RLS filters by the JWT `tenant_id` claim. RLS is the only thing
+  doing it. The service-role key bypasses RLS: only `lib/dal/supabase*.ts`,
+  `scripts/provision-tenant.mts`, `tests/db/`, `e2e/` may touch it.
+- **RLS filters by tenant and nothing else.** No per-user policy: any session
+  sees the whole tenant. Per-user/per-module limits are enforced by the guards.
+- **Writes go through `sp_*` stored procedures** called from `lib/dal`. A
+  multi-table write assembled in TypeScript breaks between two awaits.
+- Allowed SQL outside `lib/dal`: auth (`app/(auth)/login/actions.ts`,
+  `logoutAction`) and `proxy.ts`. **Known debt, do not add to it** (move when
+  you're in the file): `app/api/ventas/lookup-item/route.ts`,
+  `app/(app)/inventario/productos/[id]/ficha/page.tsx`,
+  `components/theming/persistThemePreference.ts`.
 
-**Legitimate exceptions to "no SQL outside `lib/dal`"**: authentication
-(`app/(auth)/login/actions.ts`, `logoutAction`) and the session middleware
-(`proxy.ts`). Auth is not domain data and middleware cannot use the server
-client.
+## Every mutation is a Server Action with three gates
 
-**Known violations — these are debt, not precedent.** Do not add to them, and
-prefer moving one into `lib/dal` if you are already working in the file:
+It is a public POST endpoint; TS types are erased at runtime. In order:
 
-- `app/api/ventas/lookup-item/route.ts` queries `detalle_reserva` and `producto`
-- `app/(app)/inventario/productos/[id]/ficha/page.tsx` queries `costo_producto`
-- `components/theming/persistThemePreference.ts` queries `configuracion`
+1. **Authorize**: `requireModuleRole(session, '<modulo>', '<accion>')`. The
+   route `layout.tsx` gates `ver` only and is not a boundary for actions.
+2. **Validate**: zod schema from `lib/validation/**`, `safeParse`,
+   `strictObject`. Build it from the domain catalogue (e.g. `permisosSchema`
+   from `CATALOGO_PERMISOS`) so there are never two lists.
+3. **Call the DAL** with `parsed.data`, never the raw input.
 
-# Every mutation is a Server Action with three gates
+Return `{ ok: true } | { ok: false, reason }`; `reason` is a kebab-case slug,
+never prose or a Postgres error.
 
-A Server Action is a public POST endpoint. The TypeScript type of its argument
-is erased at build time, so it proves nothing at runtime. In this order:
+## Errors the operator reads
 
-1. **Authorize.** `requireModuleRole(session, '<modulo>', '<accion>')`. Each
-   module's `layout.tsx` also gates `ver` for the whole route group, but a
-   layout is not a boundary for an action — the action is reachable without it.
-2. **Validate.** A zod schema from `lib/validation/**`, with `safeParse`. The
-   schema is built from the domain catalogue where one exists (see
-   `permisosSchema`, assembled from `CATALOGO_PERMISOS`) so there are never two
-   lists to drift apart. Use `strictObject`: unknown keys are rejected.
-3. **Call the DAL.** Pass `parsed.data`, never the raw input.
+`lib/errores/mensajes.ts` is the only place a user-facing message lives; UI
+calls `mensajeDeError(reason)`, never shows `res.reason`. Spanish, voseo, final
+full stop, no jargon (no "SKU", "tenant", "payload", table names): the reader
+sells clothes. A test enforces it. A new slug raised by an `sp_*` goes in the
+catalogue and in the inventory list of `lib/errores/mensajes.test.ts`.
 
-Return `{ ok: true } | { ok: false, reason: string }`. `reason` is a stable
-kebab-case slug, never prose and never a Postgres error.
+## Design for N, not for 1
 
-# Errors the operator reads
+For any screen over a list: queries per element? what at 200? who controls N?
+If N comes from URL or input, cap and dedupe. An `await` in a `for` means a
+batch domain function is missing: add it to `lib/dal`. Don't borrow another
+use case's heavy loader just to satisfy "no SQL outside the DAL".
 
-`lib/errores/mensajes.ts` is the **only** place a user-facing error message
-lives. The UI calls `mensajeDeError(reason)`; it never shows `res.reason` raw.
+# Modules: three lists that do not match
 
-No jargon: the person reading it sells clothes. No "SKU", "tenant", "payload",
-no table or constraint names. Spanish, voseo, full stop at the end. A test
-enforces all of that, plus that no slug can escape untranslated.
-
-When a stored procedure starts raising a new slug, add it to the catalogue and
-to the inventory list in `lib/errores/mensajes.test.ts`.
-
-# Don't call it done if you didn't run it
-
-Before reporting a change as finished, run the project's gates:
-
-```bash
-npx tsc --noEmit && npx eslint && npx vitest run --exclude 'tests/db/**' && pnpm build
-```
-
-If one of them fails, it is not finished.
-
-`tests/db/*` talks to a real Postgres and needs the local Supabase stack
-(`supabase start`, which needs Docker running). When it is down those suites
-fail with `ECONNREFUSED 127.0.0.1:54321` — report that as not verified, never as
-passing. Same for `pnpm test:e2e`, which needs a live server and a database.
-
-In whatever you write — commit message, PR body, summary — keep what you
-verified separate from what you assume. If you never printed the page, write
-"not verified"; do not write "check that it comes out clean". A report that
-claims a check which never ran is worse than no report, because the reader stops
-reviewing.
-
-# Design for N, not for 1
-
-Before writing a screen that processes a list, answer three questions: how many
-queries per element, what happens at two hundred, and who controls that number.
-If the number comes from a URL or from user input, it needs a cap and a dedupe.
-
-An `await` inside a `for` is the tell: there is almost always a missing domain
-function that resolves the whole batch in one query. Ad-hoc Supabase queries
-outside `lib/dal/**` are forbidden, but satisfying that rule by calling another
-use case's loader drags that use case's cost along with it — a loader that joins
-movements, supplier and category is the right choice for the detail page that
-displays them, and the wrong one for a label that prints a name. When nothing
-existing fits, add the domain function that is missing.
+Route groups, permission modules and DAL domains differ (e.g. `clientes/` and
+`cuotas/` are gated by permission `ventas`; `proveedores/` by `inventario`).
+Never guess a permission from a folder name — see `docs/modulos.md`.
 
 # Tests
 
-| Suite | Command | Needs |
-| --- | --- | --- |
-| Unit (colocated `*.test.ts`) | `npx vitest run --exclude 'tests/db/**'` | nothing |
-| Unit + database | `pnpm test` | local Supabase + Docker |
-| Database only (`tests/db/*`) | `npx vitest run tests/db` | local Supabase + Docker |
-| End to end (`e2e/`) | `pnpm test:e2e` | dev server + database |
+Colocated `*.test.ts`; describe behaviour, not implementation. Coverage
+(`vitest.config.mts`) measures a deliberate subset of pure logic; DAL, routes
+and domain components are covered by DB + Playwright. Adding a pure tested
+module to `include` is welcome; lowering a threshold to pass is not.
 
-`pnpm test` is plain `vitest run`: it includes the database suites, so without
-Docker it reports dozens of failures that say nothing about your change. The
-first row is the one to run while working.
+# How to work by size of change
 
-Coverage (`pnpm test:coverage`) measures a deliberate subset, listed in
-`vitest.config.mts` with the reasoning: pure logic that runs without a browser,
-a database or Next's request lifecycle. Routes, the DAL and domain components
-are covered by the database and Playwright suites instead; a unit-coverage
-number for them would measure how much got mocked. The thresholds sit just under
-the measured reality on purpose. Adding a pure, fully tested module to the
-`include` list is welcome; lowering a threshold to make a change pass is not.
-
-Tests describe behaviour, not implementation, and live next to the code they
-cover. The DB suites gate themselves on env vars, so a missing `.env.local`
-makes them skip — which reads exactly like passing. Check the count.
+- **Small** (one file, mechanical, obvious): do it, run the gate.
+- **Medium** (a feature slice, 2+ files, new logic): state the approach in 3-5
+  lines first, then implement, then gate. Update `docs/modulos.md` if module
+  ownership changes.
+- **Large / schema / new module**: spec first in `openspec/changes/<name>/`
+  (proposal → spec → design → tasks), get approval, then apply. Migrations
+  need a `-- DOWN:` comment header (see `supabase/README.md`).
+- **Unapproved ideas** go to `docs/propuestas/`, not to code.
+- If a rule changes, update its doc **in the same commit**.
 
 # Conventions
 
-- **Commits**: Conventional Commits, subject and body in Spanish. Never add
-  `Co-Authored-By` or any AI attribution.
-- **Comments and identifiers**: Spanish in the domain (`app/**`, `lib/dal/**`,
-  `lib/<dominio>/**`) because the domain vocabulary is Spanish — `venta`,
-  `consignacion`, `rendicion` have no honest English name here. English in
-  `components/ui/**`, which are generic primitives, and in this file.
-- **Comments explain why, not what.** The existing ones carry the reason a
-  decision was taken and what broke before it; match that density and keep it
-  when you touch the code around them.
-- **UI copy**: Spanish, voseo ("Elegí un proveedor", "Agregá al menos un ítem").
-- Write code that reads like the code around it.
+- **Commits**: Conventional Commits, subject and body in Spanish. Never any
+  `Co-Authored-By` or AI attribution (project rule; overrides provider defaults).
+- **Language**: Spanish for domain code/comments (`app/**`, `lib/dal/**`,
+  `lib/<dominio>/**`); English in `components/ui/**` and in this file. UI copy
+  Spanish, voseo ("Elegí un proveedor").
+- Comments explain *why* (what broke before), not what. Match surrounding code.
+- Reports (commit, PR, summary): separate what you verified from what you
+  assume. Never claim a check that did not run.
+
+# Before touching X, read Y
+
+| Touching | Read first |
+| --- | --- |
+| Any route, permission, layout | `docs/modulos.md`, `lib/types/administracion.ts` (`CATALOGO_PERMISOS`) |
+| A migration or `sp_*` | `supabase/README.md` (CI applies them: `supabase db push`) |
+| A mutation | the three gates above + `lib/dal/guard.ts` |
+| An error message | `lib/errores/mensajes.ts` |
+| Next.js API | `node_modules/next/dist/docs/` |
+| A multi-step feature | `openspec/config.yaml`, then `openspec/changes/` |
+| Revendedoras module | `ingenieria/`: local-only draft plans (gitignored), not a contract. Never read `ingenieria/utopia-intructivo/Seguridad/` (secrets). May be absent: ask the user |
+
+# Keeping this file useful
+
+A rule enters only if an agent made the same mistake twice, or if the decision
+would surprise a newcomer. Keep it ≤150 lines; detail goes to `docs/`. If a
+rule can be enforced by lint or a test, enforce it there instead of here.
