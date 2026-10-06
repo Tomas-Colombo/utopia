@@ -54,7 +54,6 @@ export function Button({
 }: ButtonProps) {
   return (
     <button
-      // eslint-disable-next-line react/button-has-type
       type={type}
       data-variant={variant}
       data-size={size}

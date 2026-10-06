@@ -1,6 +1,5 @@
 import Link from 'next/link'
 import { Topbar } from '@/components/shell/Topbar'
-import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { verifySession } from '@/lib/dal/session'
 import { listReservas } from '@/lib/dal/reservas/reserva'

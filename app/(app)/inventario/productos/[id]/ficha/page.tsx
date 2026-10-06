@@ -7,7 +7,6 @@ import {
   getProveedorHabitualDeProducto,
   listItemsByProducto,
 } from '@/lib/dal/inventario/item'
-import { createServerClient } from '@/lib/dal/supabase'
 import { FichaProductoView } from './FichaProductoView'
 
 /**
@@ -24,12 +23,11 @@ export default async function FichaProductoPage(props: {
   const producto = await getProducto(id)
   if (!producto) notFound()
 
-  const [categoria, categorias, proveedor, items, costo] = await Promise.all([
+  const [categoria, categorias, proveedor, items] = await Promise.all([
     getCategoria(producto.id_categoria),
     listCategoriasActivas(),
     getProveedorHabitualDeProducto(id),
     listItemsByProducto(id),
-    fetchCostoVigente(id),
   ])
 
   // stock_disponible / stock_total: los derivamos de los items para no
@@ -54,8 +52,6 @@ export default async function FichaProductoPage(props: {
             categorias={categorias}
             proveedor={proveedor}
             items={items}
-            costoVigente={costo?.costo ?? null}
-            monedaVigente={costo?.moneda ?? null}
             stockDisponible={stockDisponible}
             stockTotal={stockTotal}
           />
@@ -63,19 +59,4 @@ export default async function FichaProductoPage(props: {
       </main>
     </>
   )
-}
-
-async function fetchCostoVigente(
-  idProducto: string,
-): Promise<{ costo: number; moneda: string } | null> {
-  const supabase = await createServerClient()
-  const { data, error } = await supabase
-    .from('costo_producto')
-    .select('costo, moneda')
-    .eq('id_producto', idProducto)
-    .is('vigente_hasta', null)
-    .maybeSingle()
-  if (error) throw new Error(`fetchCostoVigente: ${error.message}`)
-  if (!data) return null
-  return { costo: Number(data.costo), moneda: String(data.moneda) }
 }
