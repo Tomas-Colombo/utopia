@@ -7,7 +7,7 @@
 
 ## Review Workload Forecast
 
-- Líneas estimadas totales (13 slices): **~3,700–4,100**
+- Líneas estimadas totales (14 slices): **~3,700–4,100**
 - Riesgo de presupuesto 400 líneas: **Medio-Alto**
 - PRs encadenados: **Sí** — stacked to main
 - Decisión antes de apply: **No** (decisiones cerradas en la propuesta §4)
@@ -30,12 +30,13 @@ Decision needed before apply: No
 | 5 | Tablas reversas + sp_anular (00070a) | PR 5 | ~200 | Medio |
 | 6 | sp_devolucion + rendición (00070b) | PR 6 | ~200 | Medio |
 | 7 | DAL + Actions + UI ventas | PR 7 | ~350 | Alto |
-| 8 | Lectura única (00071) | PR 8 | ~380 | Alto |
-| 9 | DAL + helpers puros | PR 9 | ~350 | Medio |
-| 10 | page + form + error + loading | PR 10 | ~300 | Medio |
-| 11 | Bloques 1–5 | PR 11 | ~350 | Medio |
-| 12 | Bloques 6–9 + gráfico | PR 12 | ~350 | Medio |
-| 13 | Limpieza + docs | PR 13 | ~200 | Bajo |
+| 8 | Lectura única (resultados/flujo) (00071a) | PR 8 | ~300 | Alto |
+| 9 | Lectura única (resto) (00071b) | PR 9 | ~300 | Alto |
+| 10 | DAL + helpers puros | PR 10 | ~350 | Medio |
+| 11 | page + form + error + loading | PR 11 | ~300 | Medio |
+| 12 | Bloques 1–5 | PR 12 | ~350 | Medio |
+| 13 | Bloques 6–9 + gráfico | PR 13 | ~350 | Medio |
+| 14 | Limpieza + docs | PR 14 | ~200 | Bajo |
 
 ---
 
@@ -219,7 +220,7 @@ Decision needed before apply: No
 
 - [ ] `tests/db/reversas.test.ts`:
   - Devolución total pagada → reintegro por el monto de la línea.
-  - Devolución en venta con varias líneas → reintegro proporcional.
+  - Devolución en venta con varias líneas → reintegro = max(0, Σ pagos − (venta.total − Σ devoluciones previas − monto de esta línea) − Σ reintegros previos).
   - Devolución bloqueada (cuotas abiertas / rendida / anulada / ya devuelta).
   - Consignación devuelta → NO entra en `sp_generar_rendicion`.
 
@@ -255,25 +256,46 @@ Decision needed before apply: No
 
 ---
 
-## Slice 8 — Capa de lectura única (00071) (~380 líneas)
+## Slice 8 — Capa de lectura única (resultados/flujo) (00071) (~300 líneas)
 
-**Goal**: `v_linea_venta`, `rf_finanzas_*`, `fn_contexto_periodo`.
-**Closes**: REQ-DB-10 a REQ-DB-17.
+**Goal**: `v_linea_venta`, `rf_finanzas_resultados`, `rf_finanzas_flujo`.
+**Closes**: REQ-DB-10, REQ-DB-11, REQ-DB-12.
 **Depends on**: Slice 6.
 
 **ESCRIBIR TESTS ANTES** (TDD estricto):
 
 - [ ] `tests/db/finanzas.test.ts`:
-  - Escenario A completo con números exactos de §7.
-  - Escenario B completo.
-  - Todos los casos de borde de §7 (7 casos numerados).
-  - `rf_finanzas_serie_mensual`: un solo escaneo agrupado (verificar con `EXPLAIN`).
-  - `rf_finanzas_ranking_productos`: `orden-invalido` con valor fuera de lista blanca.
+  - Escenario A completo con números exactos de §7 para resultados y flujo.
+  - Escenario B completo para resultados y flujo.
+  - Casos de borde aplicables a resultados y flujo.
 
-- [ ] `supabase/migrations/00071_finanzas_lectura.sql`:
+- [ ] `supabase/migrations/00071_finanzas_lectura_1.sql`:
   - `CREATE VIEW v_linea_venta` (REQ-DB-10).
   - `rf_finanzas_resultados` (REQ-DB-11).
   - `rf_finanzas_flujo` (REQ-DB-12).
+  - `GRANT EXECUTE` a `authenticated` en cada función.
+  - `-- DOWN:`.
+  - `supabase db reset` + escenario dorado pasa.
+
+- [ ] Gate completo.
+
+---
+
+## Slice 9 — Capa de lectura única (resto) (00072) (~300 líneas)
+
+**Goal**: `rf_finanzas_serie_mensual`, `rf_finanzas_posicion`, `rf_finanzas_ranking_productos`, `rf_finanzas_gastos_presupuesto`, `fn_contexto_periodo`.
+**Closes**: REQ-DB-13 a REQ-DB-17.
+**Depends on**: Slice 8.
+
+**ESCRIBIR TESTS ANTES** (TDD estricto):
+
+- [ ] `tests/db/finanzas.test.ts`:
+  - Escenario A y B para posición.
+  - Todos los casos de borde restantes de §7.
+  - `rf_finanzas_serie_mensual`: un solo escaneo agrupado (verificar con `EXPLAIN`).
+  - `rf_finanzas_ranking_productos`: `orden-invalido` con valor fuera de lista blanca.
+
+- [ ] `supabase/migrations/00072_finanzas_lectura_2.sql`:
   - `rf_finanzas_serie_mensual` (REQ-DB-13).
   - `rf_finanzas_posicion` (REQ-DB-14).
   - `rf_finanzas_ranking_productos` (REQ-DB-15).
@@ -287,11 +309,11 @@ Decision needed before apply: No
 
 ---
 
-## Slice 9 — DAL, validación y helpers puros (~350 líneas)
+## Slice 10 — DAL, validación y helpers puros (~350 líneas)
 
 **Goal**: `finanzas.ts`, `reportes.ts` (validación), `moneda.ts`, `bloques.ts`, `periodo.ts`.
 **Closes**: REQ-APP-01 a REQ-APP-05.
-**Depends on**: Slice 8 (tipos de retorno vienen de las RF).
+**Depends on**: Slice 9 (tipos de retorno vienen de las RF).
 
 - [ ] `lib/utils/moneda.ts` + `moneda.test.ts`.
 - [ ] Agregar `lib/utils/moneda.ts` al `include` de cobertura en `vitest.config.mts`.
@@ -306,11 +328,11 @@ Decision needed before apply: No
 
 ---
 
-## Slice 10 — page + form + error + loading (~300 líneas)
+## Slice 11 — page + form + error + loading (~300 líneas)
 
 **Goal**: Estructura de la página, formulario de período, error.tsx, loading.tsx.
 **Closes**: REQ-UI-01, REQ-UI-02, REQ-UI-03, REQ-UI-04.
-**Depends on**: Slice 9.
+**Depends on**: Slice 10.
 
 **Leer antes de escribir**:
 - [ ] `node_modules/next/dist/docs/01-app/03-api-reference/03-file-conventions/error.md`
@@ -328,11 +350,11 @@ Decision needed before apply: No
 
 ---
 
-## Slice 11 — Bloques 1–5 (~350 líneas)
+## Slice 12 — Bloques 1–5 (~350 líneas)
 
 **Goal**: BloqueResumen, BloqueGanancia, BloqueMovimientoPlata, GraficoTendencia, BloqueCobrar.
 **Closes**: REQ-UI-05, REQ-UI-06 (bloques 1–5), REQ-UI-07.
-**Depends on**: Slice 10.
+**Depends on**: Slice 11.
 
 - [ ] `components/reportes/VariacionBadge.tsx`.
 - [ ] `components/reportes/BloqueError.tsx`.
@@ -347,11 +369,11 @@ Decision needed before apply: No
 
 ---
 
-## Slice 12 — Bloques 6–9 + exportación CSV (~350 líneas)
+## Slice 13 — Bloques 6–9 + exportación CSV (~350 líneas)
 
 **Goal**: BloqueMercaderia, BloqueProveedores, BloqueGastos, BloqueRanking, exportación CSV.
 **Closes**: REQ-UI-06 (bloques 6–9), REQ-UI-08, REQ-UI-09.
-**Depends on**: Slice 11.
+**Depends on**: Slice 12.
 
 - [ ] `components/reportes/BloqueMercaderia.tsx`.
 - [ ] `components/reportes/BloqueProveedores.tsx`.
@@ -365,11 +387,11 @@ Decision needed before apply: No
 
 ---
 
-## Slice 13 — Limpieza y cierre (~200 líneas)
+## Slice 14 — Limpieza y cierre (~200 líneas)
 
 **Goal**: Eliminar RPC viejas, limpiar DAL y tipos, actualizar docs.
 **Closes**: Fase 6 completa.
-**Depends on**: Slice 12.
+**Depends on**: Slice 13.
 
 - [ ] `rg "rf_reporte_financiero\|rf_reporte_caja\|rf_incobrables_periodo\|rf_rotacion_por_producto\|rf_dashboard_kpis" lib/ app/ supabase/` → verificar cero consumidores antes de borrar.
 - [ ] Migración `0007x_limpieza_reportes_viejos.sql` con `DROP FUNCTION` y `-- DOWN:`.
