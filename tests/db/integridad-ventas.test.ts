@@ -168,3 +168,67 @@ describe.skipIf(!hasTestDb)('Ganancia y Costo Consistentes (00067)', () => {
     expect(Number(detalle?.monto_ganancia)).toBe(f.precio - f.costo)
   })
 })
+
+describe.skipIf(!hasTestDb)('Incobrables sin doble conteo (00069)', () => {
+  it('marcar cuota incobrable NO genera gasto_negocio', async () => {
+    const f = await ventaFixture('incobrable-sin-gasto')
+    const { venderFinanciado, cuotasDe } = await import('./_fixtures-ventas')
+    
+    const { data: idVenta } = await venderFinanciado(f, { cuotas: 3, primerVencimiento: '2026-01-01' })
+    const cuotas = await cuotasDe(f, idVenta as string)
+    
+    const { error } = await f.authenticated.rpc('sp_marcar_cuota_incobrable', {
+      p_id_cuota: cuotas[0].id_cuota_financiada,
+      p_motivo: 'test'
+    })
+    
+    expect(error).toBeNull()
+    
+    const { count } = await f.serviceRole.from('gasto_negocio').select('*', { count: 'exact', head: true }).eq('id_tenant', f.tenantId)
+    expect(count).toBe(0)
+  })
+
+  it('cobrar cuota de venta anulada levanta error venta-anulada', async () => {
+    const f = await ventaFixture('cobrar-cuota-anulada')
+    const { venderFinanciado, cuotasDe } = await import('./_fixtures-ventas')
+    
+    const { data: idVenta } = await venderFinanciado(f, { cuotas: 3, primerVencimiento: '2026-01-01' })
+    const cuotas = await cuotasDe(f, idVenta as string)
+    
+    // Forzamos el estado de la venta a 'anulada' saltando el trigger (service role direct update)
+    // Wait, tr_venta_inmutable protects it. We will use sp_anular_venta once implemented, 
+    // but for now, wait, we don't have sp_anular_venta yet! Slice 5 implements anulación.
+    // However, we can bypass the trigger by temporarily disabling it OR by creating a dummy venta
+    // Oh, the trigger tr_venta_inmutable allows state change! "solo permite editar columnas secundarias como estado_venta"
+    // Wait, tr_venta_inmutable DOES allow changing estado_venta.
+    await f.serviceRole.from('venta').update({ estado_venta: 'anulada' }).eq('id_venta', idVenta)
+    
+    const { error } = await f.authenticated.rpc('sp_cobrar_cuota', {
+      p_id_cuota: cuotas[0].id_cuota_financiada,
+      p_monto: cuotas[0].monto,
+      p_medio: 'efectivo',
+      p_id_cuenta_destino: f.idCuenta
+    })
+    
+    expect(error).not.toBeNull()
+    expect(error?.message).toMatch(/venta-anulada/)
+  })
+
+  it('marcar incobrable de venta anulada levanta error venta-anulada', async () => {
+    const f = await ventaFixture('incobrable-anulada')
+    const { venderFinanciado, cuotasDe } = await import('./_fixtures-ventas')
+    
+    const { data: idVenta } = await venderFinanciado(f, { cuotas: 3, primerVencimiento: '2026-01-01' })
+    const cuotas = await cuotasDe(f, idVenta as string)
+    
+    await f.serviceRole.from('venta').update({ estado_venta: 'anulada' }).eq('id_venta', idVenta)
+    
+    const { error } = await f.authenticated.rpc('sp_marcar_cuota_incobrable', {
+      p_id_cuota: cuotas[0].id_cuota_financiada,
+      p_motivo: 'test'
+    })
+    
+    expect(error).not.toBeNull()
+    expect(error?.message).toMatch(/venta-anulada/)
+  })
+})

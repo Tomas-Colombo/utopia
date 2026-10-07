@@ -43,7 +43,7 @@ const SLUGS_DE_LA_APP = [
   'proveedor-con-items', 'quedan-pendientes', 'regla-not-found',
   'rendicion-not-found', 'reserva-no-activa', 'reserva-not-found', 'rol-en-uso',
   'rol-not-found', 'sin-cuenta-predeterminada', 'sin-lineas-pendientes',
-  'talle-no-valido', 'usuario-not-found', 'vencimiento-invalido', 'venta-not-found',
+  'talle-no-valido', 'usuario-not-found', 'vencimiento-invalido', 'venta-anulada', 'venta-not-found',
   'venta-ya-rendida',
   // Rutas de API
   'elegir-talle', 'item-no-disponible', 'item-no-es-consignacion', 'proveedor-vacio',
