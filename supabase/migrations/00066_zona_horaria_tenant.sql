@@ -484,7 +484,7 @@ create or replace function rf_reporte_caja(
    and pv.created_at >= p_desde and pv.created_at <= p_hasta;
 $$;
 
--- DOWN
+/* -- DOWN
 
 create or replace function sp_calcular_costo_cobro(
   p_id_cuenta_destino uuid,
@@ -937,3 +937,4 @@ grant execute on function rf_reporte_caja(timestamptz, timestamptz) to authentic
 drop function if exists fn_rango_tenant(date, date);
 drop function if exists fn_hoy_tenant();
 alter table tenant drop column if exists zona_horaria;
+*/
