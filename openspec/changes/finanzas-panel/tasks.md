@@ -39,6 +39,13 @@ Decision needed before apply: No
 
 ---
 
+## Fase 0 — Gate humano
+
+- [ ] Aprobar especificación completa (las decisiones DC-1 a DC-17 están cerradas).
+- [ ] NO AVANZAR a la Fase 1 / Slice 1 hasta recibir aprobación ESCRITA del usuario en el chat.
+
+---
+
 ## Slice 1 — Zona horaria por tenant (~120 líneas)
 
 **Goal**: `fn_hoy_tenant()`, `fn_rango_tenant()`, `tenant.zona_horaria`.
@@ -61,7 +68,8 @@ Decision needed before apply: No
   - `ALTER TABLE tenant ADD COLUMN zona_horaria...`
   - `fn_hoy_tenant()` definida.
   - `fn_rango_tenant()` definida.
-  - Reemplazar `current_date` → `fn_hoy_tenant()` en `sp_registrar_venta` y `sp_calcular_costo_cobro`.
+  - Reemplazar `current_date` → `fn_hoy_tenant()` en `sp_registrar_venta`, `sp_calcular_costo_cobro` y la vista `a_acreditar`.
+  - Verificar si `seed.sql` y `scripts/provision-tenant.mts` necesitan ajustes.
   - `-- DOWN:` y bloque de rollback al final.
   - `supabase db reset` sin errores.
 
@@ -122,7 +130,7 @@ Decision needed before apply: No
 
 ### 3.2 Leer antes de escribir
 
-- [ ] Leer `00065_borrar_tenant_con_ingresos_confirmados.sql` para entender el mecanismo de bypass (variable de sesión `utopia.bypass_immutable`).
+- [ ] Leer `00065_borrar_tenant_con_ingresos_confirmados.sql` para entender el mecanismo de bypass (`not exists (select 1 from tenant where id_tenant = old.id_tenant)`).
 - [ ] Leer `00064` líneas 393–412 para entender si `sp_registrar_venta` hace `UPDATE total` post-insert.
 
 ### 3.3 Migración
@@ -314,6 +322,7 @@ Decision needed before apply: No
 - [ ] `app/(app)/reportes/loading.tsx` (skeleton con misma estructura).
 - [ ] `app/(app)/reportes/ReportesPeriodoForm.tsx` (REQ-UI-04).
 - [ ] `app/(app)/reportes/page.tsx` (orquestación sin cálculos).
+- [ ] Tests e2e básicos de la página.
 - [ ] Verificar en preview: claro, oscuro, 375 px.
 - [ ] Gate completo.
 
@@ -332,6 +341,7 @@ Decision needed before apply: No
 - [ ] `components/reportes/BloqueMovimientoPlata.tsx`.
 - [ ] `components/reportes/GraficoTendencia.tsx` (SVG, accesible, REQ-UI-07).
 - [ ] `components/reportes/BloqueCobrar.tsx`.
+- [ ] Tests de render (RTL) para cada componente/bloque.
 - [ ] Verificar en preview: claro, oscuro, 375 px.
 - [ ] Gate completo.
 
@@ -348,6 +358,7 @@ Decision needed before apply: No
 - [ ] `components/reportes/BloqueGastos.tsx`.
 - [ ] `components/reportes/BloqueRanking.tsx` (con selector de orden).
 - [ ] Exportación CSV en BloqueGanancia y BloqueRanking.
+- [ ] Tests de render (RTL) para los nuevos bloques.
 - [ ] Verificar en preview: claro, oscuro, 375 px.
 - [ ] Verificar consola y red sin errores.
 - [ ] Gate completo.

@@ -100,7 +100,7 @@ si `venta.estado_venta = 'anulada'`.
 **MUST**: Existir la tabla `reintegro_cliente` con:
 - `id_reintegro uuid PK`, `id_tenant`, FK a tenant, RLS `id_tenant = auth_tenant_id()`.
 - `id_venta`, `id_devolucion uuid NULL`, `id_pago_venta uuid NULL`.
-- `id_cuenta_destino`, `medio media_pago` (tipo enum existente), `monto numeric(14,2) CHECK (monto > 0)`.
+- `id_cuenta_destino`, `medio medio_pago` (tipo enum existente), `monto numeric(14,2) CHECK (monto > 0)`.
 - `fecha timestamptz DEFAULT now()`, `origen text CHECK (origen IN ('anulacion', 'devolucion'))`.
 - `motivo text`, `id_usuario`.
 - Solo policies `SELECT` e `INSERT`.
@@ -110,12 +110,15 @@ si `venta.estado_venta = 'anulada'`.
 
 ## REQ-DB-07 — sp_anular_venta con reintegros
 
-**MUST**: `sp_anular_venta` rechazar con `venta-con-incobrables` si la venta
-tiene cuotas en estado `incobrable`.
+**MUST**: `sp_anular_venta` hacer DROP de la firma vieja antes de crear la nueva para evitar ambigüedades.
 
-**MUST**: `sp_anular_venta` crear un `reintegro_cliente` espejo por cada
-`pago_venta` de la venta (mismo `id_cuenta_destino`/`medio`, `monto` = lo
-cobrado menos lo ya reintegrado).
+**MUST**: `sp_anular_venta` mantener el comportamiento actual: idempotencia, bloqueo con `venta-ya-rendida`, ítems pasan a `disponible`, y cuotas abiertas pasan a `anulada`.
+
+**MUST**: `sp_anular_venta` rechazar con `venta-con-incobrables` si la venta tiene cuotas en estado `incobrable`.
+
+**MUST**: `sp_anular_venta` crear un `reintegro_cliente` espejo por cada `pago_venta` de la venta (mismo `id_cuenta_destino`/`medio`, `monto` = lo cobrado menos lo ya reintegrado).
+
+**MUST**: `sp_anular_venta` recibir el parámetro `p_ip inet` para auditoría, y auditar con el total reintegrado.
 
 **MUST**: `sp_anular_venta` retornar `{ total_reintegrado }` en su JSONB de respuesta.
 
@@ -123,13 +126,17 @@ cobrado menos lo ya reintegrado).
 
 ## REQ-DB-08 — sp_registrar_devolucion_cliente reescrito
 
-**MUST**: `sp_registrar_devolucion_cliente` rechazar con slugs:
-`venta-anulada`, `linea-ya-devuelta`, `linea-ya-rendida`, `devolucion-venta-con-cuotas-abiertas`, `reintegro-requiere-cuenta`.
+**MUST**: `sp_registrar_devolucion_cliente` hacer DROP de la firma vieja antes de crear la nueva.
 
-**MUST**: Si hay reembolso (`reembolsable > 0`), exigir `id_cuenta_reintegro` y
-`medio_reintegro` y crear el `reintegro_cliente`.
+**MUST**: `sp_registrar_devolucion_cliente` rechazar con slugs:
+`venta-anulada`, `linea-ya-devuelta`, `linea-ya-rendida`, `devolucion-venta-con-cuotas-abiertas`, `reintegro-requiere-cuenta`, y si el ítem no está `vendido`.
+
+**MUST**: Si hay reembolso (`reembolsable > 0`, calculado con la fórmula de Fase 2.3), exigir `id_cuenta_reintegro` y
+`medio_reintegro` y crear el `reintegro_cliente`. La fórmula es: `reembolsable = max(0, Σ pagos - (venta.total - Σ devoluciones_previas - monto_esta_linea) - Σ reintegros_previos)`.
 
 **MUST**: Insertar `devolucion_venta` y transicionar el ítem a `devuelto_cliente`.
+
+**MUST**: Recibir `p_ip inet` para auditoría.
 
 **MUST**: Retornar `{ reintegro }` en su JSONB.
 
@@ -161,27 +168,39 @@ usen también `v_perfil_proveedor` y la capa de lectura de Fase 3.
 ## REQ-DB-11 — rf_finanzas_resultados (§6.1)
 
 **MUST**: Existir `rf_finanzas_resultados(p_desde date, p_hasta date)` que
-devuelva UNA fila con los campos exactos de §6.1:
-`ventas_brutas`, `anulaciones`, `devoluciones`, `ventas_netas`,
-`costo_mercaderia`, `ganancia_sobre_ventas`, `costo_cobro`, `incobrables`,
-`bajas_inventario`, `ganancia_despues_de_costos`, `gastos`, `ganancia_final`,
-`cantidad_ventas`, `ticket_promedio`.
+devuelva UNA fila con los campos exactos de §6.1, aplicando estas fórmulas:
+- `ventas_brutas`: Σ `venta.total` de ventas con `fecha` en el período (incluye las que luego se anularon).
+- `anulaciones`: Σ `venta.total` de ventas con `fecha_anulacion` en el período.
+- `devoluciones`: Σ `devolucion_venta.monto` con `fecha` en el período.
+- `ventas_netas`: `ventas_brutas - anulaciones - devoluciones`.
+- `costo_mercaderia`: Σ `costo` de líneas de ventas del período − Σ `costo` de líneas de ventas anuladas en el período − Σ `costo_recuperado` de devoluciones del período.
+- `ganancia_sobre_ventas`: `ventas_netas - costo_mercaderia`.
+- `costo_cobro`: Σ `pago_venta.costo_cobro` con `created_at` en el período, sea cual sea el estado de la venta.
+- `incobrables`: Σ (`monto - monto_pagado`) de `cuota_financiada` en estado `incobrable` con `fecha_incobrable` en el período.
+- `bajas_inventario`: Σ `costo_ingreso` de ítems que pasaron a `baja` en el período.
+- `ganancia_despues_de_costos`: `ganancia_sobre_ventas - costo_cobro - incobrables - bajas_inventario`.
+- `gastos`: Σ `gasto_negocio.monto` con `fecha` en el período. (SIEMPRE se devuelve, el DAL decide si exponerlo).
+- `ganancia_final`: `ganancia_despues_de_costos - gastos`.
+- `cantidad_ventas`: count de ventas `registrada` del período.
+- `ticket_promedio`: `ventas_netas / cantidad` (null si 0).
 
 **MUST**: Cada campo seguir la definición EXACTA de §6.1 (fuente de verdad del contrato).
-
-**MUST NOT**: Calcularse `gastos` si el módulo no es aplicable; la función SHOULD
-devolver NULL para ese campo y el DAL lo omite si el bloque está deshabilitado.
 
 ---
 
 ## REQ-DB-12 — rf_finanzas_flujo (§6.2)
 
 **MUST**: Existir `rf_finanzas_flujo(p_desde date, p_hasta date)` con los campos
-exactos de §6.2: `cobrado`, `devuelto_clientes`, `costo_cobro`, `neto_cobros`,
-`compras_mercaderia`, `pagos_proveedores`, `gastos`, `flujo_neto`, `por_acreditar`.
-
-**MUST**: `compras_mercaderia` incluir solo ingresos de tipo `compra`, confirmados,
-no cancelados (DC-11).
+exactos de §6.2, aplicando estas fórmulas:
+- `cobrado`: Σ `pago_venta.monto` con `created_at` en el período (incluye pagos de ventas luego anuladas y cobros de cuotas).
+- `devuelto_clientes`: Σ `reintegro_cliente.monto` con `fecha` en el período.
+- `costo_cobro`: igual que 6.1.
+- `neto_cobros`: `cobrado - devuelto_clientes - costo_cobro`.
+- `compras_mercaderia`: Σ `cantidad × costo_unitario` de `ingreso_mercaderia_detalle` de ingresos `compra`, `confirmado`, no cancelados, con `fecha` en el período.
+- `pagos_proveedores`: Σ `rendicion_proveedor.monto_total` con `estado='pagada'` y `fecha_pago` en el período.
+- `gastos`: igual que 6.1.
+- `flujo_neto`: `neto_cobros - compras_mercaderia - pagos_proveedores - gastos`.
+- `por_acreditar`: Σ `neto_acreditado` de pagos con `fecha_acreditacion > fn_hoy_tenant()`, con desglose por `cuenta_destino.tipo`.
 
 **MUST NOT**: Existir saldos por cuenta: solo desglose de cobrado.
 
@@ -202,9 +221,14 @@ una query por mes.
 
 ## REQ-DB-14 — rf_finanzas_posicion (§6.3)
 
-**MUST**: Existir `rf_finanzas_posicion()` con los campos exactos de §6.3:
-`capital_propio`, `mercaderia_terceros`, `devueltos_clientes`, `valor_venta_potencial`,
-`productos_sin_precio`, y los campos de por cobrar y deuda a proveedores.
+**MUST**: Existir `rf_finanzas_posicion()` con los campos exactos de §6.3, aplicando estas fórmulas:
+- `capital_propio`: Σ `costo_ingreso` de ítems `disponible`/`reservado` con `tipo_ingreso='compra'`.
+- `mercaderia_terceros`: Σ `costo_ingreso` de ítems `disponible`/`reservado` con `tipo_ingreso='consignacion'`.
+- `devueltos_clientes`: Σ `costo_ingreso` de ítems en `devuelto_cliente`.
+- `valor_venta_potencial`: Σ `producto.precio_venta` de los ítems de capital propio y de terceros en stock.
+- `productos_sin_precio`: cantidad de ítems cuyo producto tiene `precio_venta is null` (excluidos de la suma potencial).
+- `por_cobrar`: cálculo de `rf_cuentas_por_cobrar` (cuotas `pendiente`/`parcial`; saldo `monto - monto_pagado`).
+- `deuda_proveedores`: `a_rendir` (Σ `monto_proveedor` de líneas con `id_rendicion is null`, `excluida_rendicion=false`, `monto_proveedor>0`, venta `registrada`, sin devolución) + `rendiciones_sin_pagar` (Σ `monto_total` en estado `pendiente`).
 
 ---
 
@@ -246,8 +270,18 @@ la zona del tenant.
 
 ## REQ-DB-18 — Escenario dorado (§7)
 
-**MUST**: `tests/db/finanzas.test.ts` verificar el escenario A y B de §7 con
+**MUST**: `tests/db/finanzas.test.ts` verificar el escenario A y B de §7 (definido en `specs/golden.md`) con
 los números calculados a mano. Si un número difiere, es un defecto en la
 implementación o en el documento; MUST NOT ajustarse el test para que pase.
 
-**MUST**: Cubrir todos los casos de borde del §7 (cada uno como test separado).
+**MUST**: Cubrir todos los casos de borde del §7 (cada uno como test separado documentado en `specs/golden.md`).
+
+---
+
+## REQ-DB-19 — Reglas transversales (§6.4)
+
+**MUST**: Ninguna cifra se calcula en TypeScript; la UI solo formatea y compara.
+
+**MUST**: Una cifra que aparece en dos bloques sale del mismo campo de la misma RPC.
+
+**MUST**: Si el divisor es 0 o no hay período anterior, no se muestra porcentaje ("sin datos").

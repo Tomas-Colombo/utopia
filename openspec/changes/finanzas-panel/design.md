@@ -1,7 +1,7 @@
 # Design: Remodelación del módulo Finanzas / Reportes
 
 **Change**: `finanzas-panel`
-**Status**: Design (decisiones CERRADAS — ver propuesta §4 DC-1 a DC-17)
+**Status**: Pendiente de aprobación del usuario (decisiones CERRADAS — ver propuesta §4 DC-1 a DC-17)
 **Mode**: openspec
 **Covers**: Fases 1–6 de la propuesta fuente
 
@@ -26,7 +26,40 @@ cierra todas.
 
 ---
 
-## 2. Layout de repositorio afectado
+## 2. Prohibiciones y arquitectura
+
+Esta sección define las reglas innegociables del proyecto y de esta implementación (de §1 y §3 de la propuesta). Violar cualquiera es motivo de rechazo del PR.
+
+### 2.1. Arquitectura común
+
+1. **PostgreSQL es el motor de consistencia transaccional.** Toda invariante de negocio crítica (montos que cuadran, estados válidos, inmutabilidad de snapshots, aislamiento por tenant) vive en la base, no en TypeScript.
+2. **La lógica de negocio crítica va en funciones PL/pgSQL y triggers.** Escrituras solo por `sp_*`, lecturas por `rf_*` o `v_*`. Invariantes con `CHECK`, `UNIQUE`, FKs y triggers.
+3. **RLS activada en todas las tablas**, con policy `id_tenant = auth_tenant_id()`. Las funciones nuevas son `SECURITY INVOKER` (no se introduce `security definer`).
+4. **Capas de la app**: `app/**` (rutas, actions, sin SQL), `components/**` (UI, sin SQL), `lib/dal/**` (ÚNICO lugar que consulta Supabase), `supabase/` (migraciones, sp). La clave service-role no se usa en la app.
+5. **Toda mutación es una Server Action con tres compuertas**: (1) `requireModuleRole`, (2) validación zod `strictObject` y `safeParse`, (3) llamar al DAL con `parsed.data`. Devuelve `{ ok: true } | { ok: false, reason }` con slug kebab-case.
+6. **Mensajes al operador en `lib/errores/mensajes.ts`**: español, voseo, punto final, sin jerga ni `res.reason` en la UI.
+7. **Diseñá para N, no para 1**: acotar, deduplicar, no `await` dentro de un `for`.
+
+### 2.2. Prohibiciones
+
+**Base de datos:**
+- No editar migraciones ya aplicadas (00001–00065). Todo va en nuevas, desde 00066.
+- No tocar una base remota (nada de `db push` a prod ni escrituras con el MCP de Supabase).
+- No cambiar la firma de un `sp_*` sin `DROP FUNCTION IF EXISTS` en la misma migración.
+- No usar `current_date`, `now()::date` ni `date_trunc('day', now())` en SQL nuevo o modificado (usar `fn_hoy_tenant()`/`fn_rango_tenant()`).
+- No calcular una cifra de negocio en dos lugares.
+
+**Código de aplicación:**
+- Cero SQL en `app/**` y `components/**`. Todo pasa por `lib/dal/**`.
+- No sumar dinero en JavaScript: las sumas se hacen en SQL sobre `numeric`.
+- No dependencias nuevas sin aprobación.
+- No bajar umbrales de cobertura.
+- Sin `Co-Authored-By` ni `--no-verify`.
+- No leer `ingenieria/utopia-intructivo/Seguridad/`.
+
+---
+
+## 3. Layout de repositorio afectado
 
 Solo lo que este cambio agrega o modifica:
 
@@ -174,7 +207,7 @@ y `excluida_rendicion`.
 `pago_venta`: policies `SELECT`/`INSERT` solo; trigger que bloquea `UPDATE`/`DELETE`.
 
 Borrado de tenant: leer cómo `00065_borrar_tenant_con_ingresos_confirmados.sql`
-exceptuó `ingreso_detalle_inmutable` (variable de sesión `utopia.bypass_immutable`)
+exceptuó el trigger con `not exists (select 1 from tenant where id_tenant = old.id_tenant)` en el DELETE,
 y aplicar el mismo mecanismo para `venta`/`detalle_venta`/`pago_venta`.
 
 Constraint diferida de pagos: trigger de constraint `DEFERRABLE INITIALLY DEFERRED`
@@ -302,7 +335,33 @@ DAL: borrar `getDashboardKpis`, `getReporteFinanciero`, `getReporteCaja`,
 
 ---
 
-## 4. Contratos de datos clave
+## 5. Decisiones cerradas (DC-1 a DC-17)
+
+Definición complementaria: "Cuota abierta" = estado `pendiente` o `parcial`.
+
+| ID | Decisión | Por qué |
+|---|---|---|
+| DC-1 | Un solo criterio de costo: `costo de la línea = detalle_venta.costo_snapshot`, para compra **y** consignación. `monto_ganancia = precio_venta − costo_snapshot` para ambos, impuesto por `CHECK`. | Hoy hay dos criterios (D1/D2). En consignación `monto_proveedor == costo_snapshot`, así que para consignación el número no cambia; solo se corrige compra. |
+| DC-2 | `monto_proveedor` pasa a significar únicamente "lo que se le debe al proveedor": `0` si compra, `= costo_snapshot` si consignación (`CHECK`). | Separa deuda de costo. |
+| DC-3 | El estado de resultados se mide **por fecha del evento**, no reescribe el pasado: una venta cuenta en el período en que se hizo; su anulación o devolución resta en el período en que ocurrió. Las ventas anuladas **no desaparecen** del período original. | Cerrar un mes y que cambie al mes siguiente es inaceptable. |
+| DC-4 | La plata devuelta al cliente se modela con una tabla propia `reintegro_cliente` (append-only). La anulación genera un reintegro espejo de cada pago; la devolución de línea genera uno con cuenta/medio elegidos por el operador. | Hace visible y auditable la salida de caja (D5). |
+| DC-5 | Una devolución se modela con `devolucion_venta` (append-only), **no** muta `venta.total` ni `detalle_venta`. | Snapshots inmutables (D11). |
+| DC-6 | **Devolución sobre venta con cuotas abiertas**: **se bloquea** con `devolucion-venta-con-cuotas-abiertas`. Para esos casos queda la anulación. | Reducir cuotas parcialmente es un problema aparte; se deja explícito como límite conocido. |
+| DC-7 | **Anular una venta con cuotas incobrables se bloquea** (`venta-con-incobrables`). | Evita la doble penalización (D6) sin inventar reversos contables. |
+| DC-8 | Incobrables: deja de crearse el `gasto_negocio` "Incobrables". La pérdida se calcula de `cuota_financiada` (saldo `monto − monto_pagado` de cuotas `incobrable`, por `fecha_incobrable`). | Una sola fuente, sin doble conteo con gastos. |
+| DC-9 | Los aranceles/retenciones **no se recuperan** al anular o devolver: el costo de cobro se reconoce en el período del pago, incluso si la venta se anuló después. | Es plata realmente perdida; hoy se oculta (D5). |
+| DC-10 | Zona horaria **por tenant**: `tenant.zona_horaria`. Todo rango/“hoy” se resuelve en la base con esa zona. Rangos semiabiertos `[desde 00:00, hasta+1 00:00)`. | Producto revendible; elimina D9 de raíz. |
+| DC-11 | Las compras de mercadería (`ingreso_mercaderia` tipo `compra`, confirmado, no cancelado) **se asumen pagadas al recibirlas** (no hay cuentas por pagar). Se rotula así en la UI. | No existe estado de pago de compras; modelarlo es otro módulo. |
+| DC-12 | La devolución de cliente asume que la mercadería vuelve al stock (recupera el costo). Si vuelve dañada, el operador la da de baja y la pérdida aparece como "mercadería dada de baja". El ítem queda en `devuelto_cliente` hasta que se reingrese. | Mantiene consistencia sin crear estados nuevos. |
+| DC-13 | Devolver una línea ya rendida al proveedor se bloquea (`linea-ya-rendida`), igual que `sp_anular_venta` con `venta-ya-rendida`. | Coherencia con lo existente. |
+| DC-14 | Un bloque del panel se muestra solo si el módulo está **habilitado en el tenant Y el usuario tiene permiso `ver`** sobre él. Los bloques ocultos **no se consultan** (no se llama a su RPC). | Evita exponer datos de módulos no contratados o sin permiso (D12). |
+| DC-15 | No hay librería de gráficos: gráficos en SVG propio dentro de `components/reportes/`, accesibles. | No hay ninguna instalada; controla AA y tokens. |
+| DC-16 | Se elimina "ganancia esperada / impacto de descuentos" del panel. | Estaba mal (D3). Reaparecería, si se quiere, como cambio aparte. |
+| DC-17 | Convención de nombres: lecturas `rf_finanzas_*`, vistas `v_*`, escrituras `sp_*`, helpers `fn_*`. | Respeta `AGENTS.md` (`sp_*` es solo escritura). |
+
+---
+
+## 6. Contratos de datos clave
 
 ### 4.1 Retorno de rf_finanzas_resultados
 
@@ -319,8 +378,8 @@ export interface FinanzasResultados {
   incobrables: number
   bajas_inventario: number
   ganancia_despues_de_costos: number
-  gastos: number | null      // null si módulo gastos no aplica
-  ganancia_final: number | null
+  gastos: number
+  ganancia_final: number
   cantidad_ventas: number
   ticket_promedio: number | null
 }
@@ -337,7 +396,7 @@ export type NombreBloque =
 export function bloquesVisibles(session: Session): NombreBloque[]
 ```
 
-### 4.3 Variación
+### 6.3 Variación
 
 ```typescript
 // lib/utils/moneda.ts
@@ -351,14 +410,7 @@ export function formatearVariacion(actual: number, anterior: number): VariacionR
 
 ---
 
-## 5. Decisiones de implementación abierta
-
-Ninguna. La propuesta §4 cierra todas. Si durante apply aparece una situación
-no cubierta, PARAR y consultar al usuario.
-
----
-
-## 6. Riesgos y mitigaciones
+## 7. Riesgos y mitigaciones
 
 Ver propuesta §9. El riesgo más crítico de implementación es el trigger de
 inmutabilidad de `venta` si `sp_registrar_venta` hace `UPDATE total` después
@@ -367,7 +419,7 @@ leyendo la migración 00064 completa antes de tocarla.
 
 ---
 
-## 7. Verificación
+## 8. Verificación
 
 **Gate automático** (antes de decir "listo" en cada fase):
 ```
