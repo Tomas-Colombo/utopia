@@ -42,8 +42,8 @@ Decision needed before apply: No
 
 ## Fase 0 — Gate humano
 
-- [ ] Aprobar especificación completa (las decisiones DC-1 a DC-17 están cerradas).
-- [ ] NO AVANZAR a la Fase 1 / Slice 1 hasta recibir aprobación ESCRITA del usuario en el chat.
+- [x] Aprobar especificación completa (las decisiones DC-1 a DC-17 están cerradas).
+- [x] NO AVANZAR a la Fase 1 / Slice 1 hasta recibir aprobación ESCRITA del usuario en el chat.
 
 ---
 
