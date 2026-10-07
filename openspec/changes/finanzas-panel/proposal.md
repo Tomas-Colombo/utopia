@@ -2,7 +2,7 @@
 
 **Change**: `finanzas-panel`
 **Status**: Pendiente de aprobación del usuario — decisiones cerradas en §4 de la propuesta fuente
-**Source**: `ingenieria/changes/modulo-finanzas/propuesta.md` (v2, aprobada por el usuario)
+**Source**: `ingenieria/changes/modulo-finanzas/propuesta.md` (v2, pendiente de aprobación del usuario)
 **Covers**: Fases 1–6 de la propuesta. La Fase 0 (esta carpeta) es el spec formal que habilita la ejecución.
 
 ---

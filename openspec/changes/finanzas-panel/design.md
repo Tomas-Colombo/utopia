@@ -9,7 +9,7 @@
 
 ## 1. Overview
 
-Este design convierte la propuesta aprobada en una implementación concreta sobre
+Este design convierte la propuesta pendiente de aprobación en una implementación concreta sobre
 el proyecto existente (Next.js 16.2.10, React 19, TS 5, Tailwind 4, Supabase/Postgres).
 
 El estado de partida es:
