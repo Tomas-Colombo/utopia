@@ -340,13 +340,13 @@ Decision needed before apply: No
 - [ ] `app/(app)/gastos/page.tsx` (patrón de página).
 - [ ] `app/(app)/consignaciones/page.tsx` (patrón de fechas).
 
-- [ ] `app/(app)/reportes/error.tsx` (`'use client'`, `unstable_retry`).
-- [ ] `app/(app)/reportes/loading.tsx` (skeleton con misma estructura).
-- [ ] `app/(app)/reportes/ReportesPeriodoForm.tsx` (REQ-UI-04).
-- [ ] `app/(app)/reportes/page.tsx` (orquestación sin cálculos).
-- [ ] Tests e2e básicos de la página.
-- [ ] Verificar en preview: claro, oscuro, 375 px.
-- [ ] Gate completo.
+- [x] `app/(app)/reportes/error.tsx` (`'use client'`, `unstable_retry`).
+- [x] `app/(app)/reportes/loading.tsx` (skeleton con misma estructura).
+- [x] `app/(app)/reportes/ReportesPeriodoForm.tsx` (REQ-UI-04).
+- [x] `app/(app)/reportes/page.tsx` (orquestación sin cálculos).
+- [x] Tests e2e básicos de la página.
+- [x] Verificar en preview: claro, oscuro, 375 px.
+- [x] Gate completo.
 
 ---
 
