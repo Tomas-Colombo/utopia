@@ -3,7 +3,7 @@
 import { Button } from '@/components/ui/Button'
 
 export default function ReportesError({
-  error,
+  error: _error,
   unstable_retry,
 }: {
   error: Error & { digest?: string }

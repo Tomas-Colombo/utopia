@@ -7,6 +7,8 @@ import {
   getPosicion,
   getResultados,
   getSerieMensual,
+  getGastosPresupuesto,
+  getRankingProductos,
 } from '@/lib/dal/reportes/finanzas'
 import { ReportesPeriodoForm } from './ReportesPeriodoForm'
 import { inicioDelDia, inicioDelDiaSiguiente, periodoAnterior } from '@/lib/fechas'
@@ -18,6 +20,10 @@ import { BloqueMovimientoPlata } from '@/components/reportes/BloqueMovimientoPla
 import { GraficoTendencia } from '@/components/reportes/GraficoTendencia'
 import { BloqueCobrar } from '@/components/reportes/BloqueCobrar'
 import { BloqueError } from '@/components/reportes/BloqueError'
+import { BloqueMercaderia } from '@/components/reportes/BloqueMercaderia'
+import { BloqueProveedores } from '@/components/reportes/BloqueProveedores'
+import { BloqueGastos } from '@/components/reportes/BloqueGastos'
+import { BloqueRanking } from '@/components/reportes/BloqueRanking'
 
 async function tryFetch<T>(promise: Promise<T>): Promise<{ ok: true; data: T } | { ok: false }> {
   try {
@@ -29,7 +35,7 @@ async function tryFetch<T>(promise: Promise<T>): Promise<{ ok: true; data: T } |
 }
 
 export default async function ReportesPage(props: {
-  searchParams: Promise<{ desde?: string; hasta?: string }>
+  searchParams: Promise<{ desde?: string; hasta?: string; limite?: string; orden?: string }>
 }) {
   const session = await verifySession()
   const sp = await props.searchParams
@@ -42,14 +48,19 @@ export default async function ReportesPage(props: {
   const desde = parsed.success ? parsed.data.desde : contexto.mes_desde
   const hasta = parsed.success ? parsed.data.hasta : contexto.mes_hasta
   const prev = periodoAnterior(desde, hasta)
+  const orden = parsed.success ? parsed.data.orden : 'ganancia'
+  const limite = parsed.success ? parsed.data.limite : 5
 
   const puedeVerVentas = hasModuleAccess(session, 'ventas', 'ver')
+  const puedeVerInventario = hasModuleAccess(session, 'inventario', 'ver')
   const tieneGastos = session.modulosHabilitados.includes('gastos')
+  const tieneRendiciones = session.modulosHabilitados.includes('rendiciones')
 
   const [
     resultadosReq, resultadosPrevReq,
     flujoReq, flujoPrevReq,
-    posicionReq, serieReq
+    posicionReq, serieReq,
+    rankingReq, gastosReq
   ] = await Promise.all([
     tryFetch(getResultados(inicioDelDia(desde), inicioDelDiaSiguiente(hasta))),
     tryFetch(getResultados(inicioDelDia(prev.desde), inicioDelDiaSiguiente(prev.hasta))),
@@ -57,6 +68,8 @@ export default async function ReportesPage(props: {
     tryFetch(getFlujo(inicioDelDia(prev.desde), inicioDelDiaSiguiente(prev.hasta))),
     tryFetch(getPosicion()),
     tryFetch(getSerieMensual(inicioDelDiaSiguiente(hasta), 12)),
+    tryFetch(getRankingProductos(inicioDelDia(desde), inicioDelDiaSiguiente(hasta), limite, orden)),
+    tieneGastos ? tryFetch(getGastosPresupuesto(hasta)) : Promise.resolve({ ok: false as const }),
   ])
 
   return (
@@ -110,7 +123,48 @@ export default async function ReportesPage(props: {
               <BloqueError />
             </div>
           )}
-          {/* Espacio para BloqueMercaderia y Proveedores en Slice 13 */}
+
+          {puedeVerInventario && (
+            posicionReq.ok ? (
+              <div className="md:col-span-1 xl:col-span-1">
+                <BloqueMercaderia posicion={posicionReq.data!} />
+              </div>
+            ) : (
+              <div className="md:col-span-1 xl:col-span-1">
+                <BloqueError />
+              </div>
+            )
+          )}
+
+          {tieneRendiciones && (
+            posicionReq.ok ? (
+              <div className="md:col-span-1 xl:col-span-1">
+                <BloqueProveedores posicion={posicionReq.data!} />
+              </div>
+            ) : (
+              <div className="md:col-span-1 xl:col-span-1">
+                <BloqueError />
+              </div>
+            )
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          {tieneGastos && (
+            gastosReq.ok ? (
+              <BloqueGastos presupuestos={gastosReq.data!} mesHasta={hasta} />
+            ) : (
+              <BloqueError />
+            )
+          )}
+          
+          {puedeVerInventario && (
+            rankingReq.ok ? (
+              <BloqueRanking ranking={rankingReq.data!} ordenActual={orden} />
+            ) : (
+              <BloqueError />
+            )
+          )}
         </div>
       </main>
     </>

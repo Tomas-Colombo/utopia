@@ -375,15 +375,15 @@ Decision needed before apply: No
 **Closes**: REQ-UI-06 (bloques 6–9), REQ-UI-08, REQ-UI-09.
 **Depends on**: Slice 12.
 
-- [ ] `components/reportes/BloqueMercaderia.tsx`.
-- [ ] `components/reportes/BloqueProveedores.tsx`.
-- [ ] `components/reportes/BloqueGastos.tsx`.
-- [ ] `components/reportes/BloqueRanking.tsx` (con selector de orden).
-- [ ] Exportación CSV en BloqueGanancia y BloqueRanking.
-- [ ] Tests de render (RTL) para los nuevos bloques.
+- [x] `components/reportes/BloqueMercaderia.tsx`.
+- [x] `components/reportes/BloqueProveedores.tsx`.
+- [x] `components/reportes/BloqueGastos.tsx`.
+- [x] `components/reportes/BloqueRanking.tsx` (con selector de orden).
+- [x] Exportación CSV en BloqueGanancia y BloqueRanking.
+- [x] Tests de render (RTL) para los nuevos bloques.
 - [ ] Verificar en preview: claro, oscuro, 375 px.
 - [ ] Verificar consola y red sin errores.
-- [ ] Gate completo.
+- [x] Gate completo.
 
 ---
 

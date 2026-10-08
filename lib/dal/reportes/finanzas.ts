@@ -123,11 +123,10 @@ export async function getRankingProductos(desde: string, hasta: string, limite: 
   }))
 }
 
-export async function getGastosPresupuesto(desde: string, hasta: string): Promise<FinanzasPresupuestoRow[]> {
+export async function getGastosPresupuesto(mes: string): Promise<FinanzasPresupuestoRow[]> {
   const supabase = await createServerClient()
   const { data, error } = await supabase.rpc('rf_finanzas_gastos_presupuesto', {
-    p_desde: desde,
-    p_hasta: hasta,
+    p_mes: mes,
   })
   if (error) throw new Error(`rf_finanzas_gastos_presupuesto: ${error.message}`)
 

@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { BloqueResumen } from './BloqueResumen'
 import { BloqueGanancia } from './BloqueGanancia'
 import { BloqueMovimientoPlata } from './BloqueMovimientoPlata'
@@ -104,5 +104,66 @@ describe('Componentes de Reportes (Bloques 1-5)', () => {
   it('renderiza BloqueError', () => {
     render(<BloqueError onRetry={() => {}} />)
     expect(screen.getByText('Reintentar')).toBeDefined()
+  })
+})
+
+import { BloqueMercaderia } from './BloqueMercaderia'
+import { BloqueProveedores } from './BloqueProveedores'
+import { BloqueGastos } from './BloqueGastos'
+import { BloqueRanking } from './BloqueRanking'
+
+// mock next/navigation
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ replace: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(''),
+  usePathname: () => '/reportes'
+}))
+
+describe('Componentes de Reportes (Bloques 6-9)', () => {
+  const mockPosicion = {
+    capital_propio: 1000,
+    mercaderia_terceros: 200,
+    devueltos_clientes: 0,
+    valor_venta_potencial: 2000,
+    productos_sin_precio: 3,
+    deuda_proveedores: 400,
+    por_cobrar: null
+  }
+
+  it('renderiza BloqueMercaderia', () => {
+    render(<BloqueMercaderia posicion={mockPosicion} />)
+    expect(screen.getByText('Tu stock hoy')).toBeDefined()
+    expect(screen.getByText('3 productos sin precio')).toBeDefined()
+  })
+
+  it('renderiza BloqueProveedores', () => {
+    render(<BloqueProveedores posicion={mockPosicion} />)
+    expect(screen.getByText('Lo que debés')).toBeDefined()
+    expect(screen.getByText('A proveedores')).toBeDefined()
+    expect(screen.getByText('Ver rendiciones pendientes →')).toBeDefined()
+  })
+
+  it('renderiza BloqueGastos', () => {
+    const presupuestos = [
+      { id_categoria_gasto: '1', nombre: 'Alquiler', gastado: 500, presupuesto_mensual: 1000, consumido_pct: 0.5 }
+    ]
+    render(<BloqueGastos presupuestos={presupuestos} mesHasta="2026-10-31" />)
+    expect(screen.getByText('Gastos vs. Presupuesto')).toBeDefined()
+    expect(screen.getByText('Alquiler')).toBeDefined()
+  })
+
+  it('renderiza BloqueGastos vacío', () => {
+    render(<BloqueGastos presupuestos={[]} mesHasta="2026-10-31" />)
+    expect(screen.getByText('No hay gastos ni presupuestos cargados en este mes.')).toBeDefined()
+  })
+
+  it('renderiza BloqueRanking', () => {
+    const ranking = [
+      { id_producto: '1', nombre: 'Remera', unidades_vendidas: 10, monto_vendido: 1000, ganancia: 500, porcentaje_ventas: null }
+    ]
+    render(<BloqueRanking ranking={ranking} ordenActual="ganancia" />)
+    expect(screen.getByText('Los que más rinden')).toBeDefined()
+    expect(screen.getByText('Remera')).toBeDefined()
+    expect(screen.getByText('Exportar CSV')).toBeDefined()
   })
 })

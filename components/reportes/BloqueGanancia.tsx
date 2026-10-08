@@ -1,3 +1,5 @@
+'use client'
+
 import React from 'react'
 import type { FinanzasResultadosRow } from '@/lib/types/reportes'
 
@@ -13,11 +15,37 @@ interface BloqueGananciaProps {
   tieneGastos: boolean
 }
 
+import { escapeCsvField, downloadCsv } from '@/lib/utils/csv'
+
 export function BloqueGanancia({ resultados, tieneGastos }: BloqueGananciaProps) {
+  const exportarCSV = () => {
+    const csvRows = [
+      'Concepto,Monto',
+      `${escapeCsvField('Vendiste (neto)')},${resultados.ventas_netas}`,
+      `${escapeCsvField('Menos costo de mercadería')},-${resultados.costo_mercaderia}`,
+      `${escapeCsvField('Ganancia antes de gastos')},${resultados.ganancia_sobre_ventas}`
+    ]
+    
+    if (tieneGastos) {
+      csvRows.push(
+        `${escapeCsvField('Menos gastos')},-${resultados.gastos}`,
+        `${escapeCsvField('Ganancia final')},${resultados.ganancia_final}`
+      )
+    }
+
+    downloadCsv(`ganancia-${resultados.mes}.csv`, csvRows.join('\n'))
+  }
+
   return (
     <section aria-labelledby="h2-ganancia" className="rounded-lg border border-border bg-card overflow-hidden">
-      <div className="p-4 border-b border-border bg-panel">
+      <div className="p-4 border-b border-border bg-panel flex justify-between items-center">
         <h2 id="h2-ganancia" className="font-display text-lg">Cómo se arma tu ganancia</h2>
+        <button
+          onClick={exportarCSV}
+          className="h-9 px-3 text-sm font-medium border border-border rounded-md hover:bg-panel transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rosa"
+        >
+          Exportar CSV
+        </button>
       </div>
       
       <div className="overflow-x-auto">
