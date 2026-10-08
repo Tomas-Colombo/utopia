@@ -356,16 +356,16 @@ Decision needed before apply: No
 **Closes**: REQ-UI-05, REQ-UI-06 (bloques 1–5), REQ-UI-07.
 **Depends on**: Slice 11.
 
-- [ ] `components/reportes/VariacionBadge.tsx`.
-- [ ] `components/reportes/BloqueError.tsx`.
-- [ ] `components/reportes/BloqueResumen.tsx`.
-- [ ] `components/reportes/BloqueGanancia.tsx`.
-- [ ] `components/reportes/BloqueMovimientoPlata.tsx`.
-- [ ] `components/reportes/GraficoTendencia.tsx` (SVG, accesible, REQ-UI-07).
-- [ ] `components/reportes/BloqueCobrar.tsx`.
-- [ ] Tests de render (RTL) para cada componente/bloque.
-- [ ] Verificar en preview: claro, oscuro, 375 px.
-- [ ] Gate completo.
+- [x] `components/reportes/VariacionBadge.tsx`.
+- [x] `components/reportes/BloqueError.tsx`.
+- [x] `components/reportes/BloqueResumen.tsx`.
+- [x] `components/reportes/BloqueGanancia.tsx`.
+- [x] `components/reportes/BloqueMovimientoPlata.tsx`.
+- [x] `components/reportes/GraficoTendencia.tsx` (SVG, accesible, REQ-UI-07).
+- [x] `components/reportes/BloqueCobrar.tsx`.
+- [x] Tests de render (RTL) para cada componente/bloque.
+- [x] Verificar en preview: claro, oscuro, 375 px.
+- [x] Gate completo.
 
 ---
 

@@ -174,12 +174,14 @@ export interface FinanzasResultadosRow {
 export interface FinanzasFlujoRow {
   mes: string
   cobrado: number
+  devuelto_clientes: number
   costo_procesamiento: number
   neto_cobros: number
   compras_mercaderia: number
   pagos_proveedores: number
   gastos: number
   flujo_neto: number
+  por_acreditar: Record<string, number> | null
 }
 
 export interface FinanzasSerieMensualRow {
@@ -192,7 +194,11 @@ export interface FinanzasSerieMensualRow {
 
 export interface FinanzasPosicion {
   capital_propio: number
+  mercaderia_terceros: number
   devueltos_clientes: number
+  valor_venta_potencial: number
+  productos_sin_precio: number
+  por_cobrar: CuentasPorCobrar | null
   deuda_proveedores: number
 }
 

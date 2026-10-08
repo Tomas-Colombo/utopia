@@ -8,6 +8,7 @@ import type {
   FinanzasRankingRow,
   FinanzasResultadosRow,
   FinanzasSerieMensualRow,
+  CuentasPorCobrar,
 } from '@/lib/types/reportes'
 
 function fila<T>(data: unknown): T | null {
@@ -55,12 +56,14 @@ export async function getFlujo(desde: string, hasta: string): Promise<FinanzasFl
   return {
     mes: String(row.mes ?? ''),
     cobrado: Number(row.cobrado ?? 0),
-    costo_procesamiento: Number(row.costo_procesamiento ?? 0),
+    devuelto_clientes: Number(row.devuelto_clientes ?? 0),
+    costo_procesamiento: Number(row.costo_cobro ?? 0),
     neto_cobros: Number(row.neto_cobros ?? 0),
     compras_mercaderia: Number(row.compras_mercaderia ?? 0),
     pagos_proveedores: Number(row.pagos_proveedores ?? 0),
     gastos: Number(row.gastos ?? 0),
     flujo_neto: Number(row.flujo_neto ?? 0),
+    por_acreditar: row.por_acreditar ? (row.por_acreditar as Record<string, number>) : null,
   }
 }
 
@@ -91,7 +94,11 @@ export async function getPosicion(): Promise<FinanzasPosicion | null> {
 
   return {
     capital_propio: Number(row.capital_propio ?? 0),
+    mercaderia_terceros: Number(row.mercaderia_terceros ?? 0),
     devueltos_clientes: Number(row.devueltos_clientes ?? 0),
+    valor_venta_potencial: Number(row.valor_venta_potencial ?? 0),
+    productos_sin_precio: Number(row.productos_sin_precio ?? 0),
+    por_cobrar: row.por_cobrar ? (row.por_cobrar as CuentasPorCobrar) : null,
     deuda_proveedores: Number(row.deuda_proveedores ?? 0),
   }
 }
