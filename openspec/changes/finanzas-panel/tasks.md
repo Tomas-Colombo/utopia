@@ -226,16 +226,16 @@ Decision needed before apply: No
 
 ### 6.2 Migración (continuación de 00070)
 
-- [ ] Continuación de `00070` o nueva migración si supera 400 líneas:
-  - `sp_registrar_devolucion_cliente` reescrito (REQ-DB-08).
-  - `sp_generar_rendicion` modificado para excluir devueltos (REQ-DB-09).
-  - Actualizar `v_perfil_proveedor` si consulta el mismo campo.
-  - `-- DOWN:` completo.
+- [x] Continuación de `00070` o nueva migración si supera 400 líneas:
+  - [x] `sp_registrar_devolucion_cliente` reescrito (REQ-DB-08).
+  - [x] `sp_generar_rendicion` modificado para excluir devueltos (REQ-DB-09).
+  - [x] Actualizar `v_perfil_proveedor` si consulta el mismo campo.
+  - [x] `-- DOWN:` completo.
 
 ### 6.3 Gate
 
-- [ ] Tests de DB.
-- [ ] Gate completo.
+- [x] Tests de DB.
+- [x] Gate completo.
 
 ---
 

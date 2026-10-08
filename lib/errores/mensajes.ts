@@ -160,6 +160,10 @@ const MENSAJES: Record<string, string> = {
   'venta-con-incobrables': 'No se puede anular porque hay cuotas marcadas como incobrables.',
   'detalle-venta-not-found': 'Esa línea de la venta ya no existe. Recargá la página.',
   'detalle-ya-rendido': 'No se puede anular: esa línea ya se rindió al proveedor.',
+  'item-no-esta-vendido': 'El ítem no pertenece a esta venta o no está vendido.',
+  'detalle-ya-devuelto': 'Esa línea de la venta ya fue devuelta.',
+  'devolucion-venta-con-cuotas-abiertas': 'No se puede devolver el ítem porque la venta tiene cuotas sin pagar.',
+  'reintegro-requiere-cuenta-y-medio': 'Para reintegrar dinero tenés que elegir una cuenta y un medio de pago.',
   'sin-precio-lista':
     'El producto no tiene precio de venta. Fijalo en Precios, Control de precios.',
   'sku-sin-stock': 'Ese código no tiene unidades disponibles en stock.',
