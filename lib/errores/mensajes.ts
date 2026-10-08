@@ -157,6 +157,7 @@ const MENSAJES: Record<string, string> = {
   'venta-not-found': 'Esa venta ya no existe. Recargá la página.',
   'venta-ya-rendida': 'No se puede anular: la venta ya se rindió al proveedor.',
   'venta-anulada': 'No podés hacer esto porque la venta está anulada.',
+  'venta-con-incobrables': 'No se puede anular porque hay cuotas marcadas como incobrables.',
   'detalle-venta-not-found': 'Esa línea de la venta ya no existe. Recargá la página.',
   'detalle-ya-rendido': 'No se puede anular: esa línea ya se rindió al proveedor.',
   'sin-precio-lista':
