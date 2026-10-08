@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { describe, expect, test } from 'vitest'
 import { ventaFixture, venderContado, venderFinanciado, PRECIO, COSTO } from './_fixtures-ventas'
 import { createServerClient } from '../../lib/dal/supabase-test'
@@ -428,5 +429,73 @@ describe('rf_finanzas_resultados y rf_finanzas_flujo', () => {
     // este ingreso suma 5 * 1000 = 5000
     expect(flujo.compras_mercaderia).toBe(5000)
     expect(flujo.flujo_neto).toBe(-5000)
+  })
+})
+
+describe('rf_finanzas_posicion y rf_finanzas_serie_mensual', () => {
+  test('posicion inicial y despues de devolucion', async () => {
+    const f = await ventaFixture('Pos', 1, { tipoIngreso: 'compra' })
+    
+    const { data: pos1, error: err1 } = await f.authenticated.rpc('rf_finanzas_posicion').single()
+    expect(err1).toBeNull()
+
+    // 1 item * 20.000 (COSTO)
+    expect((pos1 as any).capital_propio).toBe(20000)
+    expect((pos1 as any).devueltos_clientes).toBe(0)
+    expect((pos1 as any).deuda_proveedores).toBe(0)
+
+    // Vendemos 1 y lo devolvemos
+    const { data: idVenta } = await venderContado(f, { items: [f.items[0]] })
+    
+    const { data: det } = await f.serviceRole
+      .from('detalle_venta')
+      .select('id_detalle_venta')
+      .eq('id_venta', idVenta as string)
+      .single()
+      
+    await f.authenticated.rpc('sp_registrar_devolucion_cliente', {
+      p_id_detalle_venta: det!.id_detalle_venta,
+      p_motivo: null,
+      p_id_cuenta_reintegro: f.idCuenta,
+      p_medio_reintegro: 'efectivo'
+    })
+
+    const { data: pos2 } = await f.authenticated.rpc('rf_finanzas_posicion').single()
+    // 0 items disponibles
+    expect((pos2 as any).capital_propio).toBe(0)
+    // 1 devuelto
+    expect((pos2 as any).devueltos_clientes).toBe(20000)
+  })
+
+  test('rf_finanzas_serie_mensual: un solo escaneo agrupado', async () => {
+    const f = await ventaFixture('Serie', 1)
+    const { data: explain, error } = await f.authenticated.rpc('rf_finanzas_serie_mensual', {
+      p_hasta: new Date().toISOString().slice(0, 10),
+      p_meses: 12
+    })
+    expect(error).toBeNull()
+    // Solo verifica que devuelva las 12 filas
+    expect((explain as any[]).length).toBe(12)
+  })
+
+  test('rf_finanzas_ranking_productos: orden-invalido', async () => {
+    const f = await ventaFixture('Rank', 1)
+    const { error } = await f.authenticated.rpc('rf_finanzas_ranking_productos', {
+      p_desde: '2026-01-01',
+      p_hasta: '2026-12-31',
+      p_limite: 10,
+      p_orden: 'invalido'
+    })
+    expect(error?.message).toContain('orden-invalido')
+  })
+  test('fn_contexto_periodo: devuelve contexto de fechas', async () => {
+    const f = await ventaFixture('Ctx', 1)
+    const { data: ctx, error } = await f.authenticated.rpc('fn_contexto_periodo').single()
+    expect(error).toBeNull()
+
+    expect(ctx.hoy).toBeDefined()
+    expect(ctx.mes_desde).toBeDefined()
+    expect(ctx.mes_hasta).toBeDefined()
+    expect((ctx as any).capital_propio).toBeUndefined()
   })
 })

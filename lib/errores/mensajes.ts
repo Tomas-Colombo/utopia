@@ -222,6 +222,10 @@ const MENSAJES: Record<string, string> = {
 
   // ─── Gastos ────────────────────────────────────────────────────────
   'gasto-inexistente': 'Ese gasto ya no existe. Recargá la página.',
+
+  // ─── Finanzas ──────────────────────────────────────────────────────
+  'periodo-invalido': 'El período pedido no es válido.',
+  'orden-invalido': 'El criterio de orden no es válido.',
 }
 
 /**

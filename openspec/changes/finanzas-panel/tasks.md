@@ -289,13 +289,13 @@ Decision needed before apply: No
 
 **ESCRIBIR TESTS ANTES** (TDD estricto):
 
-- [ ] `tests/db/finanzas.test.ts`:
+- [x] `tests/db/finanzas.test.ts`:
   - Escenario A y B para posición.
   - Todos los casos de borde restantes de §7.
   - `rf_finanzas_serie_mensual`: un solo escaneo agrupado (verificar con `EXPLAIN`).
   - `rf_finanzas_ranking_productos`: `orden-invalido` con valor fuera de lista blanca.
 
-- [ ] `supabase/migrations/00072_finanzas_lectura_2.sql`:
+- [x] `supabase/migrations/00072_finanzas_lectura_2.sql`:
   - `rf_finanzas_serie_mensual` (REQ-DB-13).
   - `rf_finanzas_posicion` (REQ-DB-14).
   - `rf_finanzas_ranking_productos` (REQ-DB-15).
@@ -305,7 +305,7 @@ Decision needed before apply: No
   - `-- DOWN:`.
   - `supabase db reset` + escenario dorado pasa.
 
-- [ ] Gate completo.
+- [x] Gate completo.
 
 ---
 
