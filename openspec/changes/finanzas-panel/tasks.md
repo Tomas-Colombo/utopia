@@ -264,12 +264,12 @@ Decision needed before apply: No
 
 **ESCRIBIR TESTS ANTES** (TDD estricto):
 
-- [ ] `tests/db/finanzas.test.ts`:
+- [x] `tests/db/finanzas.test.ts`:
   - Escenario A completo con números exactos de §7 para resultados y flujo.
   - Escenario B completo para resultados y flujo.
   - Casos de borde aplicables a resultados y flujo.
 
-- [ ] `supabase/migrations/00071_finanzas_lectura_1.sql`:
+- [x] `supabase/migrations/00072_finanzas_lectura_1.sql`:
   - `CREATE VIEW v_linea_venta` (REQ-DB-10).
   - `rf_finanzas_resultados` (REQ-DB-11).
   - `rf_finanzas_flujo` (REQ-DB-12).
@@ -277,7 +277,7 @@ Decision needed before apply: No
   - `-- DOWN:`.
   - `supabase db reset` + escenario dorado pasa.
 
-- [ ] Gate completo.
+- [x] Gate completo.
 
 ---
 
