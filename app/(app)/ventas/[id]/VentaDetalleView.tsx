@@ -98,8 +98,6 @@ export function VentaDetalleView({
         // Vacío va como `undefined`, no como `''`: `spAnularVenta` lo manda como
         // NULL y la vista distingue "sin motivo" de "motivo en blanco".
         motivo: motivo || undefined,
-        idCuentaReintegro: reintegroCuenta || undefined,
-        medioReintegro: (reintegroMedio as MedioPago) || undefined,
       })
       if (!res.ok) return toast.error('No se pudo anular', mensajeDeError(res.reason))
       setMotivoAnulacion('')
@@ -393,8 +391,6 @@ export function VentaDetalleView({
         onCancel={() => {
           setAnularOpen(false)
           setMotivoAnulacion('')
-          setReintegroMedio('')
-          setReintegroCuenta('')
         }}
       >
         <div className="space-y-4">
@@ -412,41 +408,6 @@ export function VentaDetalleView({
               placeholder="Ej: el cliente se arrepintió"
             />
           </Field>
-          
-          <div className="rounded border border-border p-3 space-y-3 bg-card-2">
-            <h4 className="font-medium text-sm">Opciones de reintegro (opcional)</h4>
-            <p className="text-xs text-muted mb-2">Si corresponde devolver plata, seleccioná por dónde sale.</p>
-            <Field htmlFor="reint-medio-anulacion" label="Medio de pago">
-              <select
-                id="reint-medio-anulacion"
-                className="w-full"
-                value={reintegroMedio}
-                onChange={(e) => setReintegroMedio(e.target.value as MedioPago | '')}
-              >
-                <option value="">(Ninguno)</option>
-                {(Object.keys(MEDIO_PAGO_LABEL) as MedioPago[]).map((m) => (
-                  <option key={m} value={m}>{MEDIO_PAGO_LABEL[m]}</option>
-                ))}
-              </select>
-            </Field>
-            {reintegroMedio && (
-              <Field htmlFor="reint-cuenta-anulacion" label="Cuenta origen">
-                <select
-                  id="reint-cuenta-anulacion"
-                  className="w-full"
-                  value={reintegroCuenta}
-                  onChange={(e) => setReintegroCuenta(e.target.value)}
-                >
-                  <option value="">Seleccionar cuenta...</option>
-                  {cuentas.map((c) => (
-                    <option key={c.id_cuenta_destino} value={c.id_cuenta_destino}>
-                      {c.nombre}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-            )}
-          </div>
         </div>
       </ConfirmDialog>
       <ConfirmDialog

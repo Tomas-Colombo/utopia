@@ -99,8 +99,6 @@ export async function registrarVentaAction(input: {
 export async function anularVentaAction(input: {
   idVenta: string
   motivo?: string
-  idCuentaReintegro?: string | null
-  medioReintegro?: MedioPago | null
 }): Promise<ActionResult<{ total_reintegrado: number }>> {
   const g = await guarded('ventas', 'editar')
   if (!g.ok) return { ok: false, reason: g.error }
@@ -111,12 +109,10 @@ export async function anularVentaAction(input: {
   try {
     const res = await spAnularVenta(
       parsed.data.idVenta,
-      parsed.data.motivo,
-      parsed.data.idCuentaReintegro,
-      parsed.data.medioReintegro
+      parsed.data.motivo
     )
     revalidatePath('/ventas')
-    revalidatePath(`/ventas/${input.idVenta}`)
+    revalidatePath(`/ventas/${parsed.data.idVenta}`)
     revalidatePath('/inventario/productos')
     return { ok: true, data: res }
   } catch (e) {
@@ -144,7 +140,7 @@ export async function devolverItemVentaAction(input: {
       parsed.data.idCuentaReintegro,
       parsed.data.medioReintegro
     )
-    revalidatePath(`/ventas/${input.idVenta}`)
+    revalidatePath(`/ventas/${parsed.data.idVenta}`)
     return { ok: true, data: res }
   } catch (e) {
     return { ok: false, reason: (e as Error).message }

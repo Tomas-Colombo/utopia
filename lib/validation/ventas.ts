@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+const medioPagoSchema = z.enum(['efectivo', 'transferencia', 'tarjeta_debito', 'tarjeta_credito'])
+
 /**
  * Validación de runtime del motivo de anulación. El `maxLength` del textarea
  * es una comodidad de la UI, no un límite: el Server Action es un POST que
@@ -22,10 +24,6 @@ export const anularVentaSchema = z.strictObject(
         const t = m?.trim()
         return t ? t : undefined
       }),
-    idCuentaReintegro: z.string().uuid('cuenta-invalida').optional().nullable()
-      .transform((id) => id || undefined),
-    medioReintegro: z.enum(['efectivo', 'transferencia', 'tarjeta_debito', 'tarjeta_credito']).optional().nullable()
-      .transform((m) => m || undefined)
   },
   {
     error: (issue: z.core.$ZodRawIssue) =>
@@ -47,7 +45,7 @@ export const devolverItemVentaSchema = z.strictObject(
       }),
     idCuentaReintegro: z.string().uuid('cuenta-invalida').optional().nullable()
       .transform((id) => id || undefined),
-    medioReintegro: z.enum(['efectivo', 'transferencia', 'tarjeta_debito', 'tarjeta_credito']).optional().nullable()
+    medioReintegro: medioPagoSchema.optional().nullable()
       .transform((m) => m || undefined)
   },
   {
