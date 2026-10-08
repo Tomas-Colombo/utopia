@@ -315,16 +315,16 @@ Decision needed before apply: No
 **Closes**: REQ-APP-01 a REQ-APP-05.
 **Depends on**: Slice 9 (tipos de retorno vienen de las RF).
 
-- [ ] `lib/utils/moneda.ts` + `moneda.test.ts`.
-- [ ] Agregar `lib/utils/moneda.ts` al `include` de cobertura en `vitest.config.mts`.
-- [ ] `lib/reportes/bloques.ts` + `bloques.test.ts` (tabla de visibilidad por combinaciones módulo/permiso).
-- [ ] `lib/reportes/periodo.ts` + `periodo.test.ts`.
-- [ ] Agregar `lib/reportes/bloques.ts` y `periodo.ts` al `include` de cobertura.
-- [ ] `hasModuleAccess` en `lib/dal/guard.ts`.
-- [ ] `lib/validation/reportes.ts` + `reportes.test.ts`.
-- [ ] `lib/types/reportes.ts` — agregar tipos de finanzas (no borrar los actuales).
-- [ ] `lib/dal/reportes/finanzas.ts`.
-- [ ] Gate completo.
+- [x] `lib/utils/moneda.ts` + `moneda.test.ts`.
+- [x] Agregar `lib/utils/moneda.ts` al `include` de cobertura en `vitest.config.mts`.
+- [x] `lib/reportes/bloques.ts` + `bloques.test.ts` (tabla de visibilidad por combinaciones módulo/permiso).
+- [x] `lib/reportes/periodo.ts` + `periodo.test.ts`.
+- [x] Agregar `lib/reportes/bloques.ts` y `periodo.ts` al `include` de cobertura.
+- [x] `hasModuleAccess` en `lib/dal/guard.ts`.
+- [x] `lib/validation/reportes.ts` + `reportes.test.ts`.
+- [x] `lib/types/reportes.ts` — agregar tipos de finanzas (no borrar los actuales).
+- [x] `lib/dal/reportes/finanzas.ts`.
+- [x] Gate completo.
 
 ---
 

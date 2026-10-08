@@ -62,6 +62,7 @@ export default defineConfig({
         'lib/errores/**',
         'lib/inventario/**',
         'lib/precios/**',
+        'lib/reportes/**',
         'lib/tenant/**',
         // Validación de payloads de Server Actions: lógica pura, sin DB ni
         // request de Next, y es la puerta de entrada de datos no confiables.

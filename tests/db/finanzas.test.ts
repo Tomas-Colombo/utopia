@@ -1,7 +1,9 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // @ts-nocheck
 import { describe, expect, test } from 'vitest'
 import { ventaFixture, venderContado, venderFinanciado, PRECIO, COSTO } from './_fixtures-ventas'
-import { createServerClient } from '../../lib/dal/supabase-test'
 import { createTenantWithUser, signInAs } from './_helpers'
 
 describe('rf_finanzas_resultados y rf_finanzas_flujo', () => {

@@ -154,3 +154,67 @@ export interface AlertaCuotaVencida {
   vencimiento_mas_viejo: string
   dias_vencido: number
 }
+
+// ─── Finanzas Lectura Única (Slice 9 / 00072-00073) ──────────────────
+
+export interface FinanzasResultadosRow {
+  mes: string
+  ventas_brutas: number
+  anulaciones: number
+  ventas_netas: number
+  costo_mercaderia: number
+  ganancia_sobre_ventas: number
+  gastos: number
+  ganancia_final: number
+  porcentaje_ganancia: number
+  cantidad_ventas: number
+  ticket_promedio: number
+}
+
+export interface FinanzasFlujoRow {
+  mes: string
+  cobrado: number
+  costo_procesamiento: number
+  neto_cobros: number
+  compras_mercaderia: number
+  pagos_proveedores: number
+  gastos: number
+  flujo_neto: number
+}
+
+export interface FinanzasSerieMensualRow {
+  mes: string
+  ventas_netas: number
+  ganancia_sobre_ventas: number
+  ganancia_final: number
+  cobrado_neto: number
+}
+
+export interface FinanzasPosicion {
+  capital_propio: number
+  devueltos_clientes: number
+  deuda_proveedores: number
+}
+
+export interface FinanzasRankingRow {
+  id_producto: string
+  nombre: string
+  unidades_vendidas: number
+  monto_vendido: number
+  ganancia: number
+  porcentaje_ventas: number | null
+}
+
+export interface FinanzasPresupuestoRow {
+  id_categoria_gasto: string
+  nombre: string
+  gastado: number
+  presupuesto_mensual: number
+  consumido_pct: number
+}
+
+export interface FinanzasContextoPeriodo {
+  hoy: string
+  mes_desde: string
+  mes_hasta: string
+}

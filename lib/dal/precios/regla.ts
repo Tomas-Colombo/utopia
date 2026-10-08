@@ -97,7 +97,7 @@ export function reglaAplicaAhora(r: ReglaPrecioRow, now = new Date()): boolean {
   return true
 }
 
-export function reglaEstaEnUso(_r: ReglaPrecioRow): boolean {
+export function reglaEstaEnUso(): boolean {
   // Placeholder: cuando exista detalle_venta con id_regla_snapshot,
   // consultar aquí. Por ahora todas las reglas se consideran "no usadas"
   // hasta que Etapa 5 exista.

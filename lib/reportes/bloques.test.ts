@@ -1,0 +1,79 @@
+import { describe, expect, it } from 'vitest'
+import { bloquesVisibles } from './bloques'
+import type { Session } from '../dal/session'
+
+describe('bloquesVisibles', () => {
+  it('retorna bloques de ventas si tiene acceso', () => {
+    const session = {
+      rolId: '123',
+      tenantId: '123',
+      modulosHabilitados: ['ventas'],
+      permisos: { ventas: ['ver'] }
+    } as unknown as Session
+    const bloques = bloquesVisibles(session)
+    expect(bloques).toContain('resultados')
+    expect(bloques).toContain('flujo')
+    expect(bloques).toContain('serie')
+    expect(bloques).toContain('cobrar')
+    expect(bloques).not.toContain('gastos')
+  })
+
+  it('retorna bloque de gastos si tiene acceso', () => {
+    const session = {
+      rolId: '123',
+      tenantId: '123',
+      modulosHabilitados: ['gastos'],
+      permisos: { gastos: ['ver'] }
+    } as unknown as Session
+    const bloques = bloquesVisibles(session)
+    expect(bloques).toContain('gastos')
+    expect(bloques).not.toContain('resultados')
+  })
+
+  it('retorna bloques de inventario si tiene acceso', () => {
+    const session = {
+      rolId: '123',
+      tenantId: '123',
+      modulosHabilitados: ['inventario'],
+      permisos: { inventario: ['ver'] }
+    } as unknown as Session
+    const bloques = bloquesVisibles(session)
+    expect(bloques).toContain('mercaderia')
+    expect(bloques).toContain('ranking')
+    expect(bloques).not.toContain('gastos')
+  })
+
+  it('retorna bloques de rendiciones si tiene acceso', () => {
+    const session = {
+      rolId: '123',
+      tenantId: '123',
+      modulosHabilitados: ['rendiciones'],
+      permisos: { rendiciones: ['ver'] }
+    } as unknown as Session
+    const bloques = bloquesVisibles(session)
+    expect(bloques).toContain('proveedores')
+    expect(bloques).not.toContain('mercaderia')
+  })
+
+  it('retorna vacío si no tiene modulos', () => {
+    const session = {
+      rolId: '123',
+      tenantId: '123',
+      modulosHabilitados: [],
+      permisos: {}
+    } as unknown as Session
+    const bloques = bloquesVisibles(session)
+    expect(bloques.length).toBe(0)
+  })
+
+  it('retorna vacío si no tiene permiso ver', () => {
+    const session = {
+      rolId: '123',
+      tenantId: '123',
+      modulosHabilitados: ['ventas'],
+      permisos: { ventas: ['crear'] } // Not ver
+    } as unknown as Session
+    const bloques = bloquesVisibles(session)
+    expect(bloques.length).toBe(0)
+  })
+})
