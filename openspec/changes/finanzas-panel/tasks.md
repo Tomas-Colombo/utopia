@@ -245,14 +245,14 @@ Decision needed before apply: No
 **Closes**: REQ-APP-06 (slugs), parte de Fase 2.5 de la propuesta.
 **Depends on**: Slice 6.
 
-- [ ] `rg "anular\|devolucion" app/\(app\)/ventas/ lib/dal/ventas/` para localizar code existente.
-- [ ] Slugs en `lib/errores/mensajes.ts` + inventario en `lib/errores/mensajes.test.ts`.
-- [ ] Schemas Zod en `lib/validation/ventas.ts` (`z.strictObject`).
-- [ ] Wrappers en `lib/dal/ventas/ventas.ts`.
-- [ ] Server Actions con 3 compuertas.
-- [ ] `AnularVentaDialog.tsx`: muestra `total_reintegrado` antes de confirmar.
-- [ ] `DevolucionDialog.tsx`: flujo de reembolso con cuenta/medio.
-- [ ] Gate completo.
+- [x] `rg "anular\|devolucion" app/\(app\)/ventas/ lib/dal/ventas/` para localizar code existente.
+- [x] Slugs en `lib/errores/mensajes.ts` + inventario en `lib/errores/mensajes.test.ts`.
+- [x] Schemas Zod en `lib/validation/ventas.ts` (`z.strictObject`).
+- [x] Wrappers en `lib/dal/ventas/ventas.ts`.
+- [x] Server Actions con 3 compuertas.
+- [x] `AnularVentaDialog.tsx`: muestra `total_reintegrado` antes de confirmar.
+- [x] `DevolucionDialog.tsx`: flujo de reembolso con cuenta/medio.
+- [x] Gate completo.
 
 ---
 

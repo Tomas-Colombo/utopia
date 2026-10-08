@@ -22,6 +22,33 @@ export const anularVentaSchema = z.strictObject(
         const t = m?.trim()
         return t ? t : undefined
       }),
+    idCuentaReintegro: z.string().uuid('cuenta-invalida').optional().nullable()
+      .transform((id) => id || undefined),
+    medioReintegro: z.enum(['efectivo', 'transferencia', 'tarjeta_debito', 'tarjeta_credito']).optional().nullable()
+      .transform((m) => m || undefined)
+  },
+  {
+    error: (issue: z.core.$ZodRawIssue) =>
+      issue.code === 'unrecognized_keys' ? 'campo-desconocido' : 'payload-invalido',
+  },
+)
+
+export const devolverItemVentaSchema = z.strictObject(
+  {
+    idDetalleVenta: z.uuid('id-detalle-invalido'),
+    idVenta: z.uuid('id-venta-invalido'),
+    motivo: z
+      .string('motivo-invalido')
+      .max(300, 'motivo-largo')
+      .optional()
+      .transform((m) => {
+        const t = m?.trim()
+        return t ? t : undefined
+      }),
+    idCuentaReintegro: z.string().uuid('cuenta-invalida').optional().nullable()
+      .transform((id) => id || undefined),
+    medioReintegro: z.enum(['efectivo', 'transferencia', 'tarjeta_debito', 'tarjeta_credito']).optional().nullable()
+      .transform((m) => m || undefined)
   },
   {
     error: (issue: z.core.$ZodRawIssue) =>
