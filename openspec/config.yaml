@@ -25,7 +25,7 @@ stack:
   database:
     engine: "PostgreSQL (Supabase)"
     orm: "None (by decision, 100 SPs carry the business logic)"
-    migrations: "supabase/migrations (65 applied)"
+    migrations: "supabase/migrations (74 applied)"
 
 testing:
   strict_tdd: true

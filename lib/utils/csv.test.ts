@@ -29,7 +29,7 @@ describe('Utilidades CSV', () => {
 
     const blobMock = vi.fn()
     class MockBlob {
-      constructor(content: any[], options: any) {
+      constructor(content: BlobPart[], options: BlobPropertyBag) {
         blobMock(content, options)
       }
     }

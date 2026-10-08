@@ -256,7 +256,7 @@ Decision needed before apply: No
 
 ---
 
-## Slice 8 — Capa de lectura única (resultados/flujo) (00071) (~300 líneas)
+## Slice 8 — Capa de lectura única (resultados/flujo) (00072) (~300 líneas)
 
 **Goal**: `v_linea_venta`, `rf_finanzas_resultados`, `rf_finanzas_flujo`.
 **Closes**: REQ-DB-10, REQ-DB-11, REQ-DB-12.
@@ -281,7 +281,7 @@ Decision needed before apply: No
 
 ---
 
-## Slice 9 — Capa de lectura única (resto) (00072) (~300 líneas)
+## Slice 9 — Capa de lectura única (resto) (00073) (~300 líneas)
 
 **Goal**: `rf_finanzas_serie_mensual`, `rf_finanzas_posicion`, `rf_finanzas_ranking_productos`, `rf_finanzas_gastos_presupuesto`, `fn_contexto_periodo`.
 **Closes**: REQ-DB-13 a REQ-DB-17.
@@ -295,7 +295,7 @@ Decision needed before apply: No
   - `rf_finanzas_serie_mensual`: un solo escaneo agrupado (verificar con `EXPLAIN`).
   - `rf_finanzas_ranking_productos`: `orden-invalido` con valor fuera de lista blanca.
 
-- [x] `supabase/migrations/00072_finanzas_lectura_2.sql`:
+- [x] `supabase/migrations/00073_finanzas_lectura_2.sql`:
   - `rf_finanzas_serie_mensual` (REQ-DB-13).
   - `rf_finanzas_posicion` (REQ-DB-14).
   - `rf_finanzas_ranking_productos` (REQ-DB-15).
@@ -393,14 +393,14 @@ Decision needed before apply: No
 **Closes**: Fase 6 completa.
 **Depends on**: Slice 13.
 
-- [ ] `rg "rf_reporte_financiero\|rf_reporte_caja\|rf_incobrables_periodo\|rf_rotacion_por_producto\|rf_dashboard_kpis" lib/ app/ supabase/` → verificar cero consumidores antes de borrar.
-- [ ] Migración `0007x_limpieza_reportes_viejos.sql` con `DROP FUNCTION` y `-- DOWN:`.
-- [ ] Borrar `getDashboardKpis`, `getReporteFinanciero`, `getReporteCaja`, `getIncobrablesPeriodo`, `getRotacion` del DAL.
-- [ ] Borrar tipos muertos de `lib/types/reportes.ts`.
-- [ ] `docs/modulos.md` — si cambia el mapeo de permisos por ruta/bloque.
-- [ ] `supabase/README.md` — si hay convención de `-- DOWN` nueva.
-- [ ] `openspec/config.yaml` — actualizar `migrations` aplicadas.
-- [ ] `supabase db reset` + `seed.sql` + `pnpm provision-tenant` → tenant funcional, panel carga vacío sin errores.
-- [ ] Gate final completo: typecheck, lint, unit tests, build.
-- [ ] Tests de DB (marcar NO VERIFICADO si no hay Docker).
-- [ ] Reporte final al usuario.
+- [x] `rg "rf_reporte_financiero\|rf_reporte_caja\|rf_incobrables_periodo\|rf_rotacion_por_producto\|rf_dashboard_kpis" lib/ app/ supabase/` → verificar cero consumidores antes de borrar.
+- [x] Migración `0007x_limpieza_reportes_viejos.sql` con `DROP FUNCTION` y `-- DOWN:`.
+- [x] Borrar `getDashboardKpis`, `getReporteFinanciero`, `getReporteCaja`, `getIncobrablesPeriodo`, `getRotacion` del DAL.
+- [x] Borrar tipos muertos de `lib/types/reportes.ts`.
+- [x] `docs/modulos.md` — si cambia el mapeo de permisos por ruta/bloque.
+- [x] `supabase/README.md` — si hay convención de `-- DOWN` nueva.
+- [x] `openspec/config.yaml` — actualizar `migrations` aplicadas.
+- [x] `supabase db reset` + `seed.sql` + `pnpm provision-tenant` → tenant funcional, panel carga vacío sin errores.
+- [x] Gate final completo: typecheck, lint, unit tests, build.
+- [x] Tests de DB (marcar NO VERIFICADO si no hay Docker).
+- [x] Reporte final al usuario.
