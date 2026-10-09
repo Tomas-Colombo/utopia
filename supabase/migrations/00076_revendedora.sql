@@ -18,7 +18,8 @@ create table if not exists revendedora (
   telefono       text,
   email          text,
   notas          text,
-  estado         text not null default 'activa' check (estado in ('activa', 'baja')),
+  fecha_alta     date not null default current_date,
+  activo         boolean not null default true,
   created_at     timestamptz not null default now(),
   updated_at     timestamptz not null default now()
 );
@@ -33,7 +34,7 @@ create policy revendedora_tenant on revendedora for all to authenticated
   using (id_tenant = auth_tenant_id())
   with check (id_tenant = auth_tenant_id());
 
-create unique index revendedora_email_unico_idx on revendedora (id_tenant, email) where estado = 'activa' and email is not null and email <> '';
+create unique index revendedora_email_unico_idx on revendedora (id_tenant, email) where activo = true and email is not null and email <> '';
 
 create or replace function sp_crear_revendedora(
   _nombre text,
@@ -60,8 +61,8 @@ begin
     raise exception 'modulo-revendedoras-deshabilitado' using errcode = '42501';
   end if;
 
-  insert into revendedora (id_tenant, nombre, apellido, telefono, email, notas, estado)
-  values (v_tenant, _nombre, _apellido, _telefono, _email, _notas, 'activa')
+  insert into revendedora (id_tenant, nombre, apellido, telefono, email, notas, activo, fecha_alta)
+  values (v_tenant, _nombre, _apellido, _telefono, _email, _notas, true, current_date)
   returning id_revendedora into v_id;
 
   insert into auditoria(id_tenant, id_usuario, entidad, entidad_id, accion, cambios, ip)
@@ -141,24 +142,17 @@ begin
     raise exception 'revendedora-not-found' using errcode = 'P0002';
   end if;
   
-  if v_old.estado = 'baja' then
+  if not v_old.activo then
     return;
   end if;
 
   -- Para el Slice 1, no hay control de mercadería. El Slice 2/3 agregará el check "revendedora-con-stock".
   
   update revendedora
-  set estado = 'baja'
+  set activo = false
   where id_revendedora = _id and id_tenant = v_tenant;
 
   insert into auditoria(id_tenant, id_usuario, entidad, entidad_id, accion, cambios, ip)
   values (v_tenant, v_actor, 'revendedora', _id::text, 'baja',
-          jsonb_build_object('estado', 'baja'), _ip);
+          jsonb_build_object('activo', false), _ip);
 end $$;
-
--- DOWN:
--- drop function if exists sp_baja_revendedora(uuid);
--- drop function if exists sp_editar_revendedora(uuid, text, text, text, text, text);
--- drop function if exists sp_crear_revendedora(text, text, text, text, text);
--- drop table if exists revendedora;
--- delete from modulo where codigo = 'revendedoras';

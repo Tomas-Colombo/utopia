@@ -13,7 +13,8 @@ import { MENSAJE_GENERICO, mensajeDeError, SLUGS_CON_MENSAJE } from './mensajes'
  */
 const SLUGS_DE_LA_APP = [
   // Permisos y sesión
-  'no-permission', 'module-disabled', 'tenant-mismatch', 'no-session', 'no-tenant', 'modulo-revendedoras-deshabilitado', 'revendedora-not-found', 'revendedora-con-stock',
+  'no-permission', 'module-disabled', 'tenant-mismatch', 'no-session', 'no-tenant', 'modulo-revendedoras-deshabilitado',
+  'email-duplicado', 'revendedora-not-found', 'revendedora-con-stock',
   // Actions
   'apellido-invalido', 'archivo-invalido', 'consignacion-vacia', 'cuotas-invalidas',
   'cuotas-medio-invalido', 'demasiados-productos-en-un-batch', 'dias-invalidos',

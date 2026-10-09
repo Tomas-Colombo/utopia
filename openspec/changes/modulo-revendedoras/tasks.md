@@ -10,9 +10,9 @@ Leyenda: `[ ]` pendiente · `[x]` hecho y verificado.
 
 ## Fase 0 — Gate humano
 
-- [ ] Aprobación escrita del usuario sobre `proposal.md §4` (DR-1…DR-17). Ya aprobados: DR-13 (excepción DEFINER) y rol `Revendedora` bloqueado.
-- [ ] `finanzas-panel` cerrado (todas sus tareas tildadas y mergeado). **No empezar antes.**
-- [ ] Confirmar con el cliente las decisiones DR-4 (período), DR-5 (cambios), DR-6 (% del local);
+- [x] Aprobación escrita del usuario sobre `proposal.md §4` (DR-1…DR-17). Ya aprobados: DR-13 (excepción DEFINER) y rol `Revendedora` bloqueado.
+- [x] `finanzas-panel` cerrado (todas sus tareas tildadas y mergeado). **No empezar antes.**
+- [x] Confirmar con el cliente las decisiones DR-4 (período), DR-5 (cambios), DR-6 (% del local);
   si no hay respuesta rige el fallback ya cerrado.
 
 > Antes de cada slice: leer `AGENTS.md`, `docs/modulos.md`, `docs/protocolo-agentes.md`, y la
@@ -22,15 +22,15 @@ Leyenda: `[ ]` pendiente · `[x]` hecho y verificado.
 
 ## Slice 1 — Módulo y entidad (~400) · REQ-RV-MOD-01…05, 08, 09, DB-01
 
-- [ ] Test primero: rol sin `revendedoras` rechazado; tenant con módulo apagado → `module-disabled`;
+- [x] Test primero: rol sin `revendedoras` rechazado; tenant con módulo apagado → `module-disabled`;
   tenants A/B aislados; inserción cruzada rechazada.
-- [ ] Migración `00076_revendedora.sql`: fila en `modulo`, tabla `revendedora`, RLS, trigger,
+- [x] Migración `00076_revendedora.sql`: fila en `modulo`, tabla `revendedora`, RLS, trigger,
   `sp_crear/editar/baja_revendedora` con `auditoria` y chequeo de `tenant_modulo`. `-- DOWN:` probado.
-- [ ] `supabase/seed.sql`, `CATALOGO_PERMISOS`, `MODULO_NOMBRE`, `docs/modulos.md`, Sidebar.
-- [ ] `lib/types`, `lib/validation/revendedoras.ts`, `lib/dal/revendedoras/`, slugs en `mensajes.ts`.
-- [ ] `app/(app)/revendedoras/` (layout `ver`, lista, `nuevo`, `[id]`) con Server Actions de tres puertas.
-- [ ] Test: `RolesModal`/`PermisosEditor` muestran el módulo y `permisosSchema` lo acepta.
-- [ ] Doc de provisión (REQ-RV-MOD-06).
+- [x] `supabase/seed.sql`, `CATALOGO_PERMISOS`, `MODULO_NOMBRE`, `docs/modulos.md`, Sidebar.
+- [x] `lib/types`, `lib/validation/revendedoras.ts`, `lib/dal/revendedoras/`, slugs en `mensajes.ts`.
+- [x] `app/(app)/revendedoras/` (layout `ver`, lista, `nuevo`, `[id]`) con Server Actions de tres puertas.
+- [x] Test: `RolesModal`/`PermisosEditor` muestran el módulo y `permisosSchema` lo acepta.
+- [x] Doc de provisión (REQ-RV-MOD-06).
 
 ## Slice 1b — Seguridad por usuario (~400) ⚠⚠ · REQ-RV-ACC-01, 02, 10…12
 

@@ -78,6 +78,7 @@ const MENSAJES: Record<string, string> = {
   'permisos-no-array': 'Los permisos enviados no son válidos. Recargá la página y probá de nuevo.',
   'modulo-desconocido': 'Uno de los permisos no corresponde a ningún módulo. Recargá la página.',
   'modulo-revendedoras-deshabilitado': 'El módulo de revendedoras no está habilitado.',
+  'email-duplicado': 'Ya existe una revendedora con este email.',
   'revendedora-not-found': 'Esa revendedora ya no existe. Recargá la página.',
   'revendedora-con-stock': 'No podés dar de baja a una revendedora que tiene mercadería en su poder. Pedile que devuelva lo que le queda o declaralo como faltante.',
   'accion-invalida':

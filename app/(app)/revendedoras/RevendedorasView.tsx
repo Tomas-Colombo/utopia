@@ -37,11 +37,11 @@ export function RevendedorasView({ data, canCreate }: { data: RevendedoraRow[], 
     { key: 'email', label: 'Email', render: (r) => r.email || '-' },
     { key: 'telefono', label: 'Teléfono', render: (r) => r.telefono || '-' },
     {
-      key: 'estado',
+      key: 'activo',
       label: 'Estado',
       render: (r) => (
-        <Badge variant={r.estado === 'activa' ? 'success' : 'neutral'}>
-          {r.estado === 'activa' ? 'Activa' : 'Baja'}
+        <Badge variant={r.activo ? 'success' : 'neutral'}>
+          {r.activo ? 'Activa' : 'Baja'}
         </Badge>
       ),
     },
