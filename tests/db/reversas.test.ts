@@ -316,5 +316,93 @@ describe.skipIf(!hasTestDb)('Devoluciones de Cliente (Slice 6)', () => {
       
     expect(dev!.costo_recuperado).toBe(f.costo)
   })
+
+  it('Devolución bloqueada si la línea ya fue rendida al proveedor (detalle-ya-rendido)', async () => {
+    const f = await ventaFixture('dev-ya-rendida', 1, { tipoIngreso: 'consignacion' })
+    const { data: id_venta } = await venderContado(f)
+
+    const { data: detalles } = await f.serviceRole.from('detalle_venta')
+      .select('id_detalle_venta')
+      .eq('id_venta', id_venta)
+
+    // Una rendición cualquiera alcanza: id_rendicion es una de las dos columnas
+    // de detalle_venta que sigue siendo editable (00068).
+    const { data: prov } = await f.serviceRole.from('proveedor')
+      .insert({ id_tenant: f.tenantId, nombre: 'Prov devolución rendida' })
+      .select('id_proveedor')
+      .single()
+    const { data: rend } = await f.serviceRole.from('rendicion_proveedor')
+      .insert({ id_tenant: f.tenantId, id_proveedor: prov!.id_proveedor, monto_total: 0, cantidad_lineas: 0 })
+      .select('id_rendicion')
+      .single()
+    const { error: errSet } = await f.serviceRole.from('detalle_venta')
+      .update({ id_rendicion: rend!.id_rendicion })
+      .eq('id_detalle_venta', detalles![0].id_detalle_venta)
+    expect(errSet, 'marcar línea como rendida').toBeNull()
+
+    const { error } = await f.authenticated.rpc('sp_registrar_devolucion_cliente', {
+      p_id_detalle_venta: detalles![0].id_detalle_venta,
+      p_motivo: 'Test',
+      p_id_cuenta_reintegro: f.idCuenta,
+      p_medio_reintegro: 'efectivo',
+      p_ip: null
+    })
+    expect(error).not.toBeNull()
+    expect(error?.message).toMatch(/detalle-ya-rendido/)
+  })
+
+  it('Devolución sobre una venta anulada de verdad se rechaza (el ítem ya volvió a disponible)', async () => {
+    const f = await ventaFixture('dev-venta-anulada')
+    const { data: id_venta } = await venderContado(f)
+
+    const { data: detalles } = await f.serviceRole.from('detalle_venta')
+      .select('id_detalle_venta')
+      .eq('id_venta', id_venta)
+
+    const { error: errAnular } = await f.authenticated.rpc('sp_anular_venta', {
+      p_id_venta: id_venta,
+      p_motivo: 'Test',
+      p_ip: null
+    })
+    expect(errAnular, 'sp_anular_venta').toBeNull()
+
+    // Anular libera el ítem (00062): el guard item-no-esta-vendido se dispara
+    // antes que venta-anulada, así que por el flujo real nunca se llega al otro.
+    const { error } = await f.authenticated.rpc('sp_registrar_devolucion_cliente', {
+      p_id_detalle_venta: detalles![0].id_detalle_venta,
+      p_motivo: 'Test',
+      p_id_cuenta_reintegro: f.idCuenta,
+      p_medio_reintegro: 'efectivo',
+      p_ip: null
+    })
+    expect(error).not.toBeNull()
+    expect(error?.message).toMatch(/item-no-esta-vendido/)
+  })
+
+  it('Devolución bloqueada con venta-anulada cuando el ítem sigue vendido', async () => {
+    const f = await ventaFixture('dev-venta-anulada-forzada')
+    const { data: id_venta } = await venderContado(f)
+
+    const { data: detalles } = await f.serviceRole.from('detalle_venta')
+      .select('id_detalle_venta')
+      .eq('id_venta', id_venta)
+
+    // Estado forzado (el trigger de 00068 deja pasar estado_venta): aísla el
+    // guard de venta-anulada del de estado del ítem.
+    const { error: errSet } = await f.serviceRole.from('venta')
+      .update({ estado_venta: 'anulada' })
+      .eq('id_venta', id_venta)
+    expect(errSet, 'forzar estado_venta').toBeNull()
+
+    const { error } = await f.authenticated.rpc('sp_registrar_devolucion_cliente', {
+      p_id_detalle_venta: detalles![0].id_detalle_venta,
+      p_motivo: 'Test',
+      p_id_cuenta_reintegro: f.idCuenta,
+      p_medio_reintegro: 'efectivo',
+      p_ip: null
+    })
+    expect(error).not.toBeNull()
+    expect(error?.message).toMatch(/venta-anulada/)
+  })
 })
  

@@ -15,6 +15,8 @@ const eslintConfig = defineConfig([
     // Playwright artifacts: traces and reports contain bundled/minified JS.
     "e2e/.artifacts/**",
     "e2e/.report/**",
+    // Reporte de cobertura generado (vitest): JS minificado ajeno.
+    "coverage/**",
   ]),
   {
     // Playwright's fixture API takes a callback named `use`, which the React

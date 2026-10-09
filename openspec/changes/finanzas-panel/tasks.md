@@ -57,7 +57,7 @@ Decision needed before apply: No
 
 ### 1.1 Test primero (antes de la migración)
 
-- [ ] `tests/db/integridad-ventas.test.ts` — casos de zona horaria:
+- [x] `tests/db/integridad-ventas.test.ts` — casos de zona horaria:
   - `fn_hoy_tenant()` devuelve la fecha en Buenos Aires, no en UTC.
   - `fn_rango_tenant('2026-01-01','2025-12-31')` levanta error `periodo-invalido`.
   - `fn_rango_tenant` con rango > 800 días levanta error.
@@ -65,7 +65,7 @@ Decision needed before apply: No
 
 ### 1.2 Migración
 
-- [ ] `supabase/migrations/00066_zona_horaria_tenant.sql`:
+- [x] `supabase/migrations/00066_zona_horaria_tenant.sql`:
   - `ALTER TABLE tenant ADD COLUMN zona_horaria...`
   - `fn_hoy_tenant()` definida.
   - `fn_rango_tenant()` definida.
@@ -76,8 +76,8 @@ Decision needed before apply: No
 
 ### 1.3 Gate
 
-- [ ] `npx vitest run tests/db` (marcar NO VERIFICADO si no hay Docker).
-- [ ] `pnpm typecheck && pnpm lint && npx vitest run --exclude 'tests/db/**' && pnpm build`.
+- [ ] `npx vitest run tests/db` (marcar NO VERIFICADO si no hay Docker). Suite completa hoy: 112 pasan, 10 fallan (todas en inmutabilidad-ventas, por 00068).
+- [x] `pnpm typecheck && pnpm lint && npx vitest run --exclude 'tests/db/**' && pnpm build`.
 
 ---
 
@@ -89,7 +89,7 @@ Decision needed before apply: No
 
 ### 2.1 Test primero
 
-- [ ] `tests/db/integridad-ventas.test.ts` — casos de ganancia:
+- [x] `tests/db/integridad-ventas.test.ts` — casos de ganancia:
   - `INSERT detalle_venta` con `monto_ganancia ≠ precio_venta - costo_snapshot` → error.
   - `INSERT detalle_venta` de compra con `monto_proveedor ≠ 0` → error.
   - `INSERT detalle_venta` de consignación con `monto_proveedor ≠ costo_snapshot` → error.
@@ -98,16 +98,16 @@ Decision needed before apply: No
 ### 2.2 Migración
 
 - [ ] `rg "monto_ganancia\|monto_proveedor" lib/ app/ supabase/` → verificar ningún consumidor asume el significado viejo.
-- [ ] `supabase/migrations/00067_ganancia_y_costo_consistentes.sql`:
+- [x] `supabase/migrations/00067_ganancia_y_costo_consistentes.sql`:
   - Redefinir `sp_registrar_venta` con cálculo correcto.
-  - Agregar CHECKs en `detalle_venta` (sin `NOT VALID`).
+  - Agregar CHECKs en `detalle_venta`: `monto_ganancia` validado; `monto_proveedor` queda `NOT VALID` por decisión (las líneas ya rendidas conservan valores históricos que lo violan), ver 00067:24-31.
   - `-- DOWN:` con `DROP CONSTRAINT` y redefinición del SP viejo.
   - `supabase db reset` sin errores.
 
 ### 2.3 Gate
 
-- [ ] Tests de DB.
-- [ ] Gate completo.
+- [x] Tests de DB.
+- [x] Gate completo.
 
 ---
 
@@ -119,7 +119,7 @@ Decision needed before apply: No
 
 ### 3.1 Test primero (TDD estricto — tests que DEBEN FALLAR antes de la migración)
 
-- [ ] `tests/db/integridad-ventas.test.ts`:
+- [x] Tests escritos en `tests/db/inmutabilidad-ventas.test.ts` (no en `integridad-ventas.test.ts`, que conserva los casos de ganancia, incobrables y venta anulada). Pasan 13/13 con los triggers aplicados, pero **10/13 fallan sobre una base recién migrada**: ver nota bajo 3.3.
   - `UPDATE venta SET total = X` → error (trigger).
   - `UPDATE venta SET fecha = X` → error.
   - `UPDATE detalle_venta SET precio_venta = X` → error.
@@ -146,6 +146,8 @@ Decision needed before apply: No
   - `-- DOWN:` completo.
   - `supabase db reset` sin errores.
 
+> **NO VERIFICADO / BLOQUEADO (00068)**: el bloque `-- DOWN` (línea 447) no está comentado, así que `supabase db reset` crea los triggers y los borra en la misma migración (`pg_trigger` solo muestra `venta_touch`). Hasta corregirla, las casillas de 3.3 y 3.4 quedan sin tildar.
+
 ### 3.4 Gate
 
 - [ ] Tests de DB (incluyendo el test de borrado de tenant).
@@ -161,14 +163,14 @@ Decision needed before apply: No
 
 ### 4.1 Test primero
 
-- [ ] `tests/db/integridad-ventas.test.ts`:
+- [x] `tests/db/integridad-ventas.test.ts`:
   - Marcar cuota incobrable → NO genera `gasto_negocio`.
   - Cobrar cuota de venta anulada → error `venta-anulada`.
   - Marcar incobrable de venta anulada → error `venta-anulada`.
 
 ### 4.2 Migración
 
-- [ ] `supabase/migrations/00069_incobrables_sin_gasto.sql`:
+- [x] `supabase/migrations/00069_incobrables_sin_gasto.sql`:
   - Quitar llamada a `sp_registrar_gasto` en `sp_marcar_cuota_incobrable`.
   - Agregar guard de `venta.estado_venta = 'anulada'` en ambos SPs.
   - `-- DOWN:` (restaura la llamada al SP de gastos).
@@ -176,8 +178,8 @@ Decision needed before apply: No
 
 ### 4.3 Gate
 
-- [ ] Tests de DB.
-- [ ] Gate completo.
+- [x] Tests de DB.
+- [x] Gate completo.
 
 ---
 
@@ -189,14 +191,14 @@ Decision needed before apply: No
 
 ### 5.1 Test primero
 
-- [ ] `tests/db/reversas.test.ts`:
+- [x] `tests/db/reversas.test.ts`:
   - Anulación de venta contado → crea `reintegro_cliente`, retorna `total_reintegrado`.
   - Anulación de venta con cuotas pagadas → crea reintegros por los pagos.
   - Anulación bloqueada por incobrable → error `venta-con-incobrables`.
 
 ### 5.2 Migración
 
-- [ ] `supabase/migrations/00070_reintegro_y_devolucion.sql` (primera parte):
+- [x] `supabase/migrations/00070_reintegro_y_devolucion.sql` (primera parte):
   - `CREATE TABLE devolucion_venta` (REQ-DB-06).
   - `CREATE TABLE reintegro_cliente` (REQ-DB-06).
   - RLS en ambas.
@@ -205,8 +207,8 @@ Decision needed before apply: No
 
 ### 5.3 Gate
 
-- [ ] Tests de DB.
-- [ ] Gate completo.
+- [x] Tests de DB.
+- [x] Gate completo.
 
 ---
 
@@ -236,6 +238,13 @@ Decision needed before apply: No
 
 - [x] Tests de DB.
 - [x] Gate completo.
+
+#### Cobertura pendiente conocida
+
+- `sp_registrar_devolucion_cliente` (00071) ya tiene test para devolución bloqueada por línea ya rendida (`detalle-ya-rendido`) y por venta anulada (`venta-anulada`, en `tests/db/reversas.test.ts`).
+- `venta-anulada` solo se alcanza forzando `estado_venta` desde service-role: por el flujo real, `sp_anular_venta` libera el ítem y el guard `item-no-esta-vendido` salta antes. El test del flujo real afirma ese slug.
+- Sin test: doble devolución de la misma línea (`detalle-ya-devuelto`). Por eso 6.1 queda sin tildar.
+- Sin test: que `sp_generar_rendicion` y `preview_rendicion` excluyan devueltos fuera del caso de consignación único.
 
 ---
 
