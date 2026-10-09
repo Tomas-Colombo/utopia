@@ -38,7 +38,7 @@ describe('revendedoras actions', () => {
       const res = await crearRevendedoraAction(payload)
       
       expect(guard.requireModuleRole).toHaveBeenCalledWith(expect.anything(), 'revendedoras', 'crear')
-      expect(dal.crearRevendedora).toHaveBeenCalledWith(expect.anything(), payload)
+      expect(dal.crearRevendedora).toHaveBeenCalledWith(payload)
       expect(res.ok).toBe(true)
       expect(revalidatePath).toHaveBeenCalledWith('/revendedoras')
     })
@@ -62,7 +62,7 @@ describe('revendedoras actions', () => {
       const res = await editarRevendedoraAction(id, payload)
       
       expect(guard.requireModuleRole).toHaveBeenCalledWith(expect.anything(), 'revendedoras', 'editar')
-      expect(dal.editarRevendedora).toHaveBeenCalledWith(expect.anything(), id, payload)
+      expect(dal.editarRevendedora).toHaveBeenCalledWith(id, payload)
       expect(res.ok).toBe(true)
       expect(revalidatePath).toHaveBeenCalledWith('/revendedoras')
       expect(revalidatePath).toHaveBeenCalledWith(`/revendedoras/${id}`)
@@ -83,7 +83,7 @@ describe('revendedoras actions', () => {
       const res = await bajaRevendedoraAction(id)
       
       expect(guard.requireModuleRole).toHaveBeenCalledWith(expect.anything(), 'revendedoras', 'eliminar')
-      expect(dal.bajaRevendedora).toHaveBeenCalledWith(expect.anything(), id)
+      expect(dal.bajaRevendedora).toHaveBeenCalledWith(id)
       expect(res.ok).toBe(true)
     })
 

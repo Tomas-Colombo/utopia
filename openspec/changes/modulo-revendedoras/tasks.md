@@ -10,9 +10,9 @@ Leyenda: `[ ]` pendiente · `[x]` hecho y verificado.
 
 ## Fase 0 — Gate humano
 
-- [x] Aprobación escrita del usuario sobre `proposal.md §4` (DR-1…DR-17). Ya aprobados: DR-13 (excepción DEFINER) y rol `Revendedora` bloqueado.
-- [x] `finanzas-panel` cerrado (todas sus tareas tildadas y mergeado). **No empezar antes.**
-- [x] Confirmar con el cliente las decisiones DR-4 (período), DR-5 (cambios), DR-6 (% del local);
+- [ ] Aprobación escrita del usuario sobre `proposal.md §4` (DR-1…DR-17). Ya aprobados: DR-13 (excepción DEFINER) y rol `Revendedora` bloqueado.
+- [ ] `finanzas-panel` cerrado (todas sus tareas tildadas y mergeado). **No empezar antes.**
+- [ ] Confirmar con el cliente las decisiones DR-4 (período), DR-5 (cambios), DR-6 (% del local);
   si no hay respuesta rige el fallback ya cerrado.
 
 > Antes de cada slice: leer `AGENTS.md`, `docs/modulos.md`, `docs/protocolo-agentes.md`, y la

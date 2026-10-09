@@ -19,7 +19,7 @@ export async function crearRevendedoraAction(formData: unknown) {
       return { ok: false as const, reason: 'payload-invalido' }
     }
 
-    const res = await dal.crearRevendedora(session, parsed.data.payload)
+    const res = await dal.crearRevendedora( parsed.data.payload)
     if (res.ok) {
       revalidatePath('/revendedoras')
     }
@@ -43,7 +43,7 @@ export async function editarRevendedoraAction(id: string, formData: unknown) {
       return { ok: false as const, reason: 'payload-invalido' }
     }
 
-    const res = await dal.editarRevendedora(session, parsed.data.id, parsed.data.payload)
+    const res = await dal.editarRevendedora( parsed.data.id, parsed.data.payload)
     if (res.ok) {
       revalidatePath('/revendedoras')
       revalidatePath(`/revendedoras/${parsed.data.id}`)
@@ -68,7 +68,7 @@ export async function bajaRevendedoraAction(id: string) {
       return { ok: false as const, reason: 'payload-invalido' }
     }
 
-    const res = await dal.bajaRevendedora(session, parsed.data.id)
+    const res = await dal.bajaRevendedora( parsed.data.id)
     if (res.ok) {
       revalidatePath('/revendedoras')
       revalidatePath(`/revendedoras/${parsed.data.id}`)

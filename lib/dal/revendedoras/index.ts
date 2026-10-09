@@ -1,9 +1,8 @@
 import { createServerClient } from '../supabase'
-import type { Session } from '../session'
 import type { RevendedoraPayload } from '../../validation/revendedoras'
 import type { RevendedoraRow } from '../../types/revendedoras'
 
-export async function listarRevendedoras(_session: Session) {
+export async function listarRevendedoras() {
   const supabase = await createServerClient()
   const { data, error } = await supabase
     .from('revendedora')
@@ -14,7 +13,7 @@ export async function listarRevendedoras(_session: Session) {
   return data as RevendedoraRow[]
 }
 
-export async function obtenerRevendedora(_session: Session, id: string) {
+export async function obtenerRevendedora(id: string) {
   const supabase = await createServerClient()
   const { data, error } = await supabase
     .from('revendedora')
@@ -29,7 +28,7 @@ export async function obtenerRevendedora(_session: Session, id: string) {
   return data as RevendedoraRow
 }
 
-export async function crearRevendedora(_session: Session, payload: RevendedoraPayload) {
+export async function crearRevendedora(payload: RevendedoraPayload) {
   const supabase = await createServerClient()
   const { data, error } = await supabase.rpc('sp_crear_revendedora', {
     _nombre: payload.nombre,
@@ -50,7 +49,7 @@ export async function crearRevendedora(_session: Session, payload: RevendedoraPa
   return { ok: true as const, data }
 }
 
-export async function editarRevendedora(_session: Session, id: string, payload: RevendedoraPayload) {
+export async function editarRevendedora(id: string, payload: RevendedoraPayload) {
   const supabase = await createServerClient()
   const { error } = await supabase.rpc('sp_editar_revendedora', {
     _id: id,
@@ -72,7 +71,7 @@ export async function editarRevendedora(_session: Session, id: string, payload: 
   return { ok: true as const }
 }
 
-export async function bajaRevendedora(_session: Session, id: string) {
+export async function bajaRevendedora(id: string) {
   const supabase = await createServerClient()
   const { error } = await supabase.rpc('sp_baja_revendedora', {
     _id: id,
