@@ -124,8 +124,12 @@ module to `include` is welcome; lowering a threshold to pass is not.
   `lib/<dominio>/**`); English in `components/ui/**` and in this file. UI copy
   Spanish, voseo ("Elegí un proveedor").
 - Comments explain *why* (what broke before), not what. Match surrounding code.
-- Reports (commit, PR, summary): separate what you verified from what you
-  assume. Never claim a check that did not run.
+- **Reports** (commit, PR, summary): paste the raw output of every check you
+  claim, with counts (`tests/db`: files and tests). No output, no claim: say "not verified".
+- **Changing an `sp_*`**: copy its LAST definition (`rg -l "function sp_x"
+  supabase/migrations | sort | tail -1`), never an older one. Never edit a migration already applied to a shared DB.
+- **A test fails**: say whether the test or the code is wrong, citing the spec
+  line, before touching an assertion. Before deleting a file, `rg` who imports it.
 
 # Before touching X, read Y
 
