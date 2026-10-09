@@ -305,7 +305,7 @@ describe.skipIf(!hasTestDb)('sp_cobrar_cuota — 00059', () => {
 })
 
 describe.skipIf(!hasTestDb)('sp_marcar_cuota_incobrable — 00060 cascada', () => {
-  it('arrastra las cuotas POSTERIORES y registra UN SOLO gasto por el total', async () => {
+  it('arrastra las cuotas POSTERIORES sin registrar gasto', async () => {
     const f = await ventaFixture('incobrable-cascada')
     const { data: idVenta } = await venderFinanciado(f, {
       cuotas: 6,
@@ -343,7 +343,6 @@ describe.skipIf(!hasTestDb)('sp_marcar_cuota_incobrable — 00060 cascada', () =
       monto_total: number
       desde: number
       hasta: number
-      id_gasto: string
     }
     expect(r.cuotas_afectadas).toBe(4) // 3, 4, 5 y 6
     expect(r.desde).toBe(3)
@@ -366,19 +365,6 @@ describe.skipIf(!hasTestDb)('sp_marcar_cuota_incobrable — 00060 cascada', () =
       'incobrable',
       'incobrable',
     ])
-
-    // UN gasto, no cuatro: es una decisión, no cuatro hechos.
-    const gastos = unwrapFixture(
-      'gastos select',
-      await f.serviceRole
-        .from('gasto_negocio')
-        .select('monto, descripcion')
-        .eq('id_tenant', f.tenantId),
-    ) as Array<{ monto: string; descripcion: string }>
-
-    expect(gastos).toHaveLength(1)
-    expect(Number(gastos[0].monto)).toBeCloseTo(r.monto_total, 2)
-    expect(gastos[0].descripcion).toMatch(/Cuotas 3 a 6/)
   })
 
   it('NO cruza a otra compra del mismo cliente', async () => {

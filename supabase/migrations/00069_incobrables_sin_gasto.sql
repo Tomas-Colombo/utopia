@@ -1,11 +1,11 @@
 -- 00069_incobrables_sin_gasto.sql
 -- UP:
 -- - `sp_marcar_cuota_incobrable` ya NO registra `gasto_negocio`. El KPI de pérdida es
---   `sp_perdida_incobrable_venta`, no un gasto contable.
+--   `sp_perdida_incobrable_venta`, no un gasto contable. Conserva la cascada de 00060.
 -- - Se agrega un guard en `sp_marcar_cuota_incobrable` y `sp_cobrar_cuota` para impedir
 --   accionar sobre cuotas de ventas anuladas, devolviendo `venta-anulada`.
 -- DOWN:
--- - Restaura la creación de `gasto_negocio` en `sp_marcar_cuota_incobrable`.
+-- - Restaura la creación de `gasto_negocio` en `sp_marcar_cuota_incobrable` (versión 00060).
 -- - Quita el guard de `venta-anulada` de ambos.
 
 -- ─── sp_cobrar_cuota ─────────────────────────────────────────────────
@@ -112,13 +112,17 @@ create or replace function sp_marcar_cuota_incobrable(
   p_id_cuota uuid,
   p_motivo   text,
   p_ip       inet default null
-) returns void language plpgsql as $$
+) returns jsonb language plpgsql as $$
 declare
   v_tenant     uuid := auth_tenant_id();
   v_actor      uuid := auth.uid();
   v_cuota      cuota_financiada;
   v_estado_venta estado_venta;
   v_saldo      numeric(14, 2);
+  v_afectadas  integer;
+  v_desde      smallint;
+  v_hasta      smallint;
+  v_ids        uuid[];
 begin
   if v_tenant is null then
     raise exception 'no-tenant' using errcode = '42501';
@@ -143,20 +147,42 @@ begin
     raise exception 'cuota-no-incobrable: %', v_cuota.estado using errcode = '22023';
   end if;
 
-  v_saldo := v_cuota.monto - v_cuota.monto_pagado;
-
-  update cuota_financiada
-     set estado                = 'incobrable',
-         fecha_incobrable      = now(),
-         id_usuario_incobrable = v_actor,
-         motivo_incobrable     = trim(p_motivo)
-   where id_cuota_financiada = p_id_cuota;
+  with actualizadas as (
+    update cuota_financiada
+       set estado                = 'incobrable',
+           fecha_incobrable      = now(),
+           id_usuario_incobrable = v_actor,
+           motivo_incobrable     = trim(p_motivo)
+     where id_tenant = v_tenant
+       and id_venta  = v_cuota.id_venta
+       and numero   >= v_cuota.numero
+       and estado in ('pendiente', 'parcial')
+    returning id_cuota_financiada, numero, monto - monto_pagado as saldo
+  )
+  select coalesce(sum(saldo), 0),
+         count(*),
+         min(numero),
+         max(numero),
+         array_agg(id_cuota_financiada)
+    into v_saldo, v_afectadas, v_desde, v_hasta, v_ids
+    from actualizadas;
 
   insert into auditoria(id_tenant, id_usuario, entidad, entidad_id, accion, cambios, ip)
   values (v_tenant, v_actor, 'cuota_financiada', p_id_cuota::text, 'editar',
-          jsonb_build_object('estado', 'incobrable', 'saldo_perdido', v_saldo,
+          jsonb_build_object('estado', 'incobrable',
+                             'saldo_perdido', v_saldo,
+                             'cuotas_afectadas', v_afectadas,
+                             'desde', v_desde, 'hasta', v_hasta,
+                             'ids', to_jsonb(v_ids),
                              'motivo', trim(p_motivo)),
           p_ip);
+
+  return jsonb_build_object(
+    'cuotas_afectadas', v_afectadas,
+    'monto_total',      v_saldo,
+    'desde',            v_desde,
+    'hasta',            v_hasta
+  );
 end $$;
 
 grant execute on function sp_marcar_cuota_incobrable(uuid, text, inet) to authenticated;
@@ -168,15 +194,20 @@ create or replace function sp_marcar_cuota_incobrable(
   p_id_cuota uuid,
   p_motivo   text,
   p_ip       inet default null
-) returns uuid language plpgsql as $$
+) returns jsonb language plpgsql as $$
 declare
   v_tenant     uuid := auth_tenant_id();
   v_actor      uuid := auth.uid();
   v_cuota      cuota_financiada;
   v_saldo      numeric(14, 2);
+  v_afectadas  integer;
+  v_desde      smallint;
+  v_hasta      smallint;
+  v_ids        uuid[];
   v_id_cat     uuid;
   v_id_gasto   uuid;
   v_cliente    text;
+  v_detalle    text;
 begin
   if v_tenant is null then
     raise exception 'no-tenant' using errcode = '42501';
@@ -195,44 +226,71 @@ begin
     raise exception 'cuota-no-incobrable: %', v_cuota.estado using errcode = '22023';
   end if;
 
-  v_saldo := v_cuota.monto - v_cuota.monto_pagado;
+  with actualizadas as (
+    update cuota_financiada
+       set estado                = 'incobrable',
+           fecha_incobrable      = now(),
+           id_usuario_incobrable = v_actor,
+           motivo_incobrable     = trim(p_motivo)
+     where id_tenant = v_tenant
+       and id_venta  = v_cuota.id_venta
+       and numero   >= v_cuota.numero
+       and estado in ('pendiente', 'parcial')
+    returning id_cuota_financiada, numero, monto - monto_pagado as saldo
+  )
+  select coalesce(sum(saldo), 0),
+         count(*),
+         min(numero),
+         max(numero),
+         array_agg(id_cuota_financiada)
+    into v_saldo, v_afectadas, v_desde, v_hasta, v_ids
+    from actualizadas;
 
-  update cuota_financiada
-     set estado                = 'incobrable',
-         fecha_incobrable      = now(),
-         id_usuario_incobrable = v_actor,
-         motivo_incobrable     = trim(p_motivo)
-   where id_cuota_financiada = p_id_cuota;
-
-  select id_categoria_gasto into v_id_cat
-    from categoria_gasto
-   where id_tenant = v_tenant and lower(nombre) = 'incobrables'
-   limit 1;
-  if v_id_cat is null then
-    insert into categoria_gasto(id_tenant, nombre, descripcion)
-    values (v_tenant, 'Incobrables',
-            'Cuotas financiadas que el cliente no pagó y se dieron por perdidas.')
-    returning id_categoria_gasto into v_id_cat;
-  end if;
+  insert into categoria_gasto(id_tenant, nombre, descripcion)
+  values (v_tenant, 'Incobrables',
+          'Cuotas financiadas que el cliente no pagó y se dieron por perdidas.')
+  on conflict (id_tenant, lower(nombre))
+    do update set nombre = categoria_gasto.nombre
+  returning id_categoria_gasto into v_id_cat;
 
   select nombre_completo into v_cliente
     from cliente where id_cliente = v_cuota.id_cliente;
 
-  v_id_gasto := sp_registrar_gasto(
-    v_id_cat,
-    v_saldo,
-    format('Cuota %s incobrable — %s. %s', v_cuota.numero, coalesce(v_cliente, 'cliente'), trim(p_motivo)),
-    null,
-    null,
-    p_ip
-  );
+  v_detalle := case
+    when v_afectadas = 1 then format('Cuota %s', v_desde)
+    else format('Cuotas %s a %s', v_desde, v_hasta)
+  end;
+
+  if v_saldo > 0 then
+    v_id_gasto := sp_registrar_gasto(
+      v_id_cat,
+      v_saldo,
+      format('%s incobrable(s) — %s. %s',
+             v_detalle, coalesce(v_cliente, 'cliente'), trim(p_motivo)),
+      null,
+      null,
+      p_ip
+    );
+  end if;
 
   insert into auditoria(id_tenant, id_usuario, entidad, entidad_id, accion, cambios, ip)
   values (v_tenant, v_actor, 'cuota_financiada', p_id_cuota::text, 'editar',
-          jsonb_build_object('estado', 'incobrable', 'saldo_perdido', v_saldo,
-                             'motivo', trim(p_motivo), 'id_gasto', v_id_gasto),
+          jsonb_build_object('estado', 'incobrable',
+                             'saldo_perdido', v_saldo,
+                             'cuotas_afectadas', v_afectadas,
+                             'desde', v_desde, 'hasta', v_hasta,
+                             'ids', to_jsonb(v_ids),
+                             'motivo', trim(p_motivo),
+                             'id_gasto', v_id_gasto),
           p_ip);
-  return v_id_gasto;
+
+  return jsonb_build_object(
+    'id_gasto',         v_id_gasto,
+    'cuotas_afectadas', v_afectadas,
+    'monto_total',      v_saldo,
+    'desde',            v_desde,
+    'hasta',            v_hasta
+  );
 end $$;
 
 grant execute on function sp_marcar_cuota_incobrable(uuid, text, inet) to authenticated;
