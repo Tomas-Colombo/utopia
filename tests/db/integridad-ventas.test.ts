@@ -65,13 +65,14 @@ describe.skipIf(!hasTestDb)('Ganancia y Costo Consistentes (00067)', () => {
     const f = await ventaFixture('ganancia-inconsistente')
     const sr = f.serviceRole
     
-    // Necesitamos una venta vacía para inyectarle un detalle
+    // Venta sin pagos: total 0 para que el cuadre de pagos (00068/00075) no la rechace
+    // antes de llegar al check de ganancia que este test quiere ejercitar
     const { data: venta } = await sr.from('venta').insert({
       id_tenant: f.tenantId,
       id_cliente: f.idCliente,
       id_usuario_alta: f.userId,
       forma_pago: 'efectivo',
-      total: f.precio
+      total: 0
     }).select('id_venta').single()
     
     const { error } = await sr.from('detalle_venta').insert({
@@ -100,7 +101,7 @@ describe.skipIf(!hasTestDb)('Ganancia y Costo Consistentes (00067)', () => {
       id_cliente: f.idCliente,
       id_usuario_alta: f.userId,
       forma_pago: 'efectivo',
-      total: f.precio
+      total: 0
     }).select('id_venta').single()
     
     const { error } = await sr.from('detalle_venta').insert({
@@ -129,7 +130,7 @@ describe.skipIf(!hasTestDb)('Ganancia y Costo Consistentes (00067)', () => {
       id_cliente: f.idCliente,
       id_usuario_alta: f.userId,
       forma_pago: 'efectivo',
-      total: f.precio
+      total: 0
     }).select('id_venta').single()
     
     const { error } = await sr.from('detalle_venta').insert({
