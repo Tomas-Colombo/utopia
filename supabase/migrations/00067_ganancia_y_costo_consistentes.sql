@@ -8,11 +8,13 @@ update detalle_venta
 
 update detalle_venta
    set monto_proveedor = 0
- where tipo_ingreso_snapshot = 'compra' and monto_proveedor <> 0;
+ where tipo_ingreso_snapshot = 'compra' and monto_proveedor <> 0
+   and id_rendicion is null;
 
 update detalle_venta
    set monto_proveedor = costo_snapshot
- where tipo_ingreso_snapshot = 'consignacion' and monto_proveedor <> costo_snapshot;
+ where tipo_ingreso_snapshot = 'consignacion' and monto_proveedor <> costo_snapshot
+   and id_rendicion is null;
 
 -- 2. Imponer las reglas
 alter table detalle_venta
@@ -20,12 +22,13 @@ alter table detalle_venta
   check (monto_ganancia = precio_venta - costo_snapshot);
 
 alter table detalle_venta drop constraint if exists detalle_venta_monto_proveedor_check;
+-- Se marca NOT VALID porque las líneas ya rendidas mantienen su monto_proveedor histórico y pueden violar esta regla
 alter table detalle_venta
   add constraint detalle_venta_monto_proveedor_check
   check (
     (tipo_ingreso_snapshot = 'compra' and monto_proveedor = 0) or
     (tipo_ingreso_snapshot = 'consignacion' and monto_proveedor = costo_snapshot)
-  );
+  ) not valid;
 
 -- 3. Redefinir sp_registrar_venta con el cálculo correcto
 create or replace function sp_registrar_venta(
