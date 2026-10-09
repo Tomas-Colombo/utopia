@@ -12,7 +12,8 @@ insert into modulo (codigo, nombre) values
   ('rendiciones', 'Rendiciones'),
   ('gastos', 'Gastos'),
   ('reportes', 'Reportes'),
-  ('administracion', 'Administración')
+  ('administracion', 'Administración'),
+  ('revendedoras', 'Revendedoras')
 on conflict (codigo) do nothing;
 
 -- Slice 5 seed part 2: demo tenants + 1 rol each + all 7 modulos linked +

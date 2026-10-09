@@ -12,7 +12,7 @@ const UUID = '3f1b2c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d'
 
 describe('permisosSchema', () => {
   it('acepta un subconjunto de módulos', () => {
-    const r = permisosSchema.safeParse({ inventario: ['ver', 'crear'] })
+    const r = permisosSchema.safeParse({ inventario: ['ver', 'crear'], revendedoras: ['ver', 'crear'] })
     expect(r.success).toBe(true)
   })
 

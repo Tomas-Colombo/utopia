@@ -11,6 +11,7 @@ const SEEDED_MODULO_CODES = [
   'gastos',
   'reportes',
   'administracion',
+  'revendedoras',
 ]
 
 describe.skipIf(!hasTestDb)('seed idempotency — modulo catalog (REQ-MTD-12, spec 3.5)', () => {

@@ -77,6 +77,7 @@ export const CATALOGO_PERMISOS: Record<string, string[]> = {
   gastos: ['ver', 'crear', 'editar'],
   reportes: ['ver'],
   administracion: ['ver', 'crear', 'editar', 'eliminar'],
+  revendedoras: ['ver', 'crear', 'editar', 'eliminar', 'liquidar'],
 }
 
 export const MODULO_NOMBRE: Record<string, string> = {
@@ -88,4 +89,5 @@ export const MODULO_NOMBRE: Record<string, string> = {
   gastos: 'Gastos',
   reportes: 'Reportes',
   administracion: 'Administración',
+  revendedoras: 'Revendedoras',
 }
