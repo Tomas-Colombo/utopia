@@ -370,6 +370,14 @@ const NAV_ICONS: Record<string, ReactNode> = {
       <path d="M4 21a8 8 0 0116 0" />
     </>
   ),
+  revendedoras: (
+    <>
+      <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M22 21v-2a4 4 0 00-3-3.87" />
+      <path d="M16 3.13a4 4 0 010 7.75" />
+    </>
+  ),
   // Calendario con un signo de peso: la deuda es plata con fecha.
   cuotas: (
     <>
