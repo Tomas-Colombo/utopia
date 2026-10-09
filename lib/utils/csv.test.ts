@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { sanitizeCsvValue, escapeCsvField, downloadCsv } from './csv'
+import { sanitizeCsvValue, escapeCsvField, downloadCsv, csvNegative } from './csv'
 
 describe('Utilidades CSV', () => {
   it('sanitizeCsvValue antepone apóstrofe si empieza con caracteres peligrosos', () => {
