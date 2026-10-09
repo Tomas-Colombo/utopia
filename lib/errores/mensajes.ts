@@ -114,6 +114,10 @@ const MENSAJES: Record<string, string> = {
   // que en consignaciones no es una opción. Esta sirve en las dos.
   'item-en-reserva': 'El ítem está en una reserva activa. Cancelá esa reserva primero.',
   'item-ya-reservado': 'El ítem ya está en una reserva activa.',
+  'invalid-transition':
+    'El ítem cambió de estado y esa operación ya no se puede hacer. Recargá la página.',
+  'item-no-puede-darse-de-baja':
+    'Ese ítem no se puede dar de baja en su estado actual. Solo se dan de baja los disponibles o los que devolvió un cliente.',
   'item-en-otra-reserva': 'El ítem pertenece a una reserva distinta de la que cargaste.',
   'item-no-es-consignacion': 'El ítem no es de consignación: se compró directamente.',
   'item-otro-proveedor': 'El ítem es de otro proveedor.',
@@ -194,11 +198,15 @@ const MENSAJES: Record<string, string> = {
   'reserva-no-activa':
     'La reserva ya no está activa: fue cancelada, venció o se convirtió en venta.',
   'vencimiento-invalido': 'La fecha de vencimiento tiene que ser futura.',
+  'item-no-disponible-para-reserva':
+    'Uno de los ítems ya no está disponible para reservar. Sacalo de la reserva e intentá de nuevo.',
 
   // ─── Consignaciones ────────────────────────────────────────────────
   'consignacion-vacia': 'El lote no puede quedar vacío.',
   'consignacion-no-activa': 'La consignación ya está cerrada.',
   'consignacion-not-found': 'Esa consignación ya no existe. Recargá la página.',
+  'detalle-no-pendiente':
+    'Esa línea de la consignación ya se resolvió. Recargá la página para ver cómo quedó.',
 
   // ─── Rendiciones ───────────────────────────────────────────────────
   'rendicion-not-found': 'Esa rendición ya no existe. Recargá la página.',
@@ -264,6 +272,18 @@ const PREFIJOS: ReadonlyArray<{
     mensaje: (reason) => {
       const n = reason.match(/(\d+)/)?.[1]
       return `No se puede cancelar: ${n ?? 'algunos'} ítem(s) ya se movieron (vendidos, reservados o apartados). Revertí esas operaciones primero.`
+    },
+  },
+  {
+    // `precio-no-resoluble: producto <id> (sin-precio-lista)`: la causa viene
+    // entre paréntesis y ya tiene su propio mensaje, que le dice al operador
+    // qué arreglar. Sin esto, agregar el slug exterior taparía esa frase con
+    // una más vaga.
+    slug: 'precio-no-resoluble',
+    mensaje: (reason) => {
+      const causa = reason.match(/\(([a-z0-9-]+)\)/)?.[1]
+      if (causa && Object.hasOwn(MENSAJES, causa)) return MENSAJES[causa]
+      return 'No se pudo calcular el precio de uno de los productos. Revisá que tenga precio en Control de precios.'
     },
   },
   {

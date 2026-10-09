@@ -32,6 +32,8 @@ const SLUGS_DE_LA_APP = [
   'cuota-no-cobrable', 'cuota-no-incobrable', 'cuota-not-found',
   'descripcion-requerida', 'detalle-not-found', 'detalle-venta-not-found',
   'detalle-ya-devuelto', 'detalle-ya-rendido', 'devolucion-venta-con-cuotas-abiertas',
+  'detalle-no-pendiente', 'invalid-transition', 'item-no-disponible-para-reserva',
+  'item-no-puede-darse-de-baja', 'precio-no-resoluble',
   'excede-disponibles', 'falta-categoria', 'falta-producto',
   'financiacion-cuotas-invalidas', 'financiacion-sin-saldo',
   'financiacion-sin-vencimiento', 'gasto-inexistente', 'ingreso-con-items-movidos',
@@ -123,6 +125,24 @@ describe('gana el slug más específico, no el más corto', () => {
     expect(mensajeDeError('sp_x: financiacion-cuotas-invalidas')).toBe(
       'La cantidad de cuotas no es válida.',
     )
+  })
+
+  it('item-no-disponible-para-reserva no cae en el item-no-disponible genérico', () => {
+    const msg = mensajeDeError('sp_crear_reserva: item-no-disponible-para-reserva: abc (estado=vendido)')
+    expect(msg).toContain('para reservar')
+    expect(msg).not.toBe(mensajeDeError('item-no-disponible'))
+  })
+
+  it('precio-no-resoluble conserva la causa concreta cuando tiene mensaje', () => {
+    const msg = mensajeDeError('sp_registrar_venta: precio-no-resoluble: producto abc (sin-precio-lista)')
+    expect(msg).toBe(mensajeDeError('sin-precio-lista'))
+  })
+
+  it('precio-no-resoluble con una causa desconocida da un mensaje propio, no el genérico', () => {
+    const msg = mensajeDeError('sp_registrar_venta: precio-no-resoluble: producto abc (causa-nueva)')
+    expect(msg).toContain('calcular el precio')
+    expect(msg).not.toBe(MENSAJE_GENERICO)
+    expect(msg).not.toContain('causa-nueva')
   })
 
   it('items-vacios no se confunde con ningún slug más corto', () => {
