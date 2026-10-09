@@ -171,10 +171,75 @@ end $$;
 
 grant execute on function sp_anular_venta(uuid, text, inet) to authenticated;
 
--- DOWN:
+/* -- DOWN
+drop function if exists sp_anular_venta(uuid, text, inet);
+drop table if exists reintegro_cliente cascade;
+drop table if exists devolucion_venta cascade;
 
--- drop function sp_anular_venta(uuid, text, inet);
--- drop table reintegro_cliente;
--- drop table devolucion_venta;
+create or replace function sp_anular_venta(
+  p_id_venta uuid,
+  p_motivo   text default null,
+  p_ip       inet default null
+) returns void language plpgsql as $$
+declare
+  v_tenant   uuid := auth_tenant_id();
+  v_actor    uuid := auth.uid();
+  v_estado   estado_venta;
+  v_rendida  boolean;
+  v_anuladas integer := 0;
+  r_det      record;
+begin
+  select estado_venta into v_estado from venta
+    where id_venta = p_id_venta and id_tenant = v_tenant for update;
+  if v_estado is null then
+    raise exception 'venta-not-found' using errcode = '42704';
+  end if;
+  if v_estado = 'anulada' then
+    return; -- idempotente
+  end if;
 
--- (Y habría que re-crear la función original que devolvía void).
+  select exists(
+    select 1 from detalle_venta
+     where id_venta = p_id_venta and id_rendicion is not null
+  ) into v_rendida;
+  if v_rendida then
+    raise exception 'venta-ya-rendida' using errcode = '22023';
+  end if;
+
+  for r_det in
+    select dv.id_item, ip.estado_item
+      from detalle_venta dv
+      join item_producto ip on ip.id_item = dv.id_item
+     where dv.id_venta = p_id_venta
+     for update of ip
+  loop
+    if r_det.estado_item = 'vendido' then
+      perform sp_transicion_item_producto(
+        r_det.id_item, 'disponible', 'ajuste', p_id_venta, 'anulacion_venta', p_ip
+      );
+    end if;
+  end loop;
+
+  with anuladas as (
+    update cuota_financiada
+       set estado = 'anulada'
+     where id_venta = p_id_venta
+       and estado in ('pendiente', 'parcial')
+    returning 1
+  )
+  select count(*) into v_anuladas from anuladas;
+
+  update venta
+     set estado_venta     = 'anulada',
+         fecha_anulacion  = now(),
+         motivo_anulacion = p_motivo
+   where id_venta = p_id_venta;
+
+  insert into auditoria(id_tenant, id_usuario, entidad, entidad_id, accion, cambios, ip)
+  values (v_tenant, v_actor, 'venta', p_id_venta::text, 'anular',
+          jsonb_build_object('motivo', p_motivo, 'cuotas_anuladas', v_anuladas),
+          p_ip);
+end $$;
+
+grant execute on function sp_anular_venta(uuid, text, inet) to authenticated;
+*/
