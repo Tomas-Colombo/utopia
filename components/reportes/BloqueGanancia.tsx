@@ -15,20 +15,20 @@ interface BloqueGananciaProps {
   tieneGastos: boolean
 }
 
-import { escapeCsvField, downloadCsv } from '@/lib/utils/csv'
+import { escapeCsvField, downloadCsv, csvNegative } from '@/lib/utils/csv'
 
 export function BloqueGanancia({ resultados, tieneGastos }: BloqueGananciaProps) {
   const exportarCSV = () => {
     const csvRows = [
       'Concepto,Monto',
       `${escapeCsvField('Vendiste (neto)')},${resultados.ventas_netas}`,
-      `${escapeCsvField('Menos costo de mercadería')},-${resultados.costo_mercaderia}`,
+      `${escapeCsvField('Menos costo de mercadería')},${csvNegative(resultados.costo_mercaderia)}`,
       `${escapeCsvField('Ganancia antes de gastos')},${resultados.ganancia_sobre_ventas}`
     ]
     
     if (tieneGastos) {
       csvRows.push(
-        `${escapeCsvField('Menos gastos')},-${resultados.gastos}`,
+        `${escapeCsvField('Menos gastos')},${csvNegative(resultados.gastos)}`,
         `${escapeCsvField('Ganancia final')},${resultados.ganancia_final}`
       )
     }

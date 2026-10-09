@@ -18,6 +18,13 @@ describe('Utilidades CSV', () => {
     expect(escapeCsvField(null)).toBe('""')
   })
 
+  it('csvNegative niega el número y evita doble signo', () => {
+    expect(csvNegative(100)).toBe(-100)
+    expect(csvNegative(-100)).toBe(100)
+    expect(csvNegative(0)).toBe(-0)
+    expect(csvNegative(null)).toBe('')
+  })
+
   it('downloadCsv arma el blob con BOM y llama a revokeObjectURL', () => {
     const createObjectURL = vi.fn().mockReturnValue('blob:http://localhost/123')
     const revokeObjectURL = vi.fn()

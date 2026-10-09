@@ -21,6 +21,15 @@ export function escapeCsvField(value: string | number | null | undefined): strin
 }
 
 /**
+ * Devuelve el opuesto del número para columnas que restan,
+ * evitando el formato "--100" que rompe Excel.
+ */
+export function csvNegative(value: number | null | undefined): string | number {
+  if (value == null) return ''
+  return -value
+}
+
+/**
  * Descarga el contenido CSV con BOM UTF-8 para que Excel lo abra bien.
  */
 export function downloadCsv(filename: string, csvContent: string) {
