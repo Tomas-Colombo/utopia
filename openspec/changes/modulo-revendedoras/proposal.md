@@ -101,7 +101,7 @@ Las preguntas abiertas del borrador se cierran así. Cambiarlas requiere consult
 1. **`finanzas-panel` debe estar cerrado** antes de la primera migración de este cambio.
    Este cambio modifica `v_linea_venta`, `rf_finanzas_resultados` y el trigger de
    inmutabilidad creados por ese. Las migraciones llegan hasta `00074`; **este cambio
-   arranca en `00075`**.
+   arranca en `00076`**.
 
 ## 7. Riesgos
 

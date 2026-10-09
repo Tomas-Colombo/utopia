@@ -2,7 +2,7 @@
 
 **Delivery**: PRs encadenados, ≤400 líneas cada uno (`openspec/config.yaml`).
 **Strict TDD**: activo. Test primero, verlo fallar, después implementar.
-**Primera migración**: `00075` (hay 74). Renumerar si `finanzas-panel` u otro cambio suma antes.
+**Primera migración**: `00076` (hay 75). Renumerar si `finanzas-panel` u otro cambio suma antes.
 **Protocolo**: `docs/protocolo-agentes.md` — un slice por vez, checklist de cierre con
 salida cruda, reporte con "no verificado" honesto. El ejecutor no avanza sin OK.
 
@@ -24,7 +24,7 @@ Leyenda: `[ ]` pendiente · `[x]` hecho y verificado.
 
 - [ ] Test primero: rol sin `revendedoras` rechazado; tenant con módulo apagado → `module-disabled`;
   tenants A/B aislados; inserción cruzada rechazada.
-- [ ] Migración `00075_revendedora.sql`: fila en `modulo`, tabla `revendedora`, RLS, trigger,
+- [ ] Migración `00076_revendedora.sql`: fila en `modulo`, tabla `revendedora`, RLS, trigger,
   `sp_crear/editar/baja_revendedora` con `auditoria` y chequeo de `tenant_modulo`. `-- DOWN:` probado.
 - [ ] `supabase/seed.sql`, `CATALOGO_PERMISOS`, `MODULO_NOMBRE`, `docs/modulos.md`, Sidebar.
 - [ ] `lib/types`, `lib/validation/revendedoras.ts`, `lib/dal/revendedoras/`, slugs en `mensajes.ts`.
@@ -58,8 +58,8 @@ Prerrequisito de todo lo que lee una revendedora. `/judgment-day` antes de empez
 
 ## Slice 2 — Estado `en_revendedora` (~250) ⚠ · REQ-RV-DB-02
 
-- [ ] `00076_estado_en_revendedora.sql` — **solo** el `ADD VALUE`.
-- [ ] `00077_transicion_en_revendedora.sql` — matriz de transiciones (test tabla-manejada completo).
+- [ ] `00077_estado_en_revendedora.sql` — **solo** el `ADD VALUE`.
+- [ ] `00078_transicion_en_revendedora.sql` — matriz de transiciones (test tabla-manejada completo).
 - [ ] Auditar los 19 archivos de `EstadoItem`; guardia `never` en badges; test.
 - [ ] Auditar `rf_finanzas_posicion`/mercadería/capital propio por enumeraciones de estado y decidir.
 - [ ] `/code-review` sobre `consignaciones` e `inventario` antes de extender.
@@ -68,7 +68,7 @@ Prerrequisito de todo lo que lee una revendedora. `/judgment-day` antes de empez
 
 - [ ] Test primero: confirmar mueve estado; `reservado` rechazado; mismo ítem en dos abiertas
   rechazado; devolución restaura; cerrar con ítems en poder rechazado; auditoría; aislamiento.
-- [ ] `00078_consignacion_revendedora.sql` y `00079_consignacion_revendedora_functions.sql`
+- [ ] `00079_consignacion_revendedora.sql` y `00080_consignacion_revendedora_functions.sql`
   (tablas, índice parcial, 6 SPs, `rf_stock_por_tenencia`). `-- DOWN:` probado.
 - [ ] Slugs nuevos en `mensajes.ts` + inventario del test.
 
@@ -83,7 +83,7 @@ Prerrequisito de todo lo que lee una revendedora. `/judgment-day` antes de empez
 ## Slice 5 — Motor de comisiones (~400) · REQ-RV-DB-04
 
 - [ ] `lib/comisiones/__fixtures__/escalas.ts` primero; test unitario y test de DB sobre la misma tabla.
-- [ ] `00080_comisiones.sql`: enums, `regla_comision`, `escala_comision`, `EXCLUDE` de vigencias,
+- [ ] `00081_comisiones.sql`: enums, `regla_comision`, `escala_comision`, `EXCLUDE` de vigencias,
   `fn_resolver_comision`, semilla al habilitar módulo (`sp_toggle_tenant_modulo`).
 - [ ] `lib/comisiones/resolver-comision.ts`; editor de la regla general en `revendedoras/comisiones/` y
   **editor de comisión propia en la ficha de cada revendedora** (escala o % fijo, muestra si rige la
@@ -97,15 +97,15 @@ Mayor riesgo del cambio. `/judgment-day` sobre `ventas` antes de empezar.
 - [ ] **Primero**: correr el set completo de ventas con `canal` por defecto; debe quedar verde.
 - [ ] Tests nuevos: venta de ítem que no tiene → rechazada; sin `id_revendedora` → check; local sin
   cambios; módulo apagado → `modulo-revendedoras-deshabilitado`; UPDATE directo de línea → rechazado.
-- [ ] `00081_venta_canal.sql` (columnas + trigger de inmutabilidad ampliado),
-  `00082_sp_registrar_venta_canal.sql` (desde `00068`), `00083_anular_venta_revendedora.sql`
+- [ ] `00082_venta_canal.sql` (columnas + trigger de inmutabilidad ampliado),
+  `00083_sp_registrar_venta_canal.sql` (desde `00068`), `00084_anular_venta_revendedora.sql`
   (DR-7, desde `00070`/`00071`).
 - [ ] Contrato DAL↔SQL: pegar lado a lado firma del SP y parámetros del DAL.
 
 ## Slice 6b — Venta por canal: finanzas (~350) ⚠ · REQ-RV-DB-08
 
 - [ ] **Escenario dorado de revendedoras** en `specs/golden.md`, calculado a mano, antes de implementar.
-- [ ] `00084_finanzas_comision.sql`: `v_linea_venta`, `rf_finanzas_resultados`, `_flujo`, `_posicion`
+- [ ] `00085_finanzas_comision.sql`: `v_linea_venta`, `rf_finanzas_resultados`, `_flujo`, `_posicion`
   (todas desde su última definición). `INVOKER`.
 - [ ] DAL `lib/dal/reportes/finanzas.ts` y tipos; sin aritmética de dinero en TS.
 
@@ -139,7 +139,7 @@ Después de la consignación (Slice 4) y antes de la liquidación: da visibilida
 - [ ] Tests primero: tramo por total del período y no por venta; excluidas no se sellan; no se
   liquida dos veces; venta registrada entre preview y commit se captura; anular venta liquidada
   rechazado; pago a cuenta de otro tenant rechazado; sin acción `liquidar` rechazado.
-- [ ] `00085_liquidacion_revendedora.sql`, `00086_liquidacion_functions.sql`
+- [ ] `00086_liquidacion_revendedora.sql`, `00087_liquidacion_functions.sql`
   (desde la última `sp_generar_rendicion`). `-- DOWN:` probado.
 
 ## Slice 7b — Liquidación: UI (~380)
@@ -152,11 +152,11 @@ Después de la consignación (Slice 4) y antes de la liquidación: da visibilida
 
 - [ ] Tests: stock conservado; línea original excluida; comisión total invariante; cambio sobre
   venta liquidada rechazado; origen local vs. revendedora.
-- [ ] `00087_cambio_venta.sql`; acción en `VentaDetalleView` condicionada al módulo para canal revendedora.
+- [ ] `00088_cambio_venta.sql`; acción en `VentaDetalleView` condicionada al módulo para canal revendedora.
 
 ## Slice 9 — Reportes (~350) · REQ-RV-DB-08
 
-- [ ] `00088_reportes_revendedoras.sql`: `rf_perfil_revendedora`, `rf_cumplimiento_objetivos` (`INVOKER`).
+- [ ] `00089_reportes_revendedoras.sql`: `rf_perfil_revendedora`, `rf_cumplimiento_objetivos` (`INVOKER`).
 - [ ] `bloquesVisibles` + bloque `revendedoras` (test de visibilidad por módulo y permiso);
   `BloqueError` aislado; CSV con `csvNegative`.
 - [ ] `tests/db/reportes-revendedoras.test.ts` con fixture fijo y cifras calculadas a mano.
@@ -213,4 +213,4 @@ Excepción DEFINER (DR-13) **aprobada por el usuario el 2026-10-09**; no volver 
 | 9b–9d | Declaración, `rvp_*` y pantallas de la revendedora | Alto |
 | 10 | Cierre y matriz de bloqueo | Bajo |
 
-Migraciones previstas desde `00075`; numerarlas en el orden real de aplicación (~20).
+Migraciones previstas desde `00076`; numerarlas en el orden real de aplicación (~20).

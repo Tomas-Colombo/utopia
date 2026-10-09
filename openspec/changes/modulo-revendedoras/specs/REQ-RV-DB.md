@@ -1,7 +1,7 @@
 # REQ-RV-DB — Modelo de datos, SPs y finanzas
 
 **Change**: `modulo-revendedoras`
-Todas las migraciones: numeradas desde **`00075`**, con bloque `-- DOWN:` completo y
+Todas las migraciones: numeradas desde **`00076`**, con bloque `-- DOWN:` completo y
 **probado** sobre una base recién migrada. Cualquier slug que levante un `sp_*` entra en
 `lib/errores/mensajes.ts` y en el inventario de `lib/errores/mensajes.test.ts`
 (`slugs-migraciones.test.ts` lo exige). Montos `numeric`, sin aritmética de dinero en TS.

@@ -13,7 +13,7 @@ Antes de escribir código:
    CERRADAS, no las reabras), design.md, tasks.md y las specs/REQ-RV-*.md que cita el slice.
 3. Leé los archivos que vas a tocar. Si vas a modificar un sp_*, una función SQL o un trigger,
    copiá su ÚLTIMA definición: rg -l "function <nombre>" supabase/migrations | sort | tail -1
-   Nunca edites una migración ya aplicada. La próxima migración libre es 00075 o la que
+   Nunca edites una migración ya aplicada. La próxima migración libre es 00076 o la que
    siga según `ls supabase/migrations`; numerá en orden de aplicación.
 4. Antes de escribir código Next.js, leé la guía relevante de node_modules/next/dist/docs/.
 5. Verificá que se cumple el gate de la Fase 0 de tasks.md (finanzas-panel cerrado y

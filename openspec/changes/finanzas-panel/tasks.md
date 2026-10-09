@@ -76,7 +76,7 @@ Decision needed before apply: No
 
 ### 1.3 Gate
 
-- [ ] `npx vitest run tests/db` (marcar NO VERIFICADO si no hay Docker). Suite completa hoy: 112 pasan, 10 fallan (todas en inmutabilidad-ventas, por 00068).
+- [x] `npx vitest run tests/db` — 21 archivos, 122 tests, todos pasan (tras 00075).
 - [x] `pnpm typecheck && pnpm lint && npx vitest run --exclude 'tests/db/**' && pnpm build`.
 
 ---
@@ -136,7 +136,7 @@ Decision needed before apply: No
 
 ### 3.3 Migración
 
-- [ ] `supabase/migrations/00068_inmutabilidad_ventas.sql`:
+- [x] `supabase/migrations/00068_inmutabilidad_ventas.sql` + `00075_restaurar_inmutabilidad_ventas.sql`:
   - Trigger `BEFORE UPDATE` en `venta`.
   - Trigger `BEFORE UPDATE` en `detalle_venta`.
   - Trigger/policy append-only en `pago_venta`.
@@ -146,12 +146,12 @@ Decision needed before apply: No
   - `-- DOWN:` completo.
   - `supabase db reset` sin errores.
 
-> **NO VERIFICADO / BLOQUEADO (00068)**: el bloque `-- DOWN` (línea 447) no está comentado, así que `supabase db reset` crea los triggers y los borra en la misma migración (`pg_trigger` solo muestra `venta_touch`). Hasta corregirla, las casillas de 3.3 y 3.4 quedan sin tildar.
+> **Corregido con 00075**: el `-- DOWN` de 00068 tenía sentencias `drop` sin comentar y la migración borraba sus propios triggers. 00068 no se edita (puede estar aplicada en una base compartida); `00075_restaurar_inmutabilidad_ventas.sql` los recrea. `-- DOWN` de 00075 probado: deja 0 triggers; reaplicarla deja 4. En bases compartidas donde 00068 ya corrió, 00075 repone la protección.
 
 ### 3.4 Gate
 
-- [ ] Tests de DB (incluyendo el test de borrado de tenant).
-- [ ] Gate completo.
+- [x] Tests de DB (incluyendo el test de borrado de tenant): 122/122.
+- [x] Gate completo.
 
 ---
 
