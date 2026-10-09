@@ -68,6 +68,7 @@ declare
   r_pago              record;
   v_total_reintegrado numeric(14,2) := 0;
   v_reintegro_pago    numeric(14,2);
+  v_restante          numeric(14,2);
   v_tiene_incobrables boolean;
 begin
   select estado_venta into v_estado from venta
@@ -122,15 +123,24 @@ begin
   )
   select count(*) into v_anuladas from anuladas;
 
+  -- Lo que queda por devolver es lo cobrado menos TODO lo ya reintegrado de la
+  -- venta. Los reintegros de una devolución no cuelgan de un pago (id_pago_venta
+  -- nulo), así que restar solo los de cada pago devolvía dos veces esa plata.
+  v_restante := greatest(0::numeric,
+    (select coalesce(sum(monto), 0) from pago_venta where id_venta = p_id_venta)
+    - (select coalesce(sum(monto), 0) from reintegro_cliente where id_venta = p_id_venta)
+  );
+
   for r_pago in
     select id_pago_venta, id_cuenta_destino, medio, monto
       from pago_venta
      where id_venta = p_id_venta
+     order by created_at, id_pago_venta
   loop
-    v_reintegro_pago := r_pago.monto - coalesce((
+    v_reintegro_pago := least(v_restante, r_pago.monto - coalesce((
       select sum(monto) from reintegro_cliente
        where id_pago_venta = r_pago.id_pago_venta
-    ), 0);
+    ), 0));
     
     if v_reintegro_pago > 0 then
       insert into reintegro_cliente (
@@ -141,6 +151,7 @@ begin
         r_pago.medio, v_reintegro_pago, 'anulacion', p_motivo, v_actor
       );
       v_total_reintegrado := v_total_reintegrado + v_reintegro_pago;
+      v_restante := v_restante - v_reintegro_pago;
     end if;
   end loop;
 

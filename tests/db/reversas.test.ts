@@ -170,6 +170,45 @@ describe.skipIf(!hasTestDb)('Devoluciones de Cliente (Slice 6)', () => {
     expect(error?.message).toMatch(/devolucion-venta-con-cuotas-abiertas/)
   })
 
+  it('Anular una venta ya devuelta en parte NO reintegra lo que ya se devolvió', async () => {
+    const f = await ventaFixture('anula-tras-devolucion', 2)
+
+    // Venta de contado de dos ítems, pagada completa: total = 2 * f.precio.
+    const { data: id_venta, error: errV } = await venderContado(f)
+    expect(errV).toBeNull()
+
+    const { data: detalles } = await f.serviceRole.from('detalle_venta')
+      .select('id_detalle_venta')
+      .eq('id_venta', id_venta)
+
+    // Se devuelve una línea y se reintegra su precio.
+    const { data: dev, error: errDev } = await f.authenticated.rpc('sp_registrar_devolucion_cliente', {
+      p_id_detalle_venta: detalles![0].id_detalle_venta,
+      p_motivo: 'Talle',
+      p_id_cuenta_reintegro: f.idCuenta,
+      p_medio_reintegro: 'efectivo',
+      p_ip: null,
+    })
+    expect(errDev, 'errDev').toBeNull()
+    expect(dev!.reintegro).toBe(f.precio)
+
+    // Al anular, solo queda por devolver lo que no se devolvió: una línea.
+    const { data: anul, error: errAnul } = await f.authenticated.rpc('sp_anular_venta', {
+      p_id_venta: id_venta,
+      p_motivo: 'Se arrepintió del resto',
+      p_ip: null,
+    })
+    expect(errAnul, 'errAnul').toBeNull()
+    expect(anul!.total_reintegrado).toBe(f.precio)
+
+    // El cliente nunca recibe más de lo que pagó.
+    const { data: reintegros } = await f.serviceRole.from('reintegro_cliente')
+      .select('monto')
+      .eq('id_venta', id_venta)
+    const devuelto = (reintegros ?? []).reduce((acc, r) => acc + Number(r.monto), 0)
+    expect(devuelto).toBe(f.precio * 2)
+  })
+
   it('Devolución en venta con varias líneas reintegra fórmula max(0, pagos - (total - previas - monto) - reint_previos)', async () => {
     const f = await ventaFixture('dev-formulas', 2)
     
