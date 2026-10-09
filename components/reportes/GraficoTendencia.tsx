@@ -3,6 +3,7 @@
 import React, { useState } from 'react'
 import type { FinanzasSerieMensualRow } from '@/lib/types/reportes'
 import { Button } from '@/components/ui/Button'
+import { formatearMesCorto } from '@/lib/reportes/mes'
 
 function formatMoneyCompact(value: number) {
   if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`
@@ -13,13 +14,6 @@ function formatMoneyCompact(value: number) {
 function formatMoneyFull(value: number | null | undefined) {
   if (value == null) return '—'
   return Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(value)
-}
-
-function parseMonth(mesStr: string) {
-  if (!mesStr) return ''
-  const [a, m] = mesStr.split('-')
-  const date = new Date(Number(a), Number(m) - 1, 1)
-  return Intl.DateTimeFormat('es-AR', { month: 'short', year: '2-digit' }).format(date)
 }
 
 interface GraficoTendenciaProps {
@@ -79,7 +73,7 @@ export function GraficoTendencia({ serie, tieneGastos }: GraficoTendenciaProps) 
               <tbody className="divide-y divide-border">
                 {serie.map(s => (
                   <tr key={s.mes}>
-                    <td className="p-2 text-left font-medium text-ink">{parseMonth(s.mes)}</td>
+                    <td className="p-2 text-left font-medium text-ink">{formatearMesCorto(s.mes)}</td>
                     <td className="p-2 tabular-nums">{formatMoneyFull(s.ventas_netas)}</td>
                     <td className="p-2 tabular-nums">{formatMoneyFull(s.cobrado_neto)}</td>
                     <td className="p-2 tabular-nums">{formatMoneyFull(tieneGastos ? s.ganancia_final : s.ganancia_sobre_ventas)}</td>
@@ -122,7 +116,7 @@ export function GraficoTendencia({ serie, tieneGastos }: GraficoTendenciaProps) 
                 return (
                   <g key={s.mes} className="transition-all duration-300 ease-in-out hover:opacity-80">
                     <title>
-                      {parseMonth(s.mes)}: Ventas {formatMoneyFull(s.ventas_netas)} | Cobrado {formatMoneyFull(s.cobrado_neto)} | Ganancia {formatMoneyFull(tieneGastos ? s.ganancia_final : s.ganancia_sobre_ventas)}
+                      {formatearMesCorto(s.mes)}: Ventas {formatMoneyFull(s.ventas_netas)} | Cobrado {formatMoneyFull(s.cobrado_neto)} | Ganancia {formatMoneyFull(tieneGastos ? s.ganancia_final : s.ganancia_sobre_ventas)}
                     </title>
                     
                     {/* Ventas netas (fondo más ancho) */}
@@ -165,7 +159,7 @@ export function GraficoTendencia({ serie, tieneGastos }: GraficoTendenciaProps) 
                       fill="currentColor"
                       className="text-muted font-medium"
                     >
-                      {parseMonth(s.mes)}
+                      {formatearMesCorto(s.mes)}
                     </text>
                   </g>
                 )
