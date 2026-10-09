@@ -11,7 +11,7 @@ import {
   getRankingProductos,
 } from '@/lib/dal/reportes/finanzas'
 import { ReportesPeriodoForm } from './ReportesPeriodoForm'
-import { inicioDelDia, inicioDelDiaSiguiente, periodoAnterior } from '@/lib/fechas'
+import { periodoAnterior } from '@/lib/fechas'
 import { searchParamsReportesSchema } from '@/lib/validation/reportes'
 
 import { BloqueResumen } from '@/components/reportes/BloqueResumen'
@@ -56,19 +56,22 @@ export default async function ReportesPage(props: {
   const tieneGastos = session.modulosHabilitados.includes('gastos')
   const tieneRendiciones = session.modulosHabilitados.includes('rendiciones')
 
+  // Las funciones rf_finanzas_* reciben fechas y tratan `hasta` como inclusivo:
+  // se pasan tal cual. Sumarle un día (como en las consultas por timestamp)
+  // metía el 1° del mes siguiente en el período y corría la serie mensual.
   const [
     resultadosReq, resultadosPrevReq,
     flujoReq, flujoPrevReq,
     posicionReq, serieReq,
     rankingReq, gastosReq
   ] = await Promise.all([
-    tryFetch(getResultados(inicioDelDia(desde), inicioDelDiaSiguiente(hasta))),
-    tryFetch(getResultados(inicioDelDia(prev.desde), inicioDelDiaSiguiente(prev.hasta))),
-    tryFetch(getFlujo(inicioDelDia(desde), inicioDelDiaSiguiente(hasta))),
-    tryFetch(getFlujo(inicioDelDia(prev.desde), inicioDelDiaSiguiente(prev.hasta))),
+    tryFetch(getResultados(desde, hasta)),
+    tryFetch(getResultados(prev.desde, prev.hasta)),
+    tryFetch(getFlujo(desde, hasta)),
+    tryFetch(getFlujo(prev.desde, prev.hasta)),
     tryFetch(getPosicion()),
-    tryFetch(getSerieMensual(inicioDelDiaSiguiente(hasta), 12)),
-    tryFetch(getRankingProductos(inicioDelDia(desde), inicioDelDiaSiguiente(hasta), limite, orden)),
+    tryFetch(getSerieMensual(hasta, 12)),
+    tryFetch(getRankingProductos(desde, hasta, limite, orden)),
     tieneGastos ? tryFetch(getGastosPresupuesto(hasta)) : Promise.resolve({ ok: false as const }),
   ])
 
