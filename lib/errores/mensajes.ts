@@ -67,6 +67,7 @@ const MENSAJES: Record<string, string> = {
   'tenant-mismatch': 'Esos datos pertenecen a otro negocio.',
   'no-session': 'Se cerró tu sesión. Volvé a iniciar sesión.',
   'no-tenant': 'Tu sesión no está asociada a ningún negocio. Volvé a iniciar sesión.',
+  'zona-horaria-invalida': 'La zona horaria elegida no es válida.',
 
   // ─── Datos mal formados ────────────────────────────────────────────
   // Nunca deberían verse: la UI arma estos pedidos. Si aparecen, la página

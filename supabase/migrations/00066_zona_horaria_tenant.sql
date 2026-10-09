@@ -3,8 +3,21 @@
 
 alter table tenant
   add column if not exists zona_horaria text not null
-    default 'America/Argentina/Buenos_Aires'
-    check ((now() at time zone zona_horaria) is not null);
+    default 'America/Argentina/Buenos_Aires';
+
+create or replace function tr_tenant_zona_horaria()
+returns trigger language plpgsql as $$
+begin
+  if not exists (select 1 from pg_timezone_names where name = new.zona_horaria) then
+    raise exception 'zona-horaria-invalida' using errcode = '22023';
+  end if;
+  return new;
+end $$;
+
+drop trigger if exists tenant_zona_horaria_trigger on tenant;
+create trigger tenant_zona_horaria_trigger
+  before insert or update of zona_horaria on tenant
+  for each row execute function tr_tenant_zona_horaria();
 
 create or replace function fn_hoy_tenant()
 returns date language sql stable as $$
