@@ -37,12 +37,12 @@ create policy revendedora_tenant on revendedora for all to authenticated
 create unique index revendedora_email_unico_idx on revendedora (id_tenant, email) where activo = true and email is not null and email <> '';
 
 create or replace function sp_crear_revendedora(
-  _nombre text,
-  _apellido text,
-  _telefono text default null,
-  _email text default null,
-  _notas text default null,
-  _ip inet default null
+  p_nombre text,
+  p_apellido text,
+  p_telefono text default null,
+  p_email text default null,
+  p_notas text default null,
+  p_ip inet default null
 ) returns uuid language plpgsql as $$
 declare
   v_tenant uuid := auth_tenant_id();
@@ -62,24 +62,24 @@ begin
   end if;
 
   insert into revendedora (id_tenant, nombre, apellido, telefono, email, notas, activo, fecha_alta)
-  values (v_tenant, _nombre, _apellido, _telefono, _email, _notas, true, current_date)
+  values (v_tenant, p_nombre, p_apellido, p_telefono, p_email, p_notas, true, current_date)
   returning id_revendedora into v_id;
 
   insert into auditoria(id_tenant, id_usuario, entidad, entidad_id, accion, cambios, ip)
   values (v_tenant, v_actor, 'revendedora', v_id::text, 'crear',
-          jsonb_build_object('nombre', _nombre, 'apellido', _apellido, 'email', _email, 'telefono', _telefono), _ip);
+          jsonb_build_object('nombre', p_nombre, 'apellido', p_apellido, 'email', p_email, 'telefono', p_telefono), p_ip);
 
   return v_id;
 end $$;
 
 create or replace function sp_editar_revendedora(
-  _id uuid,
-  _nombre text,
-  _apellido text,
-  _telefono text default null,
-  _email text default null,
-  _notas text default null,
-  _ip inet default null
+  p_id uuid,
+  p_nombre text,
+  p_apellido text,
+  p_telefono text default null,
+  p_email text default null,
+  p_notas text default null,
+  p_ip inet default null
 ) returns void language plpgsql as $$
 declare
   v_tenant uuid := auth_tenant_id();
@@ -98,27 +98,27 @@ begin
     raise exception 'modulo-revendedoras-deshabilitado' using errcode = '42501';
   end if;
 
-  select * into v_old from revendedora where id_revendedora = _id and id_tenant = v_tenant for update;
+  select * into v_old from revendedora where id_revendedora = p_id and id_tenant = v_tenant for update;
   if not found then
     raise exception 'revendedora-not-found' using errcode = 'P0002';
   end if;
 
   update revendedora
-  set nombre = _nombre,
-      apellido = _apellido,
-      telefono = _telefono,
-      email = _email,
-      notas = _notas
-  where id_revendedora = _id and id_tenant = v_tenant;
+  set nombre = p_nombre,
+      apellido = p_apellido,
+      telefono = p_telefono,
+      email = p_email,
+      notas = p_notas
+  where id_revendedora = p_id and id_tenant = v_tenant;
 
   insert into auditoria(id_tenant, id_usuario, entidad, entidad_id, accion, cambios, ip)
-  values (v_tenant, v_actor, 'revendedora', _id::text, 'editar',
-          jsonb_build_object('nombre', _nombre, 'apellido', _apellido, 'email', _email, 'telefono', _telefono), _ip);
+  values (v_tenant, v_actor, 'revendedora', p_id::text, 'editar',
+          jsonb_build_object('nombre', p_nombre, 'apellido', p_apellido, 'email', p_email, 'telefono', p_telefono), p_ip);
 end $$;
 
 create or replace function sp_baja_revendedora(
-  _id uuid,
-  _ip inet default null
+  p_id uuid,
+  p_ip inet default null
 ) returns void language plpgsql as $$
 declare
   v_tenant uuid := auth_tenant_id();
@@ -137,7 +137,7 @@ begin
     raise exception 'modulo-revendedoras-deshabilitado' using errcode = '42501';
   end if;
 
-  select * into v_old from revendedora where id_revendedora = _id and id_tenant = v_tenant for update;
+  select * into v_old from revendedora where id_revendedora = p_id and id_tenant = v_tenant for update;
   if not found then
     raise exception 'revendedora-not-found' using errcode = 'P0002';
   end if;
@@ -150,9 +150,9 @@ begin
   
   update revendedora
   set activo = false
-  where id_revendedora = _id and id_tenant = v_tenant;
+  where id_revendedora = p_id and id_tenant = v_tenant;
 
   insert into auditoria(id_tenant, id_usuario, entidad, entidad_id, accion, cambios, ip)
-  values (v_tenant, v_actor, 'revendedora', _id::text, 'baja',
-          jsonb_build_object('activo', false), _ip);
+  values (v_tenant, v_actor, 'revendedora', p_id::text, 'baja',
+          jsonb_build_object('activo', false), p_ip);
 end $$;

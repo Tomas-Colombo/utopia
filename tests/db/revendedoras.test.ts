@@ -20,10 +20,10 @@ describe.skipIf(!hasTestDb)('revendedora — 00076', () => {
     
     // A crea revendedora
     const { error: errA, data: idRevA } = await authA.rpc('sp_crear_revendedora', {
-      _nombre: 'Reven A',
-      _apellido: 'A',
-      _telefono: '111',
-      _email: 'a@re.com'
+      p_nombre: 'Reven A',
+      p_apellido: 'A',
+      p_telefono: '111',
+      p_email: 'a@re.com'
     })
     expect(errA).toBeNull()
 
@@ -41,15 +41,15 @@ describe.skipIf(!hasTestDb)('revendedora — 00076', () => {
 
     // B intenta editar o dar de baja la de A
     const { error: errEditB } = await authB.rpc('sp_editar_revendedora', {
-      _id: idRevA,
-      _nombre: 'Hacking',
-      _apellido: 'A',
+      p_id: idRevA,
+      p_nombre: 'Hacking',
+      p_apellido: 'A',
     })
     expect(errEditB).not.toBeNull()
     expect(errEditB?.message).toMatch(/revendedora-not-found|P0002/)
 
     const { error: errBajaB } = await authB.rpc('sp_baja_revendedora', {
-      _id: idRevA,
+      p_id: idRevA,
     })
     expect(errBajaB).not.toBeNull()
     expect(errBajaB?.message).toMatch(/revendedora-not-found|P0002/)
@@ -61,10 +61,10 @@ describe.skipIf(!hasTestDb)('revendedora — 00076', () => {
     // No habilitamos el módulo.
 
     const { error } = await auth.rpc('sp_crear_revendedora', {
-      _nombre: 'Reven Apagado',
-      _apellido: 'Apagado',
-      _telefono: '222',
-      _email: 'x@re.com'
+      p_nombre: 'Reven Apagado',
+      p_apellido: 'Apagado',
+      p_telefono: '222',
+      p_email: 'x@re.com'
     })
     
     expect(error).not.toBeNull()
@@ -79,14 +79,14 @@ describe.skipIf(!hasTestDb)('revendedora — 00076', () => {
     await serviceRole.from('tenant_modulo').insert({ id_tenant: tenant.tenantId, id_modulo: modulo!.id_modulo, habilitado: true })
 
     const { data: id } = await auth.rpc('sp_crear_revendedora', {
-      _nombre: 'A',
-      _apellido: 'B'
+      p_nombre: 'A',
+      p_apellido: 'B'
     })
 
-    const { error: err1 } = await auth.rpc('sp_baja_revendedora', { _id: id })
+    const { error: err1 } = await auth.rpc('sp_baja_revendedora', { p_id: id })
     expect(err1).toBeNull()
 
-    const { error: err2 } = await auth.rpc('sp_baja_revendedora', { _id: id })
+    const { error: err2 } = await auth.rpc('sp_baja_revendedora', { p_id: id })
     expect(err2).toBeNull() // idempotente
   })
 
@@ -98,9 +98,9 @@ describe.skipIf(!hasTestDb)('revendedora — 00076', () => {
     await serviceRole.from('tenant_modulo').insert({ id_tenant: tenant.tenantId, id_modulo: modulo!.id_modulo, habilitado: true })
 
     const { data: id, error: err1 } = await auth.rpc('sp_crear_revendedora', {
-      _nombre: 'C',
-      _apellido: 'D',
-      _email: 'unico@re.com'
+      p_nombre: 'C',
+      p_apellido: 'D',
+      p_email: 'unico@re.com'
     })
     expect(err1).toBeNull()
 
@@ -110,18 +110,18 @@ describe.skipIf(!hasTestDb)('revendedora — 00076', () => {
 
     // email duplicado
     const { error: errDup } = await auth.rpc('sp_crear_revendedora', {
-      _nombre: 'E',
-      _apellido: 'F',
-      _email: 'unico@re.com'
+      p_nombre: 'E',
+      p_apellido: 'F',
+      p_email: 'unico@re.com'
     })
     expect(errDup?.code).toBe('23505')
 
     // editar
     const { error: errEdit } = await auth.rpc('sp_editar_revendedora', {
-      _id: id,
-      _nombre: 'CC',
-      _apellido: 'D',
-      _email: 'unico2@re.com'
+      p_id: id,
+      p_nombre: 'CC',
+      p_apellido: 'D',
+      p_email: 'unico2@re.com'
     })
     expect(errEdit).toBeNull()
 
@@ -130,15 +130,15 @@ describe.skipIf(!hasTestDb)('revendedora — 00076', () => {
     expect(audit2).toHaveLength(1)
 
     // baja
-    await auth.rpc('sp_baja_revendedora', { _id: id })
+    await auth.rpc('sp_baja_revendedora', { p_id: id })
     const { data: audit3 } = await serviceRole.from('auditoria').select('*').eq('entidad', 'revendedora').eq('accion', 'baja').eq('entidad_id', id)
     expect(audit3).toHaveLength(1)
 
     // despues de la baja puedo usar el email
     const { error: errFree } = await auth.rpc('sp_crear_revendedora', {
-      _nombre: 'New',
-      _apellido: 'User',
-      _email: 'unico2@re.com'
+      p_nombre: 'New',
+      p_apellido: 'User',
+      p_email: 'unico2@re.com'
     })
     expect(errFree).toBeNull()
   })

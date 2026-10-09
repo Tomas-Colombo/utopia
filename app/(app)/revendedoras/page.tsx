@@ -10,7 +10,7 @@ export const metadata = {
 
 export default async function RevendedorasPage() {
   const session = await verifySession()
-  const revendedoras = await listarRevendedoras()
+  const revendedoras = await listarRevendedoras(session)
   const canCreate = hasPermission(session, 'revendedoras', 'crear')
 
   return (

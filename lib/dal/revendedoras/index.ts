@@ -1,8 +1,11 @@
 import { createServerClient } from '../supabase'
+import type { Session } from '../session'
+import { requireModuleRole } from '../guard'
 import type { RevendedoraPayload } from '../../validation/revendedoras'
 import type { RevendedoraRow } from '../../types/revendedoras'
 
-export async function listarRevendedoras() {
+export async function listarRevendedoras(session: Session) {
+  await requireModuleRole(session, 'revendedoras', 'ver')
   const supabase = await createServerClient()
   const { data, error } = await supabase
     .from('revendedora')
@@ -13,7 +16,8 @@ export async function listarRevendedoras() {
   return data as RevendedoraRow[]
 }
 
-export async function obtenerRevendedora(id: string) {
+export async function obtenerRevendedora(session: Session, id: string) {
+  await requireModuleRole(session, 'revendedoras', 'ver')
   const supabase = await createServerClient()
   const { data, error } = await supabase
     .from('revendedora')
@@ -31,11 +35,11 @@ export async function obtenerRevendedora(id: string) {
 export async function crearRevendedora(payload: RevendedoraPayload) {
   const supabase = await createServerClient()
   const { data, error } = await supabase.rpc('sp_crear_revendedora', {
-    _nombre: payload.nombre,
-    _apellido: payload.apellido,
-    _telefono: payload.telefono || null,
-    _email: payload.email || null,
-    _notas: payload.notas || null,
+    p_nombre: payload.nombre,
+    p_apellido: payload.apellido,
+    p_telefono: payload.telefono || null,
+    p_email: payload.email || null,
+    p_notas: payload.notas || null,
   })
 
   if (error) {
@@ -52,12 +56,12 @@ export async function crearRevendedora(payload: RevendedoraPayload) {
 export async function editarRevendedora(id: string, payload: RevendedoraPayload) {
   const supabase = await createServerClient()
   const { error } = await supabase.rpc('sp_editar_revendedora', {
-    _id: id,
-    _nombre: payload.nombre,
-    _apellido: payload.apellido,
-    _telefono: payload.telefono || null,
-    _email: payload.email || null,
-    _notas: payload.notas || null,
+    p_id: id,
+    p_nombre: payload.nombre,
+    p_apellido: payload.apellido,
+    p_telefono: payload.telefono || null,
+    p_email: payload.email || null,
+    p_notas: payload.notas || null,
   })
 
   if (error) {
@@ -74,7 +78,7 @@ export async function editarRevendedora(id: string, payload: RevendedoraPayload)
 export async function bajaRevendedora(id: string) {
   const supabase = await createServerClient()
   const { error } = await supabase.rpc('sp_baja_revendedora', {
-    _id: id,
+    p_id: id,
   })
 
   if (error) {

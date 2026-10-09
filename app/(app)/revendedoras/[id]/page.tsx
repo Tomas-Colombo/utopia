@@ -6,7 +6,7 @@ import { EditarRevendedoraForm } from './EditarRevendedoraForm'
 
 export default async function RevendedoraPage({ params }: { params: { id: string } }) {
   const session = await verifySession()
-  const revendedora = await obtenerRevendedora( params.id)
+  const revendedora = await obtenerRevendedora(session, params.id)
   
   if (!revendedora) notFound()
 
