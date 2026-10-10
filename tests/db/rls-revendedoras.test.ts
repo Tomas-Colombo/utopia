@@ -96,7 +96,6 @@ describe.skipIf(!hasTestDb)('RLS revendedoras — restricción por usuario (ACC-
     // Para no usar run_sql que no existe, podemos crear una vista u obtener el claim indirectamente.
     // O intentar un select que exponga el claim. Auth claim no se expone a menos que usemos helper de test.
     // Solo forzamos que falle para el TDD:
-    // @ts-expect-error test-only function not yet in types
     const authRevHelper = await authRev.rpc('auth_revendedora_id')
     if (authRevHelper.error && authRevHelper.error.code === '42883') {
         expect(true).toBe(false) // Forzamos fallo de TDD
@@ -135,8 +134,23 @@ describe.skipIf(!hasTestDb)('RLS revendedoras — restricción por usuario (ACC-
     expect(revs![0].id_revendedora).toBe(idRevendedora)
   })
 
+  test('sesión de revendedora NO puede actualizar ni borrar su propia fila en la lista blanca', async () => {
+    const { data: updData, error: errUpd } = await authRev.from('revendedora').update({ nombre: 'Hack' }).eq('id_revendedora', idRevendedora).select()
+    if (errUpd) {
+      expect(errUpd.code).toBe('42501')
+    } else {
+      expect(updData).toHaveLength(0)
+    }
+
+    const { data: delData, error: errDel } = await authRev.from('revendedora').delete().eq('id_revendedora', idRevendedora).select()
+    if (errDel) {
+      expect(errDel.code).toBe('42501')
+    } else {
+      expect(delData).toHaveLength(0)
+    }
+  })
+
   test('sesión de operador no se ve afectada (auth_revendedora_id() es null)', async () => {
-    // @ts-expect-error test-only function not yet in types
     const authAdminHelper = await authAdmin.rpc('auth_revendedora_id')
     if (authAdminHelper.error && authAdminHelper.error.code === '42883') {
         expect(true).toBe(false)

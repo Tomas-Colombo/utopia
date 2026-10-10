@@ -37,6 +37,9 @@
 -- drop policy if exists restrict_revendedora_usuario on usuario;
 -- drop policy if exists restrict_revendedora_venta on venta;
 -- drop policy if exists revendedora_propia on revendedora;
+-- drop policy if exists restrict_revendedora_escritura_insert on revendedora;
+-- drop policy if exists restrict_revendedora_escritura_update on revendedora;
+-- drop policy if exists restrict_revendedora_escritura_delete on revendedora;
 
 create policy restrict_revendedora_arancel_cobro on arancel_cobro as restrictive for all to authenticated using (auth_revendedora_id() is null);
 create policy restrict_revendedora_auditoria on auditoria as restrictive for all to authenticated using (auth_revendedora_id() is null);
@@ -74,5 +77,7 @@ create policy restrict_revendedora_tenant on tenant as restrictive for all to au
 create policy restrict_revendedora_tenant_modulo on tenant_modulo as restrictive for all to authenticated using (auth_revendedora_id() is null);
 create policy restrict_revendedora_usuario on usuario as restrictive for all to authenticated using (auth_revendedora_id() is null);
 create policy restrict_revendedora_venta on venta as restrictive for all to authenticated using (auth_revendedora_id() is null);
-create policy revendedora_propia on revendedora as restrictive for all to authenticated using (auth_revendedora_id() is null or id_revendedora = auth_revendedora_id());
-
+create policy revendedora_propia on revendedora as restrictive for select to authenticated using (auth_revendedora_id() is null or id_revendedora = auth_revendedora_id());
+create policy restrict_revendedora_escritura_insert on revendedora as restrictive for insert to authenticated with check (auth_revendedora_id() is null);
+create policy restrict_revendedora_escritura_update on revendedora as restrictive for update to authenticated using (auth_revendedora_id() is null) with check (auth_revendedora_id() is null);
+create policy restrict_revendedora_escritura_delete on revendedora as restrictive for delete to authenticated using (auth_revendedora_id() is null);
