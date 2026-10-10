@@ -1,6 +1,7 @@
 export interface RevendedoraRow {
   id_revendedora: string
   id_tenant: string
+  id_usuario: string | null
   nombre: string
   apellido: string
   telefono: string | null

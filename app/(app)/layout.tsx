@@ -48,6 +48,10 @@ export default async function AppShellLayout({
     }
   }
 
+  if (session.idRevendedora) {
+    redirect('/mi-cuenta')
+  }
+
   return (
     <ToastProvider>
       <div className="flex min-h-screen bg-bg text-text">

@@ -47,18 +47,22 @@ describe.skipIf(!hasTestDb)('RLS revendedoras — restricción por usuario (ACC-
     if (authErr) throw authErr
     revendedoraUserId = userAuth.user.id
 
-    const { error: errorUsu } = await serviceRole.from('usuario').insert({
+    const { data: rId, error: rErr } = await serviceRole.from('rol').insert({
       id_tenant: tenantId,
-      id_usuario: revendedoraUserId,
-      email,
-      nombre_completo: 'Reven Dora',
-      id_rol: tA.rolId
+      nombre: 'Revendedora',
+      permisos: { 'revendedoras': ['ver_propio'] }
+    }).select('id_rol').single()
+    if (rErr) throw rErr
+
+    const { error: errorUsu } = await serviceRole.rpc('sp_enlazar_revendedora_usuario', {
+      p_id_revendedora: idRevendedora,
+      p_id_usuario: revendedoraUserId,
+      p_id_tenant: tenantId,
+      p_email: email,
+      p_nombre: 'Reven Dora',
+      p_id_rol: rId.id_rol
     })
     if (errorUsu) throw errorUsu
-
-    // Enlazar la revendedora con ese usuario.
-    const res = await serviceRole.from('revendedora').update({ id_usuario: revendedoraUserId }).eq('id_revendedora', idRevendedora)
-    if (res.error) console.log("ERROR UPDATING:", res.error)
 
     // Iniciar sesión como la revendedora
     authRev = await signInAs({ email, password: 'Password123!' })
@@ -171,5 +175,19 @@ describe.skipIf(!hasTestDb)('RLS revendedoras — restricción por usuario (ACC-
       apellido: 'Perez'
     })
     expect(errCli).toBeNull()
+  })
+
+  test('ACC-42: SPs de administración rechazados para revendedoras por RLS restrictivo', async () => {
+    // 1. sp_create_rol
+    const { error: err1 } = await authRev.rpc('sp_create_rol', { p_nombre: 'Hacker', p_permisos: {} })
+    expect(err1).toBeDefined()
+    expect(err1?.code).toBe('42501') // RLS viola
+    
+    // 2. sp_toggle_usuario_activo (intenta update sobre usuario)
+    const { error: err2 } = await authRev.rpc('sp_toggle_usuario_activo', { p_id_usuario: revendedoraUserId, p_estado: 'inactivo' })
+    if (!err2) {
+      const { data } = await serviceRole.from('usuario').select('estado_usuario').eq('id_usuario', revendedoraUserId).single()
+      expect(data?.estado_usuario).not.toBe('inactivo')
+    }
   })
 })

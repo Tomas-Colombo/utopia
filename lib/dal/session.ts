@@ -34,6 +34,8 @@ export interface Session {
    * `verifyTenantMatch` es quien decide qué hacer con esto.
    */
   subdominioOk: boolean
+  /** `id_revendedora` del usuario si es una revendedora (puesto por el Auth Hook) */
+  idRevendedora: string | null
 }
 
 /** Claims que nos interesan del access token verificado. */
@@ -42,6 +44,7 @@ interface VerifiedClaims {
   email?: string
   /** Puesto por el Auth Hook (`00008_auth_hook_tenant_id.sql`) como claim top-level. */
   tenant_id?: string
+  id_revendedora?: string
   app_metadata?: { tenant_id?: string }
 }
 
@@ -104,6 +107,7 @@ export const verifySession = cache(async (): Promise<Session> => {
     permisos: ctx?.ok ? ctx.permisos ?? {} : {},
     modulosHabilitados: ctx?.ok ? ctx.modulos_habilitados ?? [] : [],
     subdominioOk: ctx?.ok ? ctx.subdominio_ok : false,
+    idRevendedora: claims.id_revendedora ?? null,
   }
 })
 

@@ -9,11 +9,14 @@ import { CATALOGO_PERMISOS, MODULO_NOMBRE } from '@/lib/types/administracion'
 export function PermisosEditor({
   value,
   onChange,
+  disabled,
 }: {
   value: Record<string, string[]>
   onChange: (v: Record<string, string[]>) => void
+  disabled?: boolean
 }) {
   function toggle(modulo: string, accion: string, on: boolean) {
+    if (disabled) return
     const current = value[modulo] ?? []
     const next = on ? [...current, accion] : current.filter((a) => a !== accion)
     const map = { ...value }
@@ -53,6 +56,7 @@ export function PermisosEditor({
                           aria-label={`${mod} ${accion}`}
                           checked={marcada}
                           onChange={(e) => toggle(mod, accion, e.target.checked)}
+                          disabled={disabled}
                         />
                       ) : (
                         <span className="text-muted-2">—</span>

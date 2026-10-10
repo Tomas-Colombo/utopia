@@ -90,3 +90,119 @@ export async function bajaRevendedora(id: string) {
 
   return { ok: true as const }
 }
+
+import { createServiceClient } from '../supabase'
+
+export async function inviteRevendedora(session: Session, input: {
+  idRevendedora: string
+  email: string
+  nombreCompleto: string
+  password?: string
+}): Promise<{ id: string }> {
+  await requireModuleRole(session, 'revendedoras', 'editar')
+  await requireModuleRole(session, 'administracion', 'crear')
+
+  const admin = createServiceClient()
+
+  // Buscar rol
+  const { data: rolData, error: rolError } = await admin
+    .from('rol')
+    .select('id_rol')
+    .eq('id_tenant', session.tenantId)
+    .eq('nombre', 'Revendedora')
+    .single()
+  
+  if (rolError || !rolData) {
+    throw new Error('Rol Revendedora no encontrado para este tenant.')
+  }
+
+  // Comprobar que la revendedora no tiene acceso
+  const { data: revData, error: revError } = await admin
+    .from('revendedora')
+    .select('id_usuario')
+    .eq('id_tenant', session.tenantId)
+    .eq('id_revendedora', input.idRevendedora)
+    .single()
+  
+  if (revError || !revData) {
+    throw new Error('Revendedora no encontrada.')
+  }
+
+  if (revData.id_usuario) {
+    throw new Error('Esta revendedora ya tiene un acceso configurado.')
+  }
+
+  const generatedPassword = input.password || Math.random().toString(36).slice(-10)
+
+  const { data: created, error: authError } = await admin.auth.admin.createUser({
+    email: input.email,
+    password: generatedPassword,
+    email_confirm: true,
+    user_metadata: { nombre_completo: input.nombreCompleto },
+    app_metadata: { tenant_id: session.tenantId },
+  })
+
+  if (authError || !created.user) {
+    throw new Error(`inviteRevendedora auth: ${authError?.message ?? 'no user returned'}`)
+  }
+
+  const authId = created.user.id
+
+  const { error: linkError } = await admin.rpc('sp_enlazar_revendedora_usuario', {
+    p_id_revendedora: input.idRevendedora,
+    p_id_usuario: authId,
+    p_id_tenant: session.tenantId,
+    p_email: input.email,
+    p_nombre: input.nombreCompleto,
+    p_id_rol: rolData.id_rol
+  })
+
+  if (linkError) {
+    await admin.auth.admin.deleteUser(authId)
+    throw new Error(`inviteRevendedora db: ${linkError.message}`)
+  }
+
+  return { id: authId }
+}
+
+export async function revocarAccesoRevendedora(session: Session, input: { idRevendedora: string }) {
+  await requireModuleRole(session, 'revendedoras', 'editar')
+  await requireModuleRole(session, 'administracion', 'eliminar')
+
+  const admin = createServiceClient()
+
+  const { data: revData, error: revError } = await admin
+    .from('revendedora')
+    .select('id_usuario')
+    .eq('id_tenant', session.tenantId)
+    .eq('id_revendedora', input.idRevendedora)
+    .single()
+  
+  if (revError || !revData) {
+    throw new Error('Revendedora no encontrada.')
+  }
+
+  if (!revData.id_usuario) {
+    throw new Error('Esta revendedora no tiene acceso configurado.')
+  }
+
+  const authId = revData.id_usuario
+
+  // Eliminar usuario auth (cascadea a 'usuario' y pone null en 'revendedora.id_usuario' si estuviera ON DELETE SET NULL, 
+  // pero id_usuario en revendedora NO ES ON DELETE SET NULL, de hecho, si se borra el usuario... ¿qué pasa con id_usuario?
+  // Necesitamos desvincularlo primero si no hay cascade.
+  const { error: unlinkError } = await admin.from('revendedora').update({
+    id_usuario: null,
+  }).eq('id_revendedora', input.idRevendedora)
+
+  if (unlinkError) {
+    throw new Error(`revocarAcceso unlink: ${unlinkError.message}`)
+  }
+
+  const { error: delError } = await admin.auth.admin.deleteUser(authId)
+  if (delError) {
+    // Intentar re-linkear en caso de falla extrema
+    await admin.from('revendedora').update({ id_usuario: authId }).eq('id_revendedora', input.idRevendedora)
+    throw new Error(`revocarAcceso auth: ${delError.message}`)
+  }
+}

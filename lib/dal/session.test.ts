@@ -48,6 +48,7 @@ const emptyContext = {
   permisos: {},
   modulosHabilitados: [],
   subdominioOk: false,
+  idRevendedora: null,
 }
 
 beforeEach(() => {

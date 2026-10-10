@@ -198,7 +198,7 @@ function ListaRoles({
               <Button size="sm" variant="secondary" onClick={() => onEditar(r)} disabled={pending}>
                 Editar
               </Button>
-              <Button size="sm" variant="ghost" onClick={() => onEliminar(r)} disabled={pending}>
+              <Button size="sm" variant="ghost" onClick={() => onEliminar(r)} disabled={pending || r.nombre === 'Revendedora'}>
                 Eliminar
               </Button>
             </div>
@@ -257,14 +257,14 @@ function RolForm({
           onChange={(e) => setNombre(e.target.value)}
           autoFocus
           invalid={!!err}
-          disabled={pending}
+          disabled={pending || rol?.nombre === 'Revendedora'}
           placeholder='Ej. "Vendedor", "Encargado", "Administrador"'
         />
       </Field>
 
       <div>
         <h3 className="font-display text-lg mb-2">Permisos</h3>
-        <PermisosEditor value={permisos} onChange={setPermisos} />
+        <PermisosEditor value={permisos} onChange={setPermisos} disabled={rol?.nombre === 'Revendedora'} />
       </div>
     </form>
   )

@@ -80,3 +80,35 @@ export async function bajaRevendedoraAction(id: string) {
     throw err
   }
 }
+
+export async function darAccesoRevendedoraAction(input: {
+  idRevendedora: string
+  email: string
+  nombreCompleto: string
+  password?: string
+}) {
+  try {
+    const session = await verifySession()
+    const { id: authId } = await dal.inviteRevendedora(session, input)
+    revalidatePath('/revendedoras')
+    revalidatePath('/administracion/usuarios')
+    return { ok: true as const, data: { id: authId } }
+  } catch (error) {
+    const msg = (error as Error).message
+    if (msg.includes('email-duplicado') || msg.includes('already registered')) return { ok: false as const, reason: 'email-duplicado' }
+    if (msg.includes('acceso configurado')) return { ok: false as const, reason: 'acceso-duplicado' }
+    return { ok: false as const, reason: classifyAuthError(error) }
+  }
+}
+
+export async function revocarAccesoRevendedoraAction(idRevendedora: string) {
+  try {
+    const session = await verifySession()
+    await dal.revocarAccesoRevendedora(session, { idRevendedora })
+    revalidatePath('/revendedoras')
+    revalidatePath('/administracion/usuarios')
+    return { ok: true as const }
+  } catch (error) {
+    return { ok: false as const, reason: classifyAuthError(error) }
+  }
+}

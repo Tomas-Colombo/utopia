@@ -61,13 +61,75 @@ export function EditarRevendedoraForm({ revendedora }: { revendedora: Revendedor
         <Textarea id="er_notas" name="notas" rows={3} defaultValue={revendedora.notas || ''} />
       </Field>
 
-      <div className="mt-4 flex justify-end gap-3">
-        <Button type="button" variant="neutral" onClick={() => router.back()} disabled={loading}>
-          Volver
-        </Button>
-        <Button type="submit" disabled={loading}>
-          {loading ? 'Guardando...' : 'Guardar cambios'}
-        </Button>
+      <div className="mt-4 flex flex-wrap justify-between gap-3">
+        <div className="flex gap-2">
+          {!revendedora.id_usuario ? (
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={loading}
+              onClick={async () => {
+                if (!revendedora.email) return toast.error('La revendedora debe tener un email para darle acceso')
+                setLoading(true)
+                const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789'
+                const arr = new Uint32Array(14)
+                crypto.getRandomValues(arr)
+                const password = Array.from(arr, (n) => chars[n % chars.length]).join('')
+                
+                const { darAccesoRevendedoraAction } = await import('../actions')
+                const res = await darAccesoRevendedoraAction({
+                  idRevendedora: revendedora.id_revendedora,
+                  email: revendedora.email,
+                  nombreCompleto: `${revendedora.nombre} ${revendedora.apellido}`.trim(),
+                  password
+                })
+                setLoading(false)
+                if (!res.ok) {
+                  const rawR = (res as { reason?: unknown }).reason
+                  const msg = typeof rawR === 'string' ? rawR : ((rawR as { reason?: string })?.reason || 'error-desconocido')
+                  return toast.error('No se pudo dar acceso', mensajeDeError(msg))
+                }
+                toast.show({
+                  variant: 'success',
+                  title: 'Acceso habilitado',
+                  description: `Contraseña temporal: ${password}`,
+                  duration: 0,
+                })
+              }}
+            >
+              Dar acceso
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              variant="danger"
+              disabled={loading}
+              onClick={async () => {
+                if (!confirm('¿Seguro que querés revocar el acceso? La revendedora no podrá volver a iniciar sesión.')) return
+                setLoading(true)
+                const { revocarAccesoRevendedoraAction } = await import('../actions')
+                const res = await revocarAccesoRevendedoraAction(revendedora.id_revendedora)
+                setLoading(false)
+                if (!res.ok) {
+                  const rawR = (res as { reason?: unknown }).reason
+                  const msg = typeof rawR === 'string' ? rawR : ((rawR as { reason?: string })?.reason || 'error-desconocido')
+                  return toast.error('No se pudo revocar', mensajeDeError(msg))
+                }
+                toast.success('Acceso revocado')
+              }}
+            >
+              Revocar acceso
+            </Button>
+          )}
+        </div>
+        <div className="flex gap-2">
+          <Button type="button" variant="neutral" onClick={() => router.back()} disabled={loading}>
+            Volver
+          </Button>
+          <Button type="submit" disabled={loading}>
+            {loading ? 'Guardando...' : 'Guardar cambios'}
+          </Button>
+        </div>
       </div>
     </form>
   )
