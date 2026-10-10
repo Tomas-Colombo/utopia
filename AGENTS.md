@@ -51,10 +51,12 @@ supabase/      migrations + stored procedures  — business invariants live here
 
 - **Tenant isolation is the one invariant.** Every domain table has
   `id_tenant`; RLS filters by the JWT `tenant_id` claim. RLS is the only thing
-  doing it. The service-role key bypasses RLS: only `lib/dal/supabase*.ts`,
-  `scripts/provision-tenant.mts`, `tests/db/`, `e2e/` may touch it.
-- **RLS filters by tenant and nothing else.** No per-user policy: any session
-  sees the whole tenant. Per-user/per-module limits are enforced by the guards.
+  doing it (with one exception: `id_revendedora` restrictive policies also apply
+  for the Revendedoras module). The service-role key bypasses RLS: only
+  `lib/dal/supabase*.ts`, `scripts/provision-tenant.mts`, `tests/db/`, `e2e/` may touch it.
+- **RLS filters by tenant and nothing else** (except restrictive revendedora policies).
+  No per-user policy: any session sees the whole tenant. Per-user/per-module
+  limits are enforced by the guards.
 - **Writes go through `sp_*` stored procedures** called from `lib/dal`. A
   multi-table write assembled in TypeScript breaks between two awaits.
 - Allowed SQL outside `lib/dal`: auth (`app/(auth)/login/actions.ts`,

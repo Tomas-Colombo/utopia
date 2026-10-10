@@ -83,3 +83,8 @@ The hook function is created by `supabase/migrations/00008_auth_hook_tenant_id.s
 (Slice 5). This manual dashboard registration step remains blocked until
 `utopia-dev`/`utopia-test` exist (postponed to end of Slice 8) — apply the
 migration SQL, then complete this checklist for each project once created.
+
+**Important (Slice 1b — Revendedoras)**: the hook logic is extended by `00077_revendedora_id_usuario.sql`
+to inject the `id_revendedora` claim. After applying migration 00077 to an environment,
+verify that the hook `public.custom_access_token_hook` is still selected in the Auth -> Hooks
+dashboard.

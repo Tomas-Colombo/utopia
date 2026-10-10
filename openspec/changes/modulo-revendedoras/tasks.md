@@ -36,14 +36,14 @@ Leyenda: `[ ]` pendiente · `[x]` hecho y verificado.
 
 Prerrequisito de todo lo que lee una revendedora. `/judgment-day` antes de empezar.
 
-- [ ] Test primero (matriz ACC-07, puntos 1–3 y 7): sesión de revendedora sin acceso a nada
+- [x] Test primero (matriz ACC-07, puntos 1–3 y 7): sesión de revendedora sin acceso a nada
   fuera de la lista blanca; sesión de operador sin cambios; **la suite existente en verde**.
-- [ ] Migración: `revendedora.id_usuario` único parcial; hook con claim `id_revendedora`
+- [x] Migración: `revendedora.id_usuario` único parcial; hook con claim `id_revendedora`
   (partir de la última definición de `custom_access_token_hook`); `auth_revendedora_id()`.
   **Paso manual**: el hook está registrado a mano en cada proyecto Supabase; verificar que sigue activo.
-- [ ] Migración: policy `RESTRICTIVE` en las 36 tablas, generada y revisada, con `-- DOWN:` probado.
-- [ ] Guardia anti-olvido (ACC-11) como test de DB.
-- [ ] Documentar la regla nueva en `AGENTS.md` (la "RLS solo por tenant" deja de ser absoluta).
+- [x] Migración: policy `RESTRICTIVE` en las 36 tablas, generada y revisada, con `-- DOWN:` probado.
+- [x] Guardia anti-olvido (ACC-11) como test de DB.
+- [x] Documentar la regla nueva en `AGENTS.md` (la "RLS solo por tenant" deja de ser absoluta).
 
 ## Slice 1c — Alta del login de la revendedora (~300) · REQ-RV-ACC-03, 04
 
