@@ -190,4 +190,72 @@ describe.skipIf(!hasTestDb)('RLS revendedoras — restricción por usuario (ACC-
       expect(data?.estado_usuario).not.toBe('inactivo')
     }
   })
+
+  test('sp_enlazar_revendedora_usuario deniega ejecucion a authenticated y public', async () => {
+    const { error } = await authAdmin.rpc('sp_enlazar_revendedora_usuario', {
+      p_id_revendedora: idRevendedora,
+      p_id_usuario: '00000000-0000-0000-0000-000000000000',
+      p_id_tenant: tenantId,
+      p_email: 'x@x.com',
+      p_nombre: 'X',
+      p_id_rol: '00000000-0000-0000-0000-000000000000'
+    })
+    expect(error).not.toBeNull()
+    expect(error?.code).toBe('42501') // Could not find the function or permission denied in postgrest
+  })
+
+  test('revocar acceso no borra el usuario de auth, lo inactiva y quita id_usuario de revendedora', async () => {
+    // 1. Give it some "activity" - e.g. change updated_at on the revendedora
+    await serviceRole.from('revendedora').update({ notas: 'activa' }).eq('id_revendedora', idRevendedora)
+
+    const { error: unlinkError } = await serviceRole.from('revendedora').update({
+      id_usuario: null
+    }).eq('id_revendedora', idRevendedora)
+    expect(unlinkError).toBeNull()
+
+    const { error: userError } = await serviceRole.from('usuario').update({
+      estado_usuario: 'inactivo'
+    }).eq('id_usuario', revendedoraUserId)
+    expect(userError).toBeNull()
+
+    // Comprobar que no hay constraints rompiendose
+    const { data: user } = await serviceRole.from('usuario').select('estado_usuario').eq('id_usuario', revendedoraUserId).single()
+    expect(user?.estado_usuario).toBe('inactivo')
+
+    const { data: rev } = await serviceRole.from('revendedora').select('id_usuario').eq('id_revendedora', idRevendedora).single()
+    expect(rev?.id_usuario).toBeNull()
+
+    // El auth_user todavia existe en supabase
+    const { data: authUser, error: authError } = await serviceRole.auth.admin.getUserById(revendedoraUserId)
+    expect(authError).toBeNull()
+    expect(authUser?.user?.id).toBe(revendedoraUserId)
+  })
+  test('ACC-10: usuario revendedora sin acceso falla cerrado y no lee cliente ni venta', async () => {
+    // 1. Quitar el acceso a la revendedora (simula revocarAcceso)
+    await serviceRole.from('revendedora').update({ id_usuario: null }).eq('id_revendedora', idRevendedora)
+
+    // 2. Pedir un token nuevo simulando la llamada de auth. (En tests usamos rpc que simula el hook)
+    // Supabase JS tests environment uses GoTrueClient, but the token hook logic determines if tenant_id is injected.
+    // Instead of logging in again which is complex in DB tests, we can just call the hook manually to see what it emits
+    const { data: hookResult, error: hookErr } = await serviceRole.rpc('custom_access_token_hook', { 
+      event: { user_id: revendedoraUserId, claims: { app_metadata: {} } } 
+    })
+    expect(hookErr).toBeNull()
+
+    // The hook should omit tenant_id
+    expect(hookResult?.claims?.tenant_id).toBeUndefined()
+    expect(hookResult?.claims?.id_revendedora).toBeUndefined()
+
+    // 3. Forzar el JWT actual sin tenant_id ni id_revendedora simulando lo que emitiría el hook
+    const jwtSinTenant = `{"role":"authenticated", "sub":"${revendedoraUserId}", "email":"x@x.com"}`
+    await serviceRole.rpc('set_claim', { jwt_claim: jwtSinTenant })
+
+    // 4. Comprobar lectura de cliente
+    const { data: clientes } = await authRev.from('cliente').select('*')
+    expect(clientes).toHaveLength(0)
+
+    // Comprobar lectura de venta
+    const { data: ventas } = await authRev.from('venta').select('*')
+    expect(ventas).toHaveLength(0)
+  })
 })
