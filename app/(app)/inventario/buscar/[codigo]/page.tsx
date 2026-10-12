@@ -14,6 +14,7 @@ const ESTADO_LABEL: Record<EstadoItem, string> = {
   devuelto: 'Devuelto',
   devuelto_cliente: 'Devuelto por cliente',
   baja: 'Dado de baja',
+  en_revendedora: 'En revendedora',
 }
 
 const ESTADO_VARIANT: Record<EstadoItem, 'success' | 'info' | 'warning' | 'danger' | 'neutral'> = {
@@ -23,6 +24,7 @@ const ESTADO_VARIANT: Record<EstadoItem, 'success' | 'info' | 'warning' | 'dange
   devuelto: 'neutral',
   devuelto_cliente: 'warning',
   baja: 'danger',
+  en_revendedora: 'warning',
 }
 
 /**

@@ -18,6 +18,7 @@ export type EstadoItem =
   | 'devuelto'
   | 'devuelto_cliente'
   | 'baja'
+  | 'en_revendedora'
 
 export type TipoIngreso = 'compra' | 'consignacion'
 

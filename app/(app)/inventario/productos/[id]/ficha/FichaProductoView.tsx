@@ -47,6 +47,7 @@ function agrupar(items: ItemProductoRow[]) {
         devuelto: 0,
         devuelto_cliente: 0,
         baja: 0,
+        en_revendedora: 0,
       })
     }
     map.get(clave)![it.estado_item] += 1
@@ -304,7 +305,7 @@ export function FichaProductoView({
               <tbody>
                 {filasBreakdown.map((f) => {
                   const otros =
-                    f.counts.devuelto + f.counts.devuelto_cliente + f.counts.baja
+                    f.counts.devuelto + f.counts.devuelto_cliente + f.counts.baja + f.counts.en_revendedora
                   const total =
                     f.counts.disponible + f.counts.reservado + f.counts.vendido + otros
                   return (

@@ -81,6 +81,7 @@ const ACCIONES_POR_ESTADO: Record<EstadoItem, Accion[]> = {
   ],
   devuelto: [], // terminal
   baja: [], // terminal
+  en_revendedora: [], // Las transiciones se hacen desde el módulo de revendedoras/consignaciones
 }
 
 export function FichaActions({
