@@ -81,6 +81,13 @@ const MENSAJES: Record<string, string> = {
   'email-duplicado': 'Ya existe una revendedora con este email.',
   'revendedora-not-found': 'Esa revendedora ya no existe. Recargá la página.',
   'revendedora-con-stock': 'No podés dar de baja a una revendedora que tiene mercadería en su poder. Pedile que devuelva lo que le queda o declaralo como faltante.',
+  'acceso-duplicado': 'Esta revendedora ya tiene un acceso configurado.',
+  'error-invitacion': 'No se pudo crear el acceso.',
+  'error-enlazar': 'No se pudo enlazar el usuario a la revendedora.',
+  'sin-acceso': 'Esta revendedora no tiene acceso configurado.',
+  'error-desvincular': 'No se pudo desvincular el acceso.',
+  'error-desactivar': 'No se pudo desactivar el acceso.',
+  'error-rol-no-encontrado': 'Rol Revendedora no encontrado para tu cuenta.',
   'accion-invalida':
     'Uno de los permisos no corresponde a ninguna acción de ese módulo. Recargá la página.',
   'acciones-duplicadas': 'Hay un permiso repetido. Recargá la página y probá de nuevo.',
@@ -406,3 +413,6 @@ export const SLUGS_CON_MENSAJE: readonly string[] = [
   ...Object.keys(MENSAJES),
   ...PREFIJOS.map((p) => p.slug),
 ]
+ 
+// Nuevos slugs revendedoras
+

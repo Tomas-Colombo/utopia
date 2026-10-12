@@ -8,6 +8,7 @@
 -- drop function if exists fn_auto_crear_rol_revendedora();
 -- drop trigger if exists tr_rol_revendedora_protect on rol;
 -- drop function if exists fn_rol_revendedora_protect();
+-- drop function if exists sp_enlazar_revendedora_usuario(uuid, uuid, uuid, text, text, uuid);
 
 create or replace function fn_auto_crear_rol_revendedora() returns trigger as $$
 declare
@@ -24,7 +25,7 @@ begin
   end if;
   return NEW;
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql security definer set search_path = public;
 
 create trigger tr_auto_crear_rol_revendedora
 after insert or update on tenant_modulo
@@ -100,7 +101,7 @@ create or replace function sp_enlazar_revendedora_usuario(
   p_email text,
   p_nombre text,
   p_id_rol uuid
-) returns void language plpgsql security definer as $$
+) returns void language plpgsql security definer set search_path = public as $$
 begin
   insert into usuario (id_usuario, id_tenant, email, nombre_completo, id_rol, estado_usuario)
   values (p_id_usuario, p_id_tenant, p_email, p_nombre, p_id_rol, 'invitado');
@@ -109,8 +110,8 @@ begin
 end;
 $$;
 
+revoke execute on function sp_enlazar_revendedora_usuario(uuid, uuid, uuid, text, text, uuid) from public, authenticated;
 grant execute on function sp_enlazar_revendedora_usuario(uuid, uuid, uuid, text, text, uuid) to service_role;
-grant execute on function sp_enlazar_revendedora_usuario(uuid, uuid, uuid, text, text, uuid) to authenticated;
 
 -- Retroactivamente crear rol para tenants que ya tengan el módulo
 insert into rol(id_tenant, nombre, permisos)

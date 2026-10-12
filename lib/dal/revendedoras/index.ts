@@ -92,16 +92,14 @@ export async function bajaRevendedora(id: string) {
 }
 
 import { createServiceClient } from '../supabase'
+import * as crypto from 'crypto'
 
 export async function inviteRevendedora(session: Session, input: {
   idRevendedora: string
   email: string
   nombreCompleto: string
   password?: string
-}): Promise<{ id: string }> {
-  await requireModuleRole(session, 'revendedoras', 'editar')
-  await requireModuleRole(session, 'administracion', 'crear')
-
+}) {
   const admin = createServiceClient()
 
   // Buscar rol
@@ -113,7 +111,7 @@ export async function inviteRevendedora(session: Session, input: {
     .single()
   
   if (rolError || !rolData) {
-    throw new Error('Rol Revendedora no encontrado para este tenant.')
+    return { ok: false as const, reason: 'error-rol-no-encontrado' }
   }
 
   // Comprobar que la revendedora no tiene acceso
@@ -125,14 +123,14 @@ export async function inviteRevendedora(session: Session, input: {
     .single()
   
   if (revError || !revData) {
-    throw new Error('Revendedora no encontrada.')
+    return { ok: false as const, reason: 'revendedora-not-found' }
   }
 
   if (revData.id_usuario) {
-    throw new Error('Esta revendedora ya tiene un acceso configurado.')
+    return { ok: false as const, reason: 'acceso-duplicado' }
   }
 
-  const generatedPassword = input.password || Math.random().toString(36).slice(-10)
+  const generatedPassword = input.password || (crypto.randomBytes(16).toString('hex') + 'A1!')
 
   const { data: created, error: authError } = await admin.auth.admin.createUser({
     email: input.email,
@@ -142,9 +140,12 @@ export async function inviteRevendedora(session: Session, input: {
     app_metadata: { tenant_id: session.tenantId },
   })
 
-  if (authError || !created.user) {
-    throw new Error(`inviteRevendedora auth: ${authError?.message ?? 'no user returned'}`)
+  if (authError) {
+    if (authError.status === 422) return { ok: false as const, reason: 'email-duplicado' }
+    return { ok: false as const, reason: 'error-invitacion' }
   }
+  
+  if (!created.user) return { ok: false as const, reason: 'error-invitacion' }
 
   const authId = created.user.id
 
@@ -159,16 +160,14 @@ export async function inviteRevendedora(session: Session, input: {
 
   if (linkError) {
     await admin.auth.admin.deleteUser(authId)
-    throw new Error(`inviteRevendedora db: ${linkError.message}`)
+    if (linkError.code === '23505') return { ok: false as const, reason: 'email-duplicado' }
+    return { ok: false as const, reason: 'error-enlazar' }
   }
 
-  return { id: authId }
+  return { ok: true as const, data: { id: authId } }
 }
 
 export async function revocarAccesoRevendedora(session: Session, input: { idRevendedora: string }) {
-  await requireModuleRole(session, 'revendedoras', 'editar')
-  await requireModuleRole(session, 'administracion', 'eliminar')
-
   const admin = createServiceClient()
 
   const { data: revData, error: revError } = await admin
@@ -179,30 +178,30 @@ export async function revocarAccesoRevendedora(session: Session, input: { idReve
     .single()
   
   if (revError || !revData) {
-    throw new Error('Revendedora no encontrada.')
+    return { ok: false as const, reason: 'revendedora-not-found' }
   }
 
   if (!revData.id_usuario) {
-    throw new Error('Esta revendedora no tiene acceso configurado.')
+    return { ok: false as const, reason: 'sin-acceso' }
   }
 
   const authId = revData.id_usuario
 
-  // Eliminar usuario auth (cascadea a 'usuario' y pone null en 'revendedora.id_usuario' si estuviera ON DELETE SET NULL, 
-  // pero id_usuario en revendedora NO ES ON DELETE SET NULL, de hecho, si se borra el usuario... ¿qué pasa con id_usuario?
-  // Necesitamos desvincularlo primero si no hay cascade.
   const { error: unlinkError } = await admin.from('revendedora').update({
     id_usuario: null,
   }).eq('id_revendedora', input.idRevendedora)
 
   if (unlinkError) {
-    throw new Error(`revocarAcceso unlink: ${unlinkError.message}`)
+    return { ok: false as const, reason: 'error-desvincular' }
   }
 
-  const { error: delError } = await admin.auth.admin.deleteUser(authId)
-  if (delError) {
-    // Intentar re-linkear en caso de falla extrema
-    await admin.from('revendedora').update({ id_usuario: authId }).eq('id_revendedora', input.idRevendedora)
-    throw new Error(`revocarAcceso auth: ${delError.message}`)
+  const { error: userError } = await admin.from('usuario').update({
+    estado_usuario: 'inactivo',
+  }).eq('id_usuario', authId)
+
+  if (userError) {
+    return { ok: false as const, reason: 'error-desactivar' }
   }
+
+  return { ok: true as const }
 }

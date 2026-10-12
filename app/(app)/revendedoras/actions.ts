@@ -19,7 +19,7 @@ export async function crearRevendedoraAction(formData: unknown) {
       return { ok: false as const, reason: 'payload-invalido' }
     }
 
-    const res = await dal.crearRevendedora( parsed.data.payload)
+    const res = await dal.crearRevendedora(parsed.data.payload)
     if (res.ok) {
       revalidatePath('/revendedoras')
     }
@@ -43,7 +43,7 @@ export async function editarRevendedoraAction(id: string, formData: unknown) {
       return { ok: false as const, reason: 'payload-invalido' }
     }
 
-    const res = await dal.editarRevendedora( parsed.data.id, parsed.data.payload)
+    const res = await dal.editarRevendedora(parsed.data.id, parsed.data.payload)
     if (res.ok) {
       revalidatePath('/revendedoras')
       revalidatePath(`/revendedoras/${parsed.data.id}`)
@@ -68,7 +68,7 @@ export async function bajaRevendedoraAction(id: string) {
       return { ok: false as const, reason: 'payload-invalido' }
     }
 
-    const res = await dal.bajaRevendedora( parsed.data.id)
+    const res = await dal.bajaRevendedora(parsed.data.id)
     if (res.ok) {
       revalidatePath('/revendedoras')
       revalidatePath(`/revendedoras/${parsed.data.id}`)
@@ -81,34 +81,60 @@ export async function bajaRevendedoraAction(id: string) {
   }
 }
 
-export async function darAccesoRevendedoraAction(input: {
-  idRevendedora: string
-  email: string
-  nombreCompleto: string
-  password?: string
-}) {
+export async function darAccesoRevendedoraAction(input: unknown) {
   try {
     const session = await verifySession()
-    const { id: authId } = await dal.inviteRevendedora(session, input)
-    revalidatePath('/revendedoras')
-    revalidatePath('/administracion/usuarios')
-    return { ok: true as const, data: { id: authId } }
+    await requireModuleRole(session, 'revendedoras', 'editar')
+    await requireModuleRole(session, 'administracion', 'crear')
+
+    const schema = z.object({
+      idRevendedora: z.string().uuid(),
+      email: z.string().email().max(255),
+      nombreCompleto: z.string().max(200),
+      password: z.string().optional()
+    }).strict()
+
+    const parsed = schema.safeParse(input)
+    if (!parsed.success) {
+      return { ok: false as const, reason: 'payload-invalido' }
+    }
+
+    const res = await dal.inviteRevendedora(session, parsed.data)
+    if (res.ok) {
+      revalidatePath('/revendedoras')
+      revalidatePath('/administracion/usuarios')
+    }
+    return res
   } catch (error) {
-    const msg = (error as Error).message
-    if (msg.includes('email-duplicado') || msg.includes('already registered')) return { ok: false as const, reason: 'email-duplicado' }
-    if (msg.includes('acceso configurado')) return { ok: false as const, reason: 'acceso-duplicado' }
-    return { ok: false as const, reason: classifyAuthError(error) }
+    // We already do module guard properly above.
+    const auth = classifyAuthError(error)
+    if (auth.kind === 'auth') return { ok: false as const, reason: auth.reason }
+    return { ok: false as const, reason: 'error-desconocido' }
   }
 }
 
-export async function revocarAccesoRevendedoraAction(idRevendedora: string) {
+export async function revocarAccesoRevendedoraAction(id: unknown) {
   try {
     const session = await verifySession()
-    await dal.revocarAccesoRevendedora(session, { idRevendedora })
-    revalidatePath('/revendedoras')
-    revalidatePath('/administracion/usuarios')
-    return { ok: true as const }
+    await requireModuleRole(session, 'revendedoras', 'editar')
+    await requireModuleRole(session, 'administracion', 'eliminar')
+
+    const schema = z.object({ id: z.string().uuid() }).strict()
+    const parsed = schema.safeParse({ id })
+
+    if (!parsed.success) {
+      return { ok: false as const, reason: 'payload-invalido' }
+    }
+
+    const res = await dal.revocarAccesoRevendedora(session, { idRevendedora: parsed.data.id })
+    if (res.ok) {
+      revalidatePath('/revendedoras')
+      revalidatePath('/administracion/usuarios')
+    }
+    return res
   } catch (error) {
-    return { ok: false as const, reason: classifyAuthError(error) }
+    const auth = classifyAuthError(error)
+    if (auth.kind === 'auth') return { ok: false as const, reason: auth.reason }
+    return { ok: false as const, reason: 'error-desconocido' }
   }
 }
