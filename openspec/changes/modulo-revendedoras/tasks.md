@@ -58,11 +58,11 @@ Prerrequisito de todo lo que lee una revendedora. `/judgment-day` antes de empez
 
 ## Slice 2 — Estado `en_revendedora` (~250) ⚠ · REQ-RV-DB-02
 
-- [ ] `00077_estado_en_revendedora.sql` — **solo** el `ADD VALUE`.
-- [ ] `00078_transicion_en_revendedora.sql` — matriz de transiciones (test tabla-manejada completo).
-- [ ] Auditar los 19 archivos de `EstadoItem`; guardia `never` en badges; test.
-- [ ] Auditar `rf_finanzas_posicion`/mercadería/capital propio por enumeraciones de estado y decidir.
-- [ ] `/code-review` sobre `consignaciones` e `inventario` antes de extender.
+- [x] `00081_estado_en_revendedora.sql` — **solo** el `ADD VALUE`.
+- [x] `00082_transicion_en_revendedora.sql` — matriz de transiciones (test tabla-manejada completo).
+- [x] Auditar los 19 archivos de `EstadoItem`; guardia `never` en badges; test.
+- [x] Auditar `rf_finanzas_posicion`/mercadería/capital propio por enumeraciones de estado y decidir.
+- [x] `/code-review` sobre `consignaciones` e `inventario` antes de extender.
 
 ## Slice 3 — Consignación de salida: schema + SP (~400) · REQ-RV-DB-03
 
