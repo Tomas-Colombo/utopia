@@ -52,6 +52,7 @@ const ESTADO_EN_PALABRAS: Record<string, string> = {
   devuelto: 'devuelto al proveedor',
   devuelto_cliente: 'devuelto por el cliente',
   baja: 'dado de baja',
+  en_revendedora: 'en manos de una revendedora',
 }
 
 /**
@@ -217,6 +218,14 @@ const MENSAJES: Record<string, string> = {
   'consignacion-vacia': 'El lote no puede quedar vacío.',
   'consignacion-no-activa': 'La consignación ya está cerrada.',
   'consignacion-not-found': 'Esa consignación ya no existe. Recargá la página.',
+  'revendedora-requerida': 'Elegí una revendedora.',
+  'revendedora-inactiva': 'Esa revendedora está dada de baja. Reactivala o elegí otra.',
+  'item-no-entregable': 'Uno de los ítems no está disponible para entregar a una revendedora.',
+  'item-ya-en-consignacion-revendedora': 'El ítem ya está incluido en otra consignación activa de revendedora.',
+  'consignacion-ya-confirmada': 'Esta consignación ya fue confirmada.',
+  'consignacion-no-confirmada': 'Primero tenés que confirmar la entrega de la consignación.',
+  'consignacion-confirmada': 'No podés eliminar una consignación ya confirmada. Registrá la devolución de los ítems.',
+  'consignacion-con-items-en-poder': 'No podés cerrar la consignación mientras queden ítems en manos de la revendedora.',
   'detalle-no-pendiente':
     'Esa línea de la consignación ya se resolvió. Recargá la página para ver cómo quedó.',
 
@@ -335,6 +344,7 @@ const CONSTRAINTS: Record<string, string> = {
   cuota_venta_numero_uk: 'Esa cuota ya existe para esta venta.',
   detalle_reserva_item_activa_uk: 'Ese ítem ya está en una reserva activa.',
   consignacion_detalle_item_pendiente_uk: 'Ese ítem ya está apartado en otra consignación.',
+  consignacion_revendedora_detalle_item_activo_uk: 'Ese ítem ya está incluido en otra consignación activa de revendedora.',
 }
 
 /**

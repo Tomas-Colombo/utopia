@@ -30,6 +30,8 @@ const SLUGS_DE_LA_APP = [
   // Stored procedures
   'cantidad-invalida', 'categoria-not-found', 'categoria-sin-talles',
   'consignacion-no-activa', 'consignacion-not-found', 'cuenta-destino-invalida',
+  'revendedora-requerida', 'revendedora-inactiva', 'item-no-entregable', 'item-ya-en-consignacion-revendedora',
+  'consignacion-ya-confirmada', 'consignacion-no-confirmada', 'consignacion-confirmada', 'consignacion-con-items-en-poder',
   'cuota-no-cobrable', 'cuota-no-incobrable', 'cuota-not-found',
   'descripcion-requerida', 'detalle-not-found', 'detalle-venta-not-found',
   'detalle-ya-devuelto', 'detalle-ya-rendido', 'devolucion-venta-con-cuotas-abiertas',
