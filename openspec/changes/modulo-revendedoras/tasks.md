@@ -66,11 +66,11 @@ Prerrequisito de todo lo que lee una revendedora. `/judgment-day` antes de empez
 
 ## Slice 3 — Consignación de salida: schema + SP (~400) · REQ-RV-DB-03
 
-- [ ] Test primero: confirmar mueve estado; `reservado` rechazado; mismo ítem en dos abiertas
+- [x] Test primero: confirmar mueve estado; `reservado` rechazado; mismo ítem en dos abiertas
   rechazado; devolución restaura; cerrar con ítems en poder rechazado; auditoría; aislamiento.
-- [ ] `00079_consignacion_revendedora.sql` y `00080_consignacion_revendedora_functions.sql`
+- [x] `00084_consignacion_revendedora.sql` y `00085_consignacion_revendedora_functions.sql`
   (tablas, índice parcial, 6 SPs, `rf_stock_por_tenencia`). `-- DOWN:` probado.
-- [ ] Slugs nuevos en `mensajes.ts` + inventario del test.
+- [x] Slugs nuevos en `mensajes.ts` + inventario del test.
 
 ## Slice 4 — Consignación de salida: UI (~400)
 
