@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import { createServiceRoleTestClient } from '@/lib/dal/supabase-test'
+import { COSTO, PRECIO, ventaFixture } from './_fixtures-ventas'
 
 describe('EstadoItem transiciones — DB-02', () => {
   test('matriz completa de is_transicion_item_valida', async () => {
@@ -32,10 +33,26 @@ describe('EstadoItem transiciones — DB-02', () => {
     }
   })
 
-  test('items en_revendedora son contados en la posición financiera (capital propio)', async () => {
-    const serviceRole = createServiceRoleTestClient()
-    // Verificamos que rf_finanzas_posicion se pueda invocar sin error
-    const { error } = await serviceRole.rpc('rf_finanzas_posicion')
-    expect(error).toBeNull()
+  test('un ítem en_revendedora suma a capital_propio y valor_venta_potencial igual que uno disponible', async () => {
+    const f = await ventaFixture('PosRev', 2, { tipoIngreso: 'compra' })
+
+    const { data: posAntes, error: errAntes } = await f.authenticated.rpc('rf_finanzas_posicion').single()
+    expect(errAntes).toBeNull()
+    expect(Number((posAntes as Record<string, unknown>).capital_propio)).toBe(2 * COSTO)
+    expect(Number((posAntes as Record<string, unknown>).valor_venta_potencial)).toBe(2 * PRECIO)
+
+    // Transicionamos el segundo ítem de disponible a en_revendedora
+    const { error: errTrans } = await f.authenticated.rpc('sp_transicion_item_producto', {
+      p_id_item: f.items[1],
+      p_estado_hasta: 'en_revendedora',
+      p_tipo_movimiento: 'consignacion_revendedora',
+    })
+    expect(errTrans).toBeNull()
+
+    const { data: posDespues, error: errDespues } = await f.authenticated.rpc('rf_finanzas_posicion').single()
+    expect(errDespues).toBeNull()
+    expect(Number((posDespues as Record<string, unknown>).capital_propio)).toBe(2 * COSTO)
+    expect(Number((posDespues as Record<string, unknown>).valor_venta_potencial)).toBe(2 * PRECIO)
   })
 })
+

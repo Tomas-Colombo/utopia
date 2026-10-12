@@ -72,9 +72,9 @@ export interface PerfilProveedorDetalle {
   /**
    * Valor a costo (= lo que se le debe al proveedor si se vende) de la
    * mercadería de consignación que sigue en poder de la tienda: estados
-   * 'disponible', 'reservado' y 'devuelto_cliente' (esos tres SÍ te quedan
-   * pendientes al proveedor; 'vendido', 'devuelto' al proveedor y 'baja' no).
-   * Es deuda POTENCIAL — se vuelve real al vender.
+   * 'disponible', 'reservado', 'devuelto_cliente' y 'en_revendedora' (esos
+   * cuatro SÍ te quedan pendientes al proveedor; 'vendido', 'devuelto' al
+   * proveedor y 'baja' no). Es deuda POTENCIAL — se vuelve real al vender.
    */
   valor_stock_consignacion: number
   items_en_stock_consignacion: number
@@ -100,12 +100,13 @@ export async function getPerfilProveedorPorId(
       .eq('ingreso_mercaderia.id_proveedor', id),
     // Stock de consignación en poder de la tienda (deuda potencial): todos
     // los estados que NO son 'vendido' (ya cuenta como pendiente de rendir),
-    // NO son 'devuelto' (fue al proveedor) ni 'baja' (ajuste).
+    // NO son 'devuelto' (fue al proveedor) ni 'baja' (ajuste). Incluye
+    // 'en_revendedora' porque la prenda sigue siendo responsabilidad del local.
     supabase
       .from('item_producto')
       .select('costo_ingreso, ingreso_mercaderia!inner(id_proveedor)')
       .eq('tipo_ingreso', 'consignacion')
-      .in('estado_item', ['disponible', 'reservado', 'devuelto_cliente'])
+      .in('estado_item', ['disponible', 'reservado', 'devuelto_cliente', 'en_revendedora'])
       .eq('ingreso_mercaderia.id_proveedor', id),
     supabase
       .from('consignacion')
