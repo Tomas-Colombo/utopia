@@ -24,7 +24,7 @@ Todas las migraciones: numeradas desde **`00076`**, con bloque `-- DOWN:` comple
 - Migración B: `is_transicion_item_valida` partiendo de su **última** definición
   (`rg -l "function is_transicion_item_valida" supabase/migrations | sort | tail -1`).
   Aristas nuevas: `disponible → en_revendedora`; `en_revendedora → disponible | vendido |
-  devuelto | baja`. `reservado → en_revendedora` rechazada. Todo lo demás, rechazado.
+  devuelto | baja`; `vendido → en_revendedora` (anulación de venta canal revendedora sin liquidar, DR-7, migración `00090`). `reservado → en_revendedora` rechazada. Todo lo demás, rechazado.
 - Test de matriz tabla-manejada, incluidas todas las aristas rechazadas.
 - **Auditar los 19 archivos** que leen `EstadoItem` y agregar guardia `never` en el mapeo de
   badges para que el próximo estado rompa el build y no renderice en blanco.

@@ -105,8 +105,8 @@ Mayor riesgo del cambio. `/judgment-day` sobre `ventas` antes de empezar.
 ## Slice 6b — Venta por canal: finanzas (~350) ⚠ · REQ-RV-DB-08
 
 - [ ] **Escenario dorado de revendedoras** en `specs/golden.md`, calculado a mano, antes de implementar.
-- [ ] `00085_finanzas_comision.sql`: `v_linea_venta`, `rf_finanzas_resultados`, `_flujo`, `_posicion`
-  (todas desde su última definición). `INVOKER`.
+- [ ] `00091_finanzas_comision.sql`: `v_linea_venta`, `rf_finanzas_resultados`, `_flujo`, `_posicion`
+  (todas desde su última definición). `INVOKER`. (Nota: `pago_revendedora` y deuda de revendedoras entran en Slice 7a con las tablas correspondientes).
 - [ ] DAL `lib/dal/reportes/finanzas.ts` y tipos; sin aritmética de dinero en TS.
 
 ## Slice 6c — Venta por canal: UI (~300)
