@@ -91,6 +91,8 @@ export interface FinanzasResultadosRow {
   costo_mercaderia: number
   ganancia_sobre_ventas: number
   gastos: number
+  comision_liquidada: number
+  comision_pendiente_estimada: number
   ganancia_final: number
   porcentaje_ganancia: number
   cantidad_ventas: number

@@ -16,6 +16,8 @@ describe('Componentes de Reportes (Bloques 1-5)', () => {
     costo_mercaderia: 400,
     ganancia_sobre_ventas: 600,
     gastos: 200,
+    comision_liquidada: 0,
+    comision_pendiente_estimada: 0,
     ganancia_final: 400,
     porcentaje_ganancia: 0.4,
     cantidad_ventas: 10,

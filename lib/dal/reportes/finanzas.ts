@@ -35,6 +35,8 @@ export async function getResultados(desde: string, hasta: string): Promise<Finan
     costo_mercaderia: Number(row.costo_mercaderia ?? 0),
     ganancia_sobre_ventas: Number(row.ganancia_sobre_ventas ?? 0),
     gastos: Number(row.gastos ?? 0),
+    comision_liquidada: Number(row.comision_liquidada ?? 0),
+    comision_pendiente_estimada: Number(row.comision_pendiente_estimada ?? 0),
     ganancia_final: Number(row.ganancia_final ?? 0),
     porcentaje_ganancia: Number(row.porcentaje_ganancia ?? 0),
     cantidad_ventas: Number(row.cantidad_ventas ?? 0),
