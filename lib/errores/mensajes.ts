@@ -201,6 +201,8 @@ const MENSAJES: Record<string, string> = {
   'cuenta-destino-invalida': 'Esa cuenta destino ya no existe o está inactiva.',
   'medio-solo-revendedora':
     'El medio cuenta revendedora solo puede usarse en ventas por ese canal.',
+  'venta-revendedora-con-pagos':
+    'Las ventas por revendedora no admiten pagos manuales; se cancelan contra la cuenta de la revendedora.',
   'sin-cuenta-predeterminada':
     'No hay una cuenta destino predeterminada. Marcá una en Precios, Cuentas.',
 

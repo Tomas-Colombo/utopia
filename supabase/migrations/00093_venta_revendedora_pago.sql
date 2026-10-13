@@ -13,10 +13,14 @@
 --      - Excluye pagos con medio 'cuenta_revendedora' de cobrado y costo_cobro.
 --
 -- DOWN:
---   -- 1. Restaurar sp_registrar_venta ejecutando la definición de 00089_sp_registrar_venta_canal.sql
---   -- 2. Restaurar sp_anular_venta ejecutando la definición de 00090_anular_venta_revendedora.sql
---   -- 3. Restaurar rf_finanzas_resultados ejecutando la definición de 00091_finanzas_comision.sql
---   -- 4. Restaurar rf_finanzas_flujo ejecutando la definición de 00072_finanzas_lectura_1.sql:
+--   -- 1. Revertir constraint en pago_venta y documentar NOT NULL:
+--   alter table pago_venta drop constraint if exists pago_venta_cuenta_destino_req;
+--   -- OJO: si ya existen filas en pago_venta con medio = 'cuenta_revendedora' (id_cuenta_destino NULL),
+--   -- PostgreSQL no permitirá ejecutar `alter table pago_venta alter column id_cuenta_destino set not null;`
+--   -- hasta que dichas filas sean eliminadas o migradas a una cuenta destino válida.
+--   -- alter table pago_venta alter column id_cuenta_destino set not null;
+--
+--   -- 2. Restaurar rf_finanzas_flujo a la versión de 00072:
 --   create or replace function rf_finanzas_flujo(p_desde date, p_hasta date)
 --   returns table (
 --     cobrado numeric, devuelto_clientes numeric, costo_cobro numeric,
@@ -40,9 +44,13 @@
 --     if v_por_acreditar is null then v_por_acreditar := '{}'::jsonb; end if;
 --     return query select v_cobrado, v_devuelto_clientes, v_costo_cobro, v_cobrado - v_devuelto_clientes - v_costo_cobro, v_compras_mercaderia, v_pagos_proveedores, v_gastos, (v_cobrado - v_devuelto_clientes - v_costo_cobro) - v_compras_mercaderia - v_pagos_proveedores - v_gastos, v_por_acreditar;
 --   end; $$;
---   -- 5. Revertir constraint en pago_venta:
---   alter table pago_venta drop constraint if exists pago_venta_cuenta_destino_req;
---   -- alter table pago_venta alter column id_cuenta_destino set not null;
+--
+--   -- 3. Restaurar rf_finanzas_resultados a la versión de 00091_finanzas_comision.sql (incluyendo costo_cobro sin filtro de medio):
+--   --    Ejecutar la definición de 00091_finanzas_comision.sql.
+--   -- 4. Restaurar sp_anular_venta a la versión de 00090_anular_venta_revendedora.sql (incluyendo reintegros sin filtro de medio):
+--   --    Ejecutar la definición de 00090_anular_venta_revendedora.sql.
+--   -- 5. Restaurar sp_registrar_venta a la versión de 00089_sp_registrar_venta_canal.sql (sin pago automático por cuenta_revendedora):
+--   --    Ejecutar la definición de 00089_sp_registrar_venta_canal.sql.
 
 -- 1. Modificar pago_venta para permitir id_cuenta_destino nulo en cuenta_revendedora
 alter table pago_venta alter column id_cuenta_destino drop not null;
@@ -349,6 +357,9 @@ begin
 
   -- ─── Cobranza y registro de pagos (DR-14) ──────────────────────────
   if v_canal = 'revendedora' then
+    if p_pagos is not null and jsonb_array_length(p_pagos) > 0 then
+      raise exception 'venta-revendedora-con-pagos' using errcode = '22023';
+    end if;
     if v_total > 0 then
       insert into pago_venta(
         id_tenant, id_venta, id_cuenta_destino, medio, monto, cuotas,

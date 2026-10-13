@@ -476,5 +476,40 @@ describe.skipIf(!hasTestDb)('Venta por canal — Slice 6a (REQ-RV-DB-05)', () =>
     expect(error).not.toBeNull()
     expect(error?.message).toMatch(/medio-solo-revendedora/)
   })
+
+  test('Slice 6d — canal revendedora con pagos manuales se rechaza con venta-revendedora-con-pagos', async () => {
+    const f = await ventaFixture('VtaRevConPagos', 1, { tipoIngreso: 'compra' })
+    await habilitarModuloRevendedoras(f.tenantId)
+
+    const { data: idRev } = await f.authenticated.rpc('sp_crear_revendedora', {
+      p_nombre: 'Dora',
+      p_apellido: 'PagosManuales',
+    })
+
+    const { data: idCons } = await f.authenticated.rpc(
+      'sp_crear_consignacion_revendedora_con_items',
+      { p_id_revendedora: idRev, p_items: [f.items[0]] },
+    )
+    await f.authenticated.rpc('sp_confirmar_consignacion_revendedora', {
+      p_id_consignacion_revendedora: idCons,
+    })
+
+    const { error } = await f.authenticated.rpc('sp_registrar_venta', {
+      p_lineas: [{ id_item: f.items[0] }],
+      p_canal: 'revendedora',
+      p_id_revendedora: idRev,
+      p_pagos: [
+        {
+          id_cuenta_destino: f.idCuenta,
+          medio: 'efectivo',
+          monto: PRECIO,
+        },
+      ],
+    })
+
+    expect(error).not.toBeNull()
+    expect(error?.message).toMatch(/venta-revendedora-con-pagos/)
+  })
 })
+
 
