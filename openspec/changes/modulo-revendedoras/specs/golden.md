@@ -95,19 +95,21 @@ Si el resultado de los tests difiere, el error está en la implementación o en 
 
 ## 4. Flujo de Caja Esperado (`rf_finanzas_flujo`)
 
+Actualizado en Slice 6d con medio `cuenta_revendedora` (DR-14):
+
 | Métrica | Esperado | Cálculo / Justificación |
 |---|---|---|
-| `cobrado` | **400.000** | Pagos de V1, V2, V3, V4 (4 × 100.000) |
-| `devuelto_clientes` | **100.000** | Reintegro por anulación de V4 |
+| `cobrado` | **100.000** | Solo pago de V1 en canal local (\$100.000 en efectivo). V2, V3 y V4 pagadas con `cuenta_revendedora` se excluyen de caja física. |
+| `devuelto_clientes` | **0** | V4 anulada fue venta revendedora (`cuenta_revendedora`); no sale dinero de la caja física del local ni genera `reintegro_cliente`. |
 | `costo_cobro` | **0** | Sin aranceles |
-| **`neto_cobros`** | **300.000** | 400.000 − 100.000 |
+| **`neto_cobros`** | **100.000** | 100.000 − 0 − 0 |
 | `compras_mercaderia` | **160.000** | 4 ítems de compra a 40.000 confirmados en M |
 | `pagos_proveedores` | **0** | Sin rendiciones a proveedores pagadas |
 | `gastos` | **5.000** | G1 |
-| **`flujo_neto`** | **135.000** | `neto_cobros` (300.000) − `compras` (160.000) − `gastos` (5.000) |
+| **`flujo_neto`** | **-65.000** | `neto_cobros` (100.000) − `compras` (160.000) − `gastos` (5.000) = **-$65.000** |
 | `por_acreditar` | **`{}`** | Sin cobros diferidos |
 
-*Nota sobre `pago_revendedora`*: La tabla `pago_revendedora` se crea en el Slice 7a (Liquidación). En el Slice 6b no se inventa la tabla ni se agregan pagos de revendedoras.
+*Nota sobre `pago_revendedora`*: La tabla `pago_revendedora` se crea en el Slice 7a (Liquidación). En el Slice 6d se excluye `cuenta_revendedora` de caja física; los fondos ingresan a caja recién con `pago_revendedora` (Slice 7a).
 
 ---
 

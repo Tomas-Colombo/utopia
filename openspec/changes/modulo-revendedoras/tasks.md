@@ -119,8 +119,8 @@ Mayor riesgo del cambio. `/judgment-day` sobre `ventas` antes de empezar.
 
 ## Slice 6d — Pago de venta de revendedora (~250) · REQ-RV-DB-05b
 
-- [ ] `alter type medio_pago add value 'cuenta_revendedora'` en migración propia.
-- [ ] `sp_registrar_venta` registra el pago con ese medio solo en canal revendedora; finanzas
+- [x] `alter type medio_pago add value 'cuenta_revendedora'` en migración propia.
+- [x] `sp_registrar_venta` registra el pago con ese medio solo en canal revendedora; finanzas
   lo excluye de `cobrado`. Test de cuadre y de caja. **Va antes de dar por terminado el 6a.**
 
 ## Slice 4b — Panel de gestión del local (~400) · REQ-RV-ADM
