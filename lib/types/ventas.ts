@@ -6,6 +6,7 @@ import type { DesgloseVenta, FormaPago } from './precios'
 import type { TipoIngreso } from './inventario'
 
 export type EstadoVenta = 'registrada' | 'anulada'
+export type CanalVenta = 'local' | 'revendedora' | 'online'
 /**
  * Por dónde ENTRÓ la plata. Distinto de `FormaPago`, que es cómo se PRECIÓ la
  * venta (esa define el recargo por regla; ésta no toca el precio).
@@ -18,6 +19,11 @@ export type TipoComprobante = 'factura_a' | 'factura_b' | 'factura_c' | 'remito'
 export const ESTADO_VENTA_LABEL: Record<EstadoVenta, string> = {
   registrada: 'Registrada',
   anulada: 'Anulada',
+}
+export const CANAL_VENTA_LABEL: Record<CanalVenta, string> = {
+  local: 'Local',
+  revendedora: 'Revendedora',
+  online: 'Online',
 }
 export const ESTADO_RESERVA_LABEL: Record<EstadoReserva, string> = {
   activa: 'Activa',
@@ -102,6 +108,8 @@ export interface VentaRow {
   id_usuario_alta: string | null
   fecha: string
   forma_pago: FormaPago
+  canal: CanalVenta
+  id_revendedora: string | null
   total: number
   observaciones: string | null
   estado_venta: EstadoVenta
@@ -127,6 +135,10 @@ export interface DetalleVentaRow {
   desglose_reglas: DesgloseVenta
   id_rendicion: string | null
   excluida_rendicion: boolean
+  porcentaje_comision_preview: number
+  monto_comision: number
+  id_liquidacion: string | null
+  excluida_liquidacion: boolean
   created_at: string
 }
 
@@ -303,6 +315,8 @@ export interface RegistrarVentaInput {
   /** `descuentos`: ids de reglas de descuento elegidas para esa línea. */
   lineas: Array<{ id_item: string; descuentos?: string[] }>
   forma_pago: FormaPago
+  canal?: CanalVenta
+  id_revendedora?: string | null
   id_cliente?: string | null
   id_reserva?: string | null
   observaciones?: string | null

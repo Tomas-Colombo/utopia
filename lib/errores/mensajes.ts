@@ -184,6 +184,11 @@ const MENSAJES: Record<string, string> = {
   'sin-precio-lista':
     'El producto no tiene precio de venta. Fijalo en Precios, Control de precios.',
   'sku-sin-stock': 'Ese código no tiene unidades disponibles en stock.',
+  'venta-liquidada': 'Esta venta ya fue liquidada y no se puede anular.',
+  'venta-revendedora-sin-id': 'Elegí la revendedora correspondiente para esta venta.',
+  'devolucion-venta-revendedora':
+    'Las devoluciones de ventas de revendedora no se gestionan como devolución directa de cliente.',
+  'item-no-en-revendedora': 'Uno de los ítems no está en poder de esa revendedora.',
 
   // ─── Ventas: cobro ─────────────────────────────────────────────────
   'monto-invalido': 'El monto tiene que ser mayor a cero.',
