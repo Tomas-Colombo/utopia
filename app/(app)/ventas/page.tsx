@@ -4,11 +4,12 @@ import { Topbar } from '@/components/shell/Topbar'
 import { Button } from '@/components/ui/Button'
 import { Kpi } from '@/components/ui/Kpi'
 import { verifySession } from '@/lib/dal/session'
+import { hasModuleAccess } from '@/lib/dal/guard'
 import { listVentasPaginado, resumenVentasPeriodo } from '@/lib/dal/ventas/venta'
 import { listReservas } from '@/lib/dal/reservas/reserva'
 import { listAlertasCuotasVencidas } from '@/lib/dal/reportes/reportes'
 import { waMeLink } from '@/lib/utils/waMeLink'
-import { nombreCliente } from '@/lib/types/ventas'
+import { nombreCliente, type CanalVenta } from '@/lib/types/ventas'
 import {
   esFechaValida,
   inicioDelDia,
@@ -39,10 +40,18 @@ const PAGE_SIZE = 50
  * lo que un KPI tiene que hacer.
  */
 export default async function VentasHome(props: {
-  searchParams: Promise<{ desde?: string; hasta?: string; pagina?: string }>
+  searchParams: Promise<{ desde?: string; hasta?: string; pagina?: string; canal?: string }>
 }) {
   const session = await verifySession()
   const searchParams = await props.searchParams
+  const tieneModuloRevendedoras = hasModuleAccess(session, 'revendedoras', 'ver')
+
+  let canalFiltro: CanalVenta | undefined = undefined
+  if (tieneModuloRevendedoras && searchParams.canal) {
+    if (searchParams.canal === 'local' || searchParams.canal === 'revendedora') {
+      canalFiltro = searchParams.canal
+    }
+  }
 
   // Params inválidos o incompletos → mes en curso. Nunca reventar por una URL
   // tipeada a mano.
@@ -65,8 +74,8 @@ export default async function VentasHome(props: {
 
   const [{ rows: ventas, total }, resumen, reservasActivas, alertasCuotas] =
     await Promise.all([
-      listVentasPaginado({ ...periodo, page: pagina, pageSize: PAGE_SIZE }),
-      resumenVentasPeriodo(periodo),
+      listVentasPaginado({ ...periodo, page: pagina, pageSize: PAGE_SIZE, canal: canalFiltro }),
+      resumenVentasPeriodo({ ...periodo, canal: canalFiltro }),
       listReservas({ estado: 'activa' }),
       listAlertasCuotasVencidas(hoy),
     ])
@@ -78,6 +87,7 @@ export default async function VentasHome(props: {
   const ultimaPagina = Math.max(1, Math.ceil(total / PAGE_SIZE))
   if (pagina > ultimaPagina && total > 0) {
     const params = new URLSearchParams({ desde, hasta })
+    if (canalFiltro) params.set('canal', canalFiltro)
     if (ultimaPagina > 1) params.set('pagina', String(ultimaPagina))
     redirect(`/ventas?${params.toString()}`)
   }
@@ -98,7 +108,12 @@ export default async function VentasHome(props: {
         }
       />
       <main className="flex-1 p-6 space-y-6">
-        <VentasFiltros desde={desde} hasta={hasta} />
+        <VentasFiltros
+          desde={desde}
+          hasta={hasta}
+          tieneModuloRevendedoras={tieneModuloRevendedoras}
+          canal={canalFiltro}
+        />
 
         {/* Alerta de deuda vencida. Vive acá y no sólo en /cuotas porque es
             la pantalla que se mira todos los días: una deuda vencida que hay
@@ -217,7 +232,7 @@ export default async function VentasHome(props: {
               </span>
               {/* Exporta el período completo, no la página visible. */}
               <a
-                href={`/api/ventas/export?desde=${desde}&hasta=${hasta}`}
+                href={`/api/ventas/export?desde=${desde}&hasta=${hasta}${canalFiltro ? `&canal=${canalFiltro}` : ''}`}
                 download
                 aria-disabled={total === 0}
               >
@@ -237,6 +252,7 @@ export default async function VentasHome(props: {
                 <thead>
                   <tr className="border-b border-border text-left">
                     <th className="px-4 py-3">Fecha</th>
+                    {tieneModuloRevendedoras && <th className="px-4 py-3">Canal</th>}
                     <th className="px-4 py-3">Cliente</th>
                     <th className="px-4 py-3">Forma pago</th>
                     <th className="px-4 py-3 text-right">Líneas</th>
@@ -251,6 +267,17 @@ export default async function VentasHome(props: {
                   {ventas.map((v) => (
                     <tr key={v.id_venta} className="border-b border-border-2">
                       <td className="px-4 py-3">{new Date(v.fecha).toLocaleString('es-AR')}</td>
+                      {tieneModuloRevendedoras && (
+                        <td className="px-4 py-3">
+                          <span
+                            className={`text-xs font-mono uppercase ${
+                              v.canal === 'revendedora' ? 'text-pink-strong' : 'text-muted'
+                            }`}
+                          >
+                            {v.canal === 'revendedora' ? 'Revendedora' : 'Local'}
+                          </span>
+                        </td>
+                      )}
                       <td className="px-4 py-3">{nombreCliente(v.cliente)}</td>
                       <td className="px-4 py-3 capitalize">{v.forma_pago.replace('_', ' ')}</td>
                       <td className="px-4 py-3 text-right font-mono">{v.lineas_count}</td>

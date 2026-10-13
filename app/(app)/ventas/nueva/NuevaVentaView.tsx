@@ -48,8 +48,12 @@ import {
 import { generarPlanCuotas } from '@/lib/cuotas/generar-plan'
 import { registrarVentaAction, crearClienteAction } from '../actions'
 import { mensajeDeError } from '@/lib/errores/mensajes'
+import type { ReglaComisionConEscalas } from '@/lib/types/comisiones'
+import { estimarComision, resolverComision } from '@/lib/comisiones/resolver-comision'
+import { hoyISO } from '@/lib/utils/hoy'
 
 interface ClienteOption { id: string; nombre: string; telefono: string | null }
+export interface RevendedoraOption { id: string; nombre: string }
 /** Grupo del carrito: N unidades del mismo producto+talle en una sola fila. */
 interface Grupo {
   key: string
@@ -121,6 +125,9 @@ export function NuevaVentaView({
   aranceles,
   recargos,
   precargaReserva,
+  puedeRevendedoras = false,
+  revendedoras = [],
+  reglasComision = [],
 }: {
   clientes: ClienteOption[]
   reservasActivas: ReservaOption[]
@@ -138,6 +145,9 @@ export function NuevaVentaView({
    */
   recargos: RecargoCuotasRow[]
   precargaReserva: PrecargaReserva | null
+  puedeRevendedoras?: boolean
+  revendedoras?: RevendedoraOption[]
+  reglasComision?: ReglaComisionConEscalas[]
 }) {
   const router = useRouter()
   const toast = useToast()
@@ -145,6 +155,9 @@ export function NuevaVentaView({
 
   const [clientes, setClientes] = useState<ClienteOption[]>(clientesIniciales)
   const [idCliente, setIdCliente] = useState<string>(precargaReserva?.idCliente ?? '')
+
+  const [canal, setCanal] = useState<'local' | 'revendedora'>('local')
+  const [idRevendedora, setIdRevendedora] = useState<string>('')
 
   /**
    * Mete el financiador en una query de lookup. Desde 00063 el recargo depende
@@ -173,6 +186,12 @@ export function NuevaVentaView({
   ): string {
     const qs = new URLSearchParams()
     for (const [k, v] of Object.entries(query)) if (v) qs.set(k, v)
+    if (canal === 'revendedora') {
+      qs.set('modo', 'venta')
+      if (idRevendedora) qs.set('id_revendedora', idRevendedora)
+      if (excluir.length > 0) qs.set('excluir', excluir.join(','))
+      return `/api/revendedoras/lookup-item?${qs.toString()}`
+    }
     qs.set('forma_pago', formaPago)
     aplicarFinanciador(qs)
     const rid = reservaOverride ?? idReserva
@@ -732,6 +751,10 @@ export function NuevaVentaView({
   async function agregarPorCodigo(rawCode: string) {
     const codigo = rawCode.trim()
     if (!codigo || buscando) return
+    if (canal === 'revendedora' && !idRevendedora) {
+      setErrorBusqueda('Elegí una revendedora para continuar.')
+      return
+    }
     setBuscando(true)
     setErrorBusqueda(null)
     try {
@@ -790,6 +813,10 @@ export function NuevaVentaView({
     reservaOverride?: string | null,
   ): Promise<LineaCarrito | null> {
     if (!idProducto || buscando) return null
+    if (canal === 'revendedora' && !idRevendedora) {
+      setErrorBusqueda('Elegí una revendedora para continuar.')
+      return null
+    }
     setBuscando(true)
     setErrorBusqueda(null)
     try {
@@ -1100,26 +1127,33 @@ export function NuevaVentaView({
   }
 
   function confirmar() {
-    // Lo que falta se MARCA, no se explica en un toast que se va solo. El
-    // vendedor tiene que poder ver el campo en rojo y arreglarlo ahí mismo.
-    if (hayDeuda && !idCliente) {
-      setFaltante('cliente')
-      enfocarCampo('v-cli')
-      return
-    }
-    if (hayDeuda && !finPrimerVenc) {
-      setFaltante('vencimiento')
-      enfocarCampo('v-fin-venc')
-      return
-    }
-    if (seExcedio) {
-      // Sin campo que marcar: el exceso ya está en rojo dentro del panel y el
-      // arreglo es bajar un monto, no llenar algo que falta.
-      toast.error(
-        'La cobranza no cierra',
-        `Estás cobrando ${money(anticipo - total)} de más.`,
-      )
-      return
+    if (canal === 'revendedora') {
+      if (!idRevendedora) {
+        toast.error('Revendedora requerida', 'Elegí una revendedora para continuar.')
+        return
+      }
+    } else {
+      // Lo que falta se MARCA, no se explica en un toast que se va solo. El
+      // vendedor tiene que poder ver el campo en rojo y arreglarlo ahí mismo.
+      if (hayDeuda && !idCliente) {
+        setFaltante('cliente')
+        enfocarCampo('v-cli')
+        return
+      }
+      if (hayDeuda && !finPrimerVenc) {
+        setFaltante('vencimiento')
+        enfocarCampo('v-fin-venc')
+        return
+      }
+      if (seExcedio) {
+        // Sin campo que marcar: el exceso ya está en rojo dentro del panel y el
+        // arreglo es bajar un monto, no llenar algo que falta.
+        toast.error(
+          'La cobranza no cierra',
+          `Estás cobrando ${money(anticipo - total)} de más.`,
+        )
+        return
+      }
     }
     setFaltante(null)
 
@@ -1138,12 +1172,12 @@ export function NuevaVentaView({
         observaciones: observaciones || null,
         // Deuda derivada: si no se cobró todo, lo que falta se parte en las
         // MISMAS cuotas con las que se vendió.
-        financiacion: hayDeuda
+        financiacion: hayDeuda && canal !== 'revendedora'
           ? { cuotas: cuotasDeuda, primer_vencimiento: finPrimerVenc }
           : null,
         // Quién financia (00064). Define qué recargo se aplicó al precificar
         // y a qué cuenta va el pago cuando la cobranza no se detalla.
-        financiador: finCuotas
+        financiador: finCuotas && canal !== 'revendedora'
           ? {
               id_cuenta_destino: finCuenta,
               medio: finMedio,
@@ -1153,26 +1187,30 @@ export function NuevaVentaView({
         // Sin anticipo el panel deja un pago en $0: el SP lo rechaza con
         // `pago-monto-invalido`. Se descartan acá — un pago de cero no es una
         // forma de cobrar, es la ausencia de cobro.
-        pagos: pagosNormalizados
-          .filter((p) => p.monto > 0)
-          .map((p) => {
-            const recibido = Number(p.recibido.replace(',', '.'))
-            return {
-              medio: p.medio,
-              id_cuenta_destino: p.idCuenta,
-              monto: p.monto,
-              // El SP lo exige en credito y lo rechaza en el resto; ya viene
-              // normalizado por `normalizarPagos`.
-              cuotas: p.cuotas,
-              // El vuelto lo calcula la DB a partir de esto; solo se manda si
-              // el vendedor lo cargo y es coherente.
-              monto_recibido:
-                p.medio === 'efectivo' && Number.isFinite(recibido) && recibido >= p.monto
-                  ? recibido
-                  : null,
-              referencia: p.referencia.trim() || null,
-            }
-          }),
+        pagos: canal === 'revendedora'
+          ? []
+          : pagosNormalizados
+              .filter((p) => p.monto > 0)
+              .map((p) => {
+                const recibido = Number(p.recibido.replace(',', '.'))
+                return {
+                  medio: p.medio,
+                  id_cuenta_destino: p.idCuenta,
+                  monto: p.monto,
+                  // El SP lo exige en credito y lo rechaza en el resto; ya viene
+                  // normalizado por `normalizarPagos`.
+                  cuotas: p.cuotas,
+                  // El vuelto lo calcula la DB a partir de esto; solo se manda si
+                  // el vendedor lo cargo y es coherente.
+                  monto_recibido:
+                    p.medio === 'efectivo' && Number.isFinite(recibido) && recibido >= p.monto
+                      ? recibido
+                      : null,
+                  referencia: p.referencia.trim() || null,
+                }
+              }),
+        canal,
+        idRevendedora: canal === 'revendedora' ? idRevendedora : null,
       })
       if (!res.ok) return toast.error('No se pudo registrar la venta', mensajeDeError(res.reason))
       toast.success('Venta registrada', `Total $ ${total.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`)
@@ -1240,7 +1278,24 @@ export function NuevaVentaView({
 
   // La cobranza se valida ANTES de mandar: el SP la rechaza igual, pero
   // avisar acá es más barato que un error después de haber tocado stock.
-  const cuentasOk = cuentas.length > 0 && pagosNormalizados.every((p) => p.idCuenta)
+  const cuentasOk =
+    canal === 'revendedora'
+      ? Boolean(idRevendedora)
+      : cuentas.length > 0 && pagosNormalizados.every((p) => p.idCuenta)
+
+  const comisionResolucion = useMemo(() => {
+    if (canal !== 'revendedora' || !idRevendedora) return null
+    return resolverComision(reglasComision, {
+      idRevendedora,
+      fecha: hoyISO(),
+      montoPeriodo: total,
+    })
+  }, [canal, idRevendedora, reglasComision, total])
+
+  const comisionEstimada = useMemo(() => {
+    if (!comisionResolucion) return null
+    return estimarComision(total, comisionResolucion.porcentaje)
+  }, [comisionResolucion, total])
   // Cobrar de más nunca es válido; cobrar de menos sí, y es deuda. Lo que la
   // deuda exige es cliente (si no, no se sabe quién debe) y vencimiento.
   const seExcedio = anticipo - total > 0.005
@@ -1257,6 +1312,70 @@ export function NuevaVentaView({
     <div className="space-y-5">
       {/* Paso 1 — carrito: buscador + tabla de ítems */}
       <section className="space-y-4">
+        {puedeRevendedoras && (
+          <div className="rounded-lg border border-border bg-card p-4">
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="w-48">
+                <label
+                  htmlFor="canal-venta"
+                  className="block text-xs font-medium text-muted mb-1"
+                >
+                  Canal de venta
+                </label>
+                <select
+                  id="canal-venta"
+                  aria-label="Canal de venta"
+                  value={canal}
+                  onChange={(e) => {
+                    const nuevoCanal = e.target.value as 'local' | 'revendedora'
+                    setCanal(nuevoCanal)
+                    if (nuevoCanal === 'local') {
+                      setIdRevendedora('')
+                    }
+                    if (lineas.length > 0) {
+                      setLineas([])
+                    }
+                  }}
+                  className="w-full rounded-md border border-border bg-card-2 px-3 py-1.5 text-sm"
+                >
+                  <option value="local">Local</option>
+                  <option value="revendedora">Revendedora</option>
+                </select>
+              </div>
+
+              {canal === 'revendedora' && (
+                <div className="flex-1 min-w-[220px]">
+                  <label
+                    htmlFor="select-revendedora"
+                    className="block text-xs font-medium text-muted mb-1"
+                  >
+                    Revendedora
+                  </label>
+                  <select
+                    id="select-revendedora"
+                    aria-label="Revendedora"
+                    value={idRevendedora}
+                    onChange={(e) => {
+                      setIdRevendedora(e.target.value)
+                      if (lineas.length > 0) {
+                        setLineas([])
+                      }
+                    }}
+                    className="w-full rounded-md border border-border bg-card-2 px-3 py-1.5 text-sm"
+                  >
+                    <option value="">-- Elegí una revendedora activa --</option>
+                    {revendedoras.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.nombre}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         <div className="rounded-lg border border-border bg-card p-4 space-y-3">
           <form onSubmit={agregarLinea}>
             <Field
@@ -1828,7 +1947,9 @@ export function NuevaVentaView({
               debajo del panel, y no arriba junto a un selector que ya no
               existe. */}
           <div className="space-y-3 border-t border-border pt-4">
-            <h3 className="text-sm font-medium text-text">Medios de cobro</h3>
+            <h3 className="text-sm font-medium text-text">
+              {canal === 'revendedora' ? 'Cobranza' : 'Medios de cobro'}
+            </h3>
             <CobranzaPanel
               cuentas={cuentas}
               pagos={pagosNormalizados}
@@ -1838,14 +1959,16 @@ export function NuevaVentaView({
               recargos={recargos}
               planesCuotas={planesCuotas}
               onChange={setPagos}
+              canal={canal}
+              comisionEstimada={comisionEstimada}
             />
-            {totalRecargo > 0 && (
+            {canal !== 'revendedora' && totalRecargo > 0 && (
               <p className="text-xs text-terracota">
                 Recargo por {finCuotas} cuotas: +{money(totalRecargo)} — ya
                 incluido en el total.
               </p>
             )}
-            {finCuotas !== null && totalRecargo === 0 && lineas.length > 0 && (
+            {canal !== 'revendedora' && finCuotas !== null && totalRecargo === 0 && lineas.length > 0 && (
               <p className="text-xs text-muted">
                 Sin recargo configurado para este plan: se vende al precio de
                 lista. Se carga en Precios y Cuentas.
@@ -1858,7 +1981,7 @@ export function NuevaVentaView({
               llega al total. Antes era una decisión previa que se podía
               olvidar (y la deuda quedaba sin registrar) o dejar prendida por
               error (y se fiaba una venta ya cobrada). */}
-          {hayDeuda && (
+          {hayDeuda && canal !== 'revendedora' && (
             <div className="space-y-3 rounded-md border border-terracota/40 bg-card-2 p-3">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <h3 className="text-sm font-medium text-text">

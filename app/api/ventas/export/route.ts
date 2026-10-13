@@ -3,7 +3,7 @@ import { AuthorizationError } from '@/lib/dal/errors'
 import { requireModuleRole } from '@/lib/dal/guard'
 import { verifySession } from '@/lib/dal/session'
 import { listVentasPeriodo } from '@/lib/dal/ventas/venta'
-import { nombreCliente } from '@/lib/types/ventas'
+import { nombreCliente, type CanalVenta } from '@/lib/types/ventas'
 import {
   esFechaValida,
   inicioDelDia,
@@ -42,9 +42,16 @@ export async function GET(req: NextRequest) {
   const hastaCrudo = esFechaValida(crudoHasta) ? crudoHasta : porDefecto.hasta
   const hasta = hastaCrudo < desde ? desde : hastaCrudo
 
+  const canalParam = params.get('canal')?.trim()
+  const canal =
+    canalParam === 'local' || canalParam === 'revendedora'
+      ? (canalParam as CanalVenta)
+      : undefined
+
   const ventas = await listVentasPeriodo({
     desde: inicioDelDia(desde),
     hastaExclusivo: inicioDelDiaSiguiente(hasta),
+    canal,
   })
 
   const filas = [

@@ -31,16 +31,28 @@ const PRESETS: Array<{ id: Preset; label: string; rango: () => RangoFechas }> = 
  * de la zona horaria del USUARIO, no de la del server. Todo el cálculo pasa
  * por `lib/fechas`, que evita el corrimiento de día de `toISOString()`.
  */
-export function VentasFiltros({ desde, hasta }: RangoFechas) {
+export function VentasFiltros({
+  desde,
+  hasta,
+  tieneModuloRevendedoras = false,
+  canal: canalInicial = '',
+}: RangoFechas & {
+  tieneModuloRevendedoras?: boolean
+  canal?: string
+}) {
   const router = useRouter()
   const [d, setD] = useState(desde)
   const [h, setH] = useState(hasta)
+  const [canal, setCanal] = useState(canalInicial)
   const [pendiente, startTransition] = useTransition()
 
   const rangoInvertido = d > h
 
-  function aplicar(nuevoDesde: string, nuevoHasta: string) {
+  function aplicar(nuevoDesde: string, nuevoHasta: string, nuevoCanal = canal) {
     const params = new URLSearchParams({ desde: nuevoDesde, hasta: nuevoHasta })
+    if (tieneModuloRevendedoras && nuevoCanal) {
+      params.set('canal', nuevoCanal)
+    }
     startTransition(() => router.push(`/ventas?${params.toString()}`))
   }
 
@@ -48,14 +60,14 @@ export function VentasFiltros({ desde, hasta }: RangoFechas) {
     const { desde: nd, hasta: nh } = PRESETS.find((p) => p.id === preset)!.rango()
     setD(nd)
     setH(nh)
-    aplicar(nd, nh)
+    aplicar(nd, nh, canal)
   }
 
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault()
-        if (!rangoInvertido) aplicar(d, h)
+        if (!rangoInvertido) aplicar(d, h, canal)
       }}
       className="rounded-lg border border-border bg-card p-4 flex flex-wrap items-end gap-3"
       aria-label="Filtrar ventas por período"
@@ -89,6 +101,29 @@ export function VentasFiltros({ desde, hasta }: RangoFechas) {
           />
         </Field>
       </div>
+
+      {tieneModuloRevendedoras && (
+        <div className="w-36">
+          <Field htmlFor="ventas-canal" label="Canal">
+            <select
+              id="ventas-canal"
+              aria-label="Filtrar por canal"
+              value={canal}
+              onChange={(e) => {
+                const val = e.target.value
+                setCanal(val)
+                if (!rangoInvertido) aplicar(d, h, val)
+              }}
+              disabled={pendiente}
+              className="w-full rounded-md border border-border bg-card-2 px-3 py-2 text-sm"
+            >
+              <option value="">Todos</option>
+              <option value="local">Local</option>
+              <option value="revendedora">Revendedora</option>
+            </select>
+          </Field>
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-2 ml-auto">
         {PRESETS.map((p) => (
