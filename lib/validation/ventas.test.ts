@@ -107,5 +107,17 @@ describe('registrarVentaSchema', () => {
       expect(primerReason(r.error)).toBe('campo-desconocido')
     }
   })
+
+  it('rechaza id_revendedora snake_case como campo desconocido (solo idRevendedora)', () => {
+    const r = registrarVentaSchema.safeParse({
+      lineas: [{ id_item: UUID }],
+      formaPago: 'efectivo',
+      id_revendedora: UUID,
+    })
+    expect(r.success).toBe(false)
+    if (!r.success) {
+      expect(primerReason(r.error)).toBe('campo-desconocido')
+    }
+  })
 })
 

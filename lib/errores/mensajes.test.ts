@@ -27,6 +27,8 @@ const SLUGS_DE_LA_APP = [
   'payload-invalido', 'campo-desconocido', 'permisos-no-objeto', 'permisos-no-array',
   'modulo-desconocido', 'accion-invalida', 'acciones-duplicadas', 'id-rol-invalido',
   'id-venta-invalido', 'nombre-largo', 'motivo-largo', 'motivo-invalido',
+  'item-invalido', 'descuento-invalido', 'cuenta-invalida', 'forma-pago-invalida',
+  'cliente-invalido', 'reserva-invalida', 'observaciones-largas',
   // Stored procedures
   'cantidad-invalida', 'categoria-not-found', 'categoria-sin-talles',
   'consignacion-no-activa', 'consignacion-not-found', 'cuenta-destino-invalida',

@@ -108,6 +108,7 @@ const MENSAJES: Record<string, string> = {
   'motivo-largo': 'El motivo no puede pasar de 300 caracteres.',
   'descripcion-requerida': 'Escribí una descripción.',
   'observaciones-requeridas': 'Escribí las observaciones.',
+  'observaciones-largas': 'Las observaciones no pueden superar los 1000 caracteres.',
   // `vacio`, `formato`, `muy-corto`, `muy-largo` y `reservado` NO van acá: son
   // de `validarSubdominio` (provisioning de tenants), tienen su propio mapa
   // exhaustivamente tipado en `lib/tenant/subdominio.ts` y nunca llegan a un
@@ -192,6 +193,12 @@ const MENSAJES: Record<string, string> = {
   'item-no-en-revendedora': 'Uno de los ítems no está en poder de esa revendedora.',
   'canal-invalido': 'El canal de venta elegido no es válido.',
   'revendedora-invalida': 'Elegí una revendedora válida.',
+  'item-invalido': 'El ítem seleccionado no es válido.',
+  'descuento-invalido': 'Uno de los descuentos aplicados no es válido.',
+  'cuenta-invalida': 'La cuenta seleccionada no es válida.',
+  'forma-pago-invalida': 'La forma de pago no es válida.',
+  'cliente-invalido': 'El cliente seleccionado no es válido.',
+  'reserva-invalida': 'La reserva asociada no es válida.',
 
   // ─── Ventas: cobro ─────────────────────────────────────────────────
   'monto-invalido': 'El monto tiene que ser mayor a cero.',

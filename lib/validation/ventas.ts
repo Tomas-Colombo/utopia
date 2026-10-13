@@ -96,7 +96,6 @@ export const registrarVentaSchema = z.strictObject(
       .optional()
       .default('local'),
     idRevendedora: z.string().uuid('revendedora-invalida').nullable().optional(),
-    id_revendedora: z.string().uuid('revendedora-invalida').nullable().optional(),
   },
   {
     error: (issue: z.core.$ZodRawIssue) =>

@@ -72,7 +72,7 @@ export async function registrarVentaAction(
     if (!gRev.ok) return { ok: false, reason: gRev.error }
   }
 
-  const idRevendedora = input.idRevendedora ?? input.id_revendedora ?? null
+  const idRevendedora = input.idRevendedora ?? null
   if (input.canal === 'revendedora' && !idRevendedora) {
     return { ok: false, reason: 'revendedora-invalida' }
   }
