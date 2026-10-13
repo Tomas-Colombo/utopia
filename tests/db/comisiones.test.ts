@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeAll } from 'vitest'
+import { describe, test, expect, beforeAll, afterAll } from 'vitest'
 import { createServiceRoleTestClient } from '@/lib/dal/supabase-test'
 import { createTenantWithUser, hasTestDb, signInAs } from './_helpers'
 import { SupabaseClient } from '@supabase/supabase-js'
@@ -13,6 +13,8 @@ describe.skipIf(!hasTestDb)('DB: Motor de comisiones (REQ-RV-DB-04 / DR-16)', ()
   let tenantB: string
   let authAdminA: SupabaseClient
   let authAdminB: SupabaseClient
+  let authRevA: SupabaseClient
+  let revendedoraUserId: string
 
   const revendedorasMap: Record<string, string> = {}
 
@@ -120,6 +122,42 @@ describe.skipIf(!hasTestDb)('DB: Motor de comisiones (REQ-RV-DB-04 / DR-16)', ()
         if (errEscalas) throw errEscalas
       }
     }
+
+    // 6. Crear una usuaria revendedora real para tenant A
+    const emailRev = `rev_comis_${Date.now()}@utopia.test`
+    const { data: userAuth, error: authErr } = await serviceRole.auth.admin.createUser({
+      email: emailRev,
+      password: 'Password123!',
+      email_confirm: true,
+    })
+    if (authErr) throw authErr
+    revendedoraUserId = userAuth.user.id
+
+    const { data: rId, error: rErr } = await serviceRole.from('rol').insert({
+      id_tenant: tenantA,
+      nombre: 'Revendedora',
+      permisos: { 'revendedoras': ['ver_propio'] },
+    }).select('id_rol').single()
+    if (rErr) throw rErr
+
+    const idRev = Object.values(revendedorasMap)[0]
+    const { error: errEnlace } = await serviceRole.rpc('sp_enlazar_revendedora_usuario', {
+      p_id_revendedora: idRev,
+      p_id_usuario: revendedoraUserId,
+      p_id_tenant: tenantA,
+      p_email: emailRev,
+      p_nombre: 'Reven Comisiones',
+      p_id_rol: rId.id_rol,
+    })
+    if (errEnlace) throw errEnlace
+
+    authRevA = await signInAs({ email: emailRev, password: 'Password123!' })
+  })
+
+  afterAll(async () => {
+    if (tenantA) await serviceRole.rpc('sp_borrar_tenant', { p_id: tenantA })
+    if (tenantB) await serviceRole.rpc('sp_borrar_tenant', { p_id: tenantB })
+    if (revendedoraUserId) await serviceRole.auth.admin.deleteUser(revendedoraUserId)
   })
 
   describe('Matriz de casos de resolución (fn_resolver_comision)', () => {
@@ -334,6 +372,46 @@ describe.skipIf(!hasTestDb)('DB: Motor de comisiones (REQ-RV-DB-04 / DR-16)', ()
       })
       expect(errCrear).not.toBeNull()
       expect(errCrear?.message).toMatch(/revendedora-not-found/)
+    })
+
+    test('Sesión revendedora: sp_crear_regla_comision y sp_terminar_regla_comision fallan por RLS (INVOKER) y no modifican nada', async () => {
+      // 1. Intentar crear regla como revendedora
+      const { error: errCrear } = await authRevA.rpc('sp_crear_regla_comision', {
+        p_ambito: 'revendedora',
+        p_nombre: 'Regla Ilegítima de Revendedora',
+        p_id_revendedora: revendedorasMap['revendedora_sin_regla'],
+        p_vigente_desde: '2028-01-01',
+        p_vigente_hasta: null,
+        p_escalas: [{ objetivo_desde: 0, porcentaje: 50 }],
+      })
+
+      expect(errCrear).not.toBeNull()
+      expect(errCrear?.message).toMatch(/modulo-revendedoras-deshabilitado|violates row-level security policy|permission denied/i)
+
+      // Verificar que no se creó la regla en la tabla
+      const { data: reglas } = await serviceRole
+        .from('regla_comision')
+        .select('id_regla')
+        .eq('nombre', 'Regla Ilegítima de Revendedora')
+      expect(reglas).toHaveLength(0)
+
+      // 2. Intentar terminar una regla existente como revendedora
+      const { error: errTerminar } = await authRevA.rpc('sp_terminar_regla_comision', {
+        p_id_regla: idReglaCreada,
+        p_vigente_hasta: '2026-11-05',
+      })
+
+      expect(errTerminar).not.toBeNull()
+      expect(errTerminar?.message).toMatch(/modulo-revendedoras-deshabilitado|violates row-level security policy|permission denied/i)
+
+      // Verificar que no se modificó la fecha de la regla existente
+      const { data: reglaOriginal } = await serviceRole
+        .from('regla_comision')
+        .select('vigente_hasta')
+        .eq('id_regla', idReglaCreada)
+        .single()
+      expect(reglaOriginal?.vigente_hasta).toBe('2028-12-31')
+      expect(reglaOriginal?.vigente_hasta).not.toBe('2026-11-05')
     })
   })
 })

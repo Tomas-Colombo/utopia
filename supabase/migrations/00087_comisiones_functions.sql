@@ -13,7 +13,7 @@ create or replace function sp_crear_regla_comision(
   p_vigente_hasta  date default null,
   p_escalas        jsonb default '[]'::jsonb,
   p_ip             inet default null
-) returns uuid language plpgsql security definer set search_path = public as $$
+) returns uuid language plpgsql set search_path = public as $$
 declare
   v_tenant   uuid := auth_tenant_id();
   v_actor    uuid := auth.uid();
@@ -112,7 +112,7 @@ create or replace function sp_terminar_regla_comision(
   p_id_regla      uuid,
   p_vigente_hasta date default current_date,
   p_ip            inet default null
-) returns void language plpgsql security definer set search_path = public as $$
+) returns void language plpgsql set search_path = public as $$
 declare
   v_tenant uuid := auth_tenant_id();
   v_actor  uuid := auth.uid();
