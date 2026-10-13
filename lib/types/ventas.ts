@@ -11,7 +11,7 @@ export type CanalVenta = 'local' | 'revendedora' | 'online'
  * Por dónde ENTRÓ la plata. Distinto de `FormaPago`, que es cómo se PRECIÓ la
  * venta (esa define el recargo por regla; ésta no toca el precio).
  */
-export type MedioPago = 'efectivo' | 'transferencia' | 'tarjeta_debito' | 'tarjeta_credito'
+export type MedioPago = 'efectivo' | 'transferencia' | 'tarjeta_debito' | 'tarjeta_credito' | 'cuenta_revendedora'
 export type TipoCuentaDestino = 'efectivo' | 'banco' | 'billetera_virtual'
 export type EstadoReserva = 'activa' | 'cancelada' | 'vencida' | 'convertida_venta'
 export type TipoComprobante = 'factura_a' | 'factura_b' | 'factura_c' | 'remito' | 'ticket'
@@ -36,6 +36,7 @@ export const MEDIO_PAGO_LABEL: Record<MedioPago, string> = {
   transferencia: 'Transferencia',
   tarjeta_debito: 'Tarjeta de débito',
   tarjeta_credito: 'Tarjeta de crédito',
+  cuenta_revendedora: 'Cuenta revendedora',
 }
 export const TIPO_CUENTA_DESTINO_LABEL: Record<TipoCuentaDestino, string> = {
   efectivo: 'Efectivo',

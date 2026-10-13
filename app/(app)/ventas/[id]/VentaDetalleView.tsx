@@ -435,9 +435,11 @@ export function VentaDetalleView({
                 onChange={(e) => setReintegroMedio(e.target.value as MedioPago | '')}
               >
                 <option value="">(Ninguno)</option>
-                {(Object.keys(MEDIO_PAGO_LABEL) as MedioPago[]).map((m) => (
-                  <option key={m} value={m}>{MEDIO_PAGO_LABEL[m]}</option>
-                ))}
+                {(Object.keys(MEDIO_PAGO_LABEL) as MedioPago[])
+                  .filter((m) => m !== 'cuenta_revendedora')
+                  .map((m) => (
+                    <option key={m} value={m}>{MEDIO_PAGO_LABEL[m]}</option>
+                  ))}
               </select>
             </Field>
             {reintegroMedio && (

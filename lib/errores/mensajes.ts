@@ -199,6 +199,8 @@ const MENSAJES: Record<string, string> = {
   'pago-credito-sin-cuotas': 'Elegí en cuántas cuotas se paga con tarjeta de crédito.',
   'pago-cuotas-medio-invalido': 'Ese medio de pago no admite cuotas.',
   'cuenta-destino-invalida': 'Esa cuenta destino ya no existe o está inactiva.',
+  'medio-solo-revendedora':
+    'El medio cuenta revendedora solo puede usarse en ventas por ese canal.',
   'sin-cuenta-predeterminada':
     'No hay una cuenta destino predeterminada. Marcá una en Precios, Cuentas.',
 
