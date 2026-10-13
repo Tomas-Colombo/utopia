@@ -13,7 +13,7 @@ test.describe('Ventas · carrito', () => {
     await nuevaVenta.agregarPorTexto('QR-QUE-NO-EXISTE-E2E')
 
     await expect(nuevaVenta.errorBusqueda).toHaveText(
-      'No se encontró un ítem con ese QR en este tenant.',
+      'No se encontró ningún ítem con ese código.',
     )
     await expect(nuevaVenta.lineas).toHaveCount(0)
   })
@@ -45,7 +45,7 @@ test.describe('Ventas · carrito', () => {
     await nuevaVenta.agregarPorSugerencia(nombre)
 
     await expect(nuevaVenta.errorBusqueda).toHaveText(
-      'El producto no tiene precio de venta. Fijalo en Precios → Control de precios.',
+      'El producto no tiene precio de venta. Fijalo en Precios, Control de precios.',
     )
     await expect(nuevaVenta.lineas).toHaveCount(0)
   })
@@ -173,7 +173,7 @@ test.describe('Ventas · canal revendedora', () => {
 
     const filaRev = page.getByRole('row', { name: new RegExp(`${nombreRev} ${apellidoRev}`) })
     await expect(filaRev).toBeVisible()
-    await filaRev.getByRole('link', { name: 'Editar' }).click()
+    await filaRev.getByRole('link', { name: new RegExp(`${nombreRev} ${apellidoRev}`) }).click()
     await page.waitForURL(/\/revendedoras\/[0-9a-f-]+/)
     const idRevendedora = page.url().split('/revendedoras/')[1]?.split('?')[0]?.split('/')[0]
 
@@ -181,12 +181,14 @@ test.describe('Ventas · canal revendedora', () => {
     await page.goto(`/revendedoras/${idRevendedora}/consignaciones/nueva`)
     await page.getByLabel(/Escanear o ingresar código/i).fill(nombreProd)
     await page.getByRole('button', { name: 'Agregar ítem' }).click()
-    await page.getByRole('button', { name: /Crear consignación/i }).click()
-    await shell.expectSuccessToast('Consignación creada')
+    await page.getByRole('button', { name: 'Guardar borrador' }).click()
     await page.waitForURL(/\/revendedoras\/[0-9a-f-]+\/consignaciones\/[0-9a-f-]+/)
 
     // Confirmar entrega para que pase a en_poder
     await page.getByRole('button', { name: /Confirmar entrega/i }).click()
+    const dialogConfirmar = page.getByRole('dialog')
+    await expect(dialogConfirmar).toBeVisible()
+    await dialogConfirmar.getByRole('button', { name: 'Confirmar entrega' }).click()
     await shell.expectSuccessToast('Entrega confirmada')
 
     // 3. Venta por canal revendedora

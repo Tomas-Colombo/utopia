@@ -49,7 +49,7 @@ export class NuevaVentaPage {
   }
 
   get revendedora(): Locator {
-    return this.page.getByLabel('Revendedora')
+    return this.page.getByLabel('Revendedora', { exact: true })
   }
 
   get buscador(): Locator {

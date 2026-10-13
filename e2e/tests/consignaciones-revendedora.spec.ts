@@ -24,7 +24,7 @@ test.describe('Consignaciones a revendedora', () => {
     await inventario.filtrar(nombreProducto)
     const filaInicial = inventario.fila(nombreProducto)
     await expect(filaInicial).toBeVisible()
-    await expect(filaInicial.getByText('1')).toBeVisible()
+    await expect(filaInicial.getByText('1', { exact: true })).toBeVisible()
 
     // 2. Dar de alta una revendedora para la prueba
     await page.goto('/revendedoras/nuevo')
@@ -38,7 +38,7 @@ test.describe('Consignaciones a revendedora', () => {
     // Encontrar el ID de la revendedora creada
     const filaRev = page.getByRole('row', { name: new RegExp(`${nombreRev} ${apellidoRev}`) })
     await expect(filaRev).toBeVisible()
-    await filaRev.getByRole('link', { name: 'Editar' }).click()
+    await filaRev.getByRole('link', { name: new RegExp(`${nombreRev} ${apellidoRev}`) }).click()
     await page.waitForURL(/\/revendedoras\/[0-9a-f-]+/)
     const revendedoraUrl = page.url()
     const idRevendedora = revendedoraUrl.split('/revendedoras/')[1]?.split('?')[0]?.split('/')[0]
@@ -54,7 +54,7 @@ test.describe('Consignaciones a revendedora', () => {
 
     // Redirige al detalle
     await page.waitForURL(/\/revendedoras\/[0-9a-f-]+\/consignaciones\/[0-9a-f-]+/)
-    await expect(page.getByText('Borrador')).toBeVisible()
+    await expect(page.locator('span[data-variant]').filter({ hasText: 'Borrador' })).toBeVisible()
     await expect(page.getByText('Pendiente de entrega')).toBeVisible()
 
     // 4. Confirmar entrega
@@ -63,8 +63,8 @@ test.describe('Consignaciones a revendedora', () => {
     await expect(dialogConfirmar).toBeVisible()
     await dialogConfirmar.getByRole('button', { name: 'Confirmar entrega' }).click()
     await shell.expectSuccessToast('Entrega confirmada')
-    await expect(page.getByText('Abierta')).toBeVisible()
-    await expect(page.getByText('En poder')).toBeVisible()
+    await expect(page.locator('span[data-variant]').filter({ hasText: 'Abierta' })).toBeVisible()
+    await expect(page.locator('span[data-variant]').filter({ hasText: 'En poder' })).toBeVisible()
 
     // 5. Verificar que desaparece del stock central disponible
     await page.goto('/inventario')
@@ -90,7 +90,7 @@ test.describe('Consignaciones a revendedora', () => {
     await expect(modalDevolucion).toBeVisible()
     await page.getByRole('button', { name: 'Confirmar devolución' }).click()
     await shell.expectSuccessToast('Devolución de 1 ítem registrada correctamente')
-    await expect(page.getByText('Devuelto')).toBeVisible()
+    await expect(page.locator('span[data-variant]').filter({ hasText: 'Devuelto' })).toBeVisible()
 
     // 7. Verificar que el ítem vuelve a disponibilidad central
     await page.goto('/inventario')

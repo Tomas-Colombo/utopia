@@ -1,5 +1,5 @@
 import { defineConfig, devices } from '@playwright/test'
-import { ADMIN, BASE_URL, SERVER_URL } from './e2e/config/env'
+import { ADMIN, APP_PORT, BASE_URL, SERVER_URL } from './e2e/config/env'
 
 /**
  * E2E configuration — Chromium only, on purpose: the suite exercises business
@@ -62,7 +62,7 @@ export default defineConfig({
   ],
 
   webServer: {
-    command: 'npm run dev',
+    command: `npm run dev -- -p ${APP_PORT}`,
     // The health check runs from Node, which does not resolve `*.localhost`
     // the way Chromium does — so it targets the bare host.
     url: `${SERVER_URL}/login`,
@@ -70,5 +70,9 @@ export default defineConfig({
     timeout: 180_000,
     stdout: 'ignore',
     stderr: 'pipe',
+    env: {
+      PORT: APP_PORT,
+      NEXT_DIST_DIR: `.next-${APP_PORT}`,
+    },
   },
 })
