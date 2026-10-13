@@ -74,10 +74,10 @@ Prerrequisito de todo lo que lee una revendedora. `/judgment-day` antes de empez
 
 ## Slice 4 — Consignación de salida: UI (~400)
 
-- [ ] `app/(app)/revendedoras/[id]/consignaciones/` lista, detalle, `nueva` (reutiliza el patrón
+- [x] `app/(app)/revendedoras/[id]/consignaciones/` lista, detalle, `nueva` (reutiliza el patrón
   de lookup de `app/api/consignaciones/lookup-item`), devolución con rama dañado.
-- [ ] Columna/filtro de tenencia en inventario, **condicionados** a `hasModuleAccess`.
-- [ ] Playwright: entregar → desaparece de disponibilidad central → devolver → vuelve.
+- [x] Columna/filtro de tenencia en inventario, **condicionados** a `hasModuleAccess`.
+- [x] Playwright: entregar → desaparece de disponibilidad central → devolver → vuelve.
 - [ ] Verificación en pantalla (claro, oscuro, móvil, consola y red sin errores).
 
 ## Slice 5 — Motor de comisiones (~400) · REQ-RV-DB-04

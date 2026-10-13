@@ -10,6 +10,7 @@ import { Table, type Column } from '@/components/ui/Table'
 import { normalizar } from '@/lib/inventario/producto-match'
 import type { ProductoBuscadorItem } from '@/lib/dal/inventario/producto'
 import type { CategoriaRow, ProductoConDetalle } from '@/lib/types/inventario'
+import type { StockPorTenenciaRow } from '@/lib/types/revendedoras'
 import { EditarProductoModal } from './EditarProductoModal'
 
 export function ProductosTableClient({
@@ -23,6 +24,8 @@ export function ProductosTableClient({
   total,
   basePath = '/inventario/productos',
   scanHref,
+  tenenciaStock,
+  initialTenencia,
 }: {
   rows: ProductoConDetalle[]
   /** Catálogo liviano (id/nombre/sku) que alimenta las sugerencias en vivo. */
@@ -38,10 +41,14 @@ export function ProductosTableClient({
   basePath?: string
   /** Si se pasa, muestra un botón de cámara (escaneo) en la barra de búsqueda. */
   scanHref?: string
+  /** Stock por tenencia para mostrar columna y filtro (condicionado a módulo revendedoras). */
+  tenenciaStock?: Record<string, StockPorTenenciaRow> | null
+  initialTenencia?: string
 }) {
   const router = useRouter()
   const [q, setQ] = useState(initialSearch)
   const [cat, setCat] = useState(initialCategoria)
+  const [tenencia, setTenencia] = useState(initialTenencia ?? '')
   const [pending, startTransition] = useTransition()
   const [editing, setEditing] = useState<ProductoConDetalle | null>(null)
 
@@ -59,6 +66,17 @@ export function ProductosTableClient({
       .map((p) => ({ id: p.id_producto, nombre: p.nombre, sku: p.sku }))
   }, [catalogo, q])
 
+  const displayedRows = useMemo(() => {
+    if (!tenenciaStock || !tenencia) return rows
+    if (tenencia === 'central') {
+      return rows.filter((r) => r.stock_disponible > 0)
+    }
+    if (tenencia === 'revendedoras') {
+      return rows.filter((r) => (tenenciaStock[r.id_producto]?.en_revendedoras ?? 0) > 0)
+    }
+    return rows
+  }, [rows, tenenciaStock, tenencia])
+
   function navigate(params: URLSearchParams) {
     const qs = params.toString()
     startTransition(() => {
@@ -68,10 +86,11 @@ export function ProductosTableClient({
 
   // Cambiar filtros vuelve a la página 1: el `page` actual dejaría de tener
   // sentido con un conjunto de resultados distinto.
-  function applyFilters(nextQ = q, nextCat = cat) {
+  function applyFilters(nextQ = q, nextCat = cat, nextTenencia = tenencia) {
     const params = new URLSearchParams()
     if (nextQ.trim()) params.set('q', nextQ.trim())
     if (nextCat) params.set('cat', nextCat)
+    if (tenenciaStock && nextTenencia) params.set('tenencia', nextTenencia)
     navigate(params)
   }
 
@@ -79,6 +98,7 @@ export function ProductosTableClient({
     const params = new URLSearchParams()
     if (q.trim()) params.set('q', q.trim())
     if (cat) params.set('cat', cat)
+    if (tenenciaStock && tenencia) params.set('tenencia', tenencia)
     if (nextPage > 1) params.set('page', String(nextPage))
     navigate(params)
   }
@@ -131,6 +151,29 @@ export function ProductosTableClient({
         )
       },
     },
+    ...(tenenciaStock
+      ? [
+          {
+            key: 'tenencia',
+            label: 'Tenencia',
+            align: 'right' as const,
+            render: (r: ProductoConDetalle) => {
+              const t = tenenciaStock[r.id_producto]
+              const enRev = t ? t.en_revendedoras : 0
+              return (
+                <div className="flex flex-col items-end text-xs">
+                  <span className="font-mono text-muted">Central: {r.stock_disponible}</span>
+                  {enRev > 0 && (
+                    <span className="font-mono text-blue-500 font-medium">
+                      En rev.: {enRev}
+                    </span>
+                  )}
+                </div>
+              )
+            },
+          },
+        ]
+      : []),
     {
       key: 'acciones',
       label: '',
@@ -214,6 +257,20 @@ export function ProductosTableClient({
                 </option>
               ))}
             </select>
+            {tenenciaStock && (
+              <select
+                value={tenencia}
+                onChange={(e) => {
+                  setTenencia(e.target.value)
+                  applyFilters(q, cat, e.target.value)
+                }}
+                className=""
+              >
+                <option value="">Todas las tenencias</option>
+                <option value="central">Stock central</option>
+                <option value="revendedoras">En revendedoras</option>
+              </select>
+            )}
             <button
               type="button"
               onClick={() => applyFilters()}
@@ -239,7 +296,7 @@ export function ProductosTableClient({
       <div className="rounded-lg border border-border bg-card overflow-x-auto">
         <Table
           columns={columns}
-          data={rows}
+          data={displayedRows}
           loading={pending}
           getRowId={(r) => r.id_producto}
           emptyState="Sin productos que coincidan con los filtros"

@@ -14,6 +14,9 @@ import {
   listAlertaReposicion,
   listAlertaRotacionVencida,
 } from '@/lib/dal/reportes/reportes'
+import { hasModuleAccess } from '@/lib/dal/guard'
+import { obtenerStockPorTenencia } from '@/lib/dal/revendedoras'
+import type { StockPorTenenciaRow } from '@/lib/types/revendedoras'
 import { AlertasReposicion } from './AlertasReposicion'
 import { ProductosTableClient } from '@/components/inventario/ProductosTableClient'
 
@@ -23,27 +26,45 @@ import { ProductosTableClient } from '@/components/inventario/ProductosTableClie
  * cifras rápidas y accesos directos a los demás sub-módulos.
  */
 export default async function InventarioHome(props: {
-  searchParams: Promise<{ q?: string; cat?: string; page?: string }>
+  searchParams: Promise<{ q?: string; cat?: string; page?: string; tenencia?: string }>
 }) {
   const session = await verifySession()
   const searchParams = await props.searchParams
   const page = Math.max(1, Number.parseInt(searchParams.page ?? '1', 10) || 1)
+  const tieneModuloRevendedoras = hasModuleAccess(session, 'revendedoras', 'ver')
 
-  const [{ rows: productosPagina, total }, catalogoBuscador, resumen, proveedoresActivos, categorias, alertasRepo, alertasRot] =
-    await Promise.all([
-      listProductosConDetallePaginado({
-        search: searchParams.q,
-        idCategoria: searchParams.cat,
-        page,
-        pageSize: PRODUCTOS_PAGE_SIZE,
-      }),
-      listProductosParaBuscador(),
-      getInventarioResumen(),
-      countProveedoresActivos(),
-      listCategoriasActivas(),
-      listAlertaReposicion(),
-      listAlertaRotacionVencida(),
-    ])
+  const [
+    { rows: productosPagina, total },
+    catalogoBuscador,
+    resumen,
+    proveedoresActivos,
+    categorias,
+    alertasRepo,
+    alertasRot,
+    tenenciaList,
+  ] = await Promise.all([
+    listProductosConDetallePaginado({
+      search: searchParams.q,
+      idCategoria: searchParams.cat,
+      page,
+      pageSize: PRODUCTOS_PAGE_SIZE,
+    }),
+    listProductosParaBuscador(),
+    getInventarioResumen(),
+    countProveedoresActivos(),
+    listCategoriasActivas(),
+    listAlertaReposicion(),
+    listAlertaRotacionVencida(),
+    tieneModuloRevendedoras ? obtenerStockPorTenencia() : Promise.resolve([] as StockPorTenenciaRow[]),
+  ])
+
+  let tenenciaStockMap: Record<string, StockPorTenenciaRow> | null = null
+  if (tieneModuloRevendedoras) {
+    tenenciaStockMap = {}
+    for (const t of tenenciaList) {
+      tenenciaStockMap[t.id_producto] = t
+    }
+  }
 
   return (
     <>
@@ -130,6 +151,8 @@ export default async function InventarioHome(props: {
             total={total}
             basePath="/inventario"
             scanHref="/inventario/ficha"
+            tenenciaStock={tenenciaStockMap}
+            initialTenencia={tieneModuloRevendedoras ? (searchParams.tenencia ?? '') : ''}
           />
         </section>
       </main>
