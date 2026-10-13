@@ -25,13 +25,14 @@ import {
   spMarcarCuotaIncobrable,
 } from '@/lib/dal/cuotas/cuota'
 import { primerReason } from '@/lib/validation/administracion'
-import { anularVentaSchema, devolverItemVentaSchema } from '@/lib/validation/ventas'
+import {
+  anularVentaSchema,
+  devolverItemVentaSchema,
+  registrarVentaSchema,
+} from '@/lib/validation/ventas'
 import type { FormaPago } from '@/lib/types/precios'
 import type {
-  FinanciacionInput,
-  FinanciadorInput,
   MedioPago,
-  PagoInput,
   ResultadoIncobrable,
   TipoComprobante,
 } from '@/lib/types/ventas'
@@ -54,40 +55,54 @@ async function guarded(modulo: string, accion: string): Promise<Guarded> {
 
 // ─── Ventas ──────────────────────────────────────────────────────────
 
-export async function registrarVentaAction(input: {
-  lineas: Array<{ id_item: string; descuentos?: string[] }>
-  formaPago: FormaPago
-  idCliente?: string | null
-  idReserva?: string | null
-  observaciones?: string | null
-  /** Cobranza. Omitido = un pago por el total contra la cuenta predeterminada. */
-  pagos?: PagoInput[]
-  /** Financiación propia (00059). Exige cliente. */
-  financiacion?: FinanciacionInput | null
-  financiador?: FinanciadorInput | null
-}): Promise<ActionResult<{ id: string }>> {
-  const g = await guarded('ventas', 'crear')
-  if (!g.ok) return { ok: false, reason: g.error }
-  if (input.lineas.length === 0) return { ok: false, reason: 'lineas-vacias' }
+export async function registrarVentaAction(
+  rawInput: unknown,
+): Promise<ActionResult<{ id: string }>> {
+  const gVentas = await guarded('ventas', 'crear')
+  if (!gVentas.ok) return { ok: false, reason: gVentas.error }
+
+  const parsed = registrarVentaSchema.safeParse(rawInput)
+  if (!parsed.success) {
+    return { ok: false, reason: primerReason(parsed.error) }
+  }
+  const input = parsed.data
+
+  if (input.canal && input.canal !== 'local') {
+    const gRev = await guarded('revendedoras', 'crear')
+    if (!gRev.ok) return { ok: false, reason: gRev.error }
+  }
+
+  const idRevendedora = input.idRevendedora ?? input.id_revendedora ?? null
+  if (input.canal === 'revendedora' && !idRevendedora) {
+    return { ok: false, reason: 'revendedora-invalida' }
+  }
+
   // Se chequea acá además de en el SP: el error del RPC llega después de
   // haber empezado la transacción, y este es un dato que la UI ya tiene.
   if (input.financiacion && !input.idCliente) {
     return { ok: false, reason: 'financiacion-sin-cliente' }
   }
+
   try {
     const id = await spRegistrarVenta({
       lineas: input.lineas,
-      forma_pago: input.formaPago,
+      forma_pago: input.formaPago as FormaPago,
       id_cliente: input.idCliente ?? null,
       id_reserva: input.idReserva ?? null,
       observaciones: input.observaciones ?? null,
       pagos: input.pagos,
       financiacion: input.financiacion ?? null,
       financiador: input.financiador ?? null,
+      canal: input.canal,
+      id_revendedora: idRevendedora,
     })
     revalidatePath('/ventas')
     revalidatePath('/inventario/productos')
     revalidatePath('/inventario')
+    if (input.canal === 'revendedora') {
+      revalidatePath('/revendedoras')
+      if (idRevendedora) revalidatePath(`/revendedoras/${idRevendedora}`)
+    }
     if (input.financiacion) revalidatePath('/cuotas')
     if (input.idReserva) revalidatePath(`/ventas/reservas/${input.idReserva}`)
     return { ok: true, data: { id } }
