@@ -35,7 +35,9 @@ create or replace function fn_rol_revendedora_protect() returns trigger as $$
 begin
   if OLD.nombre = 'Revendedora' then
     if TG_OP = 'DELETE' then
-      raise exception 'No se puede eliminar el rol Revendedora' using errcode = '23503';
+      if exists (select 1 from tenant where id_tenant = OLD.id_tenant) then
+        raise exception 'No se puede eliminar el rol Revendedora' using errcode = '23503';
+      end if;
     end if;
     if TG_OP = 'UPDATE' and NEW.nombre <> 'Revendedora' then
       raise exception 'No se puede renombrar el rol Revendedora' using errcode = '23503';

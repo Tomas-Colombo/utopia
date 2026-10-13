@@ -130,12 +130,13 @@ export async function getConsignacionRevendedoraConDetalle(
         motivo,
         created_at,
         item_producto (
-          codigo_barra,
-          sku,
+          id_item,
+          qr_code,
+          talle,
           producto (
             nombre,
-            precio_actual,
-            talle
+            sku,
+            precio_venta
           )
         )
       )
@@ -178,12 +179,13 @@ export async function getConsignacionRevendedoraConDetalle(
       motivo: string | null
       created_at: string
       item_producto: {
-        codigo_barra: string | null
-        sku: string
+        id_item: string
+        qr_code: string | null
+        talle: string | null
         producto: {
           nombre: string
-          precio_actual: number
-          talle: string | null
+          sku: string
+          precio_venta: number | string
         } | null
       } | null
     }>
@@ -215,11 +217,11 @@ export async function getConsignacionRevendedoraConDetalle(
       id_consignacion_revendedora_detalle: d.id_consignacion_revendedora_detalle,
       id_item: d.id_item,
       id_producto: d.id_producto,
-      codigo_barra: d.item_producto?.codigo_barra || null,
-      sku: d.item_producto?.sku || '',
+      codigo_barra: d.item_producto?.qr_code || null,
+      sku: d.item_producto?.producto?.sku || '',
       nombre_producto: d.item_producto?.producto?.nombre || 'Producto',
-      talle: d.item_producto?.producto?.talle || null,
-      precio_actual: Number(d.item_producto?.producto?.precio_actual || 0),
+      talle: d.item_producto?.talle || null,
+      precio_actual: Number(d.item_producto?.producto?.precio_venta || 0),
       estado_detalle: d.estado_detalle,
       fecha_entrega: d.fecha_entrega,
       fecha_devolucion: d.fecha_devolucion,
@@ -266,25 +268,60 @@ export async function lookupItemParaConsignacionRevendedora(
     if (!rev.activo) return { ok: false, reason: 'revendedora-inactiva' }
   }
 
-  // 1. Buscar el item por qr o sku
-  const { data: item, error: itemError } = await supabase
+  // 1. Buscar el item por qr_code
+  const { data: itemDirecto, error: itemError } = await supabase
     .from('item_producto')
     .select(`
       id_item,
       id_producto,
-      codigo_barra,
-      sku,
+      qr_code,
+      talle,
       estado_item,
       producto (
         nombre,
-        precio_actual,
-        talle
+        sku,
+        precio_venta
       )
     `)
-    .or(`codigo_barra.eq.${qr},sku.eq.${qr}`)
+    .eq('qr_code', qr)
     .maybeSingle()
 
   if (itemError) throw itemError
+
+  let item = itemDirecto
+  if (!item) {
+    const { data: prod } = await supabase
+      .from('producto')
+      .select('id_producto')
+      .or(`nombre.ilike.%${qr}%,sku.eq.${qr}`)
+      .limit(1)
+      .maybeSingle()
+
+    if (prod) {
+      const { data: itemDeProd } = await supabase
+        .from('item_producto')
+        .select(`
+          id_item,
+          id_producto,
+          qr_code,
+          talle,
+          estado_item,
+          producto (
+            nombre,
+            sku,
+            precio_venta
+          )
+        `)
+        .eq('id_producto', prod.id_producto)
+        .eq('estado_item', 'disponible')
+        .limit(1)
+        .maybeSingle()
+      if (itemDeProd) {
+        item = itemDeProd
+      }
+    }
+  }
+
   if (!item) return { ok: false, reason: 'item-not-found' }
 
   if (item.estado_item !== 'disponible') {
@@ -332,8 +369,8 @@ export async function lookupItemParaConsignacionRevendedora(
 
   type ProductoRel = {
     nombre: string
-    precio_actual: number
-    talle: string | null
+    sku: string | null
+    precio_venta: number | null
   } | null
 
   const prod = item.producto as unknown as ProductoRel
@@ -344,10 +381,10 @@ export async function lookupItemParaConsignacionRevendedora(
       id_item: item.id_item,
       id_producto: item.id_producto,
       nombre_producto: prod?.nombre || 'Producto',
-      codigo_barra: item.codigo_barra,
-      sku: item.sku,
-      talle: prod?.talle || null,
-      precio_actual: Number(prod?.precio_actual || 0),
+      codigo_barra: item.qr_code,
+      sku: prod?.sku || '',
+      talle: item.talle || null,
+      precio_actual: Number(prod?.precio_venta || 0),
     },
   }
 }
@@ -409,7 +446,8 @@ export async function lookupItemParaVentaRevendedora(
     const { data: prod } = await supabase
       .from('producto')
       .select('id_producto')
-      .eq('sku', baseSku)
+      .or(`sku.eq.${baseSku},nombre.ilike.%${code}%`)
+      .limit(1)
       .maybeSingle()
 
     if (prod) {
@@ -452,13 +490,13 @@ export async function lookupItemParaVentaRevendedora(
       id_item,
       id_producto,
       qr_code,
+      talle,
       estado_item,
       producto (
         id_producto,
         nombre,
         sku,
-        talle,
-        precio_actual,
+        precio_venta,
         categoria (
           id_categoria,
           nombre
@@ -500,8 +538,7 @@ export async function lookupItemParaVentaRevendedora(
     id_producto: string
     nombre: string
     sku: string | null
-    talle: string | null
-    precio_actual: number
+    precio_venta: number | null
     categoria: { id_categoria: string; nombre: string } | null
   } | null
 
@@ -519,7 +556,7 @@ export async function lookupItemParaVentaRevendedora(
     id_item: itemCompleto.id_item,
     id_producto: itemCompleto.id_producto,
     qr_code: itemCompleto.qr_code,
-    talle: prod?.talle ?? null,
+    talle: itemCompleto.talle ?? null,
     producto_nombre: prod?.nombre ?? '(producto sin nombre)',
     sku: prod?.sku ?? null,
     categoria_nombre: prod?.categoria?.nombre ?? null,
@@ -539,7 +576,7 @@ export async function lookupItemParaVentaRevendedora(
         nombre_producto: prod?.nombre ?? '(producto sin nombre)',
         qr_code: itemCompleto.qr_code,
         sku: prod?.sku ?? null,
-        talle: prod?.talle ?? null,
+        talle: itemCompleto.talle ?? null,
         precio_actual: snap.precio_final,
       },
       linea,
@@ -566,13 +603,13 @@ export async function listItemsElegiblesConsignacionRevendedora(
     .select(`
       id_item,
       id_producto,
-      codigo_barra,
-      sku,
+      qr_code,
+      talle,
       estado_item,
       producto!inner (
         nombre,
-        precio_actual,
-        talle
+        sku,
+        precio_venta
       )
     `)
     .eq('estado_item', 'disponible')
@@ -580,7 +617,7 @@ export async function listItemsElegiblesConsignacionRevendedora(
 
   if (search && search.trim()) {
     const s = search.trim()
-    query = query.or(`codigo_barra.ilike.%${s}%,sku.ilike.%${s}%,producto.nombre.ilike.%${s}%`)
+    query = query.or(`qr_code.ilike.%${s}%,producto.sku.ilike.%${s}%,producto.nombre.ilike.%${s}%`)
   }
 
   const { data, error } = await query
@@ -589,12 +626,12 @@ export async function listItemsElegiblesConsignacionRevendedora(
   type RawItem = {
     id_item: string
     id_producto: string
-    codigo_barra: string | null
-    sku: string
+    qr_code: string
+    talle: string | null
     producto: {
       nombre: string
-      precio_actual: number
-      talle: string | null
+      sku: string | null
+      precio_venta: number | null
     }
   }
 
@@ -602,10 +639,10 @@ export async function listItemsElegiblesConsignacionRevendedora(
     id_item: i.id_item,
     id_producto: i.id_producto,
     nombre_producto: i.producto.nombre,
-    codigo_barra: i.codigo_barra,
-    sku: i.sku,
-    talle: i.producto.talle,
-    precio_actual: Number(i.producto.precio_actual || 0),
+    codigo_barra: i.qr_code,
+    sku: i.producto.sku || '',
+    talle: i.talle,
+    precio_actual: Number(i.producto.precio_venta || 0),
   }))
 }
 
