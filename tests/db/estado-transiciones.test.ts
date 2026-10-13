@@ -17,7 +17,7 @@ describe('EstadoItem transiciones — DB-02', () => {
     const allowedTransitions: Record<string, string[]> = {
       'disponible': ['reservado', 'vendido', 'devuelto', 'baja', 'en_revendedora'],
       'reservado': ['disponible', 'vendido', 'baja'],
-      'vendido': ['disponible', 'devuelto_cliente', 'devuelto', 'baja'],
+      'vendido': ['disponible', 'devuelto_cliente', 'devuelto', 'baja', 'en_revendedora'],
       'devuelto_cliente': ['disponible', 'baja'],
       'en_revendedora': ['disponible', 'vendido', 'devuelto', 'baja'],
       'devuelto': [],
