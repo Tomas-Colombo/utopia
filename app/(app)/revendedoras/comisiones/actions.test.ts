@@ -19,6 +19,7 @@ vi.mock('@/lib/dal/session', () => ({
 
 vi.mock('@/lib/dal/guard', () => ({
   requireModuleRole: vi.fn(),
+  classifyAuthError: vi.fn(),
 }))
 
 vi.mock('@/lib/dal/revendedoras/comisiones', () => ({
@@ -31,6 +32,8 @@ describe('Server Actions: Motor de comisiones', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(sessionModule.verifySession).mockResolvedValue({} as unknown as sessionModule.Session)
+    vi.mocked(guard.requireModuleRole).mockResolvedValue(undefined)
+    vi.mocked(guard.classifyAuthError).mockReturnValue({ kind: 'unknown', error: new Error('other') })
   })
 
   describe('crearReglaGeneralAction', () => {
@@ -68,6 +71,22 @@ describe('Server Actions: Motor de comisiones', () => {
       expect(dal.crearReglaGeneral).not.toHaveBeenCalled()
       expect(res).toEqual({ ok: false, reason: 'payload-invalido' })
     })
+
+    it('devuelve { ok: false, reason: "no-permission" } si el usuario no tiene permiso', async () => {
+      const authErr = new Error('Forbidden')
+      vi.mocked(guard.requireModuleRole).mockRejectedValue(authErr)
+      vi.mocked(guard.classifyAuthError).mockReturnValue({ kind: 'auth', reason: 'no-permission' })
+
+      const res = await crearReglaGeneralAction({
+        ambito: 'revendedora',
+        nombre: 'Test',
+        vigente_desde: '2026-01-01',
+        escalas: [{ objetivo_desde: 0, porcentaje: 10 }],
+      })
+
+      expect(res).toEqual({ ok: false, reason: 'no-permission' })
+      expect(dal.crearReglaGeneral).not.toHaveBeenCalled()
+    })
   })
 
   describe('guardarComisionPropiaAction', () => {
@@ -97,6 +116,22 @@ describe('Server Actions: Motor de comisiones', () => {
       expect(dal.guardarComisionPropia).not.toHaveBeenCalled()
       expect(res).toEqual({ ok: false, reason: 'payload-invalido' })
     })
+
+    it('devuelve { ok: false, reason: "no-permission" } si el usuario no tiene permiso', async () => {
+      const authErr = new Error('Forbidden')
+      vi.mocked(guard.requireModuleRole).mockRejectedValue(authErr)
+      vi.mocked(guard.classifyAuthError).mockReturnValue({ kind: 'auth', reason: 'no-permission' })
+
+      const res = await guardarComisionPropiaAction({
+        id_revendedora: '123e4567-e89b-12d3-a456-426614174000',
+        tipo: 'fijo',
+        porcentajeFijo: 10,
+        vigente_desde: '2026-01-01',
+      })
+
+      expect(res).toEqual({ ok: false, reason: 'no-permission' })
+      expect(dal.guardarComisionPropia).not.toHaveBeenCalled()
+    })
   })
 
   describe('terminarReglaAction', () => {
@@ -114,6 +149,19 @@ describe('Server Actions: Motor de comisiones', () => {
       expect(dal.terminarRegla).toHaveBeenCalledWith(payload)
       expect(res.ok).toBe(true)
       expect(revalidatePath).toHaveBeenCalledWith('/revendedoras/comisiones')
+    })
+
+    it('devuelve { ok: false, reason: "no-permission" } si el usuario no tiene permiso', async () => {
+      const authErr = new Error('Forbidden')
+      vi.mocked(guard.requireModuleRole).mockRejectedValue(authErr)
+      vi.mocked(guard.classifyAuthError).mockReturnValue({ kind: 'auth', reason: 'no-permission' })
+
+      const res = await terminarReglaAction({
+        id_regla: '123e4567-e89b-12d3-a456-426614174000',
+      })
+
+      expect(res).toEqual({ ok: false, reason: 'no-permission' })
+      expect(dal.terminarRegla).not.toHaveBeenCalled()
     })
   })
 })
