@@ -2,7 +2,10 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { AuthorizationError } from '@/lib/dal/errors'
 import { requireModuleRole } from '@/lib/dal/guard'
 import { verifySession } from '@/lib/dal/session'
-import { lookupItemParaConsignacionRevendedora } from '@/lib/dal/revendedoras'
+import {
+  lookupItemParaConsignacionRevendedora,
+  lookupItemParaVentaRevendedora,
+} from '@/lib/dal/revendedoras'
 
 export async function GET(req: NextRequest) {
   try {
@@ -15,17 +18,30 @@ export async function GET(req: NextRequest) {
     throw e
   }
 
-  const qr = req.nextUrl.searchParams.get('qr')?.trim()
+  const code = (req.nextUrl.searchParams.get('code') || req.nextUrl.searchParams.get('qr'))?.trim()
   const idRevendedora = req.nextUrl.searchParams.get('id_revendedora')?.trim()
+  const modo = req.nextUrl.searchParams.get('modo')?.trim() || 'consignacion'
 
-  if (!qr) {
+  if (!code) {
     return NextResponse.json({ ok: false, reason: 'qr-vacio' }, { status: 400 })
   }
   if (!idRevendedora) {
     return NextResponse.json({ ok: false, reason: 'revendedora-requerida' }, { status: 400 })
   }
 
-  const result = await lookupItemParaConsignacionRevendedora(qr, idRevendedora)
+  if (modo === 'venta') {
+    const result = await lookupItemParaVentaRevendedora(code, idRevendedora)
+    if (!result.ok) {
+      return NextResponse.json(result)
+    }
+    return NextResponse.json({
+      ok: true,
+      item: result.data.item,
+      linea: result.data.linea,
+    })
+  }
+
+  const result = await lookupItemParaConsignacionRevendedora(code, idRevendedora)
 
   if (!result.ok) {
     return NextResponse.json(result)

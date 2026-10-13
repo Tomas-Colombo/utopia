@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { anularVentaSchema } from './ventas'
+import { anularVentaSchema, registrarVentaSchema } from './ventas'
 import { primerReason } from './administracion'
 
 const UUID = '3f1b2c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d'
@@ -46,3 +46,66 @@ describe('anularVentaSchema — payload no objeto', () => {
     if (!r.success) expect(primerReason(r.error)).toBe('payload-invalido')
   })
 })
+
+describe('registrarVentaSchema', () => {
+  it('acepta venta local válida por defecto', () => {
+    const r = registrarVentaSchema.safeParse({
+      lineas: [{ id_item: UUID }],
+      formaPago: 'efectivo',
+    })
+    expect(r.success).toBe(true)
+    if (r.success) {
+      expect(r.data.canal).toBe('local')
+    }
+  })
+
+  it('acepta venta canal revendedora con idRevendedora', () => {
+    const r = registrarVentaSchema.safeParse({
+      lineas: [{ id_item: UUID }],
+      formaPago: 'efectivo',
+      canal: 'revendedora',
+      idRevendedora: UUID,
+    })
+    expect(r.success).toBe(true)
+    if (r.success) {
+      expect(r.data.canal).toBe('revendedora')
+      expect(r.data.idRevendedora).toBe(UUID)
+    }
+  })
+
+  it('rechaza canal online', () => {
+    const r = registrarVentaSchema.safeParse({
+      lineas: [{ id_item: UUID }],
+      formaPago: 'efectivo',
+      canal: 'online',
+    })
+    expect(r.success).toBe(false)
+    if (!r.success) {
+      expect(primerReason(r.error)).toMatch(/canal-invalido/)
+    }
+  })
+
+  it('rechaza líneas vacías', () => {
+    const r = registrarVentaSchema.safeParse({
+      lineas: [],
+      formaPago: 'efectivo',
+    })
+    expect(r.success).toBe(false)
+    if (!r.success) {
+      expect(primerReason(r.error)).toMatch(/lineas-vacias/)
+    }
+  })
+
+  it('rechaza campos desconocidos por strictObject', () => {
+    const r = registrarVentaSchema.safeParse({
+      lineas: [{ id_item: UUID }],
+      formaPago: 'efectivo',
+      hack: 'campo-extra',
+    })
+    expect(r.success).toBe(false)
+    if (!r.success) {
+      expect(primerReason(r.error)).toBe('campo-desconocido')
+    }
+  })
+})
+

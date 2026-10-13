@@ -190,6 +190,8 @@ const MENSAJES: Record<string, string> = {
   'devolucion-venta-revendedora':
     'Las devoluciones de ventas de revendedora no se gestionan como devolución directa de cliente.',
   'item-no-en-revendedora': 'Uno de los ítems no está en poder de esa revendedora.',
+  'canal-invalido': 'El canal de venta elegido no es válido.',
+  'revendedora-invalida': 'Elegí una revendedora válida.',
 
   // ─── Ventas: cobro ─────────────────────────────────────────────────
   'monto-invalido': 'El monto tiene que ser mayor a cero.',

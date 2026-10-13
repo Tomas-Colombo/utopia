@@ -9,6 +9,8 @@ import type {
   EditarConsignacionRevendedoraPayload,
   RegistrarDevolucionRevendedoraPayload,
 } from '../../validation/revendedoras'
+import { calcularSnapshotPrecio } from '../precios/resolucion'
+import type { LineaCarrito } from '../../types/ventas'
 
 export function extractErrorSlug(error: unknown): string {
   if (!error) return 'error-desconocido'
@@ -346,6 +348,201 @@ export async function lookupItemParaConsignacionRevendedora(
       sku: item.sku,
       talle: prod?.talle || null,
       precio_actual: Number(prod?.precio_actual || 0),
+    },
+  }
+}
+
+export async function lookupItemParaVentaRevendedora(
+  code: string,
+  idRevendedora: string,
+): Promise<
+  | {
+      ok: true
+      data: {
+        item: {
+          id_item: string
+          id_producto: string
+          nombre_producto: string
+          qr_code: string
+          sku: string | null
+          talle: string | null
+          precio_actual: number
+        }
+        linea: LineaCarrito
+      }
+    }
+  | { ok: false; reason: string }
+> {
+  const supabase = await createServerClient()
+
+  if (!idRevendedora) {
+    return { ok: false, reason: 'revendedora-requerida' }
+  }
+
+  const { data: rev, error: revError } = await supabase
+    .from('revendedora')
+    .select('activo')
+    .eq('id_revendedora', idRevendedora)
+    .maybeSingle()
+
+  if (revError) throw revError
+  if (!rev) return { ok: false, reason: 'revendedora-not-found' }
+  if (!rev.activo) return { ok: false, reason: 'revendedora-inactiva' }
+
+  let itemId: string | null = null
+
+  const { data: itemPorQr, error: qrErr } = await supabase
+    .from('item_producto')
+    .select('id_item, id_producto, qr_code, estado_item')
+    .eq('qr_code', code)
+    .maybeSingle()
+
+  if (qrErr) throw qrErr
+
+  if (itemPorQr) {
+    itemId = itemPorQr.id_item
+  } else {
+    const upper = code.toUpperCase()
+    const m = upper.match(/^([A-Z0-9_-]+)/)
+    const baseSku = m ? m[1] : upper
+
+    const { data: prod } = await supabase
+      .from('producto')
+      .select('id_producto')
+      .eq('sku', baseSku)
+      .maybeSingle()
+
+    if (prod) {
+      const { data: itemsCandidatos } = await supabase
+        .from('consignacion_revendedora_detalle')
+        .select(`
+          id_item,
+          consignacion_revendedora!inner (
+            id_revendedora,
+            confirmada,
+            estado
+          ),
+          item:item_producto!inner (
+            id_item,
+            id_producto,
+            estado_item
+          )
+        `)
+        .eq('consignacion_revendedora.id_revendedora', idRevendedora)
+        .eq('consignacion_revendedora.confirmada', true)
+        .eq('consignacion_revendedora.estado', 'abierta')
+        .eq('estado_detalle', 'en_poder')
+        .eq('item.id_producto', prod.id_producto)
+        .eq('item.estado_item', 'en_revendedora')
+        .limit(1)
+
+      if (itemsCandidatos && itemsCandidatos.length > 0) {
+        itemId = itemsCandidatos[0].id_item
+      }
+    }
+  }
+
+  if (!itemId) {
+    return { ok: false, reason: 'item-not-found' }
+  }
+
+  const { data: itemCompleto, error: errComp } = await supabase
+    .from('item_producto')
+    .select(`
+      id_item,
+      id_producto,
+      qr_code,
+      estado_item,
+      producto (
+        id_producto,
+        nombre,
+        sku,
+        talle,
+        precio_actual,
+        categoria (
+          id_categoria,
+          nombre
+        )
+      )
+    `)
+    .eq('id_item', itemId)
+    .maybeSingle()
+
+  if (errComp) throw errComp
+  if (!itemCompleto) return { ok: false, reason: 'item-not-found' }
+
+  if (itemCompleto.estado_item !== 'en_revendedora') {
+    return { ok: false, reason: 'item-no-en-revendedora' }
+  }
+
+  const { data: detalleConsig } = await supabase
+    .from('consignacion_revendedora_detalle')
+    .select(`
+      id_consignacion_revendedora_detalle,
+      consignacion_revendedora!inner (
+        id_revendedora,
+        confirmada,
+        estado
+      )
+    `)
+    .eq('id_item', itemId)
+    .eq('estado_detalle', 'en_poder')
+    .eq('consignacion_revendedora.id_revendedora', idRevendedora)
+    .eq('consignacion_revendedora.confirmada', true)
+    .eq('consignacion_revendedora.estado', 'abierta')
+    .maybeSingle()
+
+  if (!detalleConsig) {
+    return { ok: false, reason: 'item-no-en-revendedora' }
+  }
+
+  type ProductoRel = {
+    id_producto: string
+    nombre: string
+    sku: string | null
+    talle: string | null
+    precio_actual: number
+    categoria: { id_categoria: string; nombre: string } | null
+  } | null
+
+  const prod = itemCompleto.producto as unknown as ProductoRel
+  const snap = await calcularSnapshotPrecio({
+    idProducto: itemCompleto.id_producto,
+    formaPago: 'efectivo',
+  })
+
+  if (!snap.ok) {
+    return { ok: false, reason: snap.reason }
+  }
+
+  const linea: LineaCarrito = {
+    id_item: itemCompleto.id_item,
+    id_producto: itemCompleto.id_producto,
+    qr_code: itemCompleto.qr_code,
+    talle: prod?.talle ?? null,
+    producto_nombre: prod?.nombre ?? '(producto sin nombre)',
+    sku: prod?.sku ?? null,
+    categoria_nombre: prod?.categoria?.nombre ?? null,
+    precio_lista: snap.precio_lista,
+    precio_final: snap.precio_final,
+    desactualizado: snap.desactualizado,
+    desglose: snap.desglose,
+    advertencia: null,
+  }
+
+  return {
+    ok: true,
+    data: {
+      item: {
+        id_item: itemCompleto.id_item,
+        id_producto: itemCompleto.id_producto,
+        nombre_producto: prod?.nombre ?? '(producto sin nombre)',
+        qr_code: itemCompleto.qr_code,
+        sku: prod?.sku ?? null,
+        talle: prod?.talle ?? null,
+        precio_actual: snap.precio_final,
+      },
+      linea,
     },
   }
 }

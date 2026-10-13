@@ -2,6 +2,7 @@ import 'server-only'
 import { createServerClient } from '@/lib/dal/supabase'
 import type { FormaPago } from '@/lib/types/precios'
 import type {
+  CanalVenta,
   MedioPago,
   RegistrarVentaInput,
   VentaConDetalle,
@@ -25,6 +26,7 @@ export type VentaListada = VentaRow & {
 export interface PeriodoVentas {
   desde?: string
   hastaExclusivo?: string
+  canal?: CanalVenta
 }
 
 /** Filas por request al recorrer un período completo (KPIs y export). */
@@ -63,6 +65,7 @@ export async function listVentasPaginado(
     .range(from, to)
   if (opts.desde) q = q.gte('fecha', opts.desde)
   if (opts.hastaExclusivo) q = q.lt('fecha', opts.hastaExclusivo)
+  if (opts.canal) q = q.eq('canal', opts.canal)
   const { data, count, error } = await q
   if (error) throw new Error(`listVentasPaginado: ${error.message}`)
   return {
@@ -87,6 +90,7 @@ async function recorrerPeriodo<T>(select: string, opts: PeriodoVentas): Promise<
       .range(offset, offset + CHUNK_PERIODO - 1)
     if (opts.desde) q = q.gte('fecha', opts.desde)
     if (opts.hastaExclusivo) q = q.lt('fecha', opts.hastaExclusivo)
+    if (opts.canal) q = q.eq('canal', opts.canal)
     const { data, error } = await q
     if (error) throw new Error(`recorrerPeriodo: ${error.message}`)
     const chunk = (data ?? []) as unknown as T[]
@@ -146,6 +150,15 @@ export async function getVentaConDetalle(id: string): Promise<VentaConDetalle | 
   return (data ?? null) as unknown as VentaConDetalle | null
 }
 
+function extraerSlugRpc(error: { message: string }): string {
+  if (error.message.includes('modulo-revendedoras-deshabilitado')) {
+    return 'modulo-revendedoras-deshabilitado'
+  }
+  const clean = error.message.replace(/^.*(?:sp_[a-z_]+):\s*/i, '').trim()
+  const match = clean.match(/([a-z0-9_-]+)/)
+  return match ? match[1] : clean
+}
+
 /**
  * Llama al RPC transaccional. Devuelve id_venta.
  * Errores del RPC se propagan tal cual (message = código semántico:
@@ -195,7 +208,7 @@ export async function spRegistrarVenta(input: RegistrarVentaInput): Promise<stri
     p_canal: input.canal ?? 'local',
     p_id_revendedora: input.id_revendedora ?? null,
   })
-  if (error) throw new Error(`sp_registrar_venta: ${error.message}`)
+  if (error) throw new Error(extraerSlugRpc(error))
   return data as string
 }
 
@@ -208,7 +221,7 @@ export async function spAnularVenta(
     p_id_venta: idVenta,
     p_motivo: motivo ?? null,
   })
-  if (error) throw new Error(`sp_anular_venta: ${error.message}`)
+  if (error) throw new Error(extraerSlugRpc(error))
   return data as { total_reintegrado: number }
 }
 
@@ -225,7 +238,7 @@ export async function spRegistrarDevolucionCliente(
     p_id_cuenta_reintegro: idCuentaReintegro ?? null,
     p_medio_reintegro: medioReintegro ?? null,
   })
-  if (error) throw new Error(`sp_registrar_devolucion_cliente: ${error.message}`)
+  if (error) throw new Error(extraerSlugRpc(error))
   return data as { reintegro: number }
 }
 

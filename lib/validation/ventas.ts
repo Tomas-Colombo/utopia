@@ -53,3 +53,54 @@ export const devolverItemVentaSchema = z.strictObject(
       issue.code === 'unrecognized_keys' ? 'campo-desconocido' : 'payload-invalido',
   },
 )
+
+const lineaInputSchema = z.strictObject({
+  id_item: z.string().uuid('item-invalido'),
+  descuentos: z.array(z.string().uuid('descuento-invalido')).optional(),
+})
+
+const pagoInputSchema = z.strictObject({
+  medio: medioPagoSchema,
+  id_cuenta_destino: z.string().uuid('cuenta-invalida'),
+  monto: z.number().positive('monto-invalido'),
+  cuotas: z.number().int().positive().nullable().optional(),
+  monto_recibido: z.number().nullable().optional(),
+  referencia: z.string().max(200).nullable().optional(),
+})
+
+const financiacionInputSchema = z.strictObject({
+  cuotas: z.number().int().min(1).max(24),
+  primer_vencimiento: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'vencimiento-invalido'),
+})
+
+const financiadorInputSchema = z.strictObject({
+  id_cuenta_destino: z.string().uuid().nullable().optional(),
+  medio: medioPagoSchema.nullable().optional(),
+  propia: z.boolean().optional(),
+})
+
+export const registrarVentaSchema = z.strictObject(
+  {
+    lineas: z.array(lineaInputSchema).min(1, 'lineas-vacias'),
+    formaPago: z.string().min(1, 'forma-pago-invalida'),
+    idCliente: z.string().uuid('cliente-invalido').nullable().optional(),
+    idReserva: z.string().uuid('reserva-invalida').nullable().optional(),
+    observaciones: z.string().max(1000, 'observaciones-largas').nullable().optional(),
+    pagos: z.array(pagoInputSchema).optional(),
+    financiacion: financiacionInputSchema.nullable().optional(),
+    financiador: financiadorInputSchema.nullable().optional(),
+    canal: z
+      .enum(['local', 'revendedora'], {
+        error: () => 'canal-invalido',
+      })
+      .optional()
+      .default('local'),
+    idRevendedora: z.string().uuid('revendedora-invalida').nullable().optional(),
+    id_revendedora: z.string().uuid('revendedora-invalida').nullable().optional(),
+  },
+  {
+    error: (issue: z.core.$ZodRawIssue) =>
+      issue.code === 'unrecognized_keys' ? 'campo-desconocido' : 'payload-invalido',
+  },
+)
+

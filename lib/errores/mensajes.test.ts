@@ -52,7 +52,7 @@ const SLUGS_DE_LA_APP = [
   'reintegro-requiere-cuenta-y-medio', 'rendicion-not-found', 'reserva-no-activa', 'reserva-not-found', 'rol-en-uso',
   'rol-not-found', 'sin-cuenta-predeterminada', 'sin-lineas-pendientes',
   'talle-no-valido', 'usuario-not-found', 'vencimiento-invalido', 'venta-anulada',
-  'venta-con-incobrables', 'venta-not-found', 'venta-ya-rendida', 'venta-liquidada', 'venta-revendedora-sin-id', 'canal-no-disponible', 'devolucion-venta-revendedora', 'item-no-en-revendedora', 'medio-solo-revendedora', 'venta-revendedora-con-pagos',
+  'venta-con-incobrables', 'venta-not-found', 'venta-ya-rendida', 'venta-liquidada', 'venta-revendedora-sin-id', 'canal-no-disponible', 'devolucion-venta-revendedora', 'item-no-en-revendedora', 'medio-solo-revendedora', 'venta-revendedora-con-pagos', 'canal-invalido', 'revendedora-invalida',
   // Rutas de API
   'elegir-talle', 'item-no-disponible', 'item-no-es-consignacion', 'proveedor-vacio',
   'qr-vacio', 'sin-precio-lista', 'sku-sin-stock', 'sku-sin-stock-libre',
