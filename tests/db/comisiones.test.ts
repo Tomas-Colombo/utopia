@@ -228,5 +228,114 @@ describe.skipIf(!hasTestDb)('DB: Motor de comisiones (REQ-RV-DB-04 / DR-16)', ()
       expect(true).toBe(true)
     })
   })
+
+  describe('Stored procedures transaccionales: sp_crear_regla_comision y sp_terminar_regla_comision', () => {
+    let idReglaCreada: string
+
+    test('Éxito: crea regla con escalas en una transacción y audita', async () => {
+      // Crear una revendedora dedicada sin reglas previas para probar creación de regla propia
+      const { data: revTestId, error: errRev } = await authAdminA.rpc('sp_crear_revendedora', {
+        p_nombre: 'Reven',
+        p_apellido: 'SPTest',
+        p_email: 'sp_test@utopia.test',
+      })
+      expect(errRev).toBeNull()
+
+      const { data, error } = await authAdminA.rpc('sp_crear_regla_comision', {
+        p_ambito: 'revendedora',
+        p_nombre: 'Regla Propia SP Test',
+        p_id_revendedora: revTestId,
+        p_vigente_desde: '2028-01-01',
+        p_vigente_hasta: null,
+        p_escalas: [
+          { objetivo_desde: 0, porcentaje: 11 },
+          { objetivo_desde: 60000, porcentaje: 16 },
+        ],
+      })
+
+      expect(error).toBeNull()
+      expect(data).toBeDefined()
+      idReglaCreada = data
+
+      // Verificar que se persistió con sus escalas
+      const { data: escalas } = await serviceRole
+        .from('escala_comision')
+        .select('*')
+        .eq('id_regla', idReglaCreada)
+        .order('objetivo_desde', { ascending: true })
+
+      expect(escalas).toHaveLength(2)
+      expect(Number(escalas![0].porcentaje)).toBe(11)
+      expect(Number(escalas![1].porcentaje)).toBe(16)
+
+      // Terminar regla con éxito
+      const { error: errTerminar } = await authAdminA.rpc('sp_terminar_regla_comision', {
+        p_id_regla: idReglaCreada,
+        p_vigente_hasta: '2028-12-31',
+      })
+      expect(errTerminar).toBeNull()
+    })
+
+    test('Solapado: traduce error de exclusión (23P01) al slug regla-solapada', async () => {
+      // Intentar crear otra regla general en 2026 que solapa con la regla general existente
+      const { error } = await authAdminA.rpc('sp_crear_regla_comision', {
+        p_ambito: 'revendedora',
+        p_nombre: 'Regla Solapada SP',
+        p_id_revendedora: null,
+        p_vigente_desde: '2026-05-01',
+        p_vigente_hasta: '2026-09-01',
+        p_escalas: [{ objetivo_desde: 0, porcentaje: 10 }],
+      })
+
+      expect(error).not.toBeNull()
+      expect(error?.message).toMatch(/regla-solapada/)
+    })
+
+    test('Módulo apagado: rechaza si el módulo revendedoras no está habilitado', async () => {
+      const tC = await createTenantWithUser('C')
+      const authAdminC = await signInAs(tC)
+
+      const { error: errCrear } = await authAdminC.rpc('sp_crear_regla_comision', {
+        p_ambito: 'revendedora',
+        p_nombre: 'Regla Módulo Apagado',
+        p_id_revendedora: null,
+        p_vigente_desde: '2026-01-01',
+        p_vigente_hasta: null,
+        p_escalas: [{ objetivo_desde: 0, porcentaje: 10 }],
+      })
+
+      expect(errCrear).not.toBeNull()
+      expect(errCrear?.message).toMatch(/modulo-revendedoras-deshabilitado/)
+
+      const { error: errTerminar } = await authAdminC.rpc('sp_terminar_regla_comision', {
+        p_id_regla: '00000000-0000-0000-0000-000000000000',
+      })
+      expect(errTerminar).not.toBeNull()
+      expect(errTerminar?.message).toMatch(/modulo-revendedoras-deshabilitado/)
+    })
+
+    test('Otro tenant: no permite terminar regla de otro tenant ni asociar revendedora ajena', async () => {
+      // Intentar terminar la regla de tenant A desde tenant B
+      const { error: errTerminar } = await authAdminB.rpc('sp_terminar_regla_comision', {
+        p_id_regla: idReglaCreada,
+      })
+      expect(errTerminar).not.toBeNull()
+      expect(errTerminar?.message).toMatch(/regla-comision-not-found/)
+
+      // Intentar crear regla en tenant B con revendedora de tenant A
+      const idRevA = Object.values(revendedorasMap)[0]
+      const { error: errCrear } = await authAdminB.rpc('sp_crear_regla_comision', {
+        p_ambito: 'revendedora',
+        p_nombre: 'Regla Revendedora Ajena',
+        p_id_revendedora: idRevA,
+        p_vigente_desde: '2026-01-01',
+        p_vigente_hasta: null,
+        p_escalas: [{ objetivo_desde: 0, porcentaje: 10 }],
+      })
+      expect(errCrear).not.toBeNull()
+      expect(errCrear?.message).toMatch(/revendedora-not-found/)
+    })
+  })
 })
+
 

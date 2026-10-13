@@ -21,11 +21,12 @@ export function extractErrorSlug(error: unknown): string {
 
   if (
     code === '23P01' ||
+    msg.includes('regla-solapada') ||
     msg.includes('regla_comision_general_no_solapada') ||
     msg.includes('regla_comision_propia_no_solapada') ||
     msg.includes('solapada')
   ) {
-    return 'regla-comision-solapada'
+    return 'regla-solapada'
   }
 
   const cleaned = msg.replace(/^.*sp_[a-zA-Z0-9_]+:\s*/, '').trim()
@@ -191,49 +192,20 @@ export async function crearReglaGeneral(
   data: CrearReglaGeneralInput,
 ): Promise<{ ok: true; id_regla: string } | { ok: false; reason: string }> {
   const supabase = await createServerClient()
-  const { data: session } = await supabase.auth.getSession()
-  const tenantId = session?.session?.user?.user_metadata?.tenant_id
+  const { data: resData, error } = await supabase.rpc('sp_crear_regla_comision', {
+    p_ambito: data.ambito,
+    p_nombre: data.nombre,
+    p_id_revendedora: null,
+    p_vigente_desde: data.vigente_desde,
+    p_vigente_hasta: data.vigente_hasta || null,
+    p_escalas: data.escalas,
+  })
 
-  if (!tenantId) {
-    return { ok: false, reason: 'no-session' }
+  if (error) {
+    return { ok: false, reason: extractErrorSlug(error) }
   }
 
-  const { data: regla, error: errRegla } = await supabase
-    .from('regla_comision')
-    .insert({
-      id_tenant: tenantId,
-      ambito: data.ambito,
-      nombre: data.nombre,
-      id_revendedora: null,
-      vigente_desde: data.vigente_desde,
-      vigente_hasta: data.vigente_hasta || null,
-      activo: true,
-    })
-    .select('id_regla')
-    .single()
-
-  if (errRegla) {
-    return { ok: false, reason: extractErrorSlug(errRegla) }
-  }
-
-  const escalasAInsertar = data.escalas.map((e) => ({
-    id_tenant: tenantId,
-    id_regla: regla.id_regla,
-    objetivo_desde: e.objetivo_desde,
-    porcentaje: e.porcentaje,
-  }))
-
-  const { error: errEscalas } = await supabase
-    .from('escala_comision')
-    .insert(escalasAInsertar)
-
-  if (errEscalas) {
-    // Compensación básica si fallan las escalas
-    await supabase.from('regla_comision').delete().eq('id_regla', regla.id_regla)
-    return { ok: false, reason: extractErrorSlug(errEscalas) }
-  }
-
-  return { ok: true, id_regla: regla.id_regla }
+  return { ok: true, id_regla: resData }
 }
 
 /**
@@ -244,13 +216,6 @@ export async function guardarComisionPropia(
   data: GuardarComisionPropiaInput,
 ): Promise<{ ok: true; id_regla: string } | { ok: false; reason: string }> {
   const supabase = await createServerClient()
-  const { data: session } = await supabase.auth.getSession()
-  const tenantId = session?.session?.user?.user_metadata?.tenant_id
-
-  if (!tenantId) {
-    return { ok: false, reason: 'no-session' }
-  }
-
   const tramos =
     data.tipo === 'fijo'
       ? [{ objetivo_desde: 0, porcentaje: data.porcentajeFijo ?? 0 }]
@@ -265,39 +230,20 @@ export async function guardarComisionPropia(
       ? `Comisión fija ${data.porcentajeFijo ?? 0}%`
       : 'Escala personalizada por tramos'
 
-  const { data: regla, error: errRegla } = await supabase
-    .from('regla_comision')
-    .insert({
-      id_tenant: tenantId,
-      ambito: 'revendedora',
-      nombre,
-      id_revendedora: data.id_revendedora,
-      vigente_desde: data.vigente_desde,
-      vigente_hasta: data.vigente_hasta || null,
-      activo: true,
-    })
-    .select('id_regla')
-    .single()
+  const { data: resData, error } = await supabase.rpc('sp_crear_regla_comision', {
+    p_ambito: 'revendedora',
+    p_nombre: nombre,
+    p_id_revendedora: data.id_revendedora,
+    p_vigente_desde: data.vigente_desde,
+    p_vigente_hasta: data.vigente_hasta || null,
+    p_escalas: tramos,
+  })
 
-  if (errRegla) {
-    return { ok: false, reason: extractErrorSlug(errRegla) }
+  if (error) {
+    return { ok: false, reason: extractErrorSlug(error) }
   }
 
-  const { error: errEscalas } = await supabase.from('escala_comision').insert(
-    tramos.map((t) => ({
-      id_tenant: tenantId,
-      id_regla: regla.id_regla,
-      objetivo_desde: t.objetivo_desde,
-      porcentaje: t.porcentaje,
-    })),
-  )
-
-  if (errEscalas) {
-    await supabase.from('regla_comision').delete().eq('id_regla', regla.id_regla)
-    return { ok: false, reason: extractErrorSlug(errEscalas) }
-  }
-
-  return { ok: true, id_regla: regla.id_regla }
+  return { ok: true, id_regla: resData }
 }
 
 /**
@@ -310,10 +256,10 @@ export async function terminarRegla(
   const fechaTermino =
     data.vigente_hasta || new Date().toISOString().split('T')[0]
 
-  const { error } = await supabase
-    .from('regla_comision')
-    .update({ vigente_hasta: fechaTermino })
-    .eq('id_regla', data.id_regla)
+  const { error } = await supabase.rpc('sp_terminar_regla_comision', {
+    p_id_regla: data.id_regla,
+    p_vigente_hasta: fechaTermino,
+  })
 
   if (error) {
     return { ok: false, reason: extractErrorSlug(error) }

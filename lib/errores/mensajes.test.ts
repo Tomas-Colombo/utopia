@@ -47,7 +47,7 @@ const SLUGS_DE_LA_APP = [
   'nombre-requerido', 'orden-invalido', 'pago-credito-sin-cuotas', 'pago-cuotas-medio-invalido',
   'pago-monto-invalido', 'pagos-no-cuadran', 'periodo-invalido', 'producto-not-found',
   'proveedor-con-items', 'quedan-pendientes', 'regla-not-found',
-  'regla-comision-not-found', 'regla-comision-solapada', 'regla_comision_general_no_solapada',
+  'regla-comision-not-found', 'regla-solapada', 'regla-comision-solapada', 'regla_comision_general_no_solapada',
   'regla_comision_propia_no_solapada', 'escala-comision-invalida', 'sin-regla-comision', 'porcentaje-fijo-invalido',
   'reintegro-requiere-cuenta-y-medio', 'rendicion-not-found', 'reserva-no-activa', 'reserva-not-found', 'rol-en-uso',
   'rol-not-found', 'sin-cuenta-predeterminada', 'sin-lineas-pendientes',

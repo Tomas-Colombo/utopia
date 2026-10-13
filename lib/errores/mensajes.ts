@@ -237,6 +237,7 @@ const MENSAJES: Record<string, string> = {
   // ─── Precios: reglas, aranceles, recargos ──────────────────────────
   'regla-not-found': 'Esa regla ya no existe. Recargá la página.',
   'regla-comision-not-found': 'Esa regla de comisión ya no existe. Recargá la página.',
+  'regla-solapada': 'Ya existe una regla de comisión activa con fechas solapadas.',
   'regla-comision-solapada': 'Ya existe una regla de comisión activa con fechas solapadas para este caso.',
   'regla_comision_general_no_solapada': 'Ya existe una regla de comisión general activa con fechas solapadas.',
   'regla_comision_propia_no_solapada': 'Esta revendedora ya tiene una regla de comisión activa con fechas solapadas.',
