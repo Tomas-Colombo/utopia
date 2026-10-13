@@ -417,4 +417,64 @@ describe.skipIf(!hasTestDb)('Venta por canal — Slice 6a (REQ-RV-DB-05)', () =>
     expect(error).not.toBeNull()
     expect(error?.message).toMatch(/canal-no-disponible/)
   })
+
+  test('Slice 6d — canal revendedora registra pago con medio cuenta_revendedora sin cuenta destino', async () => {
+    const f = await ventaFixture('VtaRevPago', 1, { tipoIngreso: 'compra' })
+    await habilitarModuloRevendedoras(f.tenantId)
+
+    const { data: idRev } = await f.authenticated.rpc('sp_crear_revendedora', {
+      p_nombre: 'Clara',
+      p_apellido: 'Pagos',
+    })
+
+    const { data: idCons } = await f.authenticated.rpc(
+      'sp_crear_consignacion_revendedora_con_items',
+      { p_id_revendedora: idRev, p_items: [f.items[0]] },
+    )
+    await f.authenticated.rpc('sp_confirmar_consignacion_revendedora', {
+      p_id_consignacion_revendedora: idCons,
+    })
+
+    const { data: idVenta, error } = await f.authenticated.rpc('sp_registrar_venta', {
+      p_lineas: [{ id_item: f.items[0] }],
+      p_canal: 'revendedora',
+      p_id_revendedora: idRev,
+    })
+
+    expect(error).toBeNull()
+    expect(idVenta).toBeTruthy()
+
+    // El pago debe existir, tener medio cuenta_revendedora y sin id_cuenta_destino
+    const { data: pagos, error: pErr } = await f.serviceRole
+      .from('pago_venta')
+      .select('medio, monto, id_cuenta_destino, costo_cobro')
+      .eq('id_venta', idVenta)
+
+    expect(pErr).toBeNull()
+    expect(pagos).toHaveLength(1)
+    expect(pagos![0].medio).toBe('cuenta_revendedora')
+    expect(pagos![0].id_cuenta_destino).toBeNull()
+    expect(Number(pagos![0].costo_cobro)).toBe(0)
+    expect(Number(pagos![0].monto)).toBe(PRECIO)
+  })
+
+  test('Slice 6d — canal local con medio cuenta_revendedora se rechaza con medio-solo-revendedora', async () => {
+    const f = await ventaFixture('VtaLocalMedioRev', 1, { tipoIngreso: 'compra' })
+
+    const { error } = await f.authenticated.rpc('sp_registrar_venta', {
+      p_lineas: [{ id_item: f.items[0] }],
+      p_canal: 'local',
+      p_pagos: [
+        {
+          id_cuenta_destino: f.idCuenta,
+          medio: 'cuenta_revendedora',
+          monto: PRECIO,
+        },
+      ],
+    })
+
+    expect(error).not.toBeNull()
+    expect(error?.message).toMatch(/medio-solo-revendedora/)
+  })
 })
+

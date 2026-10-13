@@ -56,12 +56,34 @@ describe.skipIf(!hasTestDb)('Finanzas de revendedoras — Slice 6b (REQ-RV-DB-08
         .single(),
     ) as { id_producto: string }
 
-    // 3. Crear 4 ítems de P1 al costo de $40.000 c/u (tipo_ingreso: compra)
-    const { error: stockErr } = await authenticated.rpc('sp_crear_stock_directo', {
-      p_id_producto: prod.id_producto,
-      p_costo: COSTO_P1,
-      p_tipo_ingreso: 'compra',
-      p_items: [{ talle: null, cantidad: 4 }],
+    // 3. Crear 4 ítems de P1 al costo de $40.000 c/u comprados y confirmados en M (total compras: $160.000)
+    const { data: prov } = await sr
+      .from('proveedor')
+      .insert({ id_tenant: tenantId, nombre: 'Proveedor P1' })
+      .select('id_proveedor')
+      .single()
+
+    const { data: ing } = await sr
+      .from('ingreso_mercaderia')
+      .insert({
+        id_tenant: tenantId,
+        tipo_ingreso: 'compra',
+        confirmado: false,
+        id_proveedor: prov!.id_proveedor,
+      })
+      .select('id_ingreso')
+      .single()
+
+    await sr.from('ingreso_mercaderia_detalle').insert({
+      id_tenant: tenantId,
+      id_ingreso: ing!.id_ingreso,
+      id_producto: prod.id_producto,
+      cantidad: 4,
+      costo_unitario: COSTO_P1,
+    })
+
+    const { error: stockErr } = await authenticated.rpc('sp_confirmar_ingreso', {
+      p_id_ingreso: ing!.id_ingreso,
     })
     expect(stockErr).toBeNull()
 
@@ -266,6 +288,28 @@ describe.skipIf(!hasTestDb)('Finanzas de revendedoras — Slice 6b (REQ-RV-DB-08
     expect(Number(res.ganancia_final)).toBe(165_000)
     expect(Number(res.cantidad_ventas)).toBe(3)
     expect(Number(res.ticket_promedio)).toBe(100_000)
+
+    // 8. Evaluar rf_finanzas_flujo para el período M (DR-14)
+    const { data: flujoData, error: flujoErr } = await authenticated
+      .rpc('rf_finanzas_flujo', {
+        p_desde: pDesde,
+        p_hasta: pHasta,
+      })
+      .single()
+
+    expect(flujoErr).toBeNull()
+    expect(flujoData).toBeDefined()
+    const flujo = flujoData as Record<string, unknown>
+
+    expect(Number(flujo.cobrado)).toBe(100_000)
+    expect(Number(flujo.devuelto_clientes)).toBe(0)
+    expect(Number(flujo.costo_cobro)).toBe(0)
+    expect(Number(flujo.neto_cobros)).toBe(100_000)
+    expect(Number(flujo.compras_mercaderia)).toBe(160_000)
+    expect(Number(flujo.pagos_proveedores)).toBe(0)
+    expect(Number(flujo.gastos)).toBe(5_000)
+    expect(Number(flujo.flujo_neto)).toBe(-65_000)
+    expect(flujo.por_acreditar).toEqual({})
   })
 
   test('con modulo revendedoras apagado: comision_liquidada y comision_pendiente_estimada son 0 (REQ-RV-MOD)', async () => {
