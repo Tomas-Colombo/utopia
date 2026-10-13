@@ -192,6 +192,8 @@ export async function spRegistrarVenta(input: RegistrarVentaInput): Promise<stri
           propia: input.financiador.propia ?? false,
         }
       : null) as unknown as object,
+    p_canal: input.canal ?? 'local',
+    p_id_revendedora: input.id_revendedora ?? null,
   })
   if (error) throw new Error(`sp_registrar_venta: ${error.message}`)
   return data as string
