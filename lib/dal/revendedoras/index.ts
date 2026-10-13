@@ -205,3 +205,6 @@ export async function revocarAccesoRevendedora(session: Session, input: { idReve
 
   return { ok: true as const }
 }
+
+export * from './consignacion'
+
