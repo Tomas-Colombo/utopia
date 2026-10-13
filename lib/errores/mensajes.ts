@@ -186,6 +186,7 @@ const MENSAJES: Record<string, string> = {
   'sku-sin-stock': 'Ese código no tiene unidades disponibles en stock.',
   'venta-liquidada': 'Esta venta ya fue liquidada y no se puede anular.',
   'venta-revendedora-sin-id': 'Elegí la revendedora correspondiente para esta venta.',
+  'canal-no-disponible': 'Ese canal de venta todavía no está disponible.',
   'devolucion-venta-revendedora':
     'Las devoluciones de ventas de revendedora no se gestionan como devolución directa de cliente.',
   'item-no-en-revendedora': 'Uno de los ítems no está en poder de esa revendedora.',

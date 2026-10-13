@@ -382,6 +382,10 @@ begin
     raise exception 'lineas-vacias' using errcode = '22023';
   end if;
 
+  if v_canal = 'online' then
+    raise exception 'canal-no-disponible' using errcode = '22023';
+  end if;
+
   -- Validaciones específicas del canal revendedora
   if v_canal = 'revendedora' then
     if not exists (
@@ -541,7 +545,7 @@ begin
 
     v_lineas_procesadas := v_lineas_procesadas || jsonb_build_object(
       'id_item', v_id_item, 'id_producto', v_item.id_producto,
-      'id_prov', v_id_prov, 'precio', v_precio, 'costo', v_costo,
+      'id_prov', coalesce(v_id_prov::text, ''), 'precio', v_precio, 'costo', v_costo,
       'monto_prov', v_monto_prov,
       'monto_gan', v_monto_gan, 'tipo_ingreso', v_item.tipo_ingreso,
       'desglose', coalesce(v_snap->'desglose', '{}'::jsonb),

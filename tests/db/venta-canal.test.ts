@@ -404,4 +404,17 @@ describe.skipIf(!hasTestDb)('Venta por canal — Slice 6a (REQ-RV-DB-05)', () =>
     expect(errRevVenta).not.toBeNull()
     expect(errRevVenta?.message).toMatch(/violates row-level security policy|permission denied|no-permission/i)
   })
+
+  test('canal online se rechaza con canal-no-disponible', async () => {
+    const f = await ventaFixture('VentaOnline', 1)
+
+    const { error } = await f.authenticated.rpc('sp_registrar_venta', {
+      p_lineas: [{ id_item: f.items[0] }],
+      p_forma_pago: 'efectivo',
+      p_canal: 'online',
+    })
+
+    expect(error).not.toBeNull()
+    expect(error?.message).toMatch(/canal-no-disponible/)
+  })
 })
