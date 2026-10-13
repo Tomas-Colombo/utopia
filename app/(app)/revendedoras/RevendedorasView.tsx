@@ -49,13 +49,16 @@ export function RevendedorasView({ data, canCreate }: { data: RevendedoraRow[], 
 
   return (
     <div className="flex flex-col gap-4">
-      {canCreate && (
-        <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
+        <Button variant="secondary" onClick={() => router.push('/revendedoras/comisiones')}>
+          Reglas de comisión
+        </Button>
+        {canCreate && (
           <Button onClick={() => router.push('/revendedoras/nuevo')}>
             Nueva revendedora
           </Button>
-        </div>
-      )}
+        )}
+      </div>
       <div className="rounded-lg border border-border bg-card overflow-hidden">
         <Table columns={columns} data={data} />
       </div>

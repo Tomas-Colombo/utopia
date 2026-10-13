@@ -82,13 +82,13 @@ Prerrequisito de todo lo que lee una revendedora. `/judgment-day` antes de empez
 
 ## Slice 5 — Motor de comisiones (~400) · REQ-RV-DB-04
 
-- [ ] `lib/comisiones/__fixtures__/escalas.ts` primero; test unitario y test de DB sobre la misma tabla.
-- [ ] `00081_comisiones.sql`: enums, `regla_comision`, `escala_comision`, `EXCLUDE` de vigencias,
+- [x] `lib/comisiones/__fixtures__/escalas.ts` primero; test unitario y test de DB sobre la misma tabla.
+- [x] `00086_comisiones.sql`: enums, `regla_comision`, `escala_comision`, `EXCLUDE` de vigencias,
   `fn_resolver_comision`, semilla al habilitar módulo (`sp_toggle_tenant_modulo`).
-- [ ] `lib/comisiones/resolver-comision.ts`; editor de la regla general en `revendedoras/comisiones/` y
+- [x] `lib/comisiones/resolver-comision.ts`; editor de la regla general en `revendedoras/comisiones/` y
   **editor de comisión propia en la ficha de cada revendedora** (escala o % fijo, muestra si rige la
   propia o la general). Test: cambiar la regla no altera liquidaciones ya generadas.
-- [ ] `/code-review` sobre `precios` (el resolutor que se espeja).
+- [x] `/code-review` sobre `precios` (el resolutor que se espeja).
 
 ## Slice 6a — Venta por canal: schema + trigger + SP (~400) ⚠⚠ · REQ-RV-DB-05
 
