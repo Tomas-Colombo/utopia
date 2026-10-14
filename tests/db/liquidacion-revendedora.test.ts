@@ -247,5 +247,184 @@ describe.skipIf(!hasTestDb)('Liquidación de revendedoras — Slice 7a (REQ-RV-D
     expect(d1Post!.id_liquidacion).toBe(idLiq)
     expect(Number(d1Post!.monto_comision)).toBe(10_000)
 
+    // Comprobar que V2 NO fue sellada (sigue excluida)
+    const { data: d2Post } = await sr.from('detalle_venta').select('*').eq('id_detalle_venta', idDetalle2).single()
+    expect(d2Post!.id_liquidacion).toBeNull()
+    expect(d2Post!.excluida_liquidacion).toBe(true)
+
+    // 8. Invariante: no se liquida dos veces (preview ahora da vacío)
+    const { data: prev3Data, error: prev3Err } = await authenticated.rpc('preview_liquidacion', {
+      p_id_revendedora: idRev,
+      p_desde: pDesde,
+      p_hasta: pHasta,
+    })
+    const prev3 = prev3Data as PreviewLiquidacion
+    expect(prev3Err).toBeNull()
+    expect(prev3.cantidad_lineas).toBe(0)
+
+    // Generar de nuevo da liquidacion-vacia
+    const { error: liqVaciaErr } = await authenticated.rpc('sp_generar_liquidacion', {
+      p_id_revendedora: idRev,
+      p_desde: pDesde,
+      p_hasta: pHasta,
+    })
+    expect(liqVaciaErr?.message).toContain('liquidacion-vacia')
+
+    // 9. Anular venta liquidada es rechazado con venta-liquidada
+    const { error: anularErr } = await authenticated.rpc('sp_anular_venta', {
+      p_id_venta: idVenta1,
+      p_motivo: 'Intento anular liquidada',
+    })
+    expect(anularErr?.message).toContain('venta-liquidada')
+
+    // 10. Intentar excluir o modificar línea ya liquidada es rechazado
+    const { error: excLiqErr } = await authenticated.rpc('sp_excluir_detalle_liquidacion', {
+      p_id_detalle: idDetalle1,
+    })
+    expect(excLiqErr?.message).toContain('detalle-ya-liquidado')
+
+    // Trigger de inmutabilidad en detalle_venta: UPDATE directo sobre línea liquidada rechazado
+    const { error: updDirectoErr } = await sr
+      .from('detalle_venta')
+      .update({ precio_venta: 120_000 })
+      .eq('id_detalle_venta', idDetalle1)
+    expect(updDirectoErr).not.toBeNull()
+
+    // 11. Cambiar la regla de comisión DESPUÉS de liquidar no altera la liquidación
+    const nextDate = new Date(new Date(pHasta).getTime() + 86400000).toISOString().slice(0, 10)
+    await authenticated.rpc('sp_terminar_regla_comision', {
+      p_id_regla: idRegla1 as string,
+      p_vigente_hasta: pHasta,
+    })
+    const { error: r2Err } = await authenticated.rpc('sp_crear_regla_comision', {
+      p_ambito: 'revendedora',
+      p_nombre: 'Regla Nueva R1',
+      p_id_revendedora: idRev,
+      p_vigente_desde: nextDate,
+      p_escalas: [{ objetivo_desde: 0, porcentaje: 50 }],
+    })
+    expect(r2Err).toBeNull()
+    const { data: liqCheck } = await sr.from('liquidacion_revendedora').select('*').eq('id_liquidacion', idLiq).single()
+    expect(Number(liqCheck!.monto_comision)).toBe(10_000)
+    expect(Number(liqCheck!.porcentaje_aplicado)).toBe(10)
+
+    // 12. Cuenta corriente antes de pagar L1
+    const { data: ccAntes, error: ccAntesErr } = await authenticated.rpc('rf_cuenta_corriente_revendedora', {
+      p_id_revendedora: idRev,
+    })
+    expect(ccAntesErr).toBeNull()
+    const cc1 = Array.isArray(ccAntes) ? ccAntes[0] : ccAntes
+    expect(Number(cc1.total_vendido)).toBe(200_000)
+    expect(Number(cc1.total_comision_liquidada)).toBe(10_000)
+    expect(Number(cc1.total_liquidado)).toBe(90_000)
+    expect(Number(cc1.total_pagado)).toBe(0)
+    // adeudado = total_vendido - total_comision_liquidada - total_pagado = 200.000 - 10.000 - 0 = 190.000
+    expect(Number(cc1.adeudado)).toBe(190_000)
+
+    // 13. Marcar liquidación pagada
+    // Cuenta bancaria del tenant
+    const { data: cta } = await sr
+      .from('cuenta_destino')
+      .insert({
+        id_tenant: tenantId,
+        nombre: 'Banco Test',
+        tipo: 'banco',
+        activo: true,
+      })
+      .select('id_cuenta_destino')
+      .single()
+    const idCuenta = cta!.id_cuenta_destino
+
+    // Pago con monto incorrecto rechazado
+    const { error: pagoMontoErr } = await authenticated.rpc('sp_marcar_liquidacion_pagada', {
+      p_id_liquidacion: idLiq,
+      p_id_cuenta: idCuenta,
+      p_monto: 50_000, // debe ser 90.000
+    })
+    expect(pagoMontoErr?.message).toContain('monto-pago-invalido')
+
+    // Pago a cuenta de otro tenant rechazado
+    const otherUser = await createTenantWithUser('OtherTenantLiq')
+    const { data: otherCta } = await otherUser.serviceRole
+      .from('cuenta_destino')
+      .insert({
+        id_tenant: otherUser.tenantId,
+        nombre: 'Banco Otro Tenant',
+        tipo: 'banco',
+        activo: true,
+      })
+      .select('id_cuenta_destino')
+      .single()
+
+    const { error: otherCtaErr } = await authenticated.rpc('sp_marcar_liquidacion_pagada', {
+      p_id_liquidacion: idLiq,
+      p_id_cuenta: otherCta!.id_cuenta_destino,
+      p_monto: 90_000,
+    })
+    expect(otherCtaErr?.message).toContain('cuenta-invalida-liquidacion')
+
+    // Pago correcto
+    const { error: pagoOkErr } = await authenticated.rpc('sp_marcar_liquidacion_pagada', {
+      p_id_liquidacion: idLiq,
+      p_id_cuenta: idCuenta,
+      p_monto: 90_000,
+      p_metodo: 'transferencia',
+      p_referencia: 'TR-123456',
+    })
+    expect(pagoOkErr).toBeNull()
+
+    // Liquidación pasa a pagada
+    const { data: liqPagada } = await sr.from('liquidacion_revendedora').select('*').eq('id_liquidacion', idLiq).single()
+    expect(liqPagada!.estado).toBe('pagada')
+    expect(liqPagada!.fecha_pago).not.toBeNull()
+
+    // Intentar pagar nuevamente es rechazado
+    const { error: yaPagadaErr } = await authenticated.rpc('sp_marcar_liquidacion_pagada', {
+      p_id_liquidacion: idLiq,
+      p_id_cuenta: idCuenta,
+      p_monto: 90_000,
+    })
+    expect(yaPagadaErr?.message).toContain('liquidacion-ya-pagada')
+
+    // 14. pago_revendedora es append-only: UPDATE y DELETE rechazados por trigger
+    const { data: pagos } = await sr.from('pago_revendedora').select('*').eq('id_liquidacion', idLiq)
+    expect(pagos).toHaveLength(1)
+    const idPago = pagos![0].id_pago_revendedora
+
+    const { error: updPagoErr } = await sr.from('pago_revendedora').update({ monto: 100_000 }).eq('id_pago_revendedora', idPago)
+    expect(updPagoErr).not.toBeNull()
+
+    const { error: delPagoErr } = await sr.from('pago_revendedora').delete().eq('id_pago_revendedora', idPago)
+    expect(delPagoErr).not.toBeNull()
+
+    // 15. Cuenta corriente después de pagar L1
+    const { data: ccDespues, error: ccDespErr } = await authenticated.rpc('rf_cuenta_corriente_revendedora', {
+      p_id_revendedora: idRev,
+    })
+    expect(ccDespErr).toBeNull()
+    const cc2 = Array.isArray(ccDespues) ? ccDespues[0] : ccDespues
+    expect(Number(cc2.total_vendido)).toBe(200_000)
+    expect(Number(cc2.total_comision_liquidada)).toBe(10_000)
+    expect(Number(cc2.total_liquidado)).toBe(90_000)
+    expect(Number(cc2.total_pagado)).toBe(90_000)
+    // adeudado = 200.000 - 10.000 - 90.000 = 100.000 (resta V2 excluida)
+    expect(Number(cc2.adeudado)).toBe(100_000)
+
+    // 16. Re-incluir detalle excluido (V2)
+    const { error: reincErr } = await authenticated.rpc('sp_reincluir_detalle_liquidacion', {
+      p_id_detalle: idDetalle2,
+    })
+    expect(reincErr).toBeNull()
+
+    // Ahora preview_liquidacion la vuelve a incluir
+    const { data: prevReincData } = await authenticated.rpc('preview_liquidacion', {
+      p_id_revendedora: idRev,
+      p_desde: pDesde,
+      p_hasta: pHasta,
+    })
+    const prevReinc = prevReincData as PreviewLiquidacion
+    expect(prevReinc.cantidad_lineas).toBe(1)
+    expect(Number(prevReinc.monto_vendido)).toBe(100_000)
+
   })
 })
