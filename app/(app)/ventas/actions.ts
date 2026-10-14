@@ -11,6 +11,7 @@ import {
 } from '@/lib/dal/clientes/cliente'
 import {
   spAnularVenta,
+  spRegistrarCambio,
   spRegistrarDevolucionCliente,
   spRegistrarVenta,
 } from '@/lib/dal/ventas/venta'
@@ -27,6 +28,7 @@ import {
 import { primerReason } from '@/lib/validation/administracion'
 import {
   anularVentaSchema,
+  cambiarItemVentaSchema,
   devolverItemVentaSchema,
   registrarVentaSchema,
 } from '@/lib/validation/ventas'
@@ -156,6 +158,44 @@ export async function devolverItemVentaAction(input: {
       parsed.data.medioReintegro
     )
     revalidatePath(`/ventas/${parsed.data.idVenta}`)
+    return { ok: true, data: res }
+  } catch (e) {
+    return { ok: false, reason: (e as Error).message }
+  }
+}
+
+export async function cambiarItemVentaAction(
+  rawInput: unknown,
+): Promise<ActionResult<{ id_cambio: string; diferencia: number; id_detalle_nuevo: string }>> {
+  const gVentas = await guarded('ventas', 'crear')
+  if (!gVentas.ok) return { ok: false, reason: gVentas.error }
+
+  const parsed = cambiarItemVentaSchema.safeParse(rawInput)
+  if (!parsed.success) return { ok: false, reason: primerReason(parsed.error) }
+
+  if (parsed.data.canal === 'revendedora') {
+    const gRev = await guarded('revendedoras', 'crear')
+    if (!gRev.ok) return { ok: false, reason: gRev.error }
+  }
+
+  try {
+    const res = await spRegistrarCambio(
+      parsed.data.idDetalleOriginal,
+      parsed.data.idItemEntregado,
+      parsed.data.motivo,
+      parsed.data.medioCobro,
+      parsed.data.idCuentaDestino,
+    )
+    revalidatePath('/ventas')
+    revalidatePath(`/ventas/${parsed.data.idVenta}`)
+    revalidatePath('/inventario/productos')
+    revalidatePath('/inventario')
+    if (parsed.data.canal === 'revendedora') {
+      revalidatePath('/revendedoras')
+      if (parsed.data.idRevendedora) {
+        revalidatePath(`/revendedoras/${parsed.data.idRevendedora}`)
+      }
+    }
     return { ok: true, data: res }
   } catch (e) {
     return { ok: false, reason: (e as Error).message }
