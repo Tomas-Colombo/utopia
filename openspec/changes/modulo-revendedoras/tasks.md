@@ -163,10 +163,10 @@ Después de la consignación (Slice 4) y antes de la liquidación: da visibilida
 
 ## Slice 9b — Declaración de venta: DB (~350) · REQ-RV-ACC-30…33
 
-- [ ] Test primero (ACC-07 puntos 4–6): declarar ítem ajeno o `disponible` rechazado; doble
+- [x] Test primero (ACC-07 puntos 4–6): declarar ítem ajeno o `disponible` rechazado; doble
   declaración pendiente rechazada; confirmar crea venta canal revendedora y enlaza `id_venta`;
   rechazar exige motivo; ella no puede confirmar.
-- [ ] Migración: tabla, índice único parcial, SPs `declarar/retirar/confirmar/rechazar`.
+- [x] Migración: tabla, índice único parcial, SPs `declarar/retirar/confirmar/rechazar`.
 
 ## Slice 9c — Funciones `rvp_*` (~350) ⚠ · REQ-RV-ACC-20…23
 
