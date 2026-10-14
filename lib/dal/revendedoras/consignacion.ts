@@ -390,8 +390,9 @@ export async function lookupItemParaConsignacionRevendedora(
 }
 
 export async function lookupItemParaVentaRevendedora(
-  code: string,
+  code: string | undefined,
   idRevendedora: string,
+  idProducto?: string,
 ): Promise<
   | {
       ok: true
@@ -412,6 +413,10 @@ export async function lookupItemParaVentaRevendedora(
 > {
   const supabase = await createServerClient()
 
+  if (!code && !idProducto) {
+    return { ok: false, reason: 'qr-vacio' }
+  }
+
   if (!idRevendedora) {
     return { ok: false, reason: 'revendedora-requerida' }
   }
@@ -428,29 +433,40 @@ export async function lookupItemParaVentaRevendedora(
 
   let itemId: string | null = null
 
-  const { data: itemPorQr, error: qrErr } = await supabase
-    .from('item_producto')
-    .select('id_item, id_producto, qr_code, estado_item')
-    .eq('qr_code', code)
-    .maybeSingle()
-
-  if (qrErr) throw qrErr
-
-  if (itemPorQr) {
-    itemId = itemPorQr.id_item
-  } else {
-    const upper = code.toUpperCase()
-    const m = upper.match(/^([A-Z0-9_-]+)/)
-    const baseSku = m ? m[1] : upper
-
-    const { data: prod } = await supabase
-      .from('producto')
-      .select('id_producto')
-      .or(`sku.eq.${baseSku},nombre.ilike.%${code}%`)
-      .limit(1)
+  if (code) {
+    const { data: itemPorQr, error: qrErr } = await supabase
+      .from('item_producto')
+      .select('id_item, id_producto, qr_code, estado_item')
+      .eq('qr_code', code)
       .maybeSingle()
 
-    if (prod) {
+    if (qrErr) throw qrErr
+
+    if (itemPorQr) {
+      itemId = itemPorQr.id_item
+    }
+  }
+
+  if (!itemId) {
+    let prodId: string | null = idProducto ?? null
+    if (!prodId && code) {
+      const upper = code.toUpperCase()
+      const m = upper.match(/^([A-Z0-9_-]+)/)
+      const baseSku = m ? m[1] : upper
+
+      const { data: prod } = await supabase
+        .from('producto')
+        .select('id_producto')
+        .or(`sku.eq.${baseSku},nombre.ilike.%${code}%`)
+        .limit(1)
+        .maybeSingle()
+
+      if (prod) {
+        prodId = prod.id_producto
+      }
+    }
+
+    if (prodId) {
       const { data: itemsCandidatos } = await supabase
         .from('consignacion_revendedora_detalle')
         .select(`
@@ -470,7 +486,7 @@ export async function lookupItemParaVentaRevendedora(
         .eq('consignacion_revendedora.confirmada', true)
         .eq('consignacion_revendedora.estado', 'abierta')
         .eq('estado_detalle', 'en_poder')
-        .eq('item.id_producto', prod.id_producto)
+        .eq('item.id_producto', prodId)
         .eq('item.estado_item', 'en_revendedora')
         .limit(1)
 
