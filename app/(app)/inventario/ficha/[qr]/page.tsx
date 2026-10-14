@@ -8,6 +8,8 @@ import { findItemByQr, getItemConDetalle } from '@/lib/dal/inventario/item'
 import type { EstadoItem } from '@/lib/types/inventario'
 import { EscanearOtro } from './EscanearOtro'
 import { FichaActions } from './FichaActions'
+import { hasModuleAccess } from '@/lib/dal/guard'
+import { quienTieneItem } from '@/lib/dal/revendedoras'
 
 const ESTADO_LABEL: Record<EstadoItem, string> = {
   disponible: 'Disponible',
@@ -63,6 +65,10 @@ export default async function FichaItemPage(props: {
 
   const detalle = await getItemConDetalle(base.id_item)
   if (!detalle) return null // RLS could hide between calls
+
+  const puedeVerRevendedoras = hasModuleAccess(session, 'revendedoras', 'ver')
+  const quienTieneRes = puedeVerRevendedoras ? await quienTieneItem(decoded) : null
+  const enPoderDe = quienTieneRes?.ok ? quienTieneRes.data : null
 
   return (
     <>
@@ -129,6 +135,48 @@ export default async function FichaItemPage(props: {
               qr={qr}
               estadoActual={detalle.estado_item}
             />
+
+            {enPoderDe && (
+              <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-display text-lg">En poder de revendedora</h3>
+                  <Link
+                    href={`/revendedoras/${enPoderDe.id_revendedora}`}
+                    className="text-sm font-semibold text-rosa hover:underline"
+                  >
+                    Ver revendedora
+                  </Link>
+                </div>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <div className="text-xs uppercase font-mono text-muted">Revendedora</div>
+                    <div className="font-medium">
+                      {enPoderDe.nombre} {enPoderDe.apellido}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs uppercase font-mono text-muted">Entregado el</div>
+                    <div>
+                      {enPoderDe.fecha_entrega
+                        ? new Date(enPoderDe.fecha_entrega).toLocaleDateString('es-AR')
+                        : '—'}
+                    </div>
+                  </div>
+                  {enPoderDe.telefono && (
+                    <div>
+                      <div className="text-xs uppercase font-mono text-muted">Teléfono</div>
+                      <div>{enPoderDe.telefono}</div>
+                    </div>
+                  )}
+                  {enPoderDe.email && (
+                    <div>
+                      <div className="text-xs uppercase font-mono text-muted">Email</div>
+                      <div>{enPoderDe.email}</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             <div className="rounded-lg border border-border bg-card p-4 flex items-center justify-between">
               <div>
