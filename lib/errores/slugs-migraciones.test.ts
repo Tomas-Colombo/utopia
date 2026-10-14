@@ -26,6 +26,7 @@ const SIN_MENSAJE: Record<string, string> = {
   'venta-inmutable': 'trigger 00068, defensivo',
   'detalle-venta-inmutable': 'trigger 00068, defensivo',
   'pago-venta-inmutable': 'trigger 00068, defensivo',
+  'pago-revendedora-inmutable': 'trigger 00094, defensivo',
   'cuadre-pagos-fallido': 'constraint trigger 00068, defensivo',
   'ingreso-confirmado': 'trigger 00051, defensivo',
   'financiacion-no-cuadra': 'chequeo defensivo de sp_registrar_venta',

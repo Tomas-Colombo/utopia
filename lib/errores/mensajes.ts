@@ -254,6 +254,16 @@ const MENSAJES: Record<string, string> = {
     'Este proveedor no tiene líneas pendientes de rendir en este momento.',
 
   // ─── Precios: reglas, aranceles, recargos ──────────────────────────
+  // ─── Liquidaciones (Revendedoras) ──────────────────────────────────
+  'liquidacion-vacia': 'No hay ventas pendientes de liquidar en el período seleccionado.',
+  'liquidacion-ya-pagada': 'Esta liquidación ya fue marcada como pagada.',
+  'cuenta-invalida-liquidacion': 'La cuenta seleccionada no pertenece al negocio o no está activa.',
+  'monto-pago-invalido': 'El monto del pago debe coincidir exactamente con el total a cobrar de la liquidación.',
+  'detalle-ya-liquidado': 'No se puede modificar una línea que ya forma parte de una liquidación.',
+  'detalle-no-en-liquidacion': 'La línea seleccionada no pertenece a esta liquidación.',
+  'liquidacion-no-encontrada': 'No se encontró la liquidación seleccionada.',
+  'revendedora-invalida-liquidacion': 'La revendedora seleccionada no es válida o no pertenece al negocio.',
+
   'regla-not-found': 'Esa regla ya no existe. Recargá la página.',
   'regla-comision-not-found': 'Esa regla de comisión ya no existe. Recargá la página.',
   'regla-solapada': 'Ya existe una regla de comisión activa con fechas solapadas.',

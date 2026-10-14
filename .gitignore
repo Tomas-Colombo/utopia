@@ -57,6 +57,7 @@ next-env.d.ts
 #carpeta
 utopia-intructivo/
 supabase/.temp/
+.claude/worktrees/
 
 seed_dev.sql
 

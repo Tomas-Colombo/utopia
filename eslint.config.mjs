@@ -18,6 +18,8 @@ const eslintConfig = defineConfig([
     "e2e/.report/**",
     // Reporte de cobertura generado (vitest): JS minificado ajeno.
     "coverage/**",
+    // Directorios de worktrees de agentes externos
+    ".claude/**",
   ]),
   {
     // Playwright's fixture API takes a callback named `use`, which the React
