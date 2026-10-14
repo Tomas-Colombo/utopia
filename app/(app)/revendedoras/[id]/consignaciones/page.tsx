@@ -6,6 +6,7 @@ import { hasPermission, requireModuleRole } from '@/lib/dal/guard'
 import { verifySession } from '@/lib/dal/session'
 import { obtenerRevendedora, listConsignacionesRevendedora } from '@/lib/dal/revendedoras'
 import { ConsignacionesRevendedoraTable } from './ConsignacionesRevendedoraTable'
+import { RevendedoraTabs } from '../RevendedoraTabs'
 
 export default async function ConsignacionesRevendedoraPage(props: {
   params: Promise<{ id: string }>
@@ -35,6 +36,7 @@ export default async function ConsignacionesRevendedoraPage(props: {
         }
       />
       <main className="flex-1 p-6 space-y-6">
+        <RevendedoraTabs idRevendedora={id} activeTab="consignaciones" />
         <div className="rounded-lg border border-border bg-card p-6 space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="font-display text-lg">Historial de consignaciones</h2>

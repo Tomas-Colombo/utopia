@@ -5,9 +5,7 @@ import { obtenerRevendedora, getComisionRevendedora } from '@/lib/dal/revendedor
 import { hasPermission } from '@/lib/dal/guard'
 import { EditarRevendedoraForm } from './EditarRevendedoraForm'
 import { ComisionPropiaCard } from './ComisionPropiaCard'
-
-import Link from 'next/link'
-import { Button } from '@/components/ui/Button'
+import { RevendedoraTabs } from './RevendedoraTabs'
 
 export default async function RevendedoraPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await verifySession()
@@ -25,15 +23,9 @@ export default async function RevendedoraPage({ params }: { params: Promise<{ id
         title={`${revendedora.nombre} ${revendedora.apellido}`}
         session={session}
         backHref="/revendedoras"
-        actions={
-          <Link href={`/revendedoras/${revendedora.id_revendedora}/consignaciones`}>
-            <Button size="sm" variant="secondary">
-              Consignaciones
-            </Button>
-          </Link>
-        }
       />
-      <main className="flex-1 p-6 space-y-6 max-w-2xl">
+      <main className="flex-1 p-6 space-y-6 max-w-4xl">
+        <RevendedoraTabs idRevendedora={revendedora.id_revendedora} activeTab="resumen" />
         <div className="rounded-lg border border-border bg-card p-6">
           <EditarRevendedoraForm revendedora={revendedora} />
         </div>
