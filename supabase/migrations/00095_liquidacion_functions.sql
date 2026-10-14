@@ -419,3 +419,130 @@ $$;
 
 grant execute on function sp_generar_liquidacion(uuid, date, date, text, inet) to authenticated;
 
+-- ─── 3. sp_excluir_detalle_liquidacion (INVOKER) ──────────────────────
+
+create or replace function sp_excluir_detalle_liquidacion(
+  p_id_detalle uuid,
+  p_motivo     text default null,
+  p_ip         inet default null
+) returns void
+language plpgsql
+security invoker
+as $$
+declare
+  v_tenant     uuid := auth_tenant_id();
+  v_actor      uuid := auth.uid();
+  v_liquidada  boolean;
+  v_excluida   boolean;
+begin
+  if v_tenant is null then
+    raise exception 'no-tenant' using errcode = '42501';
+  end if;
+
+  if auth_revendedora_id() is not null then
+    raise exception 'no-permission' using errcode = '42501';
+  end if;
+
+  if not exists (
+    select 1 from tenant_modulo tm
+    join modulo m on m.id_modulo = tm.id_modulo
+    where tm.id_tenant = v_tenant and m.codigo = 'revendedoras' and tm.habilitado = true
+  ) then
+    raise exception 'modulo-revendedoras-deshabilitado' using errcode = '42501';
+  end if;
+
+  select id_liquidacion is not null, excluida_liquidacion
+    into v_liquidada, v_excluida
+    from detalle_venta
+   where id_detalle_venta = p_id_detalle and id_tenant = v_tenant
+   for update;
+
+  if not found then
+    raise exception 'detalle-not-found' using errcode = '42704';
+  end if;
+
+  if v_liquidada then
+    raise exception 'detalle-ya-liquidado' using errcode = '22023';
+  end if;
+
+  if v_excluida then
+    return; -- idempotente
+  end if;
+
+  update detalle_venta
+     set excluida_liquidacion = true
+   where id_detalle_venta = p_id_detalle;
+
+  insert into auditoria (id_tenant, id_usuario, entidad, entidad_id, accion, cambios, ip)
+  values (
+    v_tenant, v_actor, 'detalle_venta', p_id_detalle::text, 'excluir_liquidacion',
+    jsonb_build_object('motivo', p_motivo), p_ip
+  );
+end;
+$$;
+
+grant execute on function sp_excluir_detalle_liquidacion(uuid, text, inet) to authenticated;
+
+-- ─── 4. sp_reincluir_detalle_liquidacion (INVOKER) ────────────────────
+
+create or replace function sp_reincluir_detalle_liquidacion(
+  p_id_detalle uuid,
+  p_ip         inet default null
+) returns void
+language plpgsql
+security invoker
+as $$
+declare
+  v_tenant     uuid := auth_tenant_id();
+  v_actor      uuid := auth.uid();
+  v_liquidada  boolean;
+  v_excluida   boolean;
+begin
+  if v_tenant is null then
+    raise exception 'no-tenant' using errcode = '42501';
+  end if;
+
+  if auth_revendedora_id() is not null then
+    raise exception 'no-permission' using errcode = '42501';
+  end if;
+
+  if not exists (
+    select 1 from tenant_modulo tm
+    join modulo m on m.id_modulo = tm.id_modulo
+    where tm.id_tenant = v_tenant and m.codigo = 'revendedoras' and tm.habilitado = true
+  ) then
+    raise exception 'modulo-revendedoras-deshabilitado' using errcode = '42501';
+  end if;
+
+  select id_liquidacion is not null, excluida_liquidacion
+    into v_liquidada, v_excluida
+    from detalle_venta
+   where id_detalle_venta = p_id_detalle and id_tenant = v_tenant
+   for update;
+
+  if not found then
+    raise exception 'detalle-not-found' using errcode = '42704';
+  end if;
+
+  if v_liquidada then
+    raise exception 'detalle-ya-liquidado' using errcode = '22023';
+  end if;
+
+  if not v_excluida then
+    return; -- idempotente
+  end if;
+
+  update detalle_venta
+     set excluida_liquidacion = false
+   where id_detalle_venta = p_id_detalle;
+
+  insert into auditoria (id_tenant, id_usuario, entidad, entidad_id, accion, cambios, ip)
+  values (
+    v_tenant, v_actor, 'detalle_venta', p_id_detalle::text, 'reincluir_liquidacion',
+    '{}'::jsonb, p_ip
+  );
+end;
+$$;
+
+grant execute on function sp_reincluir_detalle_liquidacion(uuid, inet) to authenticated;
+
