@@ -9,7 +9,10 @@ import {
   getSerieMensual,
   getGastosPresupuesto,
   getRankingProductos,
-} from '@/lib/dal/reportes/finanzas'
+  getPerfilRevendedoras,
+  getCumplimientoObjetivos,
+  getResumenCanal,
+} from '@/lib/dal/reportes'
 import { ReportesPeriodoForm } from './ReportesPeriodoForm'
 import { periodoAnterior } from '@/lib/fechas'
 import { searchParamsReportesSchema } from '@/lib/validation/reportes'
@@ -24,6 +27,7 @@ import { BloqueMercaderia } from '@/components/reportes/BloqueMercaderia'
 import { BloqueProveedores } from '@/components/reportes/BloqueProveedores'
 import { BloqueGastos } from '@/components/reportes/BloqueGastos'
 import { BloqueRanking } from '@/components/reportes/BloqueRanking'
+import { BloqueRevendedoras } from '@/components/reportes/BloqueRevendedoras'
 
 async function tryFetch<T>(promise: Promise<T>): Promise<{ ok: true; data: T } | { ok: false }> {
   try {
@@ -53,8 +57,10 @@ export default async function ReportesPage(props: {
 
   const puedeVerVentas = hasModuleAccess(session, 'ventas', 'ver')
   const puedeVerInventario = hasModuleAccess(session, 'inventario', 'ver')
+  const puedeVerRevendedoras = hasModuleAccess(session, 'revendedoras', 'ver')
   const tieneGastos = session.modulosHabilitados.includes('gastos')
   const tieneRendiciones = session.modulosHabilitados.includes('rendiciones')
+  const idRevendedora = parsed.success ? parsed.data.id_revendedora : undefined
 
   // Las funciones rf_finanzas_* reciben fechas y tratan `hasta` como inclusivo:
   // se pasan tal cual. Sumarle un día (como en las consultas por timestamp)
@@ -63,7 +69,8 @@ export default async function ReportesPage(props: {
     resultadosReq, resultadosPrevReq,
     flujoReq, flujoPrevReq,
     posicionReq, serieReq,
-    rankingReq, gastosReq
+    rankingReq, gastosReq,
+    resumenCanalReq, perfilRevendedorasReq, objetivosReq,
   ] = await Promise.all([
     tryFetch(getResultados(desde, hasta)),
     tryFetch(getResultados(prev.desde, prev.hasta)),
@@ -73,6 +80,9 @@ export default async function ReportesPage(props: {
     tryFetch(getSerieMensual(hasta, 12)),
     tryFetch(getRankingProductos(desde, hasta, limite, orden)),
     tieneGastos ? tryFetch(getGastosPresupuesto(hasta)) : Promise.resolve({ ok: false as const }),
+    puedeVerRevendedoras ? tryFetch(getResumenCanal(desde, hasta)) : Promise.resolve({ ok: false as const }),
+    puedeVerRevendedoras ? tryFetch(getPerfilRevendedoras(desde, hasta, idRevendedora)) : Promise.resolve({ ok: false as const }),
+    puedeVerRevendedoras ? tryFetch(getCumplimientoObjetivos(desde, hasta, idRevendedora)) : Promise.resolve({ ok: false as const }),
   ])
 
   return (
@@ -169,6 +179,20 @@ export default async function ReportesPage(props: {
             )
           )}
         </div>
+
+        {puedeVerRevendedoras && (
+          resumenCanalReq.ok && perfilRevendedorasReq.ok && objetivosReq.ok ? (
+            <BloqueRevendedoras
+              resumenCanal={resumenCanalReq.data}
+              perfiles={perfilRevendedorasReq.data}
+              objetivos={objetivosReq.data}
+              desde={desde}
+              hasta={hasta}
+            />
+          ) : (
+            <BloqueError />
+          )
+        )}
       </main>
     </>
   )

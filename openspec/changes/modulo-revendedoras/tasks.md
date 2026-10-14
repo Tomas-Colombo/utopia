@@ -156,10 +156,10 @@ Después de la consignación (Slice 4) y antes de la liquidación: da visibilida
 
 ## Slice 9 — Reportes (~350) · REQ-RV-DB-08
 
-- [ ] `00089_reportes_revendedoras.sql`: `rf_perfil_revendedora`, `rf_cumplimiento_objetivos` (`INVOKER`).
-- [ ] `bloquesVisibles` + bloque `revendedoras` (test de visibilidad por módulo y permiso);
+- [x] `00102_reportes_revendedoras.sql`: `rf_perfil_revendedora`, `rf_cumplimiento_objetivos`, `rf_resumen_canal` (`INVOKER`).
+- [x] `bloquesVisibles` + bloque `revendedoras` (test de visibilidad por módulo y permiso);
   `BloqueError` aislado; CSV con `csvNegative`.
-- [ ] `tests/db/reportes-revendedoras.test.ts` con fixture fijo y cifras calculadas a mano.
+- [x] `tests/db/reportes-revendedoras.test.ts` con fixture fijo y cifras calculadas a mano.
 
 ## Slice 9b — Declaración de venta: DB (~350) · REQ-RV-ACC-30…33
 
