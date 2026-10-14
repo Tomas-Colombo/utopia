@@ -1,7 +1,7 @@
-﻿-- 00097_panel_revendedoras.sql
--- Slice 4b: Panel de gestiÃ³n del local (REQ-RV-ADM)
+-- 00097_panel_revendedoras.sql
+-- Slice 4b: Panel de gestión del local (REQ-RV-ADM)
 -- Funciones de lectura INVOKER: rf_panel_revendedoras, rf_totales_panel_revendedoras, rf_quien_tiene_item.
--- ActualizaciÃ³n de sp_crear_revendedora para validar email-duplicado.
+-- Actualización de sp_crear_revendedora para validar email-duplicado.
 
 -- DOWN:
 -- drop function if exists rf_quien_tiene_item(text);
@@ -39,7 +39,7 @@
 --   return v_id;
 -- end $$;
 
--- â”€â”€â”€ 1. rf_totales_panel_revendedoras (INVOKER) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+-- ─── 1. rf_totales_panel_revendedoras (INVOKER) ─────────────────────────
 
 create or replace function rf_totales_panel_revendedoras()
 returns table (
@@ -141,7 +141,7 @@ $$;
 
 grant execute on function rf_totales_panel_revendedoras() to authenticated;
 
--- â”€â”€â”€ 2. rf_panel_revendedoras (INVOKER) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+-- ─── 2. rf_panel_revendedoras (INVOKER) ──────────────────────────────────
 
 create or replace function rf_panel_revendedoras(
   p_desde          date default null,
@@ -328,7 +328,7 @@ begin
       coalesce(vp.com_est, 0)::numeric as comision_estimada,
       greatest(0, coalesce(hv.vendido_hist, 0) - coalesce(hc.com_hist, 0) - coalesce(hp.pagos_hist, 0))::numeric as adeudado,
       hv.ultima_fecha as fecha_ultima_venta,
-      0::bigint as declaraciones_pendientes, -- Slice 9b agregarÃ¡ la tabla declaracion_revendedora
+      0::bigint as declaraciones_pendientes, -- Slice 9b agregará la tabla declaracion_revendedora
       case
         when a.id_revendedora is not null then 'atrasada'
         when greatest(0, coalesce(hv.vendido_hist, 0) - coalesce(hc.com_hist, 0) - coalesce(hp.pagos_hist, 0)) > 0 then 'con_saldo'
@@ -413,3 +413,127 @@ $$;
 
 grant execute on function rf_panel_revendedoras(date, date, boolean, text, text, text, integer, integer, integer) to authenticated;
 
+-- ─── 3. rf_quien_tiene_item (ADM-12, INVOKER) ───────────────────────────
+
+create or replace function rf_quien_tiene_item(
+  p_identificador text
+) returns table (
+  id_revendedora    uuid,
+  nombre            text,
+  apellido          text,
+  telefono          text,
+  email             text,
+  id_consignacion   uuid,
+  fecha_entrega     timestamptz,
+  estado_detalle    text
+)
+language plpgsql
+stable
+security invoker
+as $$
+declare
+  v_tenant  uuid := auth_tenant_id();
+  v_is_uuid boolean;
+begin
+  if v_tenant is null then
+    raise exception 'no-tenant' using errcode = '42501';
+  end if;
+
+  if auth_revendedora_id() is not null then
+    raise exception 'no-permission' using errcode = '42501';
+  end if;
+
+  if not exists (
+    select 1 from tenant_modulo tm
+    join modulo m on m.id_modulo = tm.id_modulo
+    where tm.id_tenant = v_tenant and m.codigo = 'revendedoras' and tm.habilitado = true
+  ) then
+    raise exception 'modulo-revendedoras-deshabilitado' using errcode = '42501';
+  end if;
+
+  v_is_uuid := p_identificador ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$';
+
+  return query
+  select
+    r.id_revendedora,
+    r.nombre,
+    r.apellido,
+    r.telefono,
+    r.email,
+    cr.id_consignacion_revendedora as id_consignacion,
+    coalesce(cr.fecha_confirmacion, crd.created_at) as fecha_entrega,
+    crd.estado_detalle::text
+  from item_producto ip
+  join consignacion_revendedora_detalle crd
+    on crd.id_item = ip.id_item and crd.id_tenant = ip.id_tenant
+  join consignacion_revendedora cr
+    on cr.id_consignacion_revendedora = crd.id_consignacion_revendedora and cr.id_tenant = crd.id_tenant
+  join revendedora r
+    on r.id_revendedora = cr.id_revendedora and r.id_tenant = cr.id_tenant
+  where ip.id_tenant = v_tenant
+    and (
+      (v_is_uuid and ip.id_item = p_identificador::uuid)
+      or ip.qr_code = p_identificador
+    )
+    and crd.estado_detalle = 'en_poder'
+  order by crd.created_at desc
+  limit 1;
+end;
+$$;
+
+grant execute on function rf_quien_tiene_item(text) to authenticated;
+
+-- ─── 4. sp_crear_revendedora con validación email-duplicado ────────────
+
+create or replace function sp_crear_revendedora(
+  p_nombre   text,
+  p_apellido text,
+  p_telefono text default null,
+  p_email    text default null,
+  p_notas    text default null,
+  p_ip       inet default null
+) returns uuid
+language plpgsql
+security invoker
+as $$
+declare
+  v_tenant uuid := auth_tenant_id();
+  v_actor  uuid := auth.uid();
+  v_id     uuid;
+begin
+  if v_tenant is null then
+    raise exception 'no-tenant' using errcode = '42501';
+  end if;
+
+  if auth_revendedora_id() is not null then
+    raise exception 'no-permission' using errcode = '42501';
+  end if;
+
+  if not exists (
+    select 1 from tenant_modulo tm
+    join modulo m on m.id_modulo = tm.id_modulo
+    where tm.id_tenant = v_tenant and m.codigo = 'revendedoras' and tm.habilitado = true
+  ) then
+    raise exception 'modulo-revendedoras-deshabilitado' using errcode = '42501';
+  end if;
+
+  if p_email is not null and trim(p_email) <> '' then
+    if exists (
+      select 1 from revendedora
+      where id_tenant = v_tenant and email = trim(p_email) and activo = true
+    ) then
+      raise exception 'email-duplicado' using errcode = '23505';
+    end if;
+  end if;
+
+  insert into revendedora (id_tenant, nombre, apellido, telefono, email, notas, activo, fecha_alta)
+  values (v_tenant, trim(p_nombre), trim(p_apellido), nullif(trim(p_telefono), ''), nullif(trim(p_email), ''), p_notas, true, current_date)
+  returning id_revendedora into v_id;
+
+  insert into auditoria(id_tenant, id_usuario, entidad, entidad_id, accion, cambios, ip)
+  values (v_tenant, v_actor, 'revendedora', v_id::text, 'crear',
+          jsonb_build_object('nombre', p_nombre, 'apellido', p_apellido, 'email', p_email, 'telefono', p_telefono), p_ip);
+
+  return v_id;
+end;
+$$;
