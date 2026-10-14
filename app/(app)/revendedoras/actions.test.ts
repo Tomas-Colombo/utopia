@@ -1,5 +1,4 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { crearRevendedoraAction, editarRevendedoraAction, bajaRevendedoraAction } from './actions'
 import * as dal from '@/lib/dal/revendedoras'
 import * as guard from '@/lib/dal/guard'
 import * as sessionModule from '@/lib/dal/session'
@@ -22,12 +21,88 @@ vi.mock('@/lib/dal/revendedoras', () => ({
   crearRevendedora: vi.fn(),
   editarRevendedora: vi.fn(),
   bajaRevendedora: vi.fn(),
+  inviteRevendedora: vi.fn(),
+  guardarComisionPropia: vi.fn(),
 }))
+
+import {
+  crearRevendedoraAction,
+  crearRevendedoraUnificadaAction,
+  editarRevendedoraAction,
+  bajaRevendedoraAction,
+} from './actions'
 
 describe('revendedoras actions', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(sessionModule.verifySession).mockResolvedValue({} as unknown as sessionModule.Session)
+  })
+
+  describe('crearRevendedoraUnificadaAction', () => {
+    it('alta simple: exige revendedoras/crear y crea la revendedora', async () => {
+      vi.mocked(dal.crearRevendedora).mockResolvedValue({ ok: true, data: 'rev-uuid-1' })
+
+      const res = await crearRevendedoraUnificadaAction({
+        nombre: 'Lucia',
+        apellido: 'Vera',
+        email: 'lucia@test.com',
+      })
+
+      expect(guard.requireModuleRole).toHaveBeenCalledWith(expect.anything(), 'revendedoras', 'crear')
+      expect(dal.crearRevendedora).toHaveBeenCalledWith({
+        nombre: 'Lucia',
+        apellido: 'Vera',
+        email: 'lucia@test.com',
+      })
+      expect(res).toEqual({ ok: true, data: 'rev-uuid-1' })
+      expect(revalidatePath).toHaveBeenCalledWith('/revendedoras')
+    })
+
+    it('alta con acceso: exige administracion/crear y revendedoras/editar, e invoca inviteRevendedora', async () => {
+      vi.mocked(dal.crearRevendedora).mockResolvedValue({ ok: true, data: 'rev-uuid-2' })
+      vi.mocked(dal.inviteRevendedora).mockResolvedValue({ ok: true, data: { id: 'user-uuid-2' } })
+
+      const res = await crearRevendedoraUnificadaAction({
+        nombre: 'Lucia',
+        apellido: 'Vera',
+        email: 'lucia@test.com',
+        crear_acceso: true,
+        password_acceso: 'Password123!',
+      })
+
+      expect(guard.requireModuleRole).toHaveBeenCalledWith(expect.anything(), 'revendedoras', 'crear')
+      expect(guard.requireModuleRole).toHaveBeenCalledWith(expect.anything(), 'administracion', 'crear')
+      expect(guard.requireModuleRole).toHaveBeenCalledWith(expect.anything(), 'revendedoras', 'editar')
+      expect(dal.inviteRevendedora).toHaveBeenCalledWith(expect.anything(), {
+        idRevendedora: 'rev-uuid-2',
+        email: 'lucia@test.com',
+        nombreCompleto: 'Lucia Vera',
+        password: 'Password123!',
+      })
+      expect(res).toEqual({ ok: true, data: 'rev-uuid-2' })
+    })
+
+    it('alta con comision propia: exige revendedoras/editar y guarda comision', async () => {
+      vi.mocked(dal.crearRevendedora).mockResolvedValue({ ok: true, data: 'rev-uuid-3' })
+      vi.mocked(dal.guardarComisionPropia).mockResolvedValue({ ok: true, id_regla: 'regla-uuid-1' })
+
+      const res = await crearRevendedoraUnificadaAction({
+        nombre: 'Lucia',
+        apellido: 'Vera',
+        email: 'lucia@test.com',
+        comision_propia: 15,
+      })
+
+      expect(guard.requireModuleRole).toHaveBeenCalledWith(expect.anything(), 'revendedoras', 'crear')
+      expect(guard.requireModuleRole).toHaveBeenCalledWith(expect.anything(), 'revendedoras', 'editar')
+      expect(dal.guardarComisionPropia).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id_revendedora: 'rev-uuid-3',
+          porcentajeFijo: 15,
+        }),
+      )
+      expect(res).toEqual({ ok: true, data: 'rev-uuid-3' })
+    })
   })
 
   describe('crearRevendedoraAction', () => {

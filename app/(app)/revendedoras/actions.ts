@@ -3,9 +3,93 @@
 import { revalidatePath } from 'next/cache'
 import { verifySession } from '@/lib/dal/session'
 import { classifyAuthError, requireModuleRole } from '@/lib/dal/guard'
-import { revendedoraSchema } from '@/lib/validation/revendedoras'
+import {
+  revendedoraSchema,
+  altaRevendedoraUnificadaSchema,
+} from '@/lib/validation/revendedoras'
 import * as dal from '@/lib/dal/revendedoras'
 import { z } from 'zod'
+
+export async function crearRevendedoraUnificadaAction(input: unknown) {
+  try {
+    const session = await verifySession()
+    await requireModuleRole(session, 'revendedoras', 'crear')
+
+    const parsed = altaRevendedoraUnificadaSchema.safeParse(input)
+    if (!parsed.success) {
+      return { ok: false as const, reason: 'payload-invalido' }
+    }
+
+    const {
+      nombre,
+      apellido,
+      telefono,
+      email,
+      notas,
+      crear_acceso,
+      password_acceso,
+      comision_propia,
+    } = parsed.data
+
+    if (crear_acceso) {
+      await requireModuleRole(session, 'administracion', 'crear')
+      await requireModuleRole(session, 'revendedoras', 'editar')
+      if (!email) {
+        return { ok: false as const, reason: 'email-invalido' }
+      }
+    }
+
+    if (comision_propia !== undefined) {
+      await requireModuleRole(session, 'revendedoras', 'editar')
+    }
+
+    const res = await dal.crearRevendedora({
+      nombre,
+      apellido,
+      telefono: telefono ?? undefined,
+      email: email ?? undefined,
+      notas: notas ?? undefined,
+    })
+
+    if (!res.ok) {
+      return res
+    }
+
+    const idRevendedora = res.data
+
+    if (crear_acceso && email) {
+      const inviteRes = await dal.inviteRevendedora(session, {
+        idRevendedora,
+        email,
+        nombreCompleto: `${nombre} ${apellido}`,
+        password: password_acceso,
+      })
+      if (!inviteRes.ok) {
+        await dal.bajaRevendedora(idRevendedora).catch(() => {})
+        return inviteRes
+      }
+    }
+
+    if (comision_propia !== undefined) {
+      const comRes = await dal.guardarComisionPropia({
+        id_revendedora: idRevendedora,
+        tipo: 'fijo',
+        porcentajeFijo: comision_propia,
+        vigente_desde: new Date().toISOString().slice(0, 10),
+      })
+      if (!comRes.ok) {
+        return comRes
+      }
+    }
+
+    revalidatePath('/revendedoras')
+    return { ok: true as const, data: idRevendedora }
+  } catch (err) {
+    const auth = classifyAuthError(err)
+    if (auth.kind === 'auth') return { ok: false as const, reason: auth.reason }
+    throw err
+  }
+}
 
 export async function crearRevendedoraAction(formData: unknown) {
   try {
