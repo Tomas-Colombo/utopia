@@ -162,7 +162,11 @@ export async function provisionTenant(): Promise<SeedData> {
     throw new Error('The `modulo` catalog is empty — apply supabase/seed.sql first.')
   }
   for (const m of catalogo) {
-    PERMISOS_ADMIN[m.codigo] = CATALOGO_PERMISOS[m.codigo] ?? [...ACCIONES]
+    const permitidas = CATALOGO_PERMISOS[m.codigo] ?? [...ACCIONES]
+    PERMISOS_ADMIN[m.codigo] =
+      m.codigo === 'revendedoras'
+        ? permitidas.filter((a) => a !== 'ver_propio' && a !== 'declarar')
+        : permitidas
   }
 
   const tenant = unwrap(

@@ -427,4 +427,69 @@ describe.skipIf(!hasTestDb)('Liquidación de revendedoras — Slice 7a (REQ-RV-D
     expect(Number(prevReinc.monto_vendido)).toBe(100_000)
 
   })
+
+  test('borrar un tenant con pago_revendedora funciona en cascada, pero el DELETE directo con tenant vivo se rechaza (00096)', async () => {
+    const user = await createTenantWithUser('TenantBorradoPagos')
+    const sr = user.serviceRole
+    const tenantId = user.tenantId
+
+    const { data: rev } = await sr
+      .from('revendedora')
+      .insert({ id_tenant: tenantId, nombre: 'Ana', apellido: 'Perez', activo: true })
+      .select('id_revendedora')
+      .single()
+
+    const hoy = new Date().toISOString().slice(0, 10)
+    const { data: liq } = await sr
+      .from('liquidacion_revendedora')
+      .insert({
+        id_tenant: tenantId,
+        id_revendedora: rev!.id_revendedora,
+        periodo_desde: hoy,
+        periodo_hasta: hoy,
+        monto_vendido: 50_000,
+        monto_comision: 5_000,
+        monto_a_cobrar: 45_000,
+        cantidad_lineas: 1,
+        porcentaje_aplicado: 10,
+        estado: 'pagada',
+        fecha_liquidacion: hoy,
+        fecha_pago: hoy,
+      })
+      .select('id_liquidacion')
+      .single()
+
+    const { data: cta } = await sr
+      .from('cuenta_destino')
+      .insert({ id_tenant: tenantId, nombre: 'Caja Test', tipo: 'efectivo', activo: true })
+      .select('id_cuenta_destino')
+      .single()
+
+    const { data: pago, error: pagoInsertErr } = await sr
+      .from('pago_revendedora')
+      .insert({
+        id_tenant: tenantId,
+        id_liquidacion: liq!.id_liquidacion,
+        monto: 45_000,
+        metodo: 'transferencia',
+        id_cuenta: cta!.id_cuenta_destino,
+      })
+      .select('id_pago_revendedora')
+      .single()
+    expect(pagoInsertErr).toBeNull()
+    const idPago = pago!.id_pago_revendedora
+
+    // 1. DELETE directo con tenant vivo se RECHAZA
+    const { error: delDirectoErr } = await sr.from('pago_revendedora').delete().eq('id_pago_revendedora', idPago)
+    expect(delDirectoErr).not.toBeNull()
+    expect(delDirectoErr?.message).toContain('pago-revendedora-inmutable')
+
+    // 2. Borrado del tenant en cascada FUNCIONA
+    const { error: delTenantErr } = await sr.from('tenant').delete().eq('id_tenant', tenantId)
+    expect(delTenantErr).toBeNull()
+
+    // 3. El pago_revendedora desapareció con el tenant
+    const { data: pagoPost } = await sr.from('pago_revendedora').select('*').eq('id_pago_revendedora', idPago)
+    expect(pagoPost).toHaveLength(0)
+  })
 })

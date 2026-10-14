@@ -204,7 +204,15 @@ async function provision(opts: Opciones): Promise<void> {
         id_tenant: tenantId,
         nombre: 'Administrador',
         permisos: Object.fromEntries(
-          modulos.map((m) => [m.codigo, CATALOGO_PERMISOS[m.codigo] ?? [...ACCIONES]]),
+          modulos.map((m) => {
+            const permitidas = CATALOGO_PERMISOS[m.codigo] ?? [...ACCIONES]
+            return [
+              m.codigo,
+              m.codigo === 'revendedoras'
+                ? permitidas.filter((a) => a !== 'ver_propio' && a !== 'declarar')
+                : permitidas,
+            ]
+          }),
         ),
       })
       .select('id_rol')
