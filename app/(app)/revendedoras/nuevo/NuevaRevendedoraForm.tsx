@@ -8,24 +8,51 @@ import { Field } from '@/components/ui/Field'
 import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
 import { mensajeDeError } from '@/lib/errores/mensajes'
-import { crearRevendedoraAction } from '../actions'
+import { crearRevendedoraUnificadaAction } from '../actions'
 
-export function NuevaRevendedoraForm() {
+interface NuevaRevendedoraFormProps {
+  canGrantAccess?: boolean
+  canEditComision?: boolean
+}
+
+export function NuevaRevendedoraForm({
+  canGrantAccess = false,
+  canEditComision = false,
+}: NuevaRevendedoraFormProps) {
   const router = useRouter()
   const toast = useToast()
   const [loading, setLoading] = useState(false)
 
+  const [crearAcceso, setCrearAcceso] = useState(false)
+  const [comisionPropiaCheck, setComisionPropiaCheck] = useState(false)
+
   async function action(formData: FormData) {
     setLoading(true)
-    const payload = {
-      nombre: formData.get('nombre') as string,
-      apellido: formData.get('apellido') as string,
-      telefono: (formData.get('telefono') as string) || null,
-      email: (formData.get('email') as string) || null,
-      notas: (formData.get('notas') as string) || null,
+
+    const payload: Record<string, unknown> = {
+      nombre: (formData.get('nombre') as string)?.trim(),
+      apellido: (formData.get('apellido') as string)?.trim(),
+      telefono: (formData.get('telefono') as string)?.trim() || null,
+      email: (formData.get('email') as string)?.trim() || null,
+      notas: (formData.get('notas') as string)?.trim() || null,
+      crear_acceso: crearAcceso,
     }
 
-    const res = await crearRevendedoraAction(payload)
+    if (crearAcceso) {
+      const password = (formData.get('password_acceso') as string)?.trim()
+      if (password) {
+        payload.password_acceso = password
+      }
+    }
+
+    if (comisionPropiaCheck) {
+      const com = formData.get('comision_propia')
+      if (com !== null && com !== '') {
+        payload.comision_propia = Number(com)
+      }
+    }
+
+    const res = await crearRevendedoraUnificadaAction(payload)
     if (!res.ok) {
       toast.error(mensajeDeError(res.reason))
       setLoading(false)
@@ -37,7 +64,7 @@ export function NuevaRevendedoraForm() {
   }
 
   return (
-    <form action={action} className="flex flex-col gap-4">
+    <form action={action} className="flex flex-col gap-5">
       <div className="grid grid-cols-2 gap-4">
         <Field htmlFor="nr_nombre" label="Nombre" required>
           <Input id="nr_nombre" name="nombre" required autoFocus autoComplete="off" />
@@ -46,13 +73,24 @@ export function NuevaRevendedoraForm() {
           <Input id="nr_apellido" name="apellido" required autoComplete="off" />
         </Field>
       </div>
-      
+
       <div className="grid grid-cols-2 gap-4">
         <Field htmlFor="nr_telefono" label="Teléfono">
           <Input id="nr_telefono" name="telefono" type="tel" autoComplete="off" />
         </Field>
-        <Field htmlFor="nr_email" label="Email">
-          <Input id="nr_email" name="email" type="email" autoComplete="off" />
+        <Field
+          htmlFor="nr_email"
+          label="Email"
+          required={crearAcceso}
+          error={crearAcceso ? 'Obligatorio para otorgar acceso al sistema' : undefined}
+        >
+          <Input
+            id="nr_email"
+            name="email"
+            type="email"
+            autoComplete="off"
+            required={crearAcceso}
+          />
         </Field>
       </div>
 
@@ -60,8 +98,78 @@ export function NuevaRevendedoraForm() {
         <Textarea id="nr_notas" name="notas" rows={3} />
       </Field>
 
+      {/* Acceso al sistema (opcional) */}
+      {canGrantAccess && (
+        <div className="rounded-md border border-border p-4 bg-card-2 space-y-3">
+          <label className="flex items-center gap-2 cursor-pointer text-sm font-medium">
+            <input
+              type="checkbox"
+              checked={crearAcceso}
+              onChange={(e) => setCrearAcceso(e.target.checked)}
+              className="rounded border-border text-rosa focus:ring-rosa"
+            />
+            <span>Crear acceso al sistema para la revendedora</span>
+          </label>
+
+          {crearAcceso && (
+            <div className="pt-2">
+              <Field
+                htmlFor="nr_password"
+                label="Contraseña inicial"
+                hint="Mínimo 8 caracteres. Si no se especifica, se envía invitación."
+              >
+                <Input
+                  id="nr_password"
+                  name="password_acceso"
+                  type="password"
+                  autoComplete="new-password"
+                  placeholder="Opcional"
+                />
+              </Field>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Comisión particular (opcional) */}
+      {canEditComision && (
+        <div className="rounded-md border border-border p-4 bg-card-2 space-y-3">
+          <label className="flex items-center gap-2 cursor-pointer text-sm font-medium">
+            <input
+              type="checkbox"
+              checked={comisionPropiaCheck}
+              onChange={(e) => setComisionPropiaCheck(e.target.checked)}
+              className="rounded border-border text-rosa focus:ring-rosa"
+            />
+            <span>Asignar porcentaje de comisión particular</span>
+          </label>
+
+          {comisionPropiaCheck && (
+            <div className="pt-2 max-w-xs">
+              <Field htmlFor="nr_comision" label="Porcentaje (%)" required>
+                <Input
+                  id="nr_comision"
+                  name="comision_propia"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.5"
+                  placeholder="Ej: 15"
+                  required={comisionPropiaCheck}
+                />
+              </Field>
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="mt-4 flex justify-end gap-3">
-        <Button type="button" variant="neutral" onClick={() => router.back()} disabled={loading}>
+        <Button
+          type="button"
+          variant="neutral"
+          onClick={() => router.push('/revendedoras')}
+          disabled={loading}
+        >
           Cancelar
         </Button>
         <Button type="submit" disabled={loading}>
