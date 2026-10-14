@@ -138,7 +138,9 @@ export async function getVentaConDetalle(id: string): Promise<VentaConDetalle | 
       lineas:detalle_venta(
         *,
         producto:producto(id_producto, nombre, sku),
-        item:item_producto(qr_code)
+        item:item_producto(qr_code),
+        devolucion:devolucion_venta(id_devolucion),
+        cambio:cambio_venta(id_cambio, diferencia)
       ),
       comprobantes:comprobante(*),
       pagos:pago_venta(
@@ -242,6 +244,25 @@ export async function spRegistrarDevolucionCliente(
   })
   if (error) throw new Error(extraerSlugRpc(error))
   return data as { reintegro: number }
+}
+
+export async function spRegistrarCambio(
+  idDetalleOriginal: string,
+  idItemEntregado: string,
+  motivo?: string,
+  medioCobro?: MedioPago,
+  idCuentaDestino?: string,
+): Promise<{ id_cambio: string; diferencia: number; id_detalle_nuevo: string }> {
+  const supabase = await createServerClient()
+  const { data, error } = await supabase.rpc('sp_registrar_cambio', {
+    p_id_detalle_original: idDetalleOriginal,
+    p_id_item_entregado: idItemEntregado,
+    p_motivo: motivo ?? null,
+    p_medio_cobro: medioCobro ?? null,
+    p_id_cuenta_destino: idCuentaDestino ?? null,
+  })
+  if (error) throw new Error(extraerSlugRpc(error))
+  return data as { id_cambio: string; diferencia: number; id_detalle_nuevo: string }
 }
 
 /**

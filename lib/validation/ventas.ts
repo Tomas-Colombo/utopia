@@ -103,3 +103,31 @@ export const registrarVentaSchema = z.strictObject(
   },
 )
 
+export const cambiarItemVentaSchema = z.strictObject(
+  {
+    idDetalleOriginal: z.uuid('id-detalle-invalido'),
+    idItemEntregado: z.uuid('item-invalido'),
+    idVenta: z.uuid('id-venta-invalido'),
+    canal: z.enum(['local', 'revendedora'], {
+      error: () => 'canal-invalido',
+    }).optional().default('local'),
+    idRevendedora: z.uuid('revendedora-invalida').nullable().optional(),
+    motivo: z
+      .string('motivo-invalido')
+      .max(300, 'motivo-largo')
+      .optional()
+      .transform((m) => {
+        const t = m?.trim()
+        return t ? t : undefined
+      }),
+    medioCobro: medioPagoSchema.optional().nullable()
+      .transform((m) => m || undefined),
+    idCuentaDestino: z.uuid('cuenta-invalida').optional().nullable()
+      .transform((id) => id || undefined),
+  },
+  {
+    error: (issue: z.core.$ZodRawIssue) =>
+      issue.code === 'unrecognized_keys' ? 'campo-desconocido' : 'payload-invalido',
+  },
+)
+

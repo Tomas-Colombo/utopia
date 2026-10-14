@@ -26,7 +26,7 @@ const SLUGS_DE_LA_APP = [
   // Validación de esquema (zod)
   'payload-invalido', 'campo-desconocido', 'permisos-no-objeto', 'permisos-no-array',
   'modulo-desconocido', 'accion-invalida', 'acciones-duplicadas', 'id-rol-invalido',
-  'id-venta-invalido', 'nombre-largo', 'motivo-largo', 'motivo-invalido',
+  'id-venta-invalido', 'id-detalle-invalido', 'nombre-largo', 'motivo-largo', 'motivo-invalido',
   'item-invalido', 'descuento-invalido', 'cuenta-invalida', 'forma-pago-invalida',
   'cliente-invalido', 'reserva-invalida', 'observaciones-largas',
   // Stored procedures
@@ -36,7 +36,7 @@ const SLUGS_DE_LA_APP = [
   'consignacion-ya-confirmada', 'consignacion-no-confirmada', 'consignacion-confirmada', 'consignacion-con-items-en-poder',
   'cuota-no-cobrable', 'cuota-no-incobrable', 'cuota-not-found',
   'descripcion-requerida', 'detalle-not-found', 'detalle-venta-not-found',
-  'detalle-ya-devuelto', 'detalle-ya-rendido', 'devolucion-venta-con-cuotas-abiertas',
+  'detalle-ya-devuelto', 'detalle-ya-cambiado', 'cambio-venta-con-cuotas-abiertas', 'item-no-en-poder-revendedora', 'diferencia-negativa-no-permitida', 'diferencia-requiere-medio-y-cuenta', 'detalle-ya-rendido', 'devolucion-venta-con-cuotas-abiertas',
   'detalle-no-pendiente', 'invalid-transition', 'item-no-disponible-para-reserva',
   'item-no-puede-darse-de-baja', 'precio-no-resoluble',
   'excede-disponibles', 'falta-categoria', 'falta-producto',

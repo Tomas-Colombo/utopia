@@ -95,6 +95,7 @@ const MENSAJES: Record<string, string> = {
   'acciones-duplicadas': 'Hay un permiso repetido. Recargá la página y probá de nuevo.',
   'id-rol-invalido': 'No se pudo identificar el rol. Recargá la página y probá de nuevo.',
   'id-venta-invalido': 'No se pudo identificar la venta. Recargá la página y probá de nuevo.',
+  'id-detalle-invalido': 'No se pudo identificar la línea de la venta. Recargá la página y probá de nuevo.',
 
   // ─── Nombres y textos ──────────────────────────────────────────────
   'nombre-corto': 'El nombre necesita al menos 2 caracteres.',
@@ -181,6 +182,11 @@ const MENSAJES: Record<string, string> = {
   'detalle-ya-rendido': 'No se puede anular: esa línea ya se rindió al proveedor.',
   'item-no-esta-vendido': 'El ítem no pertenece a esta venta o no está vendido.',
   'detalle-ya-devuelto': 'Esa línea de la venta ya fue devuelta.',
+  'detalle-ya-cambiado': 'Esa línea de la venta ya fue cambiada por otro producto.',
+  'cambio-venta-con-cuotas-abiertas': 'No se puede cambiar el producto porque la venta tiene cuotas sin pagar.',
+  'item-no-en-poder-revendedora': 'El producto entregado no está en poder de esa revendedora.',
+  'diferencia-negativa-no-permitida': 'El nuevo producto no puede tener un precio menor al original.',
+  'diferencia-requiere-medio-y-cuenta': 'Para cobrar la diferencia tenés que elegir una cuenta y un medio de pago.',
   'devolucion-venta-con-cuotas-abiertas': 'No se puede devolver el ítem porque la venta tiene cuotas sin pagar.',
   'reintegro-requiere-cuenta-y-medio': 'Para reintegrar dinero tenés que elegir una cuenta y un medio de pago.',
   'sin-precio-lista':

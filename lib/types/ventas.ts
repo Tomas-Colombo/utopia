@@ -149,6 +149,8 @@ export interface VentaConDetalle extends VentaRow {
     DetalleVentaRow & {
       producto: { id_producto: string; nombre: string; sku: string | null } | null
       item: { qr_code: string } | null
+      devolucion?: { id_devolucion: string } | null
+      cambio?: { id_cambio: string; diferencia: number } | null
     }
   >
   comprobantes: ComprobanteRow[]
