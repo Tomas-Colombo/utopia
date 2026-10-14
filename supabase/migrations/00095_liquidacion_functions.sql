@@ -546,3 +546,98 @@ $$;
 
 grant execute on function sp_reincluir_detalle_liquidacion(uuid, inet) to authenticated;
 
+-- ─── 5. sp_marcar_liquidacion_pagada (INVOKER) ────────────────────────
+
+create or replace function sp_marcar_liquidacion_pagada(
+  p_id_liquidacion uuid,
+  p_id_cuenta      uuid,
+  p_monto          numeric,
+  p_metodo         text default 'transferencia',
+  p_referencia     text default null,
+  p_fecha          timestamptz default null,
+  p_ip             inet default null
+) returns uuid
+language plpgsql
+security invoker
+as $$
+declare
+  v_tenant       uuid := auth_tenant_id();
+  v_actor        uuid := auth.uid();
+  v_liq          liquidacion_revendedora%rowtype;
+  v_id_pago      uuid;
+begin
+  if v_tenant is null then
+    raise exception 'no-tenant' using errcode = '42501';
+  end if;
+
+  if auth_revendedora_id() is not null then
+    raise exception 'no-permission' using errcode = '42501';
+  end if;
+
+  if not exists (
+    select 1 from tenant_modulo tm
+    join modulo m on m.id_modulo = tm.id_modulo
+    where tm.id_tenant = v_tenant and m.codigo = 'revendedoras' and tm.habilitado = true
+  ) then
+    raise exception 'modulo-revendedoras-deshabilitado' using errcode = '42501';
+  end if;
+
+  select * into v_liq
+    from liquidacion_revendedora
+   where id_liquidacion = p_id_liquidacion
+     and id_tenant = v_tenant
+   for update;
+
+  if not found then
+    raise exception 'liquidacion-no-encontrada' using errcode = '42704';
+  end if;
+
+  if v_liq.estado = 'pagada' then
+    raise exception 'liquidacion-ya-pagada' using errcode = '22023';
+  end if;
+
+  if not exists (
+    select 1 from cuenta_destino
+     where id_cuenta_destino = p_id_cuenta
+       and id_tenant = v_tenant
+       and activo = true
+  ) then
+    raise exception 'cuenta-invalida-liquidacion' using errcode = '22023';
+  end if;
+
+  if p_monto is null or p_monto <> v_liq.monto_a_cobrar then
+    raise exception 'monto-pago-invalido' using errcode = '22023';
+  end if;
+
+  insert into pago_revendedora (
+    id_tenant, id_liquidacion, monto, metodo, referencia, id_cuenta, fecha, id_usuario_alta
+  ) values (
+    v_tenant, p_id_liquidacion, p_monto, coalesce(p_metodo, 'transferencia'),
+    p_referencia, p_id_cuenta, coalesce(p_fecha, now()), v_actor
+  ) returning id_pago_revendedora into v_id_pago;
+
+  update liquidacion_revendedora
+     set estado = 'pagada',
+         fecha_pago = coalesce(p_fecha, now())
+   where id_liquidacion = p_id_liquidacion;
+
+  insert into auditoria (id_tenant, id_usuario, entidad, entidad_id, accion, cambios, ip)
+  values (
+    v_tenant, v_actor, 'liquidacion_revendedora', p_id_liquidacion::text, 'pagar_liquidacion',
+    jsonb_build_object(
+      'id_pago_revendedora', v_id_pago,
+      'monto', p_monto,
+      'id_cuenta', p_id_cuenta,
+      'metodo', p_metodo,
+      'referencia', p_referencia,
+      'fecha', coalesce(p_fecha, now())
+    ),
+    p_ip
+  );
+
+  return v_id_pago;
+end;
+$$;
+
+grant execute on function sp_marcar_liquidacion_pagada(uuid, uuid, numeric, text, text, timestamptz, inet) to authenticated;
+
