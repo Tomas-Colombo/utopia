@@ -33,7 +33,7 @@ export function Kpi({ label, value, sub, variant = 'default', tone = 'default' }
         {label}
       </div>
       <div
-        className={`mt-1 font-display text-2xl leading-tight tabular-nums md:text-xl lg:text-2xl [overflow-wrap:anywhere] ${
+        className={`mt-1 font-figure text-2xl leading-tight md:text-xl lg:text-2xl [overflow-wrap:anywhere] ${
           tone === 'muted' ? 'text-muted' : 'text-text'
         }`}
       >
