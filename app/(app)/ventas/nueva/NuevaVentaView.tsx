@@ -1261,7 +1261,7 @@ export function NuevaVentaView({
                             }}
                             onMouseEnter={() => setResaltado(i)}
                             className={`flex cursor-pointer items-center justify-between gap-2 px-3 py-2 text-sm ${
-                              activo ? 'bg-pink-bg text-text' : 'text-text'
+                              activo ? 'bg-line text-text' : 'text-text'
                             }`}
                           >
                             <span className="flex min-w-0 flex-wrap items-center gap-1.5">
@@ -1272,7 +1272,7 @@ export function NuevaVentaView({
                                 </span>
                               )}
                               {reservadas > 0 && (
-                                <span className="shrink-0 rounded-full border border-terracota/50 bg-card px-1.5 py-0.5 text-[10px] font-medium text-terracota">
+                                <span className="shrink-0 rounded-full border border-warn/50 bg-card px-1.5 py-0.5 text-[10px] font-medium text-warn-ink">
                                   {reservadas} reservada{reservadas === 1 ? '' : 's'}
                                   {quien ? ` · ${quien}` : ''}
                                 </span>
@@ -1352,7 +1352,7 @@ export function NuevaVentaView({
                           type="button"
                           onClick={() => void abrirCambioTalle(g)}
                           disabled={buscando}
-                          className="text-xs text-pink-strong hover:underline disabled:opacity-50"
+                          className="text-xs text-ink underline decoration-line-2 underline-offset-2 hover:decoration-ink disabled:opacity-50"
                         >
                           Cambiar
                         </button>
@@ -1361,7 +1361,7 @@ export function NuevaVentaView({
                         {g.sku ?? '—'} · {g.categoria_nombre ?? '—'}
                       </div>
                       {g.advertencia && (
-                        <div className="mt-1 text-xs text-terracota">{g.advertencia}</div>
+                        <div className="mt-1 text-xs text-warn-ink">{g.advertencia}</div>
                       )}
                       {g.desactualizado && (
                         <Badge variant="warning">Precio desactualizado</Badge>
@@ -1432,7 +1432,7 @@ export function NuevaVentaView({
                         </span>{' '}
                         {r.nombre}
                       </td>
-                      <td className="px-4 py-0.5 text-right font-mono text-sm text-pink-strong">
+                      <td className="px-4 py-0.5 text-right font-mono text-sm text-ink">
                         −{money(r.total)}
                       </td>
                       <td></td>
@@ -1440,10 +1440,10 @@ export function NuevaVentaView({
                   ))}
                   {totalDescuentos > 0 && (
                     <tr>
-                      <td colSpan={3} className="px-4 py-0.5 text-right text-sm font-medium text-pink-strong">
+                      <td colSpan={3} className="px-4 py-0.5 text-right text-sm font-medium text-ink">
                         Total descuentos
                       </td>
-                      <td className="px-4 py-0.5 text-right font-mono text-sm font-semibold text-pink-strong">
+                      <td className="px-4 py-0.5 text-right font-mono text-sm font-semibold text-ink">
                         −{money(totalDescuentos)}
                       </td>
                       <td></td>
@@ -1451,10 +1451,10 @@ export function NuevaVentaView({
                   )}
                   {totalRecargo > 0 && (
                     <tr>
-                      <td colSpan={3} className="px-4 py-0.5 pb-2 text-right text-sm font-medium text-terracota">
+                      <td colSpan={3} className="px-4 py-0.5 pb-2 text-right text-sm font-medium text-warn-ink">
                         Recargo · {finCuotas} cuotas
                       </td>
-                      <td className="px-4 py-0.5 pb-2 text-right font-mono text-sm font-semibold text-terracota">
+                      <td className="px-4 py-0.5 pb-2 text-right font-mono text-sm font-semibold text-warn-ink">
                         +{money(totalRecargo)}
                       </td>
                       <td></td>
@@ -1492,9 +1492,9 @@ export function NuevaVentaView({
           {idReserva && (
             // `self-end` lo alinea con los inputs de los Field vecinos en vez
             // de estirarse a lo alto de la fila.
-            <div className="flex items-center justify-between gap-2 self-end rounded-md border border-pink-strong/40 bg-pink-bg px-2.5 py-1.5">
+            <div className="flex items-center justify-between gap-2 self-end rounded-md border border-line-2 bg-line px-2.5 py-1.5">
               <span className="min-w-0 truncate text-xs">
-                <span className="font-medium text-pink-strong">Reserva</span>
+                <span className="font-medium text-ink">Reserva</span>
                 <span className="text-text">
                   {' '}· {reservaActual?.cliente_nombre ?? 'Mostrador'}
                 </span>
@@ -1510,7 +1510,7 @@ export function NuevaVentaView({
                 onClick={desvincularReserva}
                 disabled={pending}
                 title="Quita la reserva de esta venta y vacía el carrito"
-                className="shrink-0 text-xs text-muted underline-offset-2 hover:text-terracota hover:underline disabled:opacity-50"
+                className="shrink-0 text-xs text-muted underline-offset-2 hover:text-alerta-ink hover:underline disabled:opacity-50"
               >
                 Quitar
               </button>
@@ -1564,7 +1564,7 @@ export function NuevaVentaView({
       {cobranzaOpen && (
         <section
           ref={cobroRef}
-          className="rounded-lg border border-pink-strong/40 bg-card p-4 space-y-4"
+          className="rounded-lg border border-line-2 bg-card p-4 space-y-4"
           aria-label="Cobro"
         >
           <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -1641,7 +1641,7 @@ export function NuevaVentaView({
                           }}
                           onMouseEnter={() => setCliResaltado(0)}
                           className={`cursor-pointer px-3 py-2 text-sm italic ${
-                            cliResaltado === 0 ? 'bg-pink-bg text-text' : 'text-muted'
+                            cliResaltado === 0 ? 'bg-line text-text' : 'text-muted'
                           }`}
                         >
                           — Mostrador —
@@ -1663,7 +1663,7 @@ export function NuevaVentaView({
                                 }}
                                 onMouseEnter={() => setCliResaltado(idx)}
                                 className={`flex cursor-pointer items-center justify-between gap-2 px-3 py-2 text-sm ${
-                                  activo ? 'bg-pink-bg text-text' : 'text-text'
+                                  activo ? 'bg-line text-text' : 'text-text'
                                 }`}
                               >
                                 <span>{c.nombre}</span>
@@ -1782,7 +1782,7 @@ export function NuevaVentaView({
               onChange={setPagos}
             />
             {totalRecargo > 0 && (
-              <p className="text-xs text-terracota">
+              <p className="text-xs text-warn-ink">
                 Recargo por {finCuotas} cuotas: +{money(totalRecargo)} — ya
                 incluido en el total.
               </p>
@@ -1801,12 +1801,12 @@ export function NuevaVentaView({
               olvidar (y la deuda quedaba sin registrar) o dejar prendida por
               error (y se fiaba una venta ya cobrada). */}
           {hayDeuda && (
-            <div className="space-y-3 rounded-md border border-terracota/40 bg-card-2 p-3">
+            <div className="space-y-3 rounded-md border border-warn/40 bg-card-2 p-3">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <h3 className="text-sm font-medium text-text">
                   Crédito del local
                 </h3>
-                <span className="font-mono font-semibold text-terracota">
+                <span className="font-mono font-semibold text-warn-ink">
                   {money(aFinanciar)}
                 </span>
               </div>
@@ -1929,7 +1929,7 @@ export function NuevaVentaView({
             {finCuotas !== null ? ` · ${finCuotas} cuotas` : ''}
           </div>
           {hayDeuda && (
-            <div className="text-xs text-terracota">
+            <div className="text-xs text-warn-ink">
               Queda debiendo {money(aFinanciar)}
             </div>
           )}
@@ -2105,8 +2105,8 @@ function LineaDescuentos({
                 aria-pressed={activo}
                 className={`rounded-full border px-2 py-0.5 text-xs transition disabled:opacity-50 ${
                   activo
-                    ? 'border-pink-strong bg-pink-bg text-pink-strong'
-                    : 'border-border bg-card text-text hover:border-pink-strong'
+                    ? 'border-ink bg-hover text-ink'
+                    : 'border-border bg-card text-text hover:border-ink'
                 }`}
                 title={activo ? 'Quitar descuento' : 'Aplicar descuento'}
               >
@@ -2132,14 +2132,14 @@ function LineaDescuentos({
                 {d.nombre}
                 {!d.acumulable && ' · no acumulable'}
               </span>
-              <span className="font-mono text-pink-strong">−{money(d.monto)}</span>
+              <span className="font-mono text-ink">−{money(d.monto)}</span>
             </li>
           ))}
         </ul>
       )}
 
       {noAcumulables >= 2 && (
-        <div className="text-xs text-terracota">
+        <div className="text-xs text-warn-ink">
           Estás combinando {noAcumulables} descuentos marcados como no
           acumulables. Se aplican igual — revisá que sea lo que querés.
         </div>
@@ -2181,7 +2181,7 @@ function DescuentosPanelSelect({
             type="button"
             onClick={() => setOpen((o) => !o)}
             aria-expanded={open}
-            className="flex w-full items-center justify-between rounded-md border border-border bg-card px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
+            className="flex w-full items-center justify-between rounded-md border border-border bg-card px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
           >
             <span className={activos.length ? 'text-text' : 'text-muted'}>
               {activos.length === 0
@@ -2209,16 +2209,16 @@ function DescuentosPanelSelect({
                       aria-selected={activo}
                       onClick={() => onToggle(d.id_regla)}
                       className={`flex cursor-pointer items-start gap-2 px-3 py-2 text-sm ${
-                        activo ? 'bg-pink-bg' : 'hover:bg-card'
+                        activo ? 'bg-line' : 'hover:bg-card'
                       }`}
                     >
-                      <span className="mt-0.5 w-4 shrink-0 text-pink-strong">
+                      <span className="mt-0.5 w-4 shrink-0 text-ink">
                         {activo ? '✓' : ''}
                       </span>
                       <span className="flex-1">
                         <span className="flex items-center justify-between gap-2">
                           <span className="font-medium">{d.nombre}</span>
-                          <span className="font-mono text-xs text-pink-strong">
+                          <span className="font-mono text-xs text-ink">
                             −{descValorLabel(d)}
                           </span>
                         </span>
@@ -2242,14 +2242,14 @@ function DescuentosPanelSelect({
               {activos.map(({ d }) => (
                 <span
                   key={d.id_regla}
-                  className="inline-flex items-center gap-1 rounded-full border border-pink-strong bg-pink-bg px-2 py-0.5 text-xs text-pink-strong"
+                  className="inline-flex items-center gap-1 rounded-full border border-ink bg-line px-2 py-0.5 text-xs text-ink"
                 >
                   {d.nombre} · −{descValorLabel(d)}
                   <button
                     type="button"
                     onClick={() => onToggle(d.id_regla)}
                     aria-label={`Quitar ${d.nombre}`}
-                    className="hover:text-terracota"
+                    className="hover:text-alerta-ink"
                   >
                     ×
                   </button>

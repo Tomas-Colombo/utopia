@@ -215,7 +215,7 @@ export function IngresoDetalleView({
               detalles.map((d) => (
                 <tr key={d.id_detalle} className="border-b border-border-2">
                   <td className="px-4 py-3">{productoNombre(d.id_producto)}</td>
-                  <td className="px-4 py-3">{d.talle ?? <span className="text-muted-2">—</span>}</td>
+                  <td className="px-4 py-3">{d.talle ?? <span className="text-muted">—</span>}</td>
                   <td className="px-4 py-3 text-right font-mono">{d.cantidad}</td>
                   <td className="px-4 py-3 text-right font-mono">
                     $ {Number(d.costo_unitario).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
@@ -272,7 +272,7 @@ export function IngresoDetalleView({
                   setTalleAdd('')
                 }}
                 className={`px-3 py-1.5 font-medium transition-colors ${
-                  linea.esNuevo ? 'bg-accent-pink text-sidebar' : 'text-muted hover:bg-card-2'
+                  linea.esNuevo ? 'bg-block text-block-ink' : 'text-muted hover:bg-card-2'
                 }`}
               >
                 Es nuevo
@@ -290,7 +290,7 @@ export function IngresoDetalleView({
                   setTalleAdd('')
                 }}
                 className={`px-3 py-1.5 font-medium transition-colors ${
-                  !linea.esNuevo ? 'bg-accent-pink text-sidebar' : 'text-muted hover:bg-card-2'
+                  !linea.esNuevo ? 'bg-block text-block-ink' : 'text-muted hover:bg-card-2'
                 }`}
               >
                 Del inventario

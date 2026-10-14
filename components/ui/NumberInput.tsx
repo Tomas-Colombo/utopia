@@ -42,7 +42,7 @@ function ungroup(display: string): string {
 }
 
 const CLASS_NAME =
-  'w-full rounded-md border border-control-line bg-control px-3 py-2 text-[13.5px] text-ink transition-colors placeholder:text-dim hover:border-rosa focus:outline-none focus-visible:border-rosa focus-visible:ring-2 focus-visible:ring-rosa-bg disabled:opacity-50 aria-[invalid=true]:border-alerta-ink'
+  'w-full rounded-md border border-control-line bg-control px-3 py-2 text-[13.5px] text-ink transition-colors placeholder:text-muted hover:border-muted-2 focus:outline-none focus-visible:border-ink focus-visible:ring-1 focus-visible:ring-ink disabled:opacity-50 aria-[invalid=true]:border-alerta-ink'
 
 /**
  * Numeric input with `inputMode="decimal"` (better mobile keypad) and

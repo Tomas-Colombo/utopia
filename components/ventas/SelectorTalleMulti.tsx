@@ -108,7 +108,7 @@ export function SelectorTalleMulti({
       </div>
 
       {hayReservados && (
-        <p className="rounded border border-terracota/40 bg-card px-2 py-1.5 text-xs text-terracota">
+        <p className="rounded border border-warn/40 bg-card px-2 py-1.5 text-xs text-warn-ink">
           {adopta
             ? `Hay unidades reservadas${selector.reservaLabel ? ` para ${selector.reservaLabel}` : ''}. Si las tomás, la venta queda ligada a esa reserva.`
             : 'Hay unidades reservadas por otra reserva activa: no se pueden tomar desde acá.'}
@@ -176,7 +176,7 @@ function FilaTalle({
         <span className="font-medium">{label}</span>{' '}
         <span className="text-xs text-muted">· {libres} disp.</span>
         {reservados > 0 && (
-          <span className="ml-1 rounded-full border border-terracota/50 bg-card px-1.5 py-0.5 text-[10px] font-medium text-terracota">
+          <span className="ml-1 rounded-full border border-warn/50 bg-card px-1.5 py-0.5 text-[10px] font-medium text-warn-ink">
             {reservados} reservada{reservados === 1 ? '' : 's'}
           </span>
         )}

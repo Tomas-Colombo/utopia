@@ -114,16 +114,15 @@ export function ConfirmDialog({
             >
               {cancelLabel}
             </button>
-            {/* text-sidebar (fixed near-black in both themes) — text-text/text-bg
-                flip to a LIGHT color in dark theme and fail AA against these
-                light accent backgrounds (verified via WCAG contrast math). */}
+            {/* Both pairs flip together between themes (block/block-ink,
+                alerta-ink/alerta-on), so the contrast holds in light and dark. */}
             <button
               ref={focusOnAttach}
               type="button"
               data-variant={variant}
               onClick={onConfirm}
-              className={`rounded-md px-4 py-2 text-sm font-semibold text-sidebar ${
-                variant === 'danger' ? 'bg-alerta-ink' : 'bg-accent-pink'
+              className={`rounded-md px-4 py-2 text-sm font-semibold ${
+                variant === 'danger' ? 'bg-alerta-ink text-alerta-on' : 'bg-block text-block-ink'
               }`}
             >
               {confirmLabel}

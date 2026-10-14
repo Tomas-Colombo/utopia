@@ -34,14 +34,14 @@ function contrastRatio(hexA: string, hexB: string): number {
 }
 
 describe('darkTokens', () => {
-  it('defines the exact hex values of the platino palette', () => {
-    expect(darkTokens.bg).toBe('#0C0D0F')
-    expect(darkTokens.text).toBe('#F4F6F8')
-    expect(darkTokens.sidebarBg).toBe('#08090B')
-    expect(darkTokens.accentPink).toBe('#C4CDD6')
-    expect(darkTokens.pinkStrong).toBe('#E4EAF0')
-    expect(darkTokens.terracota).toBe('#9BA7B2')
-    expect(darkTokens.success).toBe('#6FD39A')
+  it('defines the exact hex values of the Grafito + Lino dark palette', () => {
+    expect(darkTokens.bg).toBe('#0F0F11')
+    expect(darkTokens.text).toBe('#F1F0EE')
+    expect(darkTokens.sidebarBg).toBe('#0B0B0D')
+    expect(darkTokens.accent).toBe('#EDE4D3')
+    expect(darkTokens.accentInk).toBe('#141416')
+    expect(darkTokens.warnInk).toBe('#EDBE7A')
+    expect(darkTokens.alerta).toBe('#E58C78')
   })
 
   it('exposes the same token shape as lightTokens', () => {
@@ -64,12 +64,29 @@ describe('darkTokens', () => {
       expect(contrastRatio(darkTokens.text, darkTokens.bg)).toBeGreaterThanOrEqual(4.5)
     })
 
-    it('terracota vs bg meets AA', () => {
-      expect(contrastRatio(darkTokens.terracota, darkTokens.bg)).toBeGreaterThanOrEqual(4.5)
+    it('warn-ink vs bg and vs warn-bg meets AA', () => {
+      expect(contrastRatio(darkTokens.warnInk, darkTokens.bg)).toBeGreaterThanOrEqual(4.5)
+      expect(contrastRatio(darkTokens.warnInk, darkTokens.warnBg)).toBeGreaterThanOrEqual(4.5)
     })
 
-    it('success vs bg meets AA', () => {
+    it('success (the "Pagada" dot) vs bg meets AA', () => {
       expect(contrastRatio(darkTokens.success, darkTokens.bg)).toBeGreaterThanOrEqual(4.5)
+    })
+
+    it('muted and muted-2 vs bg meet AA', () => {
+      expect(contrastRatio(darkTokens.muted, darkTokens.bg)).toBeGreaterThanOrEqual(4.5)
+      expect(contrastRatio(darkTokens.muted2, darkTokens.bg)).toBeGreaterThanOrEqual(4.5)
+    })
+
+    it('alerta and alerta-ink vs alerta-bg meet AA', () => {
+      expect(contrastRatio(darkTokens.alerta, darkTokens.alertaBg)).toBeGreaterThanOrEqual(4.5)
+      expect(contrastRatio(darkTokens.alertaInk, darkTokens.alertaBg)).toBeGreaterThanOrEqual(4.5)
+    })
+
+    it('alerta-on vs alerta-ink, accent-ink vs accent and block-ink vs block meet AA', () => {
+      expect(contrastRatio(darkTokens.alertaOn, darkTokens.alertaInk)).toBeGreaterThanOrEqual(4.5)
+      expect(contrastRatio(darkTokens.accentInk, darkTokens.accent)).toBeGreaterThanOrEqual(4.5)
+      expect(contrastRatio(darkTokens.blockInk, darkTokens.block)).toBeGreaterThanOrEqual(4.5)
     })
   })
 })

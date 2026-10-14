@@ -97,7 +97,7 @@ export function PasswordChangeForm() {
       <button
         type="submit"
         disabled={pending}
-        className="self-start rounded-md bg-accent-pink px-4 py-2 text-sm font-semibold text-sidebar disabled:opacity-60"
+        className="self-start rounded-md bg-block px-4 py-2 text-sm font-semibold text-block-ink disabled:opacity-60"
       >
         {pending ? 'Updating…' : 'Update password'}
       </button>

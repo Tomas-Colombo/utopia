@@ -88,12 +88,12 @@ export function ProductosTableClient({
     {
       key: 'sku',
       label: 'SKU',
-      render: (r) => (r.sku ? <span className="font-mono text-xs">{r.sku}</span> : <span className="text-muted-2">—</span>),
+      render: (r) => (r.sku ? <span className="font-mono text-xs">{r.sku}</span> : <span className="text-muted">—</span>),
     },
     {
       key: 'categoria',
       label: 'Categoría',
-      render: (r) => r.categoria?.nombre ?? <span className="text-muted-2">—</span>,
+      render: (r) => r.categoria?.nombre ?? <span className="text-muted">—</span>,
     },
     {
       key: 'precio_venta',
@@ -105,7 +105,7 @@ export function ProductosTableClient({
             $ {r.precio_venta.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
           </span>
         ) : (
-          <span className="text-muted-2">—</span>
+          <span className="text-muted">—</span>
         ),
     },
     {
@@ -139,13 +139,13 @@ export function ProductosTableClient({
         <div className="flex items-center justify-end gap-3 text-sm">
           <Link
             href={`/inventario/productos/${r.id_producto}/ficha`}
-            className="text-pink-strong hover:underline"
+            className="text-ink underline decoration-line-2 underline-offset-2 hover:decoration-ink"
           >
             Ver
           </Link>
           <Link
             href={`/inventario/ingresos/nuevo?producto=${r.id_producto}`}
-            className="text-pink-strong hover:underline"
+            className="text-ink underline decoration-line-2 underline-offset-2 hover:decoration-ink"
             title="Cargar un ingreso prellenado con este producto"
           >
             Restock
@@ -153,7 +153,7 @@ export function ProductosTableClient({
           <button
             type="button"
             onClick={() => setEditing(r)}
-            className="text-pink-strong hover:underline"
+            className="text-ink underline decoration-line-2 underline-offset-2 hover:decoration-ink"
           >
             Editar
           </button>

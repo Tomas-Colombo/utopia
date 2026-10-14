@@ -8,9 +8,9 @@
    --ink, --accent, --band, --warn, ...). The previous generation of names
    (--card, --border, --text, ...) stays as ALIASES pointing at the new values
    so the ~100 existing components keep working. Prefer the canonical names in
-   new code. There is NO pink anywhere: errors live in the --alerta channel and
-   the one warm accent is --accent (lino), which is reserved for the main
-   action, the active nav marker and the current day in a chart.
+   new code. Errors live in the --alerta channel; the one warm accent is
+   --accent (lino), reserved for the main action, the active nav marker and
+   the current day in a chart.
    ========================================================================= */
 
 /* ---- Light ---------------------------------------------------------------- */
@@ -90,8 +90,8 @@
   /* Navigation rail internals. The rail is dark in BOTH themes, so its text
      can never ride on --ink. */
   --sidebar-ink: #9A9AA0;
-  --sidebar-ink-2: #86868D;
-  --sidebar-ink-3: #6E6E75;
+  --sidebar-ink-2: #8E8E95;
+  --sidebar-ink-3: #84848B;
   --sidebar-ink-hi: #E8E7E5;
   --sidebar-ink-hi-2: #F1F0EE;
   --sidebar-line: rgb(255 255 255 / 0.08);
@@ -173,8 +173,8 @@
   --warn-bg: color-mix(in oklab, var(--warn) 10%, var(--bg));
 
   --sidebar-ink: #9A9AA0;
-  --sidebar-ink-2: #86868D;
-  --sidebar-ink-3: #6E6E75;
+  --sidebar-ink-2: #8E8E95;
+  --sidebar-ink-3: #84848B;
   --sidebar-ink-hi: #E8E7E5;
   --sidebar-ink-hi-2: #F1F0EE;
   --sidebar-line: rgb(255 255 255 / 0.06);

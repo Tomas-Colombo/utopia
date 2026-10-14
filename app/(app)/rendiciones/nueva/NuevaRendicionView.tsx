@@ -170,7 +170,7 @@ export function NuevaRendicionView({
                       </td>
                       <td className="px-4 py-3 font-mono text-xs">{l.qr_code}</td>
                       <td className="px-4 py-3 text-xs">
-                        {l.cliente_nombre ?? <span className="text-muted-2">Mostrador</span>}
+                        {l.cliente_nombre ?? <span className="text-muted">Mostrador</span>}
                       </td>
                       <td className="px-4 py-3 text-right font-mono text-muted">
                         $ {Number(l.precio_venta).toLocaleString('es-AR', { maximumFractionDigits: 0 })}

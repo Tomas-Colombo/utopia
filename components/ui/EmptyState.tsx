@@ -31,13 +31,12 @@ export function EmptyState({ title, description, cta, icon }: EmptyStateProps) {
       {icon && <div aria-hidden="true">{icon}</div>}
       <p className="font-display text-lg text-text">{title}</p>
       {description && <p className="text-sm text-muted">{description}</p>}
-      {/* text-sidebar (fixed near-black in both themes, REQ-DS-07) is used
-          instead of text-text: text-text is LIGHT in dark mode and fails AA
-          against the light accent-pink background there (verified 1.6:1). */}
+      {/* bg-block / text-block-ink invert together between themes, so the pair
+          keeps its contrast in both (the accent is reserved for the main action). */}
       <button
         type="button"
         onClick={cta.onClick}
-        className="rounded-md bg-accent-pink px-4 py-2 font-body text-sm font-semibold text-sidebar"
+        className="rounded-md bg-block px-4 py-2 font-body text-sm font-semibold text-block-ink"
       >
         {cta.label}
       </button>

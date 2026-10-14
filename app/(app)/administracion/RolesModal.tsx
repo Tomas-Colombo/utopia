@@ -63,7 +63,7 @@ export function RolesModal({ roles }: { roles: RolRow[] }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="rounded-lg border border-border bg-card p-5 text-left hover:bg-card-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
+        className="rounded-lg border border-border bg-card p-5 text-left hover:bg-card-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
       >
         <div className="text-sm text-muted">Roles</div>
         <div className="mt-1 font-display text-2xl">{roles.length}</div>
@@ -212,7 +212,7 @@ function ListaRoles({
                   </span>
                   <span>
                     {acciones.length === 0 ? (
-                      <span className="text-muted-2">—</span>
+                      <span className="text-muted">—</span>
                     ) : (
                       acciones.join(', ')
                     )}

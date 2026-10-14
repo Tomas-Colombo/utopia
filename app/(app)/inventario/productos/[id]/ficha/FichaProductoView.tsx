@@ -169,7 +169,7 @@ export function FichaProductoView({
             {producto.sku ? (
               <span className="font-mono">{producto.sku}</span>
             ) : (
-              <span className="text-muted-2">Sin SKU</span>
+              <span className="text-muted">Sin SKU</span>
             )}
             {categoria && <span> · {categoria.nombre}</span>}
           </div>
@@ -224,7 +224,7 @@ export function FichaProductoView({
           talle y la categoría tiene talles definidos. Es una acción destacada
           porque escondida en la tabla pasaba desapercibida. */}
       {puedeAsignarTalles && (
-        <section className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-accent-pink bg-card p-5">
+        <section className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-ink bg-card p-5">
           <div className="min-w-0">
             <h3 className="text-sm font-semibold text-text">Productos sin talle</h3>
             <p className="mt-1 text-sm text-muted">
@@ -287,7 +287,7 @@ export function FichaProductoView({
         </form>
 
         {filasBreakdown.length === 0 ? (
-          <p className="text-sm text-muted-2">
+          <p className="text-sm text-muted">
             {filtroActivo
               ? 'No hay movimientos de este producto en el período seleccionado.'
               : 'Este producto no tiene ítems cargados todavía. Usá Restock para ingresar unidades.'}
@@ -330,7 +330,7 @@ export function FichaProductoView({
                 })}
               </tbody>
             </table>
-            <p className="mt-2 text-xs text-muted-2">
+            <p className="mt-2 text-xs text-muted">
               {filtroActivo
                 ? 'Se cuentan los ítems cuyo último movimiento relevante (ingreso, venta o devolución) cae en el período.'
                 : '«Otros» incluye devoluciones al proveedor, devoluciones de cliente y bajas.'}
@@ -342,7 +342,7 @@ export function FichaProductoView({
       {/* Placeholder — QRs por ítem */}
       <section className="rounded-lg border border-dashed border-border bg-card-2 p-6">
         <h3 className="text-sm font-semibold text-muted">Listado de QRs por ítem</h3>
-        <p className="mt-1 text-sm text-muted-2">Próximamente.</p>
+        <p className="mt-1 text-sm text-muted">Próximamente.</p>
       </section>
 
       <EditarProductoModal
@@ -378,7 +378,7 @@ function Dato({
     <div className={block ? 'sm:col-span-2' : undefined}>
       <div className="text-xs uppercase font-mono text-muted">{label}</div>
       <div className="mt-1 text-sm text-text whitespace-pre-wrap">{value}</div>
-      {hint && <div className="mt-0.5 text-xs text-muted-2">{hint}</div>}
+      {hint && <div className="mt-0.5 text-xs text-muted">{hint}</div>}
     </div>
   )
 }

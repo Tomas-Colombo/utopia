@@ -143,7 +143,7 @@ export default async function VentasHome(props: {
                               href={wa}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-pink-strong hover:underline"
+                              className="text-ink underline decoration-line-2 underline-offset-2 hover:decoration-ink"
                             >
                               WhatsApp
                             </a>
@@ -186,7 +186,7 @@ export default async function VentasHome(props: {
         <section className="grid grid-cols-1 gap-3 md:grid-cols-3">
           <Link
             href="/ventas/nueva"
-            className="rounded-lg border border-border bg-card p-5 hover:bg-card-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
+            className="rounded-lg border border-border bg-card p-5 hover:bg-card-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
           >
             <div className="text-sm text-muted">Vender ahora</div>
             <div className="mt-1 font-display text-xl">Nueva venta</div>
@@ -196,7 +196,7 @@ export default async function VentasHome(props: {
           </Link>
           <Link
             href="/ventas/reservas"
-            className="rounded-lg border border-border bg-card p-5 hover:bg-card-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
+            className="rounded-lg border border-border bg-card p-5 hover:bg-card-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
           >
             <div className="text-sm text-muted">Gestionar</div>
             <div className="mt-1 font-display text-xl">Reservas</div>
@@ -259,7 +259,7 @@ export default async function VentasHome(props: {
                       </td>
                       <td className="px-4 py-3">
                         {v.estado_venta === 'anulada' ? (
-                          <span className="text-xs uppercase font-mono text-pink-strong">
+                          <span className="text-xs uppercase font-mono text-ink">
                             Anulada
                           </span>
                         ) : (
@@ -269,7 +269,7 @@ export default async function VentasHome(props: {
                       <td className="px-4 py-3 text-right">
                         <Link
                           href={`/ventas/${v.id_venta}`}
-                          className="text-sm text-pink-strong hover:underline"
+                          className="text-sm text-ink underline decoration-line-2 underline-offset-2 hover:decoration-ink"
                         >
                           Ver
                         </Link>

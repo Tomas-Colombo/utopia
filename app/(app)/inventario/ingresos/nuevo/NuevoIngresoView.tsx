@@ -498,7 +498,7 @@ export function NuevoIngresoView({
                           })
                         }
                         className={`px-3 py-1.5 font-medium transition-colors ${
-                          f.esNuevo ? 'bg-accent-pink text-sidebar' : 'text-muted hover:bg-card'
+                          f.esNuevo ? 'bg-block text-block-ink' : 'text-muted hover:bg-card'
                         }`}
                       >
                         Nuevo
@@ -507,7 +507,7 @@ export function NuevoIngresoView({
                         type="button"
                         onClick={() => vincularProducto(i, match?.id_producto ?? f.idProducto)}
                         className={`px-3 py-1.5 font-medium transition-colors ${
-                          !f.esNuevo ? 'bg-accent-pink text-sidebar' : 'text-muted hover:bg-card'
+                          !f.esNuevo ? 'bg-block text-block-ink' : 'text-muted hover:bg-card'
                         }`}
                       >
                         Vincular
@@ -614,7 +614,7 @@ export function NuevoIngresoView({
                           <button
                             type="button"
                             onClick={() => actualizar(i, { tallesAbierto: !f.tallesAbierto })}
-                            className="text-xs text-pink-strong hover:underline"
+                            className="text-xs text-ink underline decoration-line-2 underline-offset-2 hover:decoration-ink"
                           >
                             {f.tallesAbierto ? 'Listo' : conTalles ? 'Editar' : 'Cargar talles'}
                           </button>

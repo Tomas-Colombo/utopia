@@ -100,7 +100,7 @@ export function ReglasView({
                 .join(' · ')}
             </b>
           ) : (
-            <span className="text-muted-2">ninguno</span>
+            <span className="text-muted">ninguno</span>
           )}
         </p>
         <Button variant="secondary" size="sm" onClick={() => setCuotasOpen(true)}>
@@ -181,7 +181,7 @@ export function ReglasView({
                       </td>
                       <td className="px-4 py-3">{ALCANCE_LABEL[r.alcance]}</td>
                       <td className="px-4 py-3">
-                        {r.forma_pago ? formaPagoLabel(r.forma_pago) : <span className="text-muted-2">—</span>}
+                        {r.forma_pago ? formaPagoLabel(r.forma_pago) : <span className="text-muted">—</span>}
                       </td>
                       <td className="px-4 py-3 text-right font-mono">{fmtValor(r)}</td>
                       <td className="px-4 py-3 text-right font-mono">{r.prioridad}</td>

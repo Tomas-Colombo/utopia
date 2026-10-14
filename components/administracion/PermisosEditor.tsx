@@ -55,7 +55,7 @@ export function PermisosEditor({
                           onChange={(e) => toggle(mod, accion, e.target.checked)}
                         />
                       ) : (
-                        <span className="text-muted-2">—</span>
+                        <span className="text-muted">—</span>
                       )}
                     </td>
                   )

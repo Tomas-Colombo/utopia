@@ -77,7 +77,7 @@ export function CuotasView({
                   href={wa}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-xs text-pink-strong hover:underline"
+                  className="text-xs text-ink underline decoration-line-2 underline-offset-2 hover:decoration-ink"
                 >
                   WhatsApp
                 </a>
@@ -117,7 +117,7 @@ export function CuotasView({
       // llamada. Por eso la antigüedad de la cuota más vieja va debajo del
       // monto, y no escondida en la ficha del cliente.
       render: (d) => {
-        if (d.vencido <= 0) return <span className="text-muted-2">—</span>
+        if (d.vencido <= 0) return <span className="text-muted">—</span>
         const atraso = d.vencida_desde ? diasHasta(d.vencida_desde, hoy) : 0
         return (
           <div>
@@ -139,7 +139,7 @@ export function CuotasView({
         if (d.vencido > 0 && !d.proximo_vencimiento) {
           return <Badge variant="danger">Todo vencido</Badge>
         }
-        if (!d.proximo_vencimiento) return <span className="text-muted-2">—</span>
+        if (!d.proximo_vencimiento) return <span className="text-muted">—</span>
         const dias = diasHasta(hoy, d.proximo_vencimiento)
         // Hoy y mañana son los dos días en los que todavía se puede hacer
         // algo, y por eso son los únicos que llevan chapa. Antes vencía hoy y

@@ -79,12 +79,12 @@ export function QrScanner({
         />
         {/* Mira de encuadre */}
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <div className="h-1/2 w-1/2 rounded-lg border-2 border-accent-pink/80" />
+          <div className="h-1/2 w-1/2 rounded-lg border-2 border-band-ink/80" />
         </div>
       </div>
 
       {error ? (
-        <p className="rounded-md border border-terracota/40 bg-terracota/10 p-3 text-sm text-terracota">
+        <p className="rounded-md border border-warn/40 bg-warn/10 p-3 text-sm text-warn-ink">
           {error}
         </p>
       ) : (

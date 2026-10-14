@@ -235,7 +235,7 @@ export function CuentasView({
         c.identificador ? (
           <span className="font-mono text-xs">{c.identificador}</span>
         ) : (
-          <span className="text-muted-2">—</span>
+          <span className="text-muted">—</span>
         ),
     },
     {
@@ -351,7 +351,7 @@ export function CuentasView({
             <button
               type="button"
               onClick={() => setCostoAbierto(true)}
-              className="w-full rounded-md border border-dashed border-border bg-card-2 p-3 text-left text-xs text-muted hover:border-rosa hover:text-text"
+              className="w-full rounded-md border border-dashed border-border bg-card-2 p-3 text-left text-xs text-muted hover:border-muted-2 hover:text-text"
             >
               <span className="font-medium">+ Cargar costo de cobro</span> — comisiones,
               retenciones y días de acreditación. Opcional: se puede completar

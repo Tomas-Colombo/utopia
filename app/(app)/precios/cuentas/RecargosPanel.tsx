@@ -166,7 +166,7 @@ export function RecargosPanel({
       </div>
 
       {creando && (
-        <div className="space-y-3 rounded-md border border-pink-strong/40 bg-card-2 p-3">
+        <div className="space-y-3 rounded-md border border-line-2 bg-card-2 p-3">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <Field htmlFor="rc-cuotas" label="Plan" required>
               <Select
@@ -295,7 +295,7 @@ export function RecargosPanel({
                   </td>
                   <td
                     className={`px-3 py-2 text-right font-mono ${
-                      margen !== null && margen < 0 ? 'text-terracota' : ''
+                      margen !== null && margen < 0 ? 'text-warn-ink' : ''
                     }`}
                   >
                     {margen === null ? '—' : `${margen >= 0 ? '+' : ''}${pct(margen)}%`}
@@ -305,7 +305,7 @@ export function RecargosPanel({
                       type="button"
                       onClick={() => cerrar(r.id_recargo_cuotas)}
                       disabled={pending}
-                      className="text-xs text-muted underline-offset-2 hover:text-terracota hover:underline disabled:opacity-50"
+                      className="text-xs text-muted underline-offset-2 hover:text-alerta-ink hover:underline disabled:opacity-50"
                       title="Cierra la vigencia. El recargo no se borra: deja de aplicar desde hoy."
                     >
                       Dar de baja

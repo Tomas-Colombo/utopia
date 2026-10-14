@@ -57,7 +57,7 @@ export function PresupuestosMesTable({ rows }: { rows: CategoriaGastoStatus[] })
                 <td className="px-4 py-3 text-right font-mono">
                   {p.presupuesto_mensual != null
                     ? `$ ${p.presupuesto_mensual.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`
-                    : <span className="text-muted-2">—</span>}
+                    : <span className="text-muted">—</span>}
                 </td>
                 <td className="px-4 py-3 text-right font-mono">
                   $ {p.gastado_mes.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
@@ -67,7 +67,7 @@ export function PresupuestosMesTable({ rows }: { rows: CategoriaGastoStatus[] })
                     ? (p.restante < 0
                         ? <span className="text-alerta-ink">-$ {Math.abs(p.restante).toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
                         : `$ ${p.restante.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`)
-                    : <span className="text-muted-2">—</span>}
+                    : <span className="text-muted">—</span>}
                 </td>
                 <td className="px-4 py-3 w-40">
                   {p.gastado_pct != null ? (
@@ -76,7 +76,7 @@ export function PresupuestosMesTable({ rows }: { rows: CategoriaGastoStatus[] })
                         <div
                           className={
                             p.alerta === 'excedido' ? 'h-full bg-alerta-ink' :
-                            p.alerta === 'cerca' ? 'h-full bg-terracota' :
+                            p.alerta === 'cerca' ? 'h-full bg-warn' :
                             'h-full bg-success'
                           }
                           style={{ width: `${pctClamp}%` }}
@@ -85,7 +85,7 @@ export function PresupuestosMesTable({ rows }: { rows: CategoriaGastoStatus[] })
                       <span className="text-xs font-mono">{p.gastado_pct}%</span>
                     </div>
                   ) : (
-                    <span className="text-muted-2 text-xs">Sin control</span>
+                    <span className="text-muted text-xs">Sin control</span>
                   )}
                 </td>
                 <td className="px-4 py-3">

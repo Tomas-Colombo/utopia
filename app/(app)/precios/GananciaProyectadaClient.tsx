@@ -97,7 +97,7 @@ export function GananciaProyectadaClient({
     {
       key: 'categoria',
       label: 'Categoría',
-      render: (r) => r.categoria_nombre ?? <span className="text-muted-2">—</span>,
+      render: (r) => r.categoria_nombre ?? <span className="text-muted">—</span>,
     },
     {
       key: 'costo',

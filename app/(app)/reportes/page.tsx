@@ -104,7 +104,7 @@ export default async function ReportesPage(props: {
           <div
             className={`rounded-md border p-3 text-sm ${
               impacto > 0
-                ? 'border-terracota bg-card-2'
+                ? 'border-warn bg-card-2'
                 : impacto < 0
                   ? 'border-success bg-card-2'
                   : 'border-border bg-card-2'
@@ -115,7 +115,7 @@ export default async function ReportesPage(props: {
             </div>
             <div className="flex items-baseline gap-2">
               <span className={`font-display text-lg ${
-                impacto > 0 ? 'text-terracota' : impacto < 0 ? 'text-success' : ''
+                impacto > 0 ? 'text-warn-ink' : impacto < 0 ? 'text-success' : ''
               }`}>
                 {impacto > 0 ? '−' : ''}{fmtMoney(Math.abs(impacto))}
               </span>
@@ -256,7 +256,7 @@ export default async function ReportesPage(props: {
           {porCobrar.vencido > 0 && (
             <Link
               href="/cuotas?estado=vencidas"
-              className="inline-block text-sm text-pink-strong hover:underline"
+              className="inline-block text-sm text-ink underline decoration-line-2 underline-offset-2 hover:decoration-ink"
             >
               Ver quién debe →
             </Link>

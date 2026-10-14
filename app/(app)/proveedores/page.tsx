@@ -45,7 +45,7 @@ function EmptyStateWrapper() {
       </p>
       <Link
         href="/proveedores/nuevo"
-        className="inline-flex items-center rounded-md bg-accent-pink px-4 py-2 text-sm font-semibold text-sidebar"
+        className="inline-flex items-center rounded-md bg-block px-4 py-2 text-sm font-semibold text-block-ink"
       >
         Nuevo proveedor
       </Link>

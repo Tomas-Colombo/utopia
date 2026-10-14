@@ -150,11 +150,11 @@ export function PerfilProveedoresTable({ rows }: { rows: PerfilProveedorRow[] })
                   </td>
                   <td className="px-4 py-3 text-right font-mono">
                     {p.monto_pendiente_rendicion > 0 ? (
-                      <span className="text-terracota font-semibold">
+                      <span className="text-warn-ink font-semibold">
                         {fmtMoney(p.monto_pendiente_rendicion)}
                       </span>
                     ) : (
-                      <span className="text-muted-2">—</span>
+                      <span className="text-muted">—</span>
                     )}
                     {p.lineas_pendientes_rendicion > 0 && (
                       <div className="text-xs text-muted">

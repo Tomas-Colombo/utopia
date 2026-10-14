@@ -118,7 +118,7 @@ export function ConsignacionesTableClient({
                   <td className="px-4 py-3">{r.proveedor?.nombre ?? '—'}</td>
                   <td className="px-4 py-3 text-right font-mono">
                     {r.pendientes > 0 ? (
-                      <span className="text-terracota">{r.pendientes}</span>
+                      <span className="text-warn-ink">{r.pendientes}</span>
                     ) : (
                       r.pendientes
                     )}

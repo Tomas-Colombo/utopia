@@ -38,7 +38,7 @@ export function Topbar({ title, actions, backHref, backLabel }: TopbarProps) {
             href={backHref}
             aria-label={backLabel ?? 'Volver'}
             title={backLabel ?? 'Volver'}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-panel-2 hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-rosa"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-panel-2 hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
           >
             <svg
               width="18"

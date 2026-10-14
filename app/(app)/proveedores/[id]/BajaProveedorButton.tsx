@@ -59,7 +59,7 @@ export function BajaProveedorButton({
           : '¿Reactivar? Vuelve a aparecer en los selectores.'}
       </p>
       {activo && tieneDeudaPendiente && (
-        <p className="text-xs text-terracota">
+        <p className="text-xs text-warn-ink">
           Tiene deuda pendiente — los movimientos históricos quedan igual.
         </p>
       )}

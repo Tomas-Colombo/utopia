@@ -17,7 +17,7 @@ export function FechaChip() {
   return (
     <span
       suppressHydrationWarning
-      className="hidden font-mono text-[10.5px] uppercase tracking-[0.06em] text-muted-2 sm:inline"
+      className="hidden font-mono text-[10.5px] uppercase tracking-[0.06em] text-muted sm:inline"
     >
       {label}
     </span>

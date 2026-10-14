@@ -67,7 +67,7 @@ export default async function BuscarCodigoPage(props: {
             </p>
             <Link
               href="/inventario/ficha"
-              className="inline-flex items-center rounded-md bg-accent-pink px-4 py-2 text-sm font-semibold text-sidebar"
+              className="inline-flex items-center rounded-md bg-block px-4 py-2 text-sm font-semibold text-block-ink"
             >
               Volver a buscar
             </Link>
@@ -141,7 +141,7 @@ export default async function BuscarCodigoPage(props: {
                     </div>
                     <Link
                       href={`/inventario/ficha/${encodeURIComponent(it.qr_code)}`}
-                      className="font-mono text-xs text-accent-pink hover:underline"
+                      className="font-mono text-xs text-ink hover:underline"
                     >
                       Ver ficha →
                     </Link>

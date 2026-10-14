@@ -246,7 +246,7 @@ export function RemitoImportPanel({
                           })
                         }
                         className={`px-3 py-1.5 font-medium transition-colors ${
-                          f.esNuevo ? 'bg-accent-pink text-sidebar' : 'text-muted hover:bg-card'
+                          f.esNuevo ? 'bg-block text-block-ink' : 'text-muted hover:bg-card'
                         }`}
                       >
                         Nuevo
@@ -255,7 +255,7 @@ export function RemitoImportPanel({
                         type="button"
                         onClick={() => actualizar(i, { esNuevo: false, talles: [], tallesAbierto: false })}
                         className={`px-3 py-1.5 font-medium transition-colors ${
-                          !f.esNuevo ? 'bg-accent-pink text-sidebar' : 'text-muted hover:bg-card'
+                          !f.esNuevo ? 'bg-block text-block-ink' : 'text-muted hover:bg-card'
                         }`}
                       >
                         Vincular
@@ -357,7 +357,7 @@ export function RemitoImportPanel({
                           <button
                             type="button"
                             onClick={() => actualizar(i, { tallesAbierto: !f.tallesAbierto })}
-                            className="text-xs text-pink-strong hover:underline"
+                            className="text-xs text-ink underline decoration-line-2 underline-offset-2 hover:decoration-ink"
                           >
                             {f.tallesAbierto ? 'Listo' : conTalles ? 'Editar' : 'Cargar talles'}
                           </button>

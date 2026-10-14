@@ -320,7 +320,7 @@ export function CobranzaPanel({
 
   if (cuentas.length === 0) {
     return (
-      <div className="rounded-md border border-terracota bg-card-2 p-3 text-xs text-terracota">
+      <div className="rounded-md border border-warn bg-card-2 p-3 text-xs text-warn-ink">
         No hay cuentas activas donde registrar el cobro. Creá una en Ventas →
         Cuentas antes de vender.
       </div>
@@ -482,13 +482,13 @@ export function CobranzaPanel({
               )}
 
               {vuelto != null && vuelto > 0 && (
-                <div className="flex items-center justify-between rounded bg-pink-bg px-2 py-1 text-sm">
+                <div className="flex items-center justify-between rounded bg-line px-2 py-1 text-sm">
                   <span className="text-muted">Vuelto</span>
-                  <span className="font-mono font-semibold text-pink-strong">{money(vuelto)}</span>
+                  <span className="font-mono font-semibold text-ink">{money(vuelto)}</span>
                 </div>
               )}
               {vuelto != null && vuelto < 0 && (
-                <p className="text-xs text-terracota">
+                <p className="text-xs text-warn-ink">
                   Recibiste menos que el monto del pago.
                 </p>
               )}
@@ -512,7 +512,7 @@ export function CobranzaPanel({
                     Comisión {costo.arancel_pct}%
                     {costo.dias_acreditacion > 0 && ` · acredita en ${costo.dias_acreditacion} días`}
                   </span>
-                  <span className="font-mono text-terracota">−{money(costo.costo_total)}</span>
+                  <span className="font-mono text-warn-ink">−{money(costo.costo_total)}</span>
                 </div>
               )}
               {!esEfectivo && costo.sin_tarifario && (
@@ -533,7 +533,7 @@ export function CobranzaPanel({
         <div
           className={`flex items-center justify-between rounded-md border px-3 py-2 text-sm ${
             restante < -EPSILON
-              ? 'border-terracota text-terracota'
+              ? 'border-warn text-warn-ink'
               : 'border-border bg-card-2 text-muted'
           }`}
         >
@@ -559,7 +559,7 @@ export function CobranzaPanel({
             <span>Total de la venta</span>
             <span className="font-mono">{money(total)}</span>
           </div>
-          <div className="flex items-center justify-between text-terracota">
+          <div className="flex items-center justify-between text-warn-ink">
             <span>Costo de cobro</span>
             <span className="font-mono">−{money(costoTotal)}</span>
           </div>

@@ -18,8 +18,8 @@ export default async function NuevaReglaPage() {
       <Topbar title="Nueva regla de precio" session={session} backHref="/precios/reglas" />
       <main className="flex-1 space-y-4 p-6">
         <details className="max-w-2xl rounded-lg border border-dashed border-border bg-card">
-          <summary className="cursor-pointer list-none px-6 py-4 font-medium text-text marker:content-none hover:bg-card-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink">
-            <span className="text-accent-pink">¿Cómo funcionan las reglas de precios?</span>
+          <summary className="cursor-pointer list-none px-6 py-4 font-medium text-text marker:content-none hover:bg-card-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink">
+            <span className="text-ink">¿Cómo funcionan las reglas de precios?</span>
             <span className="mt-1 block text-sm font-normal text-muted">
               Tipos de regla, cascada de especificidad, prioridad y un ejemplo paso a paso.
             </span>

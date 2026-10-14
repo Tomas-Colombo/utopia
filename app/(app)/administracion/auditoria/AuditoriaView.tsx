@@ -109,7 +109,7 @@ export function AuditoriaView({
                     {new Date(r.ts).toLocaleString('es-AR')}
                   </td>
                   <td className="px-4 py-3">
-                    {r.actor_nombre || r.actor_email || <span className="text-muted-2">(sistema)</span>}
+                    {r.actor_nombre || r.actor_email || <span className="text-muted">(sistema)</span>}
                   </td>
                   <td className="px-4 py-3">
                     <Badge variant="neutral">{r.entidad}</Badge>

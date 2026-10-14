@@ -38,8 +38,8 @@ export function NuevaReglaModalButton({
             botones de acción queden siempre alcanzables. */}
         <div className="max-h-[70vh] space-y-4 overflow-y-auto pr-1">
           <details className="rounded-lg border border-dashed border-border bg-card-2">
-            <summary className="cursor-pointer list-none px-4 py-3 font-medium text-text marker:content-none hover:bg-card focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink">
-              <span className="text-accent-pink">¿Cómo funcionan las reglas de precios?</span>
+            <summary className="cursor-pointer list-none px-4 py-3 font-medium text-text marker:content-none hover:bg-card focus:outline-none focus-visible:ring-2 focus-visible:ring-ink">
+              <span className="text-ink">¿Cómo funcionan las reglas de precios?</span>
               <span className="mt-1 block text-sm font-normal text-muted">
                 Tipos de regla, cascada de especificidad, prioridad y un ejemplo paso a paso.
               </span>
