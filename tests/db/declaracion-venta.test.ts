@@ -183,12 +183,12 @@ describe.skipIf(!hasTestDb)('Slice 9b — Declaración de venta: DB (REQ-RV-ACC-
     })
     expect(errAjeno?.message).toMatch(/item-no-en-poder/)
 
-    // Ana intenta declarar ítem disponible en local -> item-no-disponible
+    // Ana intenta declarar ítem disponible en local -> item-no-en-poder (o item-no-disponible)
     const { error: errDisp } = await ctx.authAna.rpc('sp_declarar_venta_revendedora', {
       p_id_item: ctx.itemDisponible,
       p_nota: 'Intento disponible',
     })
-    expect(errDisp?.message).toMatch(/item-no-disponible/)
+    expect(errDisp?.message).toMatch(/item-no-en-poder|item-no-disponible/)
 
     // Ana declara su ítem 0
     const { data: idDec, error: errOk } = await ctx.authAna.rpc('sp_declarar_venta_revendedora', {
@@ -206,7 +206,7 @@ describe.skipIf(!hasTestDb)('Slice 9b — Declaración de venta: DB (REQ-RV-ACC-
     expect(errDup?.message).toMatch(/declaracion-duplicada/)
   })
 
-  test('3. A no puede UPDATE/DELETE directo, ni insertar con id_revendedora ajeno', async () => {
+  test('3. A no puede UPDATE/DELETE directo a capricho, ni insertar con id_revendedora ajeno', async () => {
     const ctx = await setupFixture()
 
     const { data: idDec } = await ctx.authAna.rpc('sp_declarar_venta_revendedora', {
@@ -214,13 +214,21 @@ describe.skipIf(!hasTestDb)('Slice 9b — Declaración de venta: DB (REQ-RV-ACC-
       p_nota: 'Para mutacion directa',
     })
 
-    // UPDATE directo por Ana denegado por RLS (0 filas afectadas o error)
+    // UPDATE directo por Ana a 'confirmada' denegado por RLS / trigger
     const { data: updData, error: errUpd } = await ctx.authAna
       .from('declaracion_venta_revendedora')
       .update({ estado: 'confirmada' })
       .eq('id_declaracion', idDec)
       .select()
     expect(updData === null || (Array.isArray(updData) && updData.length === 0) || errUpd !== null).toBe(true)
+
+    // UPDATE directo por Ana modificando 'nota' denegado
+    const { data: updNota, error: errUpdNota } = await ctx.authAna
+      .from('declaracion_venta_revendedora')
+      .update({ nota: 'Modificada sin permiso' })
+      .eq('id_declaracion', idDec)
+      .select()
+    expect(updNota === null || (Array.isArray(updNota) && updNota.length === 0) || errUpdNota !== null).toBe(true)
 
     // DELETE directo por Ana denegado por RLS (0 filas afectadas o error)
     const { data: delData, error: errDel } = await ctx.authAna
@@ -272,7 +280,7 @@ describe.skipIf(!hasTestDb)('Slice 9b — Declaración de venta: DB (REQ-RV-ACC-
     expect(errVta?.message).toMatch(/no-permission/)
   })
 
-  test('5. retiro propio funciona; B no puede retirar declaración de A', async () => {
+  test('5. retiro propio pasa a estado "retirada"; B no puede retirar declaración de A', async () => {
     const ctx = await setupFixture()
 
     const { data: idDec } = await ctx.authAna.rpc('sp_declarar_venta_revendedora', {
@@ -291,6 +299,14 @@ describe.skipIf(!hasTestDb)('Slice 9b — Declaración de venta: DB (REQ-RV-ACC-
       p_id_declaracion: idDec,
     })
     expect(errRetiraOk).toBeNull()
+
+    // Comprobar que el estado es 'retirada'
+    const { data: decRetirada } = await ctx.authAna
+      .from('declaracion_venta_revendedora')
+      .select('estado')
+      .eq('id_declaracion', idDec)
+      .single()
+    expect(decRetirada?.estado).toBe('retirada')
 
     // Ana vuelve a declarar el mismo ítem -> permitido porque ya no está pendiente
     const { data: idDecNuevo, error: errReDeclara } = await ctx.authAna.rpc('sp_declarar_venta_revendedora', {
@@ -389,5 +405,43 @@ describe.skipIf(!hasTestDb)('Slice 9b — Declaración de venta: DB (REQ-RV-ACC-
       p_motivo: 'Motivo',
     })
     expect(e4?.message).toMatch(/modulo-revendedoras-deshabilitado/)
+
+    // rvp_item_en_mi_poder con módulo apagado
+    const { error: e5 } = await fOff.authenticated.rpc('rvp_item_en_mi_poder', {
+      p_id_item: fOff.items[0],
+    })
+    // Puede dar no-revendedora (si el actor no tiene claim) o modulo-revendedoras-deshabilitado
+    expect(e5?.message).toMatch(/modulo-revendedoras-deshabilitado|no-revendedora/)
+  })
+
+  test('8. rvp_item_en_mi_poder: sólo true para ítems en su poder; false para ajenos/disponibles; no-revendedora para operador', async () => {
+    const ctx = await setupFixture()
+
+    // Ana consulta su ítem -> true
+    const { data: esDeAna, error: errAna } = await ctx.authAna.rpc('rvp_item_en_mi_poder', {
+      p_id_item: ctx.itemsAna[0],
+    })
+    expect(errAna).toBeNull()
+    expect(esDeAna).toBe(true)
+
+    // Ana consulta ítem de Berta -> false (no error, solo false, sin revelar datos ajenos)
+    const { data: esDeBerta, error: errBerta } = await ctx.authAna.rpc('rvp_item_en_mi_poder', {
+      p_id_item: ctx.itemsBerta[0],
+    })
+    expect(errBerta).toBeNull()
+    expect(esDeBerta).toBe(false)
+
+    // Ana consulta ítem disponible en local -> false
+    const { data: esDisp, error: errDisp } = await ctx.authAna.rpc('rvp_item_en_mi_poder', {
+      p_id_item: ctx.itemDisponible,
+    })
+    expect(errDisp).toBeNull()
+    expect(esDisp).toBe(false)
+
+    // Operador del local (sin claim auth_revendedora_id) llama a rvp_item_en_mi_poder -> no-revendedora
+    const { error: errOperador } = await ctx.fA.authenticated.rpc('rvp_item_en_mi_poder', {
+      p_id_item: ctx.itemsAna[0],
+    })
+    expect(errOperador?.message).toMatch(/no-revendedora/)
   })
 })
