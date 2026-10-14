@@ -208,6 +208,7 @@ export async function revocarAccesoRevendedora(session: Session, input: { idReve
 
 export * from './consignacion'
 export * from './liquidacion'
+export * from './panel'
 export {
   listReglasComision,
   getComisionRevendedora,
