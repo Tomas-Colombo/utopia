@@ -27,6 +27,7 @@ export interface PeriodoVentas {
   desde?: string
   hastaExclusivo?: string
   canal?: CanalVenta
+  idRevendedora?: string
 }
 
 /** Filas por request al recorrer un período completo (KPIs y export). */
@@ -66,6 +67,7 @@ export async function listVentasPaginado(
   if (opts.desde) q = q.gte('fecha', opts.desde)
   if (opts.hastaExclusivo) q = q.lt('fecha', opts.hastaExclusivo)
   if (opts.canal) q = q.eq('canal', opts.canal)
+  if (opts.idRevendedora) q = q.eq('id_revendedora', opts.idRevendedora)
   const { data, count, error } = await q
   if (error) throw new Error(`listVentasPaginado: ${error.message}`)
   return {

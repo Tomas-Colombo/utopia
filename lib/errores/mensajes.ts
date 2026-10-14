@@ -263,6 +263,7 @@ const MENSAJES: Record<string, string> = {
   'detalle-no-en-liquidacion': 'La línea seleccionada no pertenece a esta liquidación.',
   'liquidacion-no-encontrada': 'No se encontró la liquidación seleccionada.',
   'revendedora-invalida-liquidacion': 'La revendedora seleccionada no es válida o no pertenece al negocio.',
+  'pago-revendedora-inmutable': 'Ese pago no se puede modificar ni anular porque ya quedó registrado.',
 
   'regla-not-found': 'Esa regla ya no existe. Recargá la página.',
   'regla-comision-not-found': 'Esa regla de comisión ya no existe. Recargá la página.',

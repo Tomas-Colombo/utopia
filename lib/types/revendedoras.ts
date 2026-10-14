@@ -99,3 +99,71 @@ export interface StockPorTenenciaRow {
   en_revendedoras: number
   por_revendedora: Record<string, number> | null
 }
+
+export type EstadoLiquidacion = 'pendiente' | 'pagada'
+
+export interface LiquidacionRevendedoraRow {
+  id_liquidacion: string
+  id_tenant: string
+  id_revendedora: string
+  periodo_desde: string
+  periodo_hasta: string
+  monto_vendido: number
+  monto_comision: number
+  monto_a_cobrar: number
+  cantidad_lineas: number
+  porcentaje_aplicado: number
+  estado: EstadoLiquidacion
+  fecha_liquidacion: string
+  fecha_pago: string | null
+  observaciones: string | null
+  id_usuario_alta: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface PagoRevendedoraRow {
+  id_pago_revendedora: string
+  id_tenant: string
+  id_liquidacion: string
+  fecha: string
+  monto: number
+  metodo: string | null
+  referencia: string | null
+  id_cuenta: string
+  created_at: string
+}
+
+export interface PreviewLineaLiquidacion {
+  id_detalle_venta: string
+  id_venta: string
+  id_item: string
+  fecha_venta: string
+  id_producto?: string
+  nombre_producto?: string
+  sku?: string
+  precio_venta: number
+  porcentaje_preview?: number
+  monto_comision_estimada?: number
+  excluida?: boolean
+}
+
+export interface PreviewLiquidacionResponse {
+  cantidad_lineas: number
+  monto_vendido: number
+  porcentaje_resuelto: number
+  monto_comision: number
+  monto_a_cobrar: number
+  lineas: PreviewLineaLiquidacion[]
+}
+
+export interface CuentaCorrienteRevendedora {
+  total_en_poder: number
+  total_vendido: number
+  total_devuelto: number
+  total_comision_liquidada: number
+  total_liquidado: number
+  total_pagado: number
+  adeudado: number
+}
+

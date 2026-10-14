@@ -19,10 +19,11 @@ export async function GET(req: NextRequest) {
   }
 
   const code = (req.nextUrl.searchParams.get('code') || req.nextUrl.searchParams.get('qr'))?.trim()
+  const idProducto = req.nextUrl.searchParams.get('id_producto')?.trim()
   const idRevendedora = req.nextUrl.searchParams.get('id_revendedora')?.trim()
   const modo = req.nextUrl.searchParams.get('modo')?.trim() || 'consignacion'
 
-  if (!code) {
+  if (!code && !idProducto) {
     return NextResponse.json({ ok: false, reason: 'qr-vacio' }, { status: 400 })
   }
   if (!idRevendedora) {
@@ -30,7 +31,7 @@ export async function GET(req: NextRequest) {
   }
 
   if (modo === 'venta') {
-    const result = await lookupItemParaVentaRevendedora(code, idRevendedora)
+    const result = await lookupItemParaVentaRevendedora(code, idRevendedora, idProducto)
     if (!result.ok) {
       return NextResponse.json(result)
     }
@@ -39,6 +40,10 @@ export async function GET(req: NextRequest) {
       item: result.data.item,
       linea: result.data.linea,
     })
+  }
+
+  if (!code) {
+    return NextResponse.json({ ok: false, reason: 'qr-vacio' }, { status: 400 })
   }
 
   const result = await lookupItemParaConsignacionRevendedora(code, idRevendedora)

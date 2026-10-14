@@ -99,3 +99,70 @@ export const eliminarConsignacionRevendedoraSchema = z.strictObject({
 })
 
 export type EliminarConsignacionRevendedoraPayload = z.infer<typeof eliminarConsignacionRevendedoraSchema>
+
+export const previewLiquidacionSchema = z.strictObject({
+  id_revendedora: z.string().uuid('id-revendedora-invalido'),
+  desde: z.string().trim().regex(dateRegex, 'fecha-desde-invalida'),
+  hasta: z.string().trim().regex(dateRegex, 'fecha-hasta-invalida'),
+})
+export type PreviewLiquidacionPayload = z.infer<typeof previewLiquidacionSchema>
+
+export const generarLiquidacionSchema = z.strictObject({
+  id_revendedora: z.string().uuid('id-revendedora-invalido'),
+  desde: z.string().trim().regex(dateRegex, 'fecha-desde-invalida'),
+  hasta: z.string().trim().regex(dateRegex, 'fecha-hasta-invalida'),
+  observaciones: z
+    .string()
+    .trim()
+    .max(1000, 'observaciones-largas')
+    .nullable()
+    .optional()
+    .transform((val) => (val ? val : null)),
+})
+export type GenerarLiquidacionPayload = z.infer<typeof generarLiquidacionSchema>
+
+export const excluirDetalleLiquidacionSchema = z.strictObject({
+  id_detalle: z.string().uuid('id-detalle-invalido'),
+  motivo: z
+    .string()
+    .trim()
+    .max(500, 'motivo-largo')
+    .nullable()
+    .optional()
+    .transform((val) => (val ? val : null)),
+})
+export type ExcluirDetalleLiquidacionPayload = z.infer<typeof excluirDetalleLiquidacionSchema>
+
+export const reincluirDetalleLiquidacionSchema = z.strictObject({
+  id_detalle: z.string().uuid('id-detalle-invalido'),
+})
+export type ReincluirDetalleLiquidacionPayload = z.infer<typeof reincluirDetalleLiquidacionSchema>
+
+export const marcarLiquidacionPagadaSchema = z.strictObject({
+  id_liquidacion: z.string().uuid('id-liquidacion-invalido'),
+  id_cuenta: z.string().uuid('id-cuenta-invalido'),
+  monto: z.number().positive('monto-invalido'),
+  metodo: z
+    .string()
+    .trim()
+    .max(50, 'metodo-largo')
+    .nullable()
+    .optional()
+    .transform((val) => (val ? val : null)),
+  referencia: z
+    .string()
+    .trim()
+    .max(100, 'referencia-larga')
+    .nullable()
+    .optional()
+    .transform((val) => (val ? val : null)),
+  fecha: z
+    .string()
+    .trim()
+    .regex(dateRegex, 'fecha-invalida')
+    .nullable()
+    .optional()
+    .transform((val) => (val ? val : null)),
+})
+export type MarcarLiquidacionPagadaPayload = z.infer<typeof marcarLiquidacionPagadaSchema>
+
