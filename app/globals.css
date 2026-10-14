@@ -346,6 +346,36 @@
   }
 }
 
+/* ---- Dark band scope -------------------------------------------------------
+   Inside the page band (components/shell/PageBand.tsx) the surface is dark in
+   BOTH themes, so the ordinary tokens are remapped for the subtree. Tailwind's
+   `@theme inline` utilities read the variables directly (`text-ink` is
+   `color: var(--ink)`), which is what makes this work without per-component
+   overrides. The legacy alias --text has to be restated: an alias is computed
+   where it is declared (:root), so it would not follow --ink on its own.
+   The alerta values are the dark theme's, because the light ones are unreadable
+   on a near-black strip. */
+@layer components {
+  .band-scope {
+    color-scheme: dark;
+    --ink: var(--band-ink);
+    --text: var(--band-ink);
+    --muted: var(--band-muted);
+    --muted-2: var(--band-muted);
+    --dim: var(--band-muted);
+    --line-2: rgb(255 255 255 / 0.28);
+    --hover: rgb(255 255 255 / 0.08);
+    --control: rgb(255 255 255 / 0.06);
+    --control-line: rgb(255 255 255 / 0.24);
+    --control-hover: rgb(255 255 255 / 0.1);
+    --block: var(--band-ink);
+    --block-ink: var(--band);
+    --alerta: #E58C78;
+    --alerta-ink: #F2B3A5;
+    --alerta-bg: #2A1A17;
+  }
+}
+
 /* --- Native dropdowns: the look ------------------------------------------
    UNLAYERED ON PURPOSE. Unlayered declarations outrank every Tailwind layer,
    utilities included, which is the entire point: ~36 raw <select> call sites

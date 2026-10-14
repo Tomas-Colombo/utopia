@@ -1,8 +1,8 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { Topbar } from '@/components/shell/Topbar'
+import { PageBand } from '@/components/shell/PageBand'
 import { Button } from '@/components/ui/Button'
-import { Kpi } from '@/components/ui/Kpi'
+import { StatusDot } from '@/components/ui/StatusMark'
 import { verifySession } from '@/lib/dal/session'
 import { listVentasPaginado, resumenVentasPeriodo } from '@/lib/dal/ventas/venta'
 import { listReservas } from '@/lib/dal/reservas/reserva'
@@ -41,7 +41,7 @@ const PAGE_SIZE = 50
 export default async function VentasHome(props: {
   searchParams: Promise<{ desde?: string; hasta?: string; pagina?: string }>
 }) {
-  const session = await verifySession()
+  await verifySession()
   const searchParams = await props.searchParams
 
   // Params inválidos o incompletos → mes en curso. Nunca reventar por una URL
@@ -88,17 +88,39 @@ export default async function VentasHome(props: {
 
   return (
     <>
-      <Topbar
+      <PageBand
+        breadcrumb={['Utopía', 'Ventas']}
         title="Ventas"
-        session={session}
+        filters={<VentasFiltros desde={desde} hasta={hasta} />}
+        kpis={[
+          { label: 'Ventas del período', value: resumen.registradas.toString() },
+          {
+            label: 'Facturado en el período',
+            value: `$ ${resumen.facturado.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`,
+          },
+          { label: 'Reservas activas', value: reservasActivas.length.toString() },
+          {
+            label: 'Vencen pronto',
+            value: proximasVencer.toString(),
+            tone: proximasVencer > 0 ? 'warn' : 'default',
+          },
+        ]}
         actions={
-          <Link href="/ventas/nueva">
-            <Button size="sm">Nueva venta</Button>
-          </Link>
+          <>
+            <Link href="/ventas/reservas">
+              <Button size="sm" variant="secondary">
+                Reservas
+              </Button>
+            </Link>
+            <Link href="/ventas/nueva">
+              <Button size="sm" variant="accent">
+                Nueva venta
+              </Button>
+            </Link>
+          </>
         }
       />
       <main className="flex-1 p-6 space-y-6">
-        <VentasFiltros desde={desde} hasta={hasta} />
 
         {/* Alerta de deuda vencida. Vive acá y no sólo en /cuotas porque es
             la pantalla que se mira todos los días: una deuda vencida que hay
@@ -169,43 +191,6 @@ export default async function VentasHome(props: {
           </section>
         )}
 
-        <section className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          <Kpi label="Ventas del período" value={resumen.registradas.toString()} />
-          <Kpi
-            label="Facturado en el período"
-            value={`$ ${resumen.facturado.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`}
-          />
-          <Kpi label="Reservas activas" value={reservasActivas.length.toString()} />
-          <Kpi
-            label="Vencen pronto"
-            value={proximasVencer.toString()}
-            variant={proximasVencer > 0 ? 'alert' : 'default'}
-          />
-        </section>
-
-        <section className="grid grid-cols-1 gap-3 md:grid-cols-3">
-          <Link
-            href="/ventas/nueva"
-            className="rounded-lg border border-border bg-card p-5 hover:bg-card-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
-          >
-            <div className="text-sm text-muted">Vender ahora</div>
-            <div className="mt-1 font-display text-xl">Nueva venta</div>
-            <p className="mt-2 text-sm text-muted">
-              Escaneo QR + búsqueda manual. Precio según forma de pago.
-            </p>
-          </Link>
-          <Link
-            href="/ventas/reservas"
-            className="rounded-lg border border-border bg-card p-5 hover:bg-card-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
-          >
-            <div className="text-sm text-muted">Gestionar</div>
-            <div className="mt-1 font-display text-xl">Reservas</div>
-            <p className="mt-2 text-sm text-muted">
-              Ver reservas activas, cancelar, convertir en venta.
-            </p>
-          </Link>
-        </section>
-
         <section className="rounded-lg border border-border bg-card">
           <div className="border-b border-border px-4 py-3 flex flex-wrap items-center justify-between gap-2">
             <h3 className="font-display text-lg">Ventas del período</h3>
@@ -236,13 +221,13 @@ export default async function VentasHome(props: {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border text-left">
-                    <th className="px-4 py-3">Fecha</th>
-                    <th className="px-4 py-3">Cliente</th>
-                    <th className="px-4 py-3">Forma pago</th>
-                    <th className="px-4 py-3 text-right">Líneas</th>
-                    <th className="px-4 py-3 text-right">Total</th>
-                    <th className="px-4 py-3">Estado</th>
-                    <th className="px-4 py-3 text-right">
+                    <th className="eyebrow px-4 py-3 font-medium text-muted">Fecha</th>
+                    <th className="eyebrow px-4 py-3 font-medium text-muted">Cliente</th>
+                    <th className="eyebrow px-4 py-3 font-medium text-muted">Forma pago</th>
+                    <th className="eyebrow px-4 py-3 font-medium text-muted text-right">Líneas</th>
+                    <th className="eyebrow px-4 py-3 font-medium text-muted text-right">Total</th>
+                    <th className="eyebrow px-4 py-3 font-medium text-muted">Estado</th>
+                    <th className="eyebrow px-4 py-3 font-medium text-muted text-right">
                       <span className="sr-only">Acciones</span>
                     </th>
                   </tr>
@@ -258,12 +243,13 @@ export default async function VentasHome(props: {
                         $ {Number(v.total).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                       </td>
                       <td className="px-4 py-3">
+                        {/* La fila no trae estado de cobro: sólo registrada o
+                            anulada. Punto en tinta / punto de alerta, siempre
+                            con la palabra al lado. */}
                         {v.estado_venta === 'anulada' ? (
-                          <span className="text-xs uppercase font-mono text-ink">
-                            Anulada
-                          </span>
+                          <StatusDot tone="alerta">Anulada</StatusDot>
                         ) : (
-                          <span className="text-xs uppercase font-mono text-success">OK</span>
+                          <StatusDot tone="ok">Registrada</StatusDot>
                         )}
                       </td>
                       <td className="px-4 py-3 text-right">
