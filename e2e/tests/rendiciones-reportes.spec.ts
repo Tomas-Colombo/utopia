@@ -37,9 +37,12 @@ test.describe('Reportes', () => {
   test('la vista consolidada carga con el período por defecto', async ({ page, shell }) => {
     await page.goto('/reportes')
 
-    await expect(shell.titulo).toHaveText('Reportes')
-    await expect(page.getByRole('heading', { name: 'Financiero del período' })).toBeVisible()
-    await expect(page.getByText('Ingresos').first()).toBeVisible()
+    await expect(shell.titulo).toHaveText('Tablero financiero')
+    await expect(page.getByText('Vendiste')).toBeVisible()
+
+    // El gráfico de tendencia debe terminar en el mes actual
+    const mesActual = Intl.DateTimeFormat('es-AR', { month: 'short', year: '2-digit' }).format(new Date())
+    await expect(page.locator('svg text.text-muted.font-medium').last()).toHaveText(mesActual)
   })
 
   test('cambiar el período se refleja en la URL', async ({ page }) => {

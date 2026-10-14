@@ -14,6 +14,7 @@ import {
   type ReservaRow,
 } from '@/lib/types/ventas'
 import { vencerReservasAction } from '../actions'
+import { mensajeDeError } from '@/lib/errores/mensajes'
 
 type Row = ReservaRow & {
   cliente: { id_cliente: string; nombre: string } | null
@@ -35,7 +36,7 @@ export function ReservasClient({ rows }: { rows: Row[] }) {
   function vencer() {
     start(async () => {
       const res = await vencerReservasAction()
-      if (!res.ok) return toast.error('No se pudo procesar', res.reason)
+      if (!res.ok) return toast.error('No se pudo procesar', mensajeDeError(res.reason))
       toast.success(
         res.data?.vencidas
           ? `${res.data.vencidas} reserva(s) marcadas como vencidas`

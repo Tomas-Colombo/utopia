@@ -2,6 +2,7 @@ import 'server-only'
 import { createServerClient } from '@/lib/dal/supabase'
 import type { FormaPago } from '@/lib/types/precios'
 import type {
+  MedioPago,
   RegistrarVentaInput,
   VentaConDetalle,
   VentaRow,
@@ -196,25 +197,34 @@ export async function spRegistrarVenta(input: RegistrarVentaInput): Promise<stri
   return data as string
 }
 
-export async function spAnularVenta(idVenta: string, motivo?: string): Promise<void> {
+export async function spAnularVenta(
+  idVenta: string,
+  motivo?: string,
+): Promise<{ total_reintegrado: number }> {
   const supabase = await createServerClient()
-  const { error } = await supabase.rpc('sp_anular_venta', {
+  const { data, error } = await supabase.rpc('sp_anular_venta', {
     p_id_venta: idVenta,
     p_motivo: motivo ?? null,
   })
   if (error) throw new Error(`sp_anular_venta: ${error.message}`)
+  return data as { total_reintegrado: number }
 }
 
 export async function spRegistrarDevolucionCliente(
   idDetalleVenta: string,
   motivo?: string,
-): Promise<void> {
+  idCuentaReintegro?: string,
+  medioReintegro?: MedioPago,
+): Promise<{ reintegro: number }> {
   const supabase = await createServerClient()
-  const { error } = await supabase.rpc('sp_registrar_devolucion_cliente', {
+  const { data, error } = await supabase.rpc('sp_registrar_devolucion_cliente', {
     p_id_detalle_venta: idDetalleVenta,
     p_motivo: motivo ?? null,
+    p_id_cuenta_reintegro: idCuentaReintegro ?? null,
+    p_medio_reintegro: medioReintegro ?? null,
   })
   if (error) throw new Error(`sp_registrar_devolucion_cliente: ${error.message}`)
+  return data as { reintegro: number }
 }
 
 /**

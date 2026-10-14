@@ -528,8 +528,6 @@ export const ORDEN_CUOTAS_LABEL: Record<OrdenCuotas, string> = {
  * pagó la 3, la 4 no se va a cobrar sola.
  */
 export interface ResultadoIncobrable {
-  /** `null` sólo si el saldo era 0, que no debería pasar. */
-  id_gasto: string | null
   cuotas_afectadas: number
   monto_total: number
   desde: number

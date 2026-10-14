@@ -11,6 +11,7 @@ import { useToast } from '@/components/ui/Toast'
 import type { GastoConCategoria } from '@/lib/types/rendiciones'
 import type { GastosOrden } from '@/lib/dal/gastos/gasto'
 import { eliminarGastoAction } from '../rendiciones/actions'
+import { mensajeDeError } from '@/lib/errores/mensajes'
 
 interface CatOpt { id: string; nombre: string }
 
@@ -96,7 +97,7 @@ export function GastosTableClient({
     startEliminar(async () => {
       const res = await eliminarGastoAction({ idGasto: gasto.id_gasto })
       setAEliminar(null)
-      if (!res.ok) return toast.error('No se pudo eliminar el gasto', res.reason)
+      if (!res.ok) return toast.error('No se pudo eliminar el gasto', mensajeDeError(res.reason))
       toast.success('Gasto eliminado')
       router.refresh()
     })

@@ -12,21 +12,20 @@ import {
 } from '@/lib/inventario/producto-match'
 import type { ProductoConDetalle } from '@/lib/types/inventario'
 
+import { QrScanner } from '@/components/inventario/QrScanner'
+
 /**
  * Buscador unificado de la ficha de un ítem: el mismo input acepta QR, SKU o
  * nombre. Mientras se escribe aparecen sugerencias por NOMBRE (nunca por SKU,
  * para no abrir un ítem equivocado); Enter selecciona la resaltada. Sin
  * sugerencias, el texto se resuelve como código vía
  * `/inventario/buscar/{codigo}` (QR o SKU).
- *
- * El botón "Abrir cámara" está deshabilitado en esta pantalla. `QrScanner`
- * (@zxing) ya funciona y se usa en venta nueva y en reservas, así que la
- * cámara acá es cuestión de cablearla, no de integrar nada.
  */
 export function BuscadorFicha({ productos }: { productos: ProductoConDetalle[] }) {
   const router = useRouter()
   const [qr, setQr] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [camaraOpen, setCamaraOpen] = useState(false)
 
   const [sugerenciasOpen, setSugerenciasOpen] = useState(false)
   const [resaltado, setResaltado] = useState(0)
@@ -83,15 +82,26 @@ export function BuscadorFicha({ productos }: { productos: ProductoConDetalle[] }
   return (
     <div className="space-y-4">
       <div className="rounded-md border border-dashed border-border bg-card-2 p-6 text-center">
-        <div className="mx-auto mb-2 h-12 w-12 rounded-full bg-card-3 flex items-center justify-center text-2xl">
-          📷
-        </div>
-        <p className="text-sm text-muted">
-          Cámara pendiente de integración
-        </p>
-        <Button variant="secondary" disabled className="mt-3">
-          Abrir cámara
-        </Button>
+        {camaraOpen ? (
+          <QrScanner
+            onDetected={(code) => {
+              setQr(code)
+              setCamaraOpen(false)
+              router.push(`/inventario/buscar/${encodeURIComponent(code)}`)
+            }}
+            onClose={() => setCamaraOpen(false)}
+          />
+        ) : (
+          <>
+            <div className="mx-auto mb-2 h-12 w-12 rounded-full bg-card-3 flex items-center justify-center text-2xl">
+              📷
+            </div>
+            <p className="text-sm text-muted">Buscar ítem o producto mediante la cámara.</p>
+            <Button variant="secondary" onClick={() => setCamaraOpen(true)} className="mt-3">
+              Abrir cámara
+            </Button>
+          </>
+        )}
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-3">

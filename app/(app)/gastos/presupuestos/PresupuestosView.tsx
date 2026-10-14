@@ -15,6 +15,7 @@ import {
   renameCategoriaGastoAction,
   setPresupuestoAction,
 } from '../../rendiciones/actions'
+import { mensajeDeError } from '@/lib/errores/mensajes'
 
 interface Cat {
   id: string
@@ -72,7 +73,7 @@ export function PresupuestosView({ initial }: { initial: Cat[] }) {
     setErrNuevo(null)
     start(async () => {
       const res = await createCategoriaGastoAction({ nombre })
-      if (!res.ok) return toast.error('No se pudo crear', res.reason)
+      if (!res.ok) return toast.error('No se pudo crear', mensajeDeError(res.reason))
       toast.success('Categoría creada')
       setNuevoNombre('')
       router.refresh()
@@ -87,7 +88,7 @@ export function PresupuestosView({ initial }: { initial: Cat[] }) {
     }
     start(async () => {
       const res = await setPresupuestoAction({ idCategoria: id, presupuesto })
-      if (!res.ok) return toast.error('No se pudo guardar', res.reason)
+      if (!res.ok) return toast.error('No se pudo guardar', mensajeDeError(res.reason))
       toast.success('Presupuesto actualizado')
       router.refresh()
     })
@@ -99,7 +100,7 @@ export function PresupuestosView({ initial }: { initial: Cat[] }) {
     if (nombre === original) return
     start(async () => {
       const res = await renameCategoriaGastoAction({ idCategoria: id, nombre })
-      if (!res.ok) return toast.error('No se pudo renombrar', res.reason)
+      if (!res.ok) return toast.error('No se pudo renombrar', mensajeDeError(res.reason))
       toast.success('Categoría renombrada')
       router.refresh()
     })
@@ -109,7 +110,7 @@ export function PresupuestosView({ initial }: { initial: Cat[] }) {
     if (!confirm(`¿Dar de baja la categoría "${nombre}"?\n\nSi tiene gastos asociados, se conserva el historial y solo deja de aparecer en el selector.`)) return
     start(async () => {
       const res = await bajaCategoriaGastoAction({ idCategoria: id })
-      if (!res.ok) return toast.error('No se pudo dar de baja', res.reason)
+      if (!res.ok) return toast.error('No se pudo dar de baja', mensajeDeError(res.reason))
       toast.success(res.data?.hardDeleted ? 'Categoría eliminada' : 'Categoría dada de baja')
       router.refresh()
     })
@@ -118,7 +119,7 @@ export function PresupuestosView({ initial }: { initial: Cat[] }) {
   function reactivar(id: string) {
     start(async () => {
       const res = await reactivarCategoriaGastoAction({ idCategoria: id })
-      if (!res.ok) return toast.error('No se pudo reactivar', res.reason)
+      if (!res.ok) return toast.error('No se pudo reactivar', mensajeDeError(res.reason))
       toast.success('Categoría reactivada')
       router.refresh()
     })

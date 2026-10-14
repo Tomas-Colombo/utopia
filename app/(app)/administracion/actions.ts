@@ -13,6 +13,13 @@ import {
   spToggleUsuarioActivo,
   spUpdateRol,
 } from '@/lib/dal/administracion/administracion'
+import {
+  compactarPermisos,
+  createRolSchema,
+  deleteRolSchema,
+  primerReason,
+  updateRolSchema,
+} from '@/lib/validation/administracion'
 import type { UsuarioEstado } from '@/lib/types/administracion'
 
 type ActionResult<T = unknown> = { ok: true; data?: T } | { ok: false; reason: string }
@@ -98,9 +105,15 @@ export async function createRolAction(input: {
 }): Promise<ActionResult<{ id: string }>> {
   const g = await guarded('crear')
   if (!g.ok) return { ok: false, reason: g.error }
-  if (input.nombre.trim().length < 2) return { ok: false, reason: 'nombre-corto' }
+
+  const parsed = createRolSchema.safeParse(input)
+  if (!parsed.success) return { ok: false, reason: primerReason(parsed.error) }
+
   try {
-    const id = await spCreateRol({ nombre: input.nombre.trim(), permisos: input.permisos })
+    const id = await spCreateRol({
+      nombre: parsed.data.nombre,
+      permisos: compactarPermisos(parsed.data.permisos),
+    })
     revalidatePath('/administracion')
     return { ok: true, data: { id } }
   } catch (e) {
@@ -115,8 +128,16 @@ export async function updateRolAction(input: {
 }): Promise<ActionResult> {
   const g = await guarded('editar')
   if (!g.ok) return { ok: false, reason: g.error }
+
+  const parsed = updateRolSchema.safeParse(input)
+  if (!parsed.success) return { ok: false, reason: primerReason(parsed.error) }
+
   try {
-    await spUpdateRol(input)
+    await spUpdateRol({
+      idRol: parsed.data.idRol,
+      nombre: parsed.data.nombre,
+      permisos: compactarPermisos(parsed.data.permisos),
+    })
     revalidatePath('/administracion')
     return { ok: true }
   } catch (e) {
@@ -127,8 +148,12 @@ export async function updateRolAction(input: {
 export async function deleteRolAction(input: { idRol: string }): Promise<ActionResult> {
   const g = await guarded('eliminar')
   if (!g.ok) return { ok: false, reason: g.error }
+
+  const parsed = deleteRolSchema.safeParse(input)
+  if (!parsed.success) return { ok: false, reason: primerReason(parsed.error) }
+
   try {
-    await spDeleteRol(input.idRol)
+    await spDeleteRol(parsed.data.idRol)
     revalidatePath('/administracion')
     return { ok: true }
   } catch (e) {

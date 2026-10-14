@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/Badge'
 import { verifySession } from '@/lib/dal/session'
 import { getVentaConDetalle } from '@/lib/dal/ventas/venta'
 import { listCuotasPorVenta } from '@/lib/dal/cuotas/cuota'
+import { listCuentasDestino } from '@/lib/dal/ventas/cuenta-destino'
 import { VentaDetalleView } from './VentaDetalleView'
 
 export default async function VentaDetallePage(props: {
@@ -15,6 +16,7 @@ export default async function VentaDetallePage(props: {
   if (!venta) notFound()
 
   const cuotas = await listCuotasPorVenta(id)
+  const cuentas = await listCuentasDestino({ soloActivas: true })
 
   return (
     <>
@@ -29,7 +31,7 @@ export default async function VentaDetallePage(props: {
         }
       />
       <main className="flex-1 p-6">
-        <VentaDetalleView venta={venta} cuotas={cuotas} />
+        <VentaDetalleView venta={venta} cuotas={cuotas} cuentas={cuentas} />
       </main>
     </>
   )

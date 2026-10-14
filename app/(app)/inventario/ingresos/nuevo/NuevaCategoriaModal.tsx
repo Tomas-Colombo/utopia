@@ -9,6 +9,7 @@ import { useToast } from '@/components/ui/Toast'
 import { TallesEditor } from '@/components/inventario/TallesEditor'
 import type { CategoriaRow } from '@/lib/types/inventario'
 import { createCategoriaAction } from '../../actions'
+import { mensajeDeError } from '@/lib/errores/mensajes'
 
 /**
  * Alta rápida de categoría desde la carga de un ingreso, sin abandonar la
@@ -52,7 +53,7 @@ export function NuevaCategoriaModal({
     setErrNombre(null)
     start(async () => {
       const res = await createCategoriaAction({ nombre, talles })
-      if (!res.ok) return toast.error('No se pudo crear', res.reason)
+      if (!res.ok) return toast.error('No se pudo crear', mensajeDeError(res.reason))
       if (!res.data) return toast.error('No se pudo crear')
       toast.success('Categoría creada')
       const now = new Date().toISOString()

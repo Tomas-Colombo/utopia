@@ -57,4 +57,16 @@ describe.skipIf(!hasTestDb)('tenant — 00002', () => {
     expect(error).toBeNull()
     expect(data).toEqual([])
   })
+
+  it('rejects an invalid timezone (00066)', async () => {
+    const serviceRole = createServiceRoleTestClient()
+    const subdominio = withScopedTenant('tz-invalida')
+
+    const { error } = await serviceRole
+      .from('tenant')
+      .insert({ nombre_comercial: 'Tz Invalida', subdominio, zona_horaria: 'America/Falsa' })
+
+    expect(error).not.toBeNull()
+    expect(error?.message).toMatch(/zona-horaria-invalida/)
+  })
 })

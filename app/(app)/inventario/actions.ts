@@ -380,6 +380,14 @@ export async function setCostoProductoAction(input: {
 
 export async function transicionItemAction(input: {
   idItem: string
+  /**
+   * QR del ítem, tal como viene en la URL (sin decodificar). Es la clave de la
+   * ruta de la ficha, y `revalidatePath` trabaja sobre el pathname, no sobre el
+   * `id_item`. Los QR son 24 chars hex (`gen_random_bytes(12)`), así que crudo
+   * y decodificado coinciden; se pasa crudo para que el path sea exactamente el
+   * que la cache tiene indexado.
+   */
+  qr: string
   estadoHasta: EstadoItem
   tipoMovimiento: string
   referenciaId?: string | null
@@ -388,8 +396,19 @@ export async function transicionItemAction(input: {
   const g = await guarded('editar')
   if ('error' in g) return { ok: false, reason: g.error }
   try {
+    // El `qr` de más no llega al RPC: `spTransicionItem` mapea campo por campo.
     await spTransicionItem(input)
-    revalidatePath('/inventario/ficha')
+    // Antes esto decía `revalidatePath('/inventario/ficha')`, que NO es la
+    // ficha del ítem: es la página de búsqueda estática que vive en ese path
+    // exacto. La ficha es `/inventario/ficha/[qr]`, y un path plano nunca
+    // matchea un segmento dinámico (ver `revalidatePath.md` §Parameters: con
+    // segmento dinámico el `type` es obligatorio, o se pasa el path literal).
+    // Mismo criterio que el resto del archivo, que pasa paths literales.
+    revalidatePath(`/inventario/ficha/${input.qr}`)
+    // Y faltaba el listado: una baja o una devolución cambia el stock, así que
+    // `/inventario` quedaba viejo. Todas las demás transiciones de este archivo
+    // ya lo revalidan.
+    revalidatePath('/inventario')
     return { ok: true }
   } catch (e) {
     return { ok: false, reason: (e as Error).message }

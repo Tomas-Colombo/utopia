@@ -24,6 +24,8 @@ import {
   spCobrarCuota,
   spMarcarCuotaIncobrable,
 } from '@/lib/dal/cuotas/cuota'
+import { primerReason } from '@/lib/validation/administracion'
+import { anularVentaSchema, devolverItemVentaSchema } from '@/lib/validation/ventas'
 import type { FormaPago } from '@/lib/types/precios'
 import type {
   FinanciacionInput,
@@ -97,15 +99,22 @@ export async function registrarVentaAction(input: {
 export async function anularVentaAction(input: {
   idVenta: string
   motivo?: string
-}): Promise<ActionResult> {
+}): Promise<ActionResult<{ total_reintegrado: number }>> {
   const g = await guarded('ventas', 'editar')
   if (!g.ok) return { ok: false, reason: g.error }
+
+  const parsed = anularVentaSchema.safeParse(input)
+  if (!parsed.success) return { ok: false, reason: primerReason(parsed.error) }
+
   try {
-    await spAnularVenta(input.idVenta, input.motivo)
+    const res = await spAnularVenta(
+      parsed.data.idVenta,
+      parsed.data.motivo
+    )
     revalidatePath('/ventas')
-    revalidatePath(`/ventas/${input.idVenta}`)
+    revalidatePath(`/ventas/${parsed.data.idVenta}`)
     revalidatePath('/inventario/productos')
-    return { ok: true }
+    return { ok: true, data: res }
   } catch (e) {
     return { ok: false, reason: (e as Error).message }
   }
@@ -115,13 +124,24 @@ export async function devolverItemVentaAction(input: {
   idDetalleVenta: string
   idVenta: string
   motivo?: string
-}): Promise<ActionResult> {
+  idCuentaReintegro?: string | null
+  medioReintegro?: MedioPago | null
+}): Promise<ActionResult<{ reintegro: number }>> {
   const g = await guarded('ventas', 'editar')
   if (!g.ok) return { ok: false, reason: g.error }
+
+  const parsed = devolverItemVentaSchema.safeParse(input)
+  if (!parsed.success) return { ok: false, reason: primerReason(parsed.error) }
+
   try {
-    await spRegistrarDevolucionCliente(input.idDetalleVenta, input.motivo)
-    revalidatePath(`/ventas/${input.idVenta}`)
-    return { ok: true }
+    const res = await spRegistrarDevolucionCliente(
+      parsed.data.idDetalleVenta,
+      parsed.data.motivo,
+      parsed.data.idCuentaReintegro,
+      parsed.data.medioReintegro
+    )
+    revalidatePath(`/ventas/${parsed.data.idVenta}`)
+    return { ok: true, data: res }
   } catch (e) {
     return { ok: false, reason: (e as Error).message }
   }

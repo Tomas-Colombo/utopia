@@ -14,7 +14,7 @@ import type {
   ProductoRow,
 } from '@/lib/types/inventario'
 import { AsignarTallesModal } from '../../AsignarTallesModal'
-import { EditarProductoModal } from '../../EditarProductoModal'
+import { EditarProductoModal } from '@/components/inventario/EditarProductoModal'
 
 type Proveedor = { id_proveedor: string; nombre: string } | null
 
@@ -64,8 +64,6 @@ export function FichaProductoView({
   categorias,
   proveedor,
   items,
-  costoVigente,
-  monedaVigente,
   stockDisponible,
   stockTotal,
 }: {
@@ -75,8 +73,6 @@ export function FichaProductoView({
   categorias: CategoriaRow[]
   proveedor: Proveedor
   items: ItemProductoRow[]
-  costoVigente: number | null
-  monedaVigente: string | null
   stockDisponible: number
   stockTotal: number
 }) {

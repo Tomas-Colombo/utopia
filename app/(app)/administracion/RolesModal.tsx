@@ -15,6 +15,7 @@ import {
   type RolRow,
 } from '@/lib/types/administracion'
 import { createRolAction, deleteRolAction, updateRolAction } from './actions'
+import { mensajeDeError } from '@/lib/errores/mensajes'
 
 /** El modal alterna entre el listado y el formulario (alta o edición). No
  *  apilamos un segundo modal encima: es el mismo diálogo cambiando de vista. */
@@ -49,7 +50,7 @@ export function RolesModal({ roles }: { roles: RolRow[] }) {
     setConfirmar(null)
     start(async () => {
       const res = await deleteRolAction({ idRol: r.id_rol })
-      if (!res.ok) return toast.error('No se pudo eliminar', traducir(res.reason))
+      if (!res.ok) return toast.error('No se pudo eliminar', mensajeDeError(res.reason))
       toast.success('Rol eliminado')
       router.refresh()
     })
@@ -119,7 +120,7 @@ export function RolesModal({ roles }: { roles: RolRow[] }) {
                 if (!res.ok) {
                   return toast.error(
                     vista.rol ? 'No se pudo guardar' : 'No se pudo crear',
-                    res.reason,
+                    mensajeDeError(res.reason),
                   )
                 }
                 toast.success(vista.rol ? 'Rol actualizado' : 'Rol creado')
@@ -269,9 +270,3 @@ function RolForm({
   )
 }
 
-function traducir(reason: string): string {
-  if (reason.startsWith('rol-en-uso')) {
-    return 'No se puede eliminar: hay usuarios con este rol asignado.'
-  }
-  return reason
-}

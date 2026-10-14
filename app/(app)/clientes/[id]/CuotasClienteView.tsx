@@ -26,6 +26,7 @@ import {
   type MedioPago,
 } from '@/lib/types/ventas'
 import { cobrarCuotaAction, marcarCuotaIncobrableAction } from '../../ventas/actions'
+import { mensajeDeError } from '@/lib/errores/mensajes'
 
 const VARIANT: Record<EstadoCuota, 'success' | 'info' | 'warning' | 'danger' | 'neutral'> = {
   pendiente: 'info',
@@ -141,7 +142,7 @@ export function CuotasClienteView({
         idCuentaDestino: idCuenta,
         referencia: referencia.trim() || null,
       })
-      if (!res.ok) return setErrCobro(explicar(res.reason))
+      if (!res.ok) return setErrCobro(mensajeDeError(res.reason))
       setCobrando(null)
       toast.success(
         monto >= saldo ? 'Cuota cobrada' : 'Cobro parcial registrado',
@@ -161,7 +162,7 @@ export function CuotasClienteView({
         idCuota: cuota.id_cuota_financiada,
         motivo,
       })
-      if (!res.ok) return setErrMotivo(explicar(res.reason))
+      if (!res.ok) return setErrMotivo(mensajeDeError(res.reason))
       setIncobrable(null)
       setMotivo('')
       // El conteo sale del SP, no del preview: si alguien cobró una cuota
@@ -630,15 +631,4 @@ function nombreMes(mes: string): string {
 
 function money(n: number): string {
   return `$ ${n.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`
-}
-
-function explicar(reason: string): string {
-  if (reason === 'monto-invalido') return 'El monto tiene que ser mayor a cero.'
-  if (reason.includes('monto-excede-saldo')) return 'El monto supera el saldo de la cuota.'
-  if (reason.includes('cuota-no-cobrable')) return 'Esta cuota ya no admite cobros.'
-  if (reason.includes('cuota-no-incobrable')) return 'Esta cuota ya está cerrada.'
-  if (reason === 'motivo-requerido') return 'Escribí el motivo.'
-  if (reason === 'no-permission') return 'Tu rol no puede hacer esto.'
-  if (reason === 'pago-sin-cuenta') return 'Elegí una cuenta destino.'
-  return reason
 }

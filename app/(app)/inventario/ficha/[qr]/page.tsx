@@ -6,6 +6,7 @@ import { QrDisplay } from '@/components/inventario/QrDisplay'
 import { verifySession } from '@/lib/dal/session'
 import { findItemByQr, getItemConDetalle } from '@/lib/dal/inventario/item'
 import type { EstadoItem } from '@/lib/types/inventario'
+import { EscanearOtro } from './EscanearOtro'
 import { FichaActions } from './FichaActions'
 
 const ESTADO_LABEL: Record<EstadoItem, string> = {
@@ -69,10 +70,18 @@ export default async function FichaItemPage(props: {
           {/* QR + estado */}
           <aside className="rounded-lg border border-border bg-card p-4">
             <QrDisplay value={detalle.qr_code} size={220} />
-            <div className="mt-4 flex items-center justify-center">
+            <div className="mt-4 flex flex-col items-center gap-3">
               <Badge variant={ESTADO_VARIANT[detalle.estado_item]}>
                 {ESTADO_LABEL[detalle.estado_item]}
               </Badge>
+              <Link
+                href={`/inventario/imprimir-etiquetas?qrs=${encodeURIComponent(detalle.qr_code)}`}
+                target="_blank"
+                className="w-full text-center rounded-md bg-card-3 border border-border px-3 py-2 text-sm font-semibold hover:bg-card-hover"
+              >
+                Imprimir Etiqueta
+              </Link>
+              <EscanearOtro />
             </div>
           </aside>
 
@@ -115,6 +124,7 @@ export default async function FichaItemPage(props: {
 
             <FichaActions
               idItem={detalle.id_item}
+              qr={qr}
               estadoActual={detalle.estado_item}
             />
 

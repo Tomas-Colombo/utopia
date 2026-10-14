@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { useToast } from '@/components/ui/Toast'
 import { toggleTenantModuloAction } from '../actions'
+import { mensajeDeError } from '@/lib/errores/mensajes'
 
 interface Mod {
   id: string
@@ -27,7 +28,7 @@ export function ModulosView({ initial }: { initial: Mod[] }) {
         idModulo: m.id,
         habilitado: next,
       })
-      if (!res.ok) return toast.error('No se pudo actualizar', res.reason)
+      if (!res.ok) return toast.error('No se pudo actualizar', mensajeDeError(res.reason))
       toast.success(next ? 'Módulo habilitado' : 'Módulo deshabilitado')
       setRows((rs) =>
         rs.map((r) => (r.id === m.id ? { ...r, habilitado: next } : r)),

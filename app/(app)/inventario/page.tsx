@@ -1,6 +1,5 @@
 import Link from 'next/link'
 import { Topbar } from '@/components/shell/Topbar'
-import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { verifySession } from '@/lib/dal/session'
 import {
@@ -16,7 +15,7 @@ import {
   listAlertaRotacionVencida,
 } from '@/lib/dal/reportes/reportes'
 import { AlertasReposicion } from './AlertasReposicion'
-import { ProductosTableClient } from './productos/ProductosTableClient'
+import { ProductosTableClient } from '@/components/inventario/ProductosTableClient'
 
 /**
  * Home del módulo Inventario. Muestra el listado de productos directamente

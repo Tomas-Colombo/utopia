@@ -11,6 +11,7 @@ import {
   type UsuarioEstado,
 } from '@/lib/types/administracion'
 import { asignarRolAction, toggleUsuarioEstadoAction } from '../actions'
+import { mensajeDeError } from '@/lib/errores/mensajes'
 
 const ESTADO_VARIANT: Record<UsuarioEstado, 'success' | 'neutral' | 'warning'> = {
   activo: 'success',
@@ -43,7 +44,7 @@ export function UsuariosView({
   function cambiarEstado(u: UsuarioConRol, next: UsuarioEstado) {
     start(async () => {
       const res = await toggleUsuarioEstadoAction({ idUsuario: u.id_usuario, estado: next })
-      if (!res.ok) return toast.error('No se pudo actualizar', res.reason)
+      if (!res.ok) return toast.error('No se pudo actualizar', mensajeDeError(res.reason))
       toast.success('Estado actualizado')
       setRows((rs) =>
         rs.map((r) =>
@@ -62,7 +63,7 @@ export function UsuariosView({
         idRol,
         nombreCompleto: u.nombre_completo ?? '',
       })
-      if (!res.ok) return toast.error('No se pudo asignar rol', res.reason)
+      if (!res.ok) return toast.error('No se pudo asignar rol', mensajeDeError(res.reason))
       toast.success('Rol actualizado')
       const nuevoRol = roles.find((r) => r.id === idRol) ?? null
       setRows((rs) =>

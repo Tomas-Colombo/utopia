@@ -70,7 +70,6 @@ export function QrScanner({
   return (
     <div className="space-y-3">
       <div className="relative overflow-hidden rounded-lg border border-border bg-black">
-        {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
         <video
           ref={videoRef}
           className="aspect-square w-full object-cover"

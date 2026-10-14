@@ -65,3 +65,8 @@ seed_dev.sql
 # ensucia el arbol constantemente y no le sirve a nadie mas. El indice
 # legible (.atl/skill-registry.md) si se versiona.
 .atl/.skill-registry.cache.json
+# database dumps (contain real data)
+/backups
+
+# Documentacion Privada
+/ingenieria/

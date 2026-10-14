@@ -57,9 +57,17 @@ export default defineConfig({
         'lib/cobros/**',
         'lib/cuotas/**',
         'lib/design-tokens/**',
+        // El catalogo de mensajes al operador: logica pura, y es lo que garantiza
+        // que ningun slug crudo llegue a la UI. Va medido.
+        'lib/errores/**',
         'lib/inventario/**',
         'lib/precios/**',
+        'lib/reportes/**',
         'lib/tenant/**',
+        // Validación de payloads de Server Actions: lógica pura, sin DB ni
+        // request de Next, y es la puerta de entrada de datos no confiables.
+        // Va medida para que el piso la proteja.
+        'lib/validation/**',
         'lib/utils/**',
         'lib/fechas.ts',
         'components/ui/**',

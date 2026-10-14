@@ -1,6 +1,12 @@
 'use client'
 
-import { useCallback, useId, useRef, type KeyboardEvent as ReactKeyboardEvent } from 'react'
+import {
+  useCallback,
+  useId,
+  useRef,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type ReactNode,
+} from 'react'
 import { Portal } from './Portal'
 
 export interface ConfirmDialogProps {
@@ -11,6 +17,13 @@ export interface ConfirmDialogProps {
   cancelLabel?: string
   /** danger variant emphasizes a destructive confirm action. */
   variant?: 'default' | 'danger'
+  /**
+   * Optional slot between the description and the buttons, for a confirm that
+   * also collects something — e.g. an optional reason recorded with the
+   * action. Inputs rendered here join the focus trap on their own, because
+   * `FOCUSABLE_SELECTOR` already covers them.
+   */
+  children?: ReactNode
   onConfirm: () => void
   onCancel: () => void
 }
@@ -32,6 +45,7 @@ export function ConfirmDialog({
   confirmLabel = 'Confirm',
   cancelLabel = 'Cancel',
   variant = 'default',
+  children,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
@@ -106,6 +120,7 @@ export function ConfirmDialog({
             {title}
           </h2>
           {description && <p className="mt-2 text-sm text-muted">{description}</p>}
+          {children && <div className="mt-4">{children}</div>}
           <div className="mt-6 flex justify-end gap-3">
             <button
               type="button"

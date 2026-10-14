@@ -22,6 +22,7 @@ import {
 import type { ProductoConDetalle } from '@/lib/types/inventario'
 import type { LineaCarrito } from '@/lib/types/ventas'
 import { crearReservaAction, crearClienteAction } from '../../actions'
+import { mensajeDeError } from '@/lib/errores/mensajes'
 
 interface Cliente { id: string; nombre: string; telefono: string | null }
 
@@ -161,7 +162,7 @@ export function NuevaReservaView({
       const r = await fetch(lookupUrl({ code: codigo }))
       const data = await r.json()
       if (!data.ok) {
-        setErrorBusqueda(explicar(data.reason, data))
+        setErrorBusqueda(mensajeDeError(data.reason, { extra: data }))
         return
       }
       if (pushItem(data.linea as LineaCarrito)) setQrInput('')
@@ -212,7 +213,7 @@ export function NuevaReservaView({
           })
           return null
         }
-        setErrorBusqueda(explicar(data.reason, data))
+        setErrorBusqueda(mensajeDeError(data.reason, { extra: data }))
         return null
       }
       const nueva = pushItem(data.linea as LineaCarrito)
@@ -277,7 +278,7 @@ export function NuevaReservaView({
         apellido,
         telefono: nuevoTelefono.trim() || null,
       })
-      if (!res.ok) return setErrorCliente(res.reason)
+      if (!res.ok) return setErrorCliente(mensajeDeError(res.reason))
       // Mismo armado que la columna generada `nombre_completo` (00058), para
       // que el cliente recien creado no se vea distinto al recargar.
       const completo = `${nombre} ${apellido}`
@@ -306,7 +307,7 @@ export function NuevaReservaView({
         fechaVencimiento: new Date(fechaVenc).toISOString(),
         observaciones: observaciones || null,
       })
-      if (!res.ok) return toast.error('No se pudo crear', explicar(res.reason))
+      if (!res.ok) return toast.error('No se pudo crear', mensajeDeError(res.reason))
       toast.success('Reserva creada')
       router.push(`/ventas/reservas/${res.data!.id}`)
       router.refresh()
@@ -591,21 +592,4 @@ export function NuevaReservaView({
       </aside>
     </div>
   )
-}
-
-function explicar(reason: string, extra?: Record<string, unknown>): string {
-  if (reason.startsWith('item-not-found')) return 'No se encontró un ítem con ese código.'
-  if (reason.startsWith('item-no-disponible')) {
-    const est = extra?.estado ? ` (estado: ${extra.estado})` : ''
-    return `El ítem no está disponible${est}.`
-  }
-  if (reason.startsWith('item-ya-reservado') || reason.startsWith('item-en-reserva'))
-    return 'El ítem ya está en otra reserva activa.'
-  if (reason === 'sku-sin-stock') return 'Ese producto no tiene unidades disponibles en stock.'
-  if (reason === 'sku-sin-stock-libre')
-    return 'No quedan unidades libres: están reservadas o ya las agregaste a la lista.'
-  if (reason === 'sin-precio-lista')
-    return 'El producto no tiene precio de venta. Fijalo en Precios → Control de precios.'
-  if (reason === 'vencimiento-invalido') return 'La fecha de vencimiento debe ser futura.'
-  return reason
 }

@@ -58,6 +58,21 @@ export function hasPermission(
 }
 
 /**
+ * Checks if the current tenant has the module enabled and the user has
+ * at least 'ver' permission for it. Used for rendering UI blocks.
+ */
+export function hasModuleAccess(
+  session: Session,
+  moduloCodigo: string,
+  accion: string = 'ver',
+): boolean {
+  if (!session.modulosHabilitados.includes(moduloCodigo)) {
+    return false
+  }
+  return hasPermission(session, moduloCodigo, accion)
+}
+
+/**
  * Maps `AuthorizationError` to a stable HTTP-ish shape for Server Action
  * results (`{ ok: false, reason }`) and for `redirect()` targets in Server
  * Components. Callers decide what to do with the reason — this only

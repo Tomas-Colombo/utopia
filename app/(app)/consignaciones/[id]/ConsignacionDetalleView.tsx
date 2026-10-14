@@ -26,6 +26,7 @@ import {
   editarConsignacionAction,
   eliminarConsignacionAction,
 } from '../actions'
+import { mensajeDeError } from '@/lib/errores/mensajes'
 
 const DETALLE_VARIANT: Record<EstadoConsignacionDetalle, 'success' | 'warning' | 'neutral'> = {
   pendiente: 'warning',
@@ -113,7 +114,7 @@ export function ConsignacionDetalleView({
       )
       const data = (await r.json()) as LookupResp
       if (!data.ok) {
-        setErrorBusqueda(traducir(data.reason, data))
+        setErrorBusqueda(mensajeDeError(data.reason, { extra: data }))
         return
       }
       // Llamar al RPC vía Server Action
@@ -124,7 +125,7 @@ export function ConsignacionDetalleView({
           motivo: motivoItem || null,
         })
         if (!res.ok) {
-          setErrorBusqueda(traducir(res.reason))
+          setErrorBusqueda(mensajeDeError(res.reason))
           return
         }
         toast.success('Ítem apartado')
@@ -147,7 +148,7 @@ export function ConsignacionDetalleView({
         idDetalle: id,
         idConsignacion: cons.id_consignacion,
       })
-      if (!res.ok) return toast.error('No se pudo confirmar salida', traducir(res.reason))
+      if (!res.ok) return toast.error('No se pudo confirmar salida', mensajeDeError(res.reason))
       toast.success('Ítem devuelto al proveedor')
       router.refresh()
     })
@@ -162,7 +163,7 @@ export function ConsignacionDetalleView({
         idDetalle: id,
         idConsignacion: cons.id_consignacion,
       })
-      if (!res.ok) return toast.error('No se pudo cancelar', traducir(res.reason))
+      if (!res.ok) return toast.error('No se pudo cancelar', mensajeDeError(res.reason))
       toast.success('Ítem liberado')
       router.refresh()
     })
@@ -172,7 +173,7 @@ export function ConsignacionDetalleView({
     setCerrarOpen(false)
     start(async () => {
       const res = await cerrarConsignacionAction({ idConsignacion: cons.id_consignacion })
-      if (!res.ok) return toast.error('No se pudo cerrar', traducir(res.reason))
+      if (!res.ok) return toast.error('No se pudo cerrar', mensajeDeError(res.reason))
       toast.success('Consignación cerrada')
       router.refresh()
     })
@@ -183,7 +184,7 @@ export function ConsignacionDetalleView({
     setConfirmarLoteOpen(false)
     start(async () => {
       const res = await confirmarConsignacionAction({ idConsignacion: cons.id_consignacion })
-      if (!res.ok) return toast.error('No se pudo confirmar', traducir(res.reason))
+      if (!res.ok) return toast.error('No se pudo confirmar', mensajeDeError(res.reason))
       toast.success(`Lote confirmado · ${res.data!.confirmados} ítem(s) devueltos`)
       router.refresh()
     })
@@ -195,7 +196,7 @@ export function ConsignacionDetalleView({
         idConsignacion: cons.id_consignacion,
         observaciones: obs,
       })
-      if (!res.ok) return toast.error('No se pudo guardar', traducir(res.reason))
+      if (!res.ok) return toast.error('No se pudo guardar', mensajeDeError(res.reason))
       setEditando(false)
       toast.success('Observaciones actualizadas')
       router.refresh()
@@ -206,7 +207,7 @@ export function ConsignacionDetalleView({
     setEliminarOpen(false)
     start(async () => {
       const res = await eliminarConsignacionAction({ idConsignacion: cons.id_consignacion })
-      if (!res.ok) return toast.error('No se pudo eliminar', traducir(res.reason))
+      if (!res.ok) return toast.error('No se pudo eliminar', mensajeDeError(res.reason))
       const n = res.data!.reestockeados
       toast.success(
         'Consignación eliminada',
@@ -504,29 +505,4 @@ export function ConsignacionDetalleView({
       />
     </div>
   )
-}
-
-function traducir(reason: string, extra?: LookupFail): string {
-  if (reason.startsWith('item-not-found')) return 'No se encontró un ítem con ese QR.'
-  if (reason.startsWith('item-no-disponible')) {
-    const est = extra?.estado ? ` (estado: ${extra.estado})` : ''
-    return `El ítem no está disponible${est}.`
-  }
-  if (reason.startsWith('item-no-es-consignacion'))
-    return 'El ítem no es de consignación (fue comprado directamente).'
-  if (reason === 'item-otro-proveedor')
-    return 'El ítem pertenece a otro proveedor.'
-  if (reason.startsWith('item-ya-en-consignacion-pendiente'))
-    return 'Ya está apartado en otra consignación pendiente.'
-  if (reason.startsWith('item-en-reserva'))
-    return 'El ítem está en una reserva activa; canceladla primero.'
-  if (reason.startsWith('quedan-pendientes'))
-    return 'No se puede cerrar: quedan ítems pendientes de devolver o cancelar.'
-  if (reason === 'consignacion-no-activa')
-    return 'La consignación ya está cerrada.'
-  if (reason.startsWith('proveedor-con-items'))
-    return 'No se puede cambiar el proveedor con ítems apartados.'
-  if (reason === 'consignacion-not-found') return 'La consignación ya no existe.'
-  if (reason === 'no-permission') return 'Tu rol no tiene permiso para esta acción.'
-  return reason
 }

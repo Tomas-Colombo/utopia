@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { useToast } from '@/components/ui/Toast'
 import { setProveedorActivoAction } from '../actions'
+import { mensajeDeError } from '@/lib/errores/mensajes'
 
 /**
  * Toggle de baja/reactivación. Con confirm inline porque dar de baja tiene
@@ -29,7 +30,7 @@ export function BajaProveedorButton({
     start(async () => {
       const res = await setProveedorActivoAction({ id, activo: !activo })
       if (!res.ok) {
-        toast.error('No se pudo actualizar', res.reason)
+        toast.error('No se pudo actualizar', mensajeDeError(res.reason))
         return
       }
       toast.success(activo ? 'Proveedor dado de baja' : 'Proveedor reactivado')

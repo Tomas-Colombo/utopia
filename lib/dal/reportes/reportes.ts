@@ -5,13 +5,8 @@ import type {
   AlertaReposicion,
   AlertaRotacionVencida,
   CuentasPorCobrar,
-  DashboardKpis,
   GananciaPorProductoRow,
-  IncobrablesPeriodo,
   PerfilProveedorRow,
-  ReporteCaja,
-  ReporteFinanciero,
-  RotacionRow,
 } from '@/lib/types/reportes'
 
 /**
@@ -21,27 +16,6 @@ import type {
  */
 
 // ─── Dashboard ───────────────────────────────────────────────────────
-
-export async function getDashboardKpis(): Promise<DashboardKpis> {
-  const supabase = await createServerClient()
-  const { data, error } = await supabase.rpc('rf_dashboard_kpis')
-  if (error) throw new Error(`rf_dashboard_kpis: ${error.message}`)
-  // La función devuelve setof (una sola row). Supabase JS lo entrega como array.
-  const row = Array.isArray(data) ? data[0] : data
-  const r = (row ?? {}) as Record<string, unknown>
-  return {
-    ventas_hoy: Number(r.ventas_hoy ?? 0),
-    facturado_hoy: Number(r.facturado_hoy ?? 0),
-    ventas_30d: Number(r.ventas_30d ?? 0),
-    facturado_30d: Number(r.facturado_30d ?? 0),
-    rendiciones_pendientes: Number(r.rendiciones_pendientes ?? 0),
-    monto_rendiciones_pendientes: Number(r.monto_rendiciones_pendientes ?? 0),
-    reservas_activas: Number(r.reservas_activas ?? 0),
-    reservas_vencidas_sin_purgar: Number(r.reservas_vencidas_sin_purgar ?? 0),
-    productos_bajo_minimo: Number(r.productos_bajo_minimo ?? 0),
-    items_rotacion_vencida: Number(r.items_rotacion_vencida ?? 0),
-  }
-}
 
 // ─── Alertas ────────────────────────────────────────────────────────
 
@@ -115,26 +89,7 @@ export async function listGananciaPorProducto(): Promise<GananciaPorProductoRow[
   }))
 }
 
-export async function getRotacion(input: {
-  desde: string
-  hasta: string
-  idCategoria?: string | null
-}): Promise<RotacionRow[]> {
-  const supabase = await createServerClient()
-  const { data, error } = await supabase.rpc('rf_rotacion_por_producto', {
-    p_desde: input.desde,
-    p_hasta: input.hasta,
-    p_id_categoria: input.idCategoria ?? null,
-  })
-  if (error) throw new Error(`rf_rotacion_por_producto: ${error.message}`)
-  return ((data ?? []) as RotacionRow[]).map((r) => ({
-    ...r,
-    unidades_vendidas: Number(r.unidades_vendidas),
-    monto_vendido: Number(r.monto_vendido),
-    monto_ganancia: Number(r.monto_ganancia),
-    ticket_promedio: Number(r.ticket_promedio),
-  }))
-}
+
 
 export async function listPerfilProveedor(): Promise<PerfilProveedorRow[]> {
   const supabase = await createServerClient()
@@ -154,63 +109,7 @@ export async function listPerfilProveedor(): Promise<PerfilProveedorRow[]> {
   }))
 }
 
-export async function getReporteFinanciero(input: {
-  desde: string
-  hasta: string
-}): Promise<ReporteFinanciero> {
-  const supabase = await createServerClient()
-  const { data, error } = await supabase.rpc('rf_reporte_financiero', {
-    p_desde: input.desde,
-    p_hasta: input.hasta,
-  })
-  if (error) throw new Error(`rf_reporte_financiero: ${error.message}`)
-  const row = Array.isArray(data) ? data[0] : data
-  const r = (row ?? {}) as Record<string, unknown>
-  return {
-    ingresos_totales: Number(r.ingresos_totales ?? 0),
-    costo_mercaderia: Number(r.costo_mercaderia ?? 0),
-    monto_a_proveedores: Number(r.monto_a_proveedores ?? 0),
-    ganancia_bruta_real: Number(r.ganancia_bruta_real ?? 0),
-    ganancia_bruta_esperada: Number(r.ganancia_bruta_esperada ?? 0),
-    impacto_descuentos: Number(r.impacto_descuentos ?? 0),
-    gastos_totales: Number(r.gastos_totales ?? 0),
-    ganancia_neta: Number(r.ganancia_neta ?? 0),
-    cantidad_ventas: Number(r.cantidad_ventas ?? 0),
-    cantidad_lineas: Number(r.cantidad_lineas ?? 0),
-    ticket_promedio: Number(r.ticket_promedio ?? 0),
-  }
-}
-
 // ─── Caja y deuda (00061) ────────────────────────────────────────────
-
-/**
- * PERCIBIDO del período: lo que entró, medido sobre la fecha del PAGO.
- *
- * No reemplaza a `getReporteFinanciero`, que mide devengado sobre la fecha de
- * la VENTA. Desde que una venta puede cobrarse en seis meses, las dos lecturas
- * dejaron de coincidir y el panel necesita las dos.
- */
-export async function getReporteCaja(input: {
-  desde: string
-  hasta: string
-}): Promise<ReporteCaja> {
-  const supabase = await createServerClient()
-  const { data, error } = await supabase.rpc('rf_reporte_caja', {
-    p_desde: input.desde,
-    p_hasta: input.hasta,
-  })
-  if (error) throw new Error(`rf_reporte_caja: ${error.message}`)
-  const r = (fila(data) ?? {}) as Record<string, unknown>
-  return {
-    cobrado_total: Number(r.cobrado_total ?? 0),
-    cobrado_contado: Number(r.cobrado_contado ?? 0),
-    cobrado_cuotas: Number(r.cobrado_cuotas ?? 0),
-    costo_cobro: Number(r.costo_cobro ?? 0),
-    neto_acreditado: Number(r.neto_acreditado ?? 0),
-    a_acreditar: Number(r.a_acreditar ?? 0),
-    cantidad_pagos: Number(r.cantidad_pagos ?? 0),
-  }
-}
 
 /**
  * Deuda vigente. Sin período: es un saldo, no un flujo.
@@ -234,26 +133,6 @@ export async function getCuentasPorCobrar(hoy: string): Promise<CuentasPorCobrar
   }
 }
 
-/** Pérdidas por incobrable del período, con el costo que quedó sin cubrir. */
-export async function getIncobrablesPeriodo(input: {
-  desde: string
-  hasta: string
-}): Promise<IncobrablesPeriodo> {
-  const supabase = await createServerClient()
-  const { data, error } = await supabase.rpc('rf_incobrables_periodo', {
-    p_desde: input.desde,
-    p_hasta: input.hasta,
-  })
-  if (error) throw new Error(`rf_incobrables_periodo: ${error.message}`)
-  const r = (fila(data) ?? {}) as Record<string, unknown>
-  return {
-    monto_incobrable: Number(r.monto_incobrable ?? 0),
-    costo_no_cubierto: Number(r.costo_no_cubierto ?? 0),
-    cuotas_incobrables: Number(r.cuotas_incobrables ?? 0),
-    ventas_afectadas: Number(r.ventas_afectadas ?? 0),
-    clientes_afectados: Number(r.clientes_afectados ?? 0),
-  }
-}
 
 /** Clientes con cuotas vencidas, el que más debe primero. */
 export async function listAlertasCuotasVencidas(

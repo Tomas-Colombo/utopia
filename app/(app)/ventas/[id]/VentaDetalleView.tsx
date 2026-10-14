@@ -8,6 +8,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Field } from '@/components/ui/Field'
 import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
+import { Textarea } from '@/components/ui/Textarea'
 import { useToast } from '@/components/ui/Toast'
 import { formaPagoLabel } from '@/lib/types/precios'
 import {
@@ -17,8 +18,10 @@ import {
   MEDIO_PAGO_LABEL,
   nombreCliente,
   TIPO_COMPROBANTE_LABEL,
+  type CuentaDestinoRow,
   type CuotaFinanciadaRow,
   type EstadoCuota,
+  type MedioPago,
   type PagoVentaRow,
   type TipoComprobante,
   type VentaConDetalle,
@@ -29,6 +32,7 @@ import {
   devolverItemVentaAction,
   emitirComprobanteAction,
 } from '../actions'
+import { mensajeDeError } from '@/lib/errores/mensajes'
 
 const CUOTA_VARIANT: Record<EstadoCuota, 'success' | 'info' | 'warning' | 'danger' | 'neutral'> = {
   pendiente: 'info',
@@ -41,19 +45,27 @@ const CUOTA_VARIANT: Record<EstadoCuota, 'success' | 'info' | 'warning' | 'dange
 export function VentaDetalleView({
   venta,
   cuotas,
+  cuentas,
 }: {
   venta: VentaConDetalle
   cuotas: CuotaFinanciadaRow[]
+  cuentas: Array<Pick<CuentaDestinoRow, 'id_cuenta_destino' | 'nombre' | 'tipo'>>
 }) {
   const router = useRouter()
   const toast = useToast()
   const [pending, start] = useTransition()
 
   const [anularOpen, setAnularOpen] = useState(false)
+  // Motivo de anulación. El SP lo guarda en `venta.motivo_anulacion` y esta
+  // misma vista lo muestra más abajo; hasta ahora nada lo capturaba, así que
+  // ese cartel no podía aparecer nunca. Es opcional (`p_motivo default null`).
+  const [motivoAnulacion, setMotivoAnulacion] = useState('')
   const [devolverOpen, setDevolverOpen] = useState<string | null>(null)
   const [comprobanteOpen, setComprobanteOpen] = useState(false)
   const [tipoComp, setTipoComp] = useState<TipoComprobante>('ticket')
   const [numeroComp, setNumeroComp] = useState('')
+  const [reintegroMedio, setReintegroMedio] = useState<MedioPago | ''>('')
+  const [reintegroCuenta, setReintegroCuenta] = useState<string>('')
 
   const readonly = venta.estado_venta === 'anulada'
   const tieneComprobante = venta.comprobantes.length > 0
@@ -79,10 +91,25 @@ export function VentaDetalleView({
 
   function anular() {
     setAnularOpen(false)
+    const motivo = motivoAnulacion.trim()
     start(async () => {
-      const res = await anularVentaAction({ idVenta: venta.id_venta })
-      if (!res.ok) return toast.error('No se pudo anular', res.reason)
-      toast.success('Venta anulada')
+      const res = await anularVentaAction({
+        idVenta: venta.id_venta,
+        // Vacío va como `undefined`, no como `''`: `spAnularVenta` lo manda como
+        // NULL y la vista distingue "sin motivo" de "motivo en blanco".
+        motivo: motivo || undefined,
+      })
+      if (!res.ok) return toast.error('No se pudo anular', mensajeDeError(res.reason))
+      setMotivoAnulacion('')
+      setReintegroMedio('')
+      setReintegroCuenta('')
+      
+      const reintegro = res.data?.total_reintegrado ?? 0
+      if (reintegro > 0) {
+        toast.success(`Venta anulada. Se generó un reintegro de $${reintegro.toLocaleString('es-AR')}.`)
+      } else {
+        toast.success('Venta anulada sin reintegros.')
+      }
       router.refresh()
     })
   }
@@ -95,9 +122,19 @@ export function VentaDetalleView({
       const res = await devolverItemVentaAction({
         idDetalleVenta: id,
         idVenta: venta.id_venta,
+        idCuentaReintegro: reintegroCuenta || undefined,
+        medioReintegro: (reintegroMedio as MedioPago) || undefined,
       })
-      if (!res.ok) return toast.error('No se pudo devolver', res.reason)
-      toast.success('Ítem devuelto por cliente')
+      if (!res.ok) return toast.error('No se pudo devolver', mensajeDeError(res.reason))
+      setReintegroMedio('')
+      setReintegroCuenta('')
+      
+      const reintegro = res.data?.reintegro ?? 0
+      if (reintegro > 0) {
+        toast.success(`Ítem devuelto. Se generó un reintegro de $${reintegro.toLocaleString('es-AR')}.`)
+      } else {
+        toast.success('Ítem devuelto sin reintegros.')
+      }
       router.refresh()
     })
   }
@@ -111,7 +148,7 @@ export function VentaDetalleView({
         tipo: tipoComp,
         numero: numeroComp,
       })
-      if (!res.ok) return toast.error('No se pudo emitir', res.reason)
+      if (!res.ok) return toast.error('No se pudo emitir', mensajeDeError(res.reason))
       toast.success('Comprobante emitido')
       setComprobanteOpen(false)
       setNumeroComp('')
@@ -351,8 +388,28 @@ export function VentaDetalleView({
         confirmLabel="Sí, anular"
         cancelLabel="Cancelar"
         onConfirm={anular}
-        onCancel={() => setAnularOpen(false)}
-      />
+        onCancel={() => {
+          setAnularOpen(false)
+          setMotivoAnulacion('')
+        }}
+      >
+        <div className="space-y-4">
+          <Field
+            htmlFor="motivo-anulacion"
+            label="Motivo (opcional)"
+            hint="Queda guardado en la venta y en la auditoría."
+          >
+            <Textarea
+              id="motivo-anulacion"
+              rows={2}
+              maxLength={300}
+              value={motivoAnulacion}
+              onChange={(e) => setMotivoAnulacion(e.target.value)}
+              placeholder="Ej: el cliente se arrepintió"
+            />
+          </Field>
+        </div>
+      </ConfirmDialog>
       <ConfirmDialog
         open={!!devolverOpen}
         title="Devolución del cliente"
@@ -360,8 +417,49 @@ export function VentaDetalleView({
         confirmLabel="Sí, devolver"
         cancelLabel="Cancelar"
         onConfirm={devolver}
-        onCancel={() => setDevolverOpen(null)}
-      />
+        onCancel={() => {
+          setDevolverOpen(null)
+          setReintegroMedio('')
+          setReintegroCuenta('')
+        }}
+      >
+        <div className="space-y-4">
+          <div className="rounded border border-border p-3 space-y-3 bg-card-2 mt-2">
+            <h4 className="font-medium text-sm">Opciones de reintegro (opcional)</h4>
+            <p className="text-xs text-muted mb-2">Si corresponde devolver plata, seleccioná por dónde sale.</p>
+            <Field htmlFor="reint-medio-dev" label="Medio de pago">
+              <select
+                id="reint-medio-dev"
+                className="w-full"
+                value={reintegroMedio}
+                onChange={(e) => setReintegroMedio(e.target.value as MedioPago | '')}
+              >
+                <option value="">(Ninguno)</option>
+                {(Object.keys(MEDIO_PAGO_LABEL) as MedioPago[]).map((m) => (
+                  <option key={m} value={m}>{MEDIO_PAGO_LABEL[m]}</option>
+                ))}
+              </select>
+            </Field>
+            {reintegroMedio && (
+              <Field htmlFor="reint-cuenta-dev" label="Cuenta origen">
+                <select
+                  id="reint-cuenta-dev"
+                  className="w-full"
+                  value={reintegroCuenta}
+                  onChange={(e) => setReintegroCuenta(e.target.value)}
+                >
+                  <option value="">Seleccionar cuenta...</option>
+                  {cuentas.map((c) => (
+                    <option key={c.id_cuenta_destino} value={c.id_cuenta_destino}>
+                      {c.nombre}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            )}
+          </div>
+        </div>
+      </ConfirmDialog>
 
       <Modal
         open={comprobanteOpen}

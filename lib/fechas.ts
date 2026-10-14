@@ -84,3 +84,19 @@ export function inicioDelDiaSiguiente(fecha: string): string {
   const siguiente = new Date(anio, mes - 1, dia + 1)
   return `${aFechaLocal(siguiente)}T00:00:00`
 }
+
+/**
+ * Calcula el período anterior del mismo tamaño exacto en días.
+ * Ej: si el período es de 31 días, retrocede 31 días.
+ */
+export function periodoAnterior(desde: string, hasta: string): RangoFechas {
+  const [aD, mD, dD] = desde.split('-').map(Number)
+  const [aH, mH, dH] = hasta.split('-').map(Number)
+  const dDesde = new Date(aD, mD - 1, dD)
+  const dHasta = new Date(aH, mH - 1, dH)
+  const difDias = Math.round((dHasta.getTime() - dDesde.getTime()) / (1000 * 3600 * 24)) + 1
+
+  const pDesde = new Date(aD, mD - 1, dD - difDias)
+  const pHasta = new Date(aH, mH - 1, dH - difDias)
+  return { desde: aFechaLocal(pDesde), hasta: aFechaLocal(pHasta) }
+}

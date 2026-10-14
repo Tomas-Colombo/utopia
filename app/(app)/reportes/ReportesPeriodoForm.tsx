@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Field } from '@/components/ui/Field'
 import { Input } from '@/components/ui/Input'
+import { anioActual, hoyRango, mesActual } from '@/lib/fechas'
 
 /**
  * Selector de período. Cambia URL params → server re-renderea con los
@@ -29,25 +30,14 @@ export function ReportesPeriodoForm({
   }
 
   function preset(kind: 'hoy' | 'mes' | 'anio') {
-    const now = new Date()
-    let desdeStr: string
-    let hastaStr: string
-    if (kind === 'hoy') {
-      const s = now.toISOString().slice(0, 10)
-      desdeStr = s
-      hastaStr = s
-    } else if (kind === 'mes') {
-      const first = new Date(now.getFullYear(), now.getMonth(), 1)
-      const last = new Date(now.getFullYear(), now.getMonth() + 1, 0)
-      desdeStr = first.toISOString().slice(0, 10)
-      hastaStr = last.toISOString().slice(0, 10)
-    } else {
-      desdeStr = `${now.getFullYear()}-01-01`
-      hastaStr = `${now.getFullYear()}-12-31`
-    }
-    setD(desdeStr)
-    setH(hastaStr)
-    apply(desdeStr, hastaStr)
+    let rango
+    if (kind === 'hoy') rango = hoyRango()
+    else if (kind === 'mes') rango = mesActual()
+    else rango = anioActual()
+    
+    setD(rango.desde)
+    setH(rango.hasta)
+    apply(rango.desde, rango.hasta)
   }
 
   return (

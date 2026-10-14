@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import { useToast } from '@/components/ui/Toast'
 import { marcarRendicionPagadaAction } from '../actions'
+import { mensajeDeError } from '@/lib/errores/mensajes'
 
 export function RendicionActions({ idRendicion }: { idRendicion: string }) {
   const router = useRouter()
@@ -22,7 +23,7 @@ export function RendicionActions({ idRendicion }: { idRendicion: string }) {
         idRendicion,
         fechaPago: fecha ? new Date(fecha).toISOString() : null,
       })
-      if (!res.ok) return toast.error('No se pudo marcar como pagada', res.reason)
+      if (!res.ok) return toast.error('No se pudo marcar como pagada', mensajeDeError(res.reason))
       toast.success('Rendición marcada como pagada')
       setOpen(false)
       router.refresh()

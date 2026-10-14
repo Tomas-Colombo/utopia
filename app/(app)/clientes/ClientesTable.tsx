@@ -18,6 +18,7 @@ import {
 } from '@/lib/types/ventas'
 import { toggleClienteActivoAction } from '../ventas/actions'
 import { EditarClienteModal } from './EditarClienteModal'
+import { mensajeDeError } from '@/lib/errores/mensajes'
 
 export function ClientesTable({
   rows,
@@ -61,7 +62,7 @@ export function ClientesTable({
         id: row.id_cliente,
         activo: !row.activo,
       })
-      if (!res.ok) return toast.error('No se pudo actualizar', res.reason)
+      if (!res.ok) return toast.error('No se pudo actualizar', mensajeDeError(res.reason))
       router.refresh()
     })
   }

@@ -7,6 +7,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useToast } from '@/components/ui/Toast'
 import type { EstadoItem } from '@/lib/types/inventario'
 import { transicionItemAction } from '../../actions'
+import { mensajeDeError } from '@/lib/errores/mensajes'
 
 /**
  * Acciones disponibles según estado actual del ítem. Sincronizado con
@@ -84,9 +85,12 @@ const ACCIONES_POR_ESTADO: Record<EstadoItem, Accion[]> = {
 
 export function FichaActions({
   idItem,
+  qr,
   estadoActual,
 }: {
   idItem: string
+  /** Clave de la ruta de esta ficha; la action la necesita para revalidarla. */
+  qr: string
   estadoActual: EstadoItem
 }) {
   const router = useRouter()
@@ -101,10 +105,11 @@ export function FichaActions({
     start(async () => {
       const res = await transicionItemAction({
         idItem,
+        qr,
         estadoHasta: accion.destino,
         tipoMovimiento: accion.tipoMovimiento,
       })
-      if (!res.ok) return toast.error('No se pudo transicionar', res.reason)
+      if (!res.ok) return toast.error('No se pudo transicionar', mensajeDeError(res.reason))
       toast.success('Estado actualizado')
       router.refresh()
     })

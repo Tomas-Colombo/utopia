@@ -27,6 +27,7 @@ import { MAX_PDF_BYTES } from '@/lib/inventario/limites'
 import { crearIngresoCompletoAction, parseRemitoPdfAction } from '../../actions'
 import { NuevoProveedorModal } from './NuevoProveedorModal'
 import { NuevaCategoriaModal } from './NuevaCategoriaModal'
+import { mensajeDeError } from '@/lib/errores/mensajes'
 
 const TIPOS: { value: TipoIngreso; label: string }[] = [
   { value: 'compra', label: 'Compra (paga al ingresar)' },
@@ -188,7 +189,7 @@ export function NuevoIngresoView({
     start(async () => {
       const res = await parseRemitoPdfAction(fd)
       if (fileRef.current) fileRef.current.value = ''
-      if (!res.ok) return toast.error('No se pudo leer el PDF', res.reason)
+      if (!res.ok) return toast.error('No se pudo leer el PDF', mensajeDeError(res.reason))
       const parsed = res.data!
       if (parsed.lineas.length === 0) {
         toast.error('No se detectaron productos', parsed.advertencias[0] ?? 'Revisá el formato del PDF')
@@ -344,7 +345,7 @@ export function NuevoIngresoView({
           talles: f.talles.length > 0 ? f.talles : undefined,
         })),
       })
-      if (!res.ok) return toast.error('No se pudo crear el ingreso', res.reason)
+      if (!res.ok) return toast.error('No se pudo crear el ingreso', mensajeDeError(res.reason))
       toast.success('Ingreso confirmado', `Se generaron ${res.data!.itemsGenerados} ítems con QR único`)
       router.push(`/inventario/ingresos/${res.data!.id}`)
       router.refresh()

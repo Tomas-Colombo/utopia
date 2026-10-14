@@ -47,6 +47,7 @@ import {
 } from './CobranzaPanel'
 import { generarPlanCuotas } from '@/lib/cuotas/generar-plan'
 import { registrarVentaAction, crearClienteAction } from '../actions'
+import { mensajeDeError } from '@/lib/errores/mensajes'
 
 interface ClienteOption { id: string; nombre: string; telefono: string | null }
 /** Grupo del carrito: N unidades del mismo producto+talle en una sola fila. */
@@ -501,6 +502,52 @@ export function NuevaVentaView({
     return rs.length === 1 ? rs[0] : null
   }
 
+  /**
+   * Sugerencias con el motivo por el que NO se pueden cargar, si lo hay. Antes
+   * el desplegable las ofrecía todas por igual y el vendedor se enteraba de que
+   * no había stock recién al confirmar, cuando el server rebotaba.
+   *
+   * Dos motivos distintos, y el segundo tiene una excepción importante:
+   *  - `stock_disponible <= 0` → no hay unidades, punto.
+   *  - sin unidades libres y SIN reserva adoptable → están todas tomadas por
+   *    reservas ajenas que esta venta no puede absorber. Si queda UNA reserva
+   *    adoptable es el caso "vengo a buscar lo que reservé": `agregarPorProducto`
+   *    la adopta, así que eso NO se bloquea.
+   *
+   * `libres` se calcula a mano porque el stock del catálogo cuenta las unidades
+   * reservadas como libres (reservar no cambia el estado del ítem): acá se
+   * separan para que el vendedor vea la verdad.
+   *
+   * Se calcula en el render y no en un `useMemo`: son ocho ítems como máximo, y
+   * las dos funciones de las que depende se recrean en cada render igual.
+   */
+  const sugerenciasVista = sugerencias.map((p) => {
+    const reservadas = reservadasDe(p.id_producto)
+    const libres = Math.max(0, p.stock_disponible - reservadas)
+    const adoptable = reservaAdoptableDe(p.id_producto)
+    const bloqueo =
+      p.stock_disponible <= 0
+        ? 'sin stock'
+        : libres === 0 && !adoptable
+          ? 'todo reservado'
+          : null
+    return { p, reservadas, libres, adoptable, bloqueo }
+  })
+
+  const indicesHabilitados = sugerenciasVista
+    .map((s, i) => (s.bloqueo ? -1 : i))
+    .filter((i) => i >= 0)
+
+  /**
+   * Índice realmente resaltado: el primer habilitado desde `resaltado` hacia
+   * abajo, o el último habilitado si ya pasó de largo. `-1` = todas bloqueadas,
+   * y entonces Enter no selecciona nada del desplegable.
+   */
+  const resaltadoEfectivo =
+    indicesHabilitados.find((i) => i >= resaltado) ??
+    indicesHabilitados[indicesHabilitados.length - 1] ??
+    -1
+
   /** Etiqueta corta de una reserva por id (para carteles). */
   function labelReserva(rid: string): string {
     const r = reservasActivas.find((x) => x.id === rid)
@@ -637,8 +684,11 @@ export function NuevaVentaView({
   // (QR/SKU) o nombre exacto.
   function agregarLinea(e?: React.FormEvent) {
     e?.preventDefault()
-    if (sugerenciasOpen && sugerencias.length > 0) {
-      elegirSugerencia(sugerencias[Math.min(resaltado, sugerencias.length - 1)])
+    // Sólo las sugerencias cargables cuentan. Si están todas bloqueadas, el
+    // Enter cae al camino de texto, que termina rebotando contra el server con
+    // el motivo exacto en vez de cargar algo que no se puede vender.
+    if (sugerenciasOpen && resaltadoEfectivo >= 0) {
+      elegirSugerencia(sugerenciasVista[resaltadoEfectivo].p)
       return
     }
     const texto = qrInput.trim()
@@ -648,15 +698,18 @@ export function NuevaVentaView({
     else void agregarPorCodigo(texto)
   }
 
-  // Navegación por teclado del desplegable de nombres.
+  // Navegación por teclado del desplegable de nombres. Salta las sugerencias
+  // bloqueadas: si no se pueden elegir, tampoco tiene sentido pararse en ellas.
   function onBuscadorKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (!sugerenciasOpen || sugerencias.length === 0) return
     if (e.key === 'ArrowDown') {
       e.preventDefault()
-      setResaltado((i) => Math.min(sugerencias.length - 1, i + 1))
+      const sig = indicesHabilitados.find((i) => i > resaltadoEfectivo)
+      if (sig !== undefined) setResaltado(sig)
     } else if (e.key === 'ArrowUp') {
       e.preventDefault()
-      setResaltado((i) => Math.max(0, i - 1))
+      const prev = [...indicesHabilitados].reverse().find((i) => i < resaltadoEfectivo)
+      if (prev !== undefined) setResaltado(prev)
     } else if (e.key === 'Escape') {
       setSugerenciasOpen(false)
     }
@@ -694,7 +747,7 @@ export function NuevaVentaView({
       }
 
       if (!data.ok) {
-        setErrorBusqueda(traducirReason(data.reason, data))
+        setErrorBusqueda(mensajeDeError(data.reason, { extra: data }))
         return
       }
       const nueva = data.linea as LineaCarrito
@@ -779,7 +832,7 @@ export function NuevaVentaView({
           })
           return null
         }
-        setErrorBusqueda(traducirReason(data.reason, data))
+        setErrorBusqueda(mensajeDeError(data.reason, { extra: data }))
         return null
       }
       const nueva = data.linea as LineaCarrito
@@ -826,7 +879,7 @@ export function NuevaVentaView({
         setErrorBusqueda(
           data.ok
             ? 'Este producto no maneja talles.'
-            : traducirReason(data.reason, data),
+            : mensajeDeError(data.reason, { extra: data }),
         )
         return
       }
@@ -980,7 +1033,7 @@ export function NuevaVentaView({
         nombre,
         telefono: nuevoTelefono.trim() || null,
       })
-      if (!res.ok) return setErrorCliente(res.reason)
+      if (!res.ok) return setErrorCliente(mensajeDeError(res.reason))
       // Mismo armado que la columna generada `nombre_completo` (00058):
       // nombre y después apellido. Si divergen, el cliente recién creado se
       // vería distinto que al recargar la página.
@@ -1121,7 +1174,7 @@ export function NuevaVentaView({
             }
           }),
       })
-      if (!res.ok) return toast.error('No se pudo registrar la venta', traducirReason(res.reason))
+      if (!res.ok) return toast.error('No se pudo registrar la venta', mensajeDeError(res.reason))
       toast.success('Venta registrada', `Total $ ${total.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`)
       router.push(`/ventas/${res.data!.id}`)
       router.refresh()
@@ -1241,27 +1294,30 @@ export function NuevaVentaView({
                       role="listbox"
                       className="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md border border-border bg-card-2 shadow"
                     >
-                      {sugerencias.map((p, i) => {
-                        const activo = i === Math.min(resaltado, sugerencias.length - 1)
-                        // El stock del catálogo cuenta las unidades reservadas
-                        // como libres (reservar no cambia el estado del ítem).
-                        // Acá se separan para que el vendedor vea la verdad.
-                        const reservadas = reservadasDe(p.id_producto)
-                        const libres = Math.max(0, p.stock_disponible - reservadas)
-                        const quien = reservaAdoptableDe(p.id_producto)?.cliente_nombre
+                      {sugerenciasVista.map(({ p, reservadas, libres, adoptable, bloqueo }, i) => {
+                        const activo = i === resaltadoEfectivo
+                        const quien = adoptable?.cliente_nombre
                         return (
                           <li
                             key={p.id_producto}
                             role="option"
                             aria-selected={activo}
+                            aria-disabled={bloqueo ? true : undefined}
                             // onMouseDown para seleccionar antes del blur del input.
-                            onMouseDown={(e) => {
-                              e.preventDefault()
-                              elegirSugerencia(p)
-                            }}
-                            onMouseEnter={() => setResaltado(i)}
-                            className={`flex cursor-pointer items-center justify-between gap-2 px-3 py-2 text-sm ${
-                              activo ? 'bg-line text-text' : 'text-text'
+                            // Bloqueada no lleva handler: no hay nada que elegir.
+                            onMouseDown={
+                              bloqueo
+                                ? (e) => e.preventDefault()
+                                : (e) => {
+                                    e.preventDefault()
+                                    elegirSugerencia(p)
+                                  }
+                            }
+                            onMouseEnter={bloqueo ? undefined : () => setResaltado(i)}
+                            className={`flex items-center justify-between gap-2 px-3 py-2 text-sm ${
+                              bloqueo
+                                ? 'cursor-not-allowed text-muted'
+                                : `cursor-pointer ${activo ? 'bg-line text-text' : 'text-text'}`
                             }`}
                           >
                             <span className="flex min-w-0 flex-wrap items-center gap-1.5">
@@ -1278,8 +1334,10 @@ export function NuevaVentaView({
                                 </span>
                               )}
                             </span>
+                            {/* El motivo reemplaza al contador de libres: con el
+                                bloqueo puesto, "0 libres" no agrega nada. */}
                             <span className="shrink-0 font-mono text-xs text-muted">
-                              {libres} libre{libres === 1 ? '' : 's'}
+                              {bloqueo ?? `${libres} libre${libres === 1 ? '' : 's'}`}
                             </span>
                           </li>
                         )
@@ -2275,30 +2333,6 @@ function esReasonDeReserva(reason: string): boolean {
   )
 }
 
-function traducirReason(reason: string, extra?: Record<string, unknown>): string {
-  if (reason.startsWith('item-not-found')) return 'No se encontró un ítem con ese QR en este tenant.'
-  if (reason.startsWith('item-no-disponible')) {
-    const est = extra?.estado ? ` (estado: ${extra.estado})` : ''
-    return `El ítem no está disponible${est}.`
-  }
-  if (reason.startsWith('item-en-reserva')) return 'El ítem está reservado por otra reserva. Cargá esa reserva o cancelala primero.'
-  if (reason.startsWith('item-en-otra-reserva')) return 'El ítem pertenece a otra reserva distinta a la que cargaste.'
-  if (reason.startsWith('item-ya-reservado')) return 'El ítem ya está en una reserva activa.'
-  if (reason === 'sku-sin-stock') return 'Ese SKU no tiene unidades disponibles en stock.'
-  if (reason === 'sku-sin-stock-libre') {
-    // Con `id_reserva` el rebote es por una reserva ajena a la venta actual:
-    // el auto-enganche ya se intentó y no aplicaba (la venta está atada a
-    // otra reserva, o hay más de una en juego).
-    return extra?.id_reserva
-      ? 'Las unidades que quedan están tomadas por otra reserva. Desvinculá la reserva actual o cobrá esa reserva aparte.'
-      : 'No quedan unidades libres: están reservadas o ya las cargaste en el carrito.'
-  }
-  if (reason === 'sin-precio-lista') return 'El producto no tiene precio de venta. Fijalo en Precios → Control de precios.'
-  if (reason === 'reserva-no-activa') return 'La reserva ya no está activa (fue cancelada, vencida o convertida).'
-  if (reason === 'lineas-vacias') return 'Agregá al menos un ítem al carrito.'
-  if (reason === 'elegir-talle') return 'Elegí un talle disponible.'
-  return reason
-}
 
 /** Hoy + 1 mes, en ISO local. Default razonable del primer vencimiento. */
 function enUnMes(): string {

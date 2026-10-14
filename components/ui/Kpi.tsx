@@ -11,7 +11,7 @@ const BOX: Record<KpiVariant, string> = {
 export interface KpiProps {
   label: string
   value: string
-  sub?: string
+  sub?: React.ReactNode
   variant?: KpiVariant
   tone?: KpiTone
 }
