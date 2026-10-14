@@ -144,9 +144,9 @@ Después de la consignación (Slice 4) y antes de la liquidación: da visibilida
 
 ## Slice 7b — Liquidación: UI (~380)
 
-- [ ] `[id]/cuenta/`, `liquidaciones/` (lista, `nueva` con preview y exclusión, detalle con pago).
+- [x] `[id]/cuenta/`, `liquidaciones/` (lista, `nueva` con preview y exclusión, detalle con pago).
   Acción `liquidar` gobierna generar/pagar. Espejo de `app/(app)/rendiciones/`.
-- [ ] Playwright: preview → excluir línea → generar → marcar pagada.
+- [x] Playwright: preview → excluir línea → generar → marcar pagada.
 
 ## Slice 8 — Cambios de producto (~400) · REQ-RV-DB-07
 

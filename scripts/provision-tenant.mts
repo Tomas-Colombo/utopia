@@ -31,6 +31,7 @@ import {
   SUBDOMINIO_REASON_LABEL,
   validarSubdominio,
 } from '../lib/tenant/subdominio.ts'
+import { CATALOGO_PERMISOS } from '../lib/types/administracion.ts'
 
 /** Every action the permission model recognizes (`rol.permisos`, REQ-AG-02). */
 const ACCIONES = ['ver', 'crear', 'editar', 'eliminar'] as const
@@ -202,7 +203,9 @@ async function provision(opts: Opciones): Promise<void> {
       .insert({
         id_tenant: tenantId,
         nombre: 'Administrador',
-        permisos: Object.fromEntries(modulos.map((m) => [m.codigo, [...ACCIONES]])),
+        permisos: Object.fromEntries(
+          modulos.map((m) => [m.codigo, CATALOGO_PERMISOS[m.codigo] ?? [...ACCIONES]]),
+        ),
       })
       .select('id_rol')
       .single()
