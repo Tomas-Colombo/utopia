@@ -5,6 +5,7 @@ import { useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
+import { ReservaMark } from '@/components/ui/StatusMark'
 import { useToast } from '@/components/ui/Toast'
 import {
   ESTADO_RESERVA_LABEL,
@@ -88,9 +89,16 @@ export function ReservasClient({ rows }: { rows: Row[] }) {
                   </td>
                   <td className="px-4 py-3 text-right font-mono">{r.items_count}</td>
                   <td className="px-4 py-3">
-                    <Badge variant={VARIANT[r.estado_reserva]}>
-                      {ESTADO_RESERVA_LABEL[r.estado_reserva]}
-                    </Badge>
+                    {r.estado_reserva === 'activa' ? (
+                      <ReservaMark
+                        label={ESTADO_RESERVA_LABEL.activa}
+                        vence={new Date(r.fecha_vencimiento).toLocaleDateString('es-AR')}
+                      />
+                    ) : (
+                      <Badge variant={VARIANT[r.estado_reserva]}>
+                        {ESTADO_RESERVA_LABEL[r.estado_reserva]}
+                      </Badge>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-3">
