@@ -24,7 +24,7 @@ export default defineConfig({
     // Vitest's default `include` also matches `*.spec.ts`, which would pull in
     // the Playwright suite (it needs a browser and a live server, and would
     // fail instantly under jsdom).
-    exclude: ['**/node_modules/**', '**/dist/**', '**/.next/**', 'e2e/**'],
+    exclude: ['**/node_modules/**', '**/dist/**', '**/.next/**', 'e2e/**', '**/.claude/**'],
     coverage: {
       /**
        * `istanbul`, not `v8`. The v8 provider re-parses every file it has to

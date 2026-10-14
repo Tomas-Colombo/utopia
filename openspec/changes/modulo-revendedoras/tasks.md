@@ -139,7 +139,7 @@ Después de la consignación (Slice 4) y antes de la liquidación: da visibilida
 - [ ] Tests primero: tramo por total del período y no por venta; excluidas no se sellan; no se
   liquida dos veces; venta registrada entre preview y commit se captura; anular venta liquidada
   rechazado; pago a cuenta de otro tenant rechazado; sin acción `liquidar` rechazado.
-- [ ] `00086_liquidacion_revendedora.sql`, `00087_liquidacion_functions.sql`
+- [ ] `00094_liquidacion_revendedora.sql`, `00095_liquidacion_functions.sql`
   (desde la última `sp_generar_rendicion`). `-- DOWN:` probado.
 
 ## Slice 7b — Liquidación: UI (~380)
