@@ -118,4 +118,36 @@ test.describe('Panel de gestión de revendedoras (Slice 4b)', () => {
     await expect(page.getByText(`${nombreRev} ${apellidoRev}`)).toBeVisible()
     await expect(page.getByRole('link', { name: 'Ver revendedora' })).toBeVisible()
   })
+
+  test('con el módulo revendedoras apagado, /revendedoras responde module-disabled', async ({
+    page,
+    administracion,
+    shell,
+  }) => {
+    // 1. Deshabilitar el módulo Revendedoras desde Administración
+    await administracion.abrirModulos()
+    const fila = administracion.filaModulo('Revendedoras')
+    await fila.getByRole('button', { name: 'Deshabilitar', exact: true }).click()
+    await shell.expectSuccessToast('Módulo deshabilitado')
+
+    try {
+      // 2. Comprobar que una petición directa responde redirección con module-disabled
+      const res = await page.request.get('/revendedoras', { maxRedirects: 0 })
+      expect(res.status()).toBe(307)
+      expect(res.headers()['location']).toBe('/?e=module-disabled')
+
+      // 3. Al navegar por navegador, rebota fuera de revendedoras hacia /ventas
+      await page.goto('/revendedoras')
+      await expect(page).toHaveURL(/\/ventas$/)
+    } finally {
+      // 4. Restaurar el módulo para no afectar otros tests
+      await administracion.abrirModulos()
+      const filaRestaurar = administracion.filaModulo('Revendedoras')
+      const habilitar = filaRestaurar.getByRole('button', { name: 'Habilitar', exact: true })
+      if (await habilitar.isVisible()) {
+        await habilitar.click()
+        await shell.expectSuccessToast('Módulo habilitado')
+      }
+    }
+  })
 })

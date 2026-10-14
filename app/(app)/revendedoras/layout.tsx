@@ -1,10 +1,23 @@
-import { ReactNode } from 'react'
-import { verifySession } from '@/lib/dal/session'
+import { redirect } from 'next/navigation'
+import { AuthorizationError } from '@/lib/dal/errors'
 import { requireModuleRole } from '@/lib/dal/guard'
+import { verifySession } from '@/lib/dal/session'
 
-export default async function RevendedorasLayout({ children }: { children: ReactNode }) {
+export default async function RevendedorasLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
   const session = await verifySession()
-  await requireModuleRole(session, 'revendedoras', 'ver')
+  try {
+    await requireModuleRole(session, 'revendedoras', 'ver')
+  } catch (error) {
+    if (error instanceof AuthorizationError) {
+      if (error.reason === 'no-session') redirect('/login')
+      redirect(`/?e=${error.reason}`)
+    }
+    throw error
+  }
 
   return <>{children}</>
 }
