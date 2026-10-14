@@ -953,3 +953,267 @@ $$;
 grant execute on function rf_finanzas_resultados(date, date) to authenticated;
 
 -- 7.3 rf_finanzas_flujo: suma pago_revendedora como cobro en fecha del pago (DR-3, DR-14)
+create or replace function rf_finanzas_flujo(p_desde date, p_hasta date)
+returns table (
+  cobrado numeric,
+  devuelto_clientes numeric,
+  costo_cobro numeric,
+  neto_cobros numeric,
+  compras_mercaderia numeric,
+  pagos_proveedores numeric,
+  gastos numeric,
+  flujo_neto numeric,
+  por_acreditar jsonb
+)
+language plpgsql
+security invoker
+as $$
+declare
+  v_tenant_id uuid;
+  v_cobrado numeric := 0;
+  v_devuelto_clientes numeric := 0;
+  v_costo_cobro numeric := 0;
+  v_compras_mercaderia numeric := 0;
+  v_pagos_proveedores numeric := 0;
+  v_gastos numeric := 0;
+  v_por_acreditar jsonb;
+  v_zona text;
+begin
+  v_tenant_id := auth_tenant_id();
+  select zona_horaria into v_zona from tenant where id_tenant = v_tenant_id;
+
+  select
+    coalesce(sum(pv.monto), 0) into v_cobrado
+  from pago_venta pv
+  where pv.id_tenant = v_tenant_id
+    and pv.medio <> 'cuenta_revendedora'
+    and (pv.created_at at time zone v_zona)::date >= p_desde and (pv.created_at at time zone v_zona)::date <= p_hasta;
+
+  -- DR-3/DR-14: Sumar pagos de liquidación de revendedoras a caja física / cuenta del tenant
+  declare
+    v_cobrado_revendedora numeric := 0;
+  begin
+    select coalesce(sum(pr.monto), 0) into v_cobrado_revendedora
+    from pago_revendedora pr
+    where pr.id_tenant = v_tenant_id
+      and (pr.fecha at time zone v_zona)::date >= p_desde
+      and (pr.fecha at time zone v_zona)::date <= p_hasta;
+
+    v_cobrado := v_cobrado + v_cobrado_revendedora;
+  end;
+
+  select
+    coalesce(sum(rc.monto), 0) into v_devuelto_clientes
+  from reintegro_cliente rc
+  where rc.id_tenant = v_tenant_id
+    and rc.medio <> 'cuenta_revendedora'
+    and (rc.fecha at time zone v_zona)::date >= p_desde and (rc.fecha at time zone v_zona)::date <= p_hasta;
+
+  select
+    coalesce(sum(pv.costo_cobro), 0) into v_costo_cobro
+  from pago_venta pv
+  where pv.id_tenant = v_tenant_id
+    and pv.medio <> 'cuenta_revendedora'
+    and (pv.created_at at time zone v_zona)::date >= p_desde and (pv.created_at at time zone v_zona)::date <= p_hasta;
+
+  select
+    coalesce(sum(cantidad * costo_unitario), 0) into v_compras_mercaderia
+  from ingreso_mercaderia_detalle d
+  join ingreso_mercaderia i on i.id_ingreso = d.id_ingreso
+  where i.id_tenant = v_tenant_id
+    and i.tipo_ingreso = 'compra'
+    and i.confirmado = true
+    and i.cancelado_at is null
+    and (i.fecha at time zone v_zona)::date >= p_desde and (i.fecha at time zone v_zona)::date <= p_hasta;
+
+  select
+    coalesce(sum(rp.monto_total), 0) into v_pagos_proveedores
+  from rendicion_proveedor rp
+  where rp.id_tenant = v_tenant_id and rp.estado = 'pagada' and (rp.fecha_pago at time zone v_zona)::date >= p_desde and (rp.fecha_pago at time zone v_zona)::date <= p_hasta;
+
+  select
+    coalesce(sum(gn.monto), 0) into v_gastos
+  from gasto_negocio gn
+  where gn.id_tenant = v_tenant_id and (gn.fecha at time zone v_zona)::date >= p_desde and (gn.fecha at time zone v_zona)::date <= p_hasta;
+
+  select jsonb_object_agg(t.tipo, coalesce(t.total, 0)) into v_por_acreditar
+  from (
+    select cd.tipo, sum(p.neto_acreditado) as total
+    from pago_venta p
+    join cuenta_destino cd on cd.id_cuenta_destino = p.id_cuenta_destino
+    where p.id_tenant = v_tenant_id
+      and p.medio <> 'cuenta_revendedora'
+      and (p.fecha_acreditacion at time zone v_zona)::date > (now() at time zone v_zona)::date
+    group by cd.tipo
+  ) t;
+
+  if v_por_acreditar is null then
+    v_por_acreditar := '{}'::jsonb;
+  end if;
+
+  return query select
+    v_cobrado,
+    v_devuelto_clientes,
+    v_costo_cobro,
+    v_cobrado - v_devuelto_clientes - v_costo_cobro as neto_cobros,
+    v_compras_mercaderia,
+    v_pagos_proveedores,
+    v_gastos,
+    (v_cobrado - v_devuelto_clientes - v_costo_cobro) - v_compras_mercaderia - v_pagos_proveedores - v_gastos as flujo_neto,
+    v_por_acreditar;
+end;
+$$;
+
+grant execute on function rf_finanzas_flujo(date, date) to authenticated;
+
+-- 7.4 rf_finanzas_posicion: suma saldo adeudado por revendedoras a por cobrar (DR-3, DR-14)
+create or replace function rf_finanzas_posicion()
+returns table (
+  capital_propio numeric,
+  mercaderia_terceros numeric,
+  devueltos_clientes numeric,
+  valor_venta_potencial numeric,
+  productos_sin_precio bigint,
+  por_cobrar jsonb,
+  deuda_proveedores numeric
+)
+language plpgsql
+security invoker
+as $$
+declare
+  v_tenant_id uuid;
+  v_capital_propio numeric := 0;
+  v_mercaderia_terceros numeric := 0;
+  v_devueltos_clientes numeric := 0;
+  v_valor_venta_potencial numeric := 0;
+  v_productos_sin_precio bigint := 0;
+  v_deuda_proveedores numeric := 0;
+  v_por_cobrar jsonb;
+  v_zona text;
+begin
+  v_tenant_id := auth_tenant_id();
+  select zona_horaria into v_zona from tenant where id_tenant = v_tenant_id;
+
+  select
+    coalesce(sum(costo_ingreso), 0) into v_capital_propio
+  from item_producto
+  where id_tenant = v_tenant_id and tipo_ingreso = 'compra' and estado_item in ('disponible', 'reservado', 'en_revendedora');
+
+  select
+    coalesce(sum(costo_ingreso), 0) into v_mercaderia_terceros
+  from item_producto
+  where id_tenant = v_tenant_id and tipo_ingreso = 'consignacion' and estado_item in ('disponible', 'reservado', 'en_revendedora');
+
+  select
+    coalesce(sum(costo_ingreso), 0) into v_devueltos_clientes
+  from item_producto
+  where id_tenant = v_tenant_id and estado_item = 'devuelto_cliente';
+
+  select
+    coalesce(sum(p.precio_venta), 0) into v_valor_venta_potencial
+  from item_producto ip
+  join producto p on p.id_producto = ip.id_producto
+  where ip.id_tenant = v_tenant_id and ip.estado_item in ('disponible', 'reservado', 'en_revendedora');
+
+  select
+    count(*) into v_productos_sin_precio
+  from producto
+  where id_tenant = v_tenant_id and precio_venta = 0 and activo = true;
+
+  -- por_cobrar: (a cobrar, vence este mes, vencido, cuotas vencidas, clientes con deuda)
+  declare
+    v_a_cobrar numeric := 0;
+    v_vence_este_mes numeric := 0;
+    v_vencido numeric := 0;
+    v_cuotas_vencidas bigint := 0;
+    v_clientes_con_deuda bigint := 0;
+    v_hoy date;
+    v_vendido_rev numeric := 0;
+    v_comision_liq_rev numeric := 0;
+    v_pagado_rev numeric := 0;
+    v_deuda_rev numeric := 0;
+  begin
+    v_hoy := (now() at time zone v_zona)::date;
+
+    select
+      coalesce(sum(monto - monto_pagado), 0) into v_a_cobrar
+    from cuota_financiada
+    where id_tenant = v_tenant_id and estado in ('pendiente', 'parcial');
+
+    select
+      coalesce(sum(monto - monto_pagado), 0) into v_vence_este_mes
+    from cuota_financiada
+    where id_tenant = v_tenant_id and estado in ('pendiente', 'parcial')
+      and date_trunc('month', (fecha_vencimiento at time zone v_zona)::timestamp)::date = date_trunc('month', v_hoy::timestamp)::date;
+
+    select
+      coalesce(sum(monto - monto_pagado), 0) into v_vencido
+    from cuota_financiada
+    where id_tenant = v_tenant_id and estado in ('pendiente', 'parcial')
+      and (fecha_vencimiento at time zone v_zona)::date < v_hoy;
+
+    select
+      count(*) into v_cuotas_vencidas
+    from cuota_financiada
+    where id_tenant = v_tenant_id and estado in ('pendiente', 'parcial')
+      and (fecha_vencimiento at time zone v_zona)::date < v_hoy;
+
+    select
+      count(distinct v.id_cliente) into v_clientes_con_deuda
+    from cuota_financiada cf
+    join venta v on v.id_venta = cf.id_venta
+    where cf.id_tenant = v_tenant_id and cf.estado in ('pendiente', 'parcial') and v.id_cliente is not null;
+
+    -- Deuda adeudada por revendedoras: total_vendido - comisiones_liquidadas - total_pagado
+    if exists (
+      select 1 from tenant_modulo tm
+      join modulo m on m.id_modulo = tm.id_modulo
+      where tm.id_tenant = v_tenant_id and m.codigo = 'revendedoras' and tm.habilitado = true
+    ) then
+      select coalesce(sum(dv.precio_venta), 0) into v_vendido_rev
+      from detalle_venta dv
+      join venta v on v.id_venta = dv.id_venta
+      where v.id_tenant = v_tenant_id
+        and v.canal = 'revendedora'
+        and v.estado_venta = 'registrada';
+
+      select coalesce(sum(monto_comision), 0) into v_comision_liq_rev
+      from liquidacion_revendedora
+      where id_tenant = v_tenant_id;
+
+      select coalesce(sum(monto), 0) into v_pagado_rev
+      from pago_revendedora
+      where id_tenant = v_tenant_id;
+
+      v_deuda_rev := greatest(0, v_vendido_rev - v_comision_liq_rev - v_pagado_rev);
+      v_a_cobrar := v_a_cobrar + v_deuda_rev;
+    end if;
+
+    v_por_cobrar := jsonb_build_object(
+      'a_cobrar', v_a_cobrar,
+      'vence_este_mes', v_vence_este_mes,
+      'vencido', v_vencido,
+      'cuotas_vencidas', v_cuotas_vencidas,
+      'clientes_con_deuda', v_clientes_con_deuda
+    );
+  end;
+
+  select
+    coalesce(sum(d.costo_unitario), 0) into v_deuda_proveedores
+  from item_producto ip
+  join ingreso_mercaderia_detalle d on d.id_ingreso = ip.id_ingreso and d.id_producto = ip.id_producto
+  where ip.id_tenant = v_tenant_id and ip.tipo_ingreso = 'consignacion' and ip.estado_item in ('disponible', 'reservado', 'en_revendedora');
+
+  return query select
+    v_capital_propio,
+    v_mercaderia_terceros,
+    v_devueltos_clientes,
+    v_valor_venta_potencial,
+    v_productos_sin_precio,
+    v_por_cobrar,
+    v_deuda_proveedores;
+end;
+$$;
+
+grant execute on function rf_finanzas_posicion() to authenticated;
+
