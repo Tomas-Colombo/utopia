@@ -1,6 +1,13 @@
 import Link from 'next/link'
 
-export type TabKey = 'resumen' | 'consignaciones' | 'ventas' | 'cuenta' | 'liquidaciones'
+export type TabKey =
+  | 'resumen'
+  | 'en_poder'
+  | 'ventas'
+  | 'consignaciones'
+  | 'cuenta'
+  | 'liquidaciones'
+  | 'declaraciones'
 
 interface RevendedoraTabsProps {
   idRevendedora: string
@@ -10,10 +17,12 @@ interface RevendedoraTabsProps {
 export function RevendedoraTabs({ idRevendedora, activeTab }: RevendedoraTabsProps) {
   const tabs = [
     { key: 'resumen', label: 'Resumen', href: `/revendedoras/${idRevendedora}` },
-    { key: 'consignaciones', label: 'Consignaciones', href: `/revendedoras/${idRevendedora}/consignaciones` },
+    { key: 'en_poder', label: 'En su poder', href: `/revendedoras/${idRevendedora}/en-poder` },
     { key: 'ventas', label: 'Ventas', href: `/revendedoras/${idRevendedora}/ventas` },
+    { key: 'consignaciones', label: 'Consignaciones', href: `/revendedoras/${idRevendedora}/consignaciones` },
     { key: 'cuenta', label: 'Cuenta', href: `/revendedoras/${idRevendedora}/cuenta` },
     { key: 'liquidaciones', label: 'Liquidaciones', href: `/revendedoras/${idRevendedora}/liquidaciones` },
+    { key: 'declaraciones', label: 'Declaraciones', href: `/revendedoras/${idRevendedora}/declaraciones` },
   ] as const
 
   return (
