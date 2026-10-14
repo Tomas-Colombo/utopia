@@ -2,6 +2,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest'
 import * as dal from '@/lib/dal/revendedoras'
 import * as guard from '@/lib/dal/guard'
 import * as sessionModule from '@/lib/dal/session'
+import { AuthorizationError } from '@/lib/dal/errors'
 import { revalidatePath } from 'next/cache'
 
 vi.mock('next/cache', () => ({
@@ -12,10 +13,13 @@ vi.mock('@/lib/dal/session', () => ({
   verifySession: vi.fn(),
 }))
 
-vi.mock('@/lib/dal/guard', () => ({
-  requireModuleRole: vi.fn(),
-  classifyAuthError: vi.fn(),
-}))
+vi.mock('@/lib/dal/guard', async (importOriginal) => {
+  const actual = await importOriginal<typeof guard>()
+  return {
+    ...actual,
+    requireModuleRole: vi.fn(),
+  }
+})
 
 vi.mock('@/lib/dal/revendedoras', () => ({
   crearRevendedora: vi.fn(),
@@ -34,11 +38,54 @@ import {
 
 describe('revendedoras actions', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    vi.resetAllMocks()
     vi.mocked(sessionModule.verifySession).mockResolvedValue({} as unknown as sessionModule.Session)
   })
 
   describe('crearRevendedoraUnificadaAction', () => {
+    it('falla con no-permission si el usuario no tiene permiso revendedoras/crear', async () => {
+      vi.mocked(guard.requireModuleRole).mockRejectedValueOnce(new AuthorizationError('no-permission'))
+
+      const res = await crearRevendedoraUnificadaAction({
+        nombre: 'Lucia',
+        apellido: 'Vera',
+      })
+
+      expect(res).toEqual({ ok: false, reason: 'no-permission' })
+      expect(dal.crearRevendedora).not.toHaveBeenCalled()
+    })
+
+    it('falla con module-disabled si el módulo revendedoras está apagado', async () => {
+      vi.mocked(guard.requireModuleRole).mockRejectedValueOnce(new AuthorizationError('module-disabled'))
+
+      const res = await crearRevendedoraUnificadaAction({
+        nombre: 'Lucia',
+        apellido: 'Vera',
+      })
+
+      expect(res).toEqual({ ok: false, reason: 'module-disabled' })
+      expect(dal.crearRevendedora).not.toHaveBeenCalled()
+    })
+
+    it('falla con no-permission si quiere crear acceso y no tiene administracion/crear', async () => {
+      vi.mocked(guard.requireModuleRole).mockImplementation(async (_session, modulo, accion) => {
+        if (modulo === 'administracion' && accion === 'crear') {
+          throw new AuthorizationError('no-permission')
+        }
+      })
+
+      const res = await crearRevendedoraUnificadaAction({
+        nombre: 'Lucia',
+        apellido: 'Vera',
+        email: 'lucia@test.com',
+        crear_acceso: true,
+        password_acceso: 'Password123!',
+      })
+
+      expect(res).toEqual({ ok: false, reason: 'no-permission' })
+      expect(dal.crearRevendedora).not.toHaveBeenCalled()
+    })
+
     it('alta simple: exige revendedoras/crear y crea la revendedora', async () => {
       vi.mocked(dal.crearRevendedora).mockResolvedValue({ ok: true, data: 'rev-uuid-1' })
 
@@ -106,6 +153,24 @@ describe('revendedoras actions', () => {
   })
 
   describe('crearRevendedoraAction', () => {
+    it('falla con no-permission si el usuario no tiene revendedoras/crear', async () => {
+      vi.mocked(guard.requireModuleRole).mockRejectedValueOnce(new AuthorizationError('no-permission'))
+
+      const res = await crearRevendedoraAction({ nombre: 'A', apellido: 'B' })
+
+      expect(res).toEqual({ ok: false, reason: 'no-permission' })
+      expect(dal.crearRevendedora).not.toHaveBeenCalled()
+    })
+
+    it('falla con module-disabled si el módulo revendedoras está apagado', async () => {
+      vi.mocked(guard.requireModuleRole).mockRejectedValueOnce(new AuthorizationError('module-disabled'))
+
+      const res = await crearRevendedoraAction({ nombre: 'A', apellido: 'B' })
+
+      expect(res).toEqual({ ok: false, reason: 'module-disabled' })
+      expect(dal.crearRevendedora).not.toHaveBeenCalled()
+    })
+
     it('pasa por las 3 puertas: requireModuleRole -> safeParse -> DAL', async () => {
       vi.mocked(dal.crearRevendedora).mockResolvedValue({ ok: true, data: 'uuid-1' })
       
@@ -119,7 +184,7 @@ describe('revendedoras actions', () => {
     })
 
     it('falla con payload-invalido si Zod rechaza', async () => {
-      const payload = { nombre: 123 } // invǭlido
+      const payload = { nombre: 123 }
       const res = await crearRevendedoraAction(payload)
       
       expect(guard.requireModuleRole).toHaveBeenCalled()
@@ -129,6 +194,26 @@ describe('revendedoras actions', () => {
   })
 
   describe('editarRevendedoraAction', () => {
+    it('falla con no-permission si el usuario no tiene revendedoras/editar', async () => {
+      vi.mocked(guard.requireModuleRole).mockRejectedValueOnce(new AuthorizationError('no-permission'))
+
+      const id = '123e4567-e89b-12d3-a456-426614174000'
+      const res = await editarRevendedoraAction(id, { nombre: 'A', apellido: 'B' })
+
+      expect(res).toEqual({ ok: false, reason: 'no-permission' })
+      expect(dal.editarRevendedora).not.toHaveBeenCalled()
+    })
+
+    it('falla con module-disabled si el módulo está apagado', async () => {
+      vi.mocked(guard.requireModuleRole).mockRejectedValueOnce(new AuthorizationError('module-disabled'))
+
+      const id = '123e4567-e89b-12d3-a456-426614174000'
+      const res = await editarRevendedoraAction(id, { nombre: 'A', apellido: 'B' })
+
+      expect(res).toEqual({ ok: false, reason: 'module-disabled' })
+      expect(dal.editarRevendedora).not.toHaveBeenCalled()
+    })
+
     it('pasa por las 3 puertas', async () => {
       vi.mocked(dal.editarRevendedora).mockResolvedValue({ ok: true })
       
@@ -151,6 +236,26 @@ describe('revendedoras actions', () => {
   })
 
   describe('bajaRevendedoraAction', () => {
+    it('falla con no-permission si el usuario no tiene revendedoras/eliminar', async () => {
+      vi.mocked(guard.requireModuleRole).mockRejectedValueOnce(new AuthorizationError('no-permission'))
+
+      const id = '123e4567-e89b-12d3-a456-426614174000'
+      const res = await bajaRevendedoraAction(id)
+
+      expect(res).toEqual({ ok: false, reason: 'no-permission' })
+      expect(dal.bajaRevendedora).not.toHaveBeenCalled()
+    })
+
+    it('falla con module-disabled si el módulo está apagado', async () => {
+      vi.mocked(guard.requireModuleRole).mockRejectedValueOnce(new AuthorizationError('module-disabled'))
+
+      const id = '123e4567-e89b-12d3-a456-426614174000'
+      const res = await bajaRevendedoraAction(id)
+
+      expect(res).toEqual({ ok: false, reason: 'module-disabled' })
+      expect(dal.bajaRevendedora).not.toHaveBeenCalled()
+    })
+
     it('pasa por las 3 puertas', async () => {
       vi.mocked(dal.bajaRevendedora).mockResolvedValue({ ok: true })
       
