@@ -150,9 +150,9 @@ Después de la consignación (Slice 4) y antes de la liquidación: da visibilida
 
 ## Slice 8 — Cambios de producto (~400) · REQ-RV-DB-07
 
-- [ ] Tests: stock conservado; línea original excluida; comisión total invariante; cambio sobre
-  venta liquidada rechazado; origen local vs. revendedora.
-- [ ] `00088_cambio_venta.sql`; acción en `VentaDetalleView` condicionada al módulo para canal revendedora.
+- [x] Tests: stock conservado; línea original excluida; comisión total invariante; cambio sobre
+  venta liquidada rechazado; origen local vs. revendedora (`tests/db/cambio-venta-local.test.ts`, `tests/db/cambio-venta-revendedora.test.ts`, `tests/db/cambio-venta-rechazos.test.ts`).
+- [x] `00098_cambio_venta.sql`, `00099_sp_registrar_cambio.sql`, `00100_finanzas_cambio.sql`, `00101_panel_revendedoras_cambio.sql`; acción en `VentaDetalleView` condicionada al módulo para canal revendedora.
 
 ## Slice 9 — Reportes (~350) · REQ-RV-DB-08
 

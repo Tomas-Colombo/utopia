@@ -29,6 +29,7 @@ import {
 import { saldoCuota } from '@/lib/cuotas/generar-plan'
 import {
   anularVentaAction,
+  cambiarItemVentaAction,
   devolverItemVentaAction,
   emitirComprobanteAction,
 } from '../actions'
@@ -61,6 +62,19 @@ export function VentaDetalleView({
   // ese cartel no podía aparecer nunca. Es opcional (`p_motivo default null`).
   const [motivoAnulacion, setMotivoAnulacion] = useState('')
   const [devolverOpen, setDevolverOpen] = useState<string | null>(null)
+  const [cambiarLinea, setCambiarLinea] = useState<VentaConDetalle['lineas'][number] | null>(null)
+  const [codigoBusqueda, setCodigoBusqueda] = useState('')
+  const [buscando, setBuscando] = useState(false)
+  const [itemCandidato, setItemCandidato] = useState<{
+    id_item: string
+    producto_nombre: string
+    qr_code: string
+    talle?: string | null
+    precio: number
+  } | null>(null)
+  const [motivoCambio, setMotivoCambio] = useState('')
+  const [cambioMedio, setCambioMedio] = useState<MedioPago | ''>('')
+  const [cambioCuenta, setCambioCuenta] = useState<string>('')
   const [comprobanteOpen, setComprobanteOpen] = useState(false)
   const [tipoComp, setTipoComp] = useState<TipoComprobante>('ticket')
   const [numeroComp, setNumeroComp] = useState('')
@@ -135,6 +149,66 @@ export function VentaDetalleView({
       } else {
         toast.success('Ítem devuelto sin reintegros.')
       }
+      router.refresh()
+    })
+  }
+
+  const precioOriginal = cambiarLinea ? Number(cambiarLinea.precio_venta) : 0
+  const precioNuevo = itemCandidato ? Number(itemCandidato.precio) : null
+  const diferenciaCambio = precioNuevo !== null ? precioNuevo - precioOriginal : null
+
+  async function buscarItemEntregado(e?: React.FormEvent) {
+    if (e) e.preventDefault()
+    const codigo = codigoBusqueda.trim()
+    if (!codigo) return
+    setBuscando(true)
+    try {
+      const url =
+        venta.canal === 'revendedora' && venta.id_revendedora
+          ? `/api/revendedoras/lookup-item?code=${encodeURIComponent(codigo)}&id_revendedora=${venta.id_revendedora}&modo=venta`
+          : `/api/ventas/lookup-item?code=${encodeURIComponent(codigo)}`
+      const res = await fetch(url)
+      const data = await res.json()
+      if (!data.ok) {
+        toast.error('No se encontró el ítem', mensajeDeError(data.reason))
+        setItemCandidato(null)
+        return
+      }
+      const linea = data.linea || data.item
+      const precio = Number(linea.precio_final ?? linea.precio_lista ?? linea.precio_venta ?? 0)
+      setItemCandidato({
+        id_item: linea.id_item,
+        producto_nombre: linea.producto_nombre || linea.nombre || '(producto)',
+        qr_code: linea.qr_code || codigo,
+        talle: linea.talle,
+        precio,
+      })
+    } catch {
+      toast.error('Error al buscar el ítem', 'Verificá la conexión y probá de nuevo.')
+    } finally {
+      setBuscando(false)
+    }
+  }
+
+  function confirmarCambio() {
+    if (!cambiarLinea || !itemCandidato) return
+    start(async () => {
+      const res = await cambiarItemVentaAction({
+        idDetalleOriginal: cambiarLinea.id_detalle_venta,
+        idItemEntregado: itemCandidato.id_item,
+        idVenta: venta.id_venta,
+        canal: venta.canal,
+        idRevendedora: venta.id_revendedora,
+        motivo: motivoCambio.trim() || undefined,
+        medioCobro: (diferenciaCambio ?? 0) > 0 && venta.canal === 'local' ? (cambioMedio as MedioPago) : undefined,
+        idCuentaDestino: (diferenciaCambio ?? 0) > 0 && venta.canal === 'local' ? cambioCuenta : undefined,
+      })
+      if (!res.ok) {
+        return toast.error('No se pudo registrar el cambio', mensajeDeError(res.reason))
+      }
+      toast.success('Cambio de producto registrado correctamente.')
+      setCambiarLinea(null)
+      setItemCandidato(null)
       router.refresh()
     })
   }
@@ -221,17 +295,37 @@ export function VentaDetalleView({
                 <td className="px-4 py-3 text-right font-mono">
                   $ {Number(l.precio_venta).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                 </td>
-                {!readonly && (
-                  <td className="px-4 py-3 text-right">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setDevolverOpen(l.id_detalle_venta)}
-                    >
-                      Devolver
-                    </Button>
-                  </td>
-                )}
+                <td className="px-4 py-3 text-right">
+                  {l.devolucion ? (
+                    <Badge variant="neutral">Devuelto</Badge>
+                  ) : l.cambio ? (
+                    <Badge variant="warning">Cambiado</Badge>
+                  ) : !readonly ? (
+                    <div className="flex items-center justify-end gap-1">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          setCambiarLinea(l)
+                          setCodigoBusqueda('')
+                          setItemCandidato(null)
+                          setMotivoCambio('')
+                          setCambioMedio('')
+                          setCambioCuenta('')
+                        }}
+                      >
+                        Cambiar
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setDevolverOpen(l.id_detalle_venta)}
+                      >
+                        Devolver
+                      </Button>
+                    </div>
+                  ) : null}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -462,6 +556,165 @@ export function VentaDetalleView({
           </div>
         </div>
       </ConfirmDialog>
+
+      <Modal
+        open={cambiarLinea !== null}
+        title="Cambiar producto"
+        onClose={() => {
+          if (pending) return
+          setCambiarLinea(null)
+          setItemCandidato(null)
+        }}
+        footer={
+          <>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setCambiarLinea(null)
+                setItemCandidato(null)
+              }}
+              disabled={pending}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={confirmarCambio}
+              disabled={
+                pending ||
+                !itemCandidato ||
+                (diferenciaCambio !== null && diferenciaCambio < 0) ||
+                (diferenciaCambio !== null &&
+                  diferenciaCambio > 0 &&
+                  venta.canal === 'local' &&
+                  (!cambioMedio || !cambioCuenta))
+              }
+            >
+              {pending ? 'Registrando cambio…' : 'Confirmar cambio'}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          {cambiarLinea && (
+            <div className="rounded border border-border p-3 bg-card-2 text-sm">
+              <div className="text-xs uppercase font-mono text-muted">Producto original</div>
+              <div className="font-medium mt-0.5">{cambiarLinea.producto?.nombre}</div>
+              <div className="flex justify-between text-xs text-muted mt-1">
+                <span>QR: {cambiarLinea.item?.qr_code ?? '—'}</span>
+                <span className="font-mono font-medium text-foreground">
+                  $ {Number(cambiarLinea.precio_venta).toLocaleString('es-AR')}
+                </span>
+              </div>
+            </div>
+          )}
+
+          <form onSubmit={buscarItemEntregado} className="space-y-2">
+            <Field htmlFor="c-codigo" label="Código o QR del nuevo producto" required>
+              <div className="flex gap-2">
+                <Input
+                  id="c-codigo"
+                  value={codigoBusqueda}
+                  onChange={(e) => setCodigoBusqueda(e.target.value)}
+                  placeholder="Escaneá el QR o escribí el código"
+                  autoFocus
+                />
+                <Button type="submit" variant="secondary" disabled={buscando || !codigoBusqueda.trim()}>
+                  {buscando ? 'Buscando…' : 'Buscar'}
+                </Button>
+              </div>
+            </Field>
+          </form>
+
+          {itemCandidato && (
+            <div className="rounded border border-border p-3 bg-card-2 text-sm space-y-2">
+              <div className="text-xs uppercase font-mono text-muted">Producto a entregar</div>
+              <div className="font-medium">{itemCandidato.producto_nombre}</div>
+              <div className="flex justify-between text-xs text-muted">
+                <span>
+                  QR: {itemCandidato.qr_code}
+                  {itemCandidato.talle && ` · Talle: ${itemCandidato.talle}`}
+                </span>
+                <span className="font-mono font-medium text-foreground">
+                  $ {itemCandidato.precio.toLocaleString('es-AR')}
+                </span>
+              </div>
+
+              {diferenciaCambio !== null && (
+                <div className="border-t border-border-2 pt-2 mt-2">
+                  {diferenciaCambio < 0 ? (
+                    <div className="text-xs text-danger font-medium">
+                      El nuevo producto tiene un precio menor al original. No se permiten cambios con diferencia negativa.
+                    </div>
+                  ) : diferenciaCambio === 0 ? (
+                    <div className="text-xs text-success font-medium">
+                      Diferencia: $ 0 (cambio directo, sin diferencia de precio).
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="text-sm font-semibold text-warning">
+                        Diferencia a cobrar: $ {diferenciaCambio.toLocaleString('es-AR')}
+                        {venta.canal === 'revendedora' && (
+                          <span className="block text-xs font-normal text-muted mt-0.5">
+                            Se cargará a la cuenta de la revendedora sin entrar a caja directa.
+                          </span>
+                        )}
+                      </div>
+
+                      {venta.canal === 'local' && (
+                        <div className="grid grid-cols-2 gap-2 pt-1">
+                          <Field htmlFor="c-medio" label="Medio de cobro" required>
+                            <select
+                              id="c-medio"
+                              className="w-full text-sm"
+                              value={cambioMedio}
+                              onChange={(e) => setCambioMedio(e.target.value as MedioPago | '')}
+                            >
+                              <option value="">Seleccionar medio...</option>
+                              {(Object.keys(MEDIO_PAGO_LABEL) as MedioPago[])
+                                .filter((m) => m !== 'cuenta_revendedora')
+                                .map((m) => (
+                                  <option key={m} value={m}>
+                                    {MEDIO_PAGO_LABEL[m]}
+                                  </option>
+                                ))}
+                            </select>
+                          </Field>
+
+                          <Field htmlFor="c-cuenta" label="Cuenta destino" required>
+                            <select
+                              id="c-cuenta"
+                              className="w-full text-sm"
+                              value={cambioCuenta}
+                              onChange={(e) => setCambioCuenta(e.target.value)}
+                            >
+                              <option value="">Seleccionar cuenta...</option>
+                              {cuentas.map((c) => (
+                                <option key={c.id_cuenta_destino} value={c.id_cuenta_destino}>
+                                  {c.nombre}
+                                </option>
+                              ))}
+                            </select>
+                          </Field>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          <Field htmlFor="c-motivo" label="Motivo del cambio (opcional)">
+            <Textarea
+              id="c-motivo"
+              value={motivoCambio}
+              onChange={(e) => setMotivoCambio(e.target.value)}
+              placeholder="Ej: Cambio de talle / color"
+              rows={2}
+            />
+          </Field>
+        </div>
+      </Modal>
 
       <Modal
         open={comprobanteOpen}
