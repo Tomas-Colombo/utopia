@@ -219,3 +219,62 @@ test.describe('Ventas · canal revendedora', () => {
   })
 })
 
+test.describe('Ventas · cambio de producto', () => {
+  test('registra un cambio directo (diferencia 0) desde el detalle de la venta', async ({
+    nuevoProducto,
+    controlPrecios,
+    nuevaVenta,
+    inventario,
+    shell,
+    seed,
+    page,
+  }) => {
+    const nombreProd1 = unique('Remera Talle S')
+    const nombreProd2 = unique('Remera Talle M')
+
+    await nuevoProducto.crear({
+      nombre: nombreProd1,
+      categoria: seed.categoriaSimple.nombre,
+      costo: '10000',
+      stock: 1,
+    })
+    await page.waitForURL(/\/inventario(\?|$)/)
+    await controlPrecios.recalcular(nombreProd1)
+
+    await nuevoProducto.crear({
+      nombre: nombreProd2,
+      categoria: seed.categoriaSimple.nombre,
+      costo: '10000',
+      stock: 1,
+    })
+    await page.waitForURL(/\/inventario(\?|$)/)
+    await controlPrecios.recalcular(nombreProd2)
+
+    await inventario.abrir()
+    const skuProd2 = await inventario.fila(nombreProd2).locator('.font-mono.text-xs').innerText()
+
+    await nuevaVenta.abrir()
+    await nuevaVenta.agregarPorSugerencia(nombreProd1)
+    await nuevaVenta.cobrarYConfirmar()
+    await shell.expectSuccessToast('Venta registrada')
+    await page.waitForURL(/\/ventas\/[0-9a-f-]{36}$/)
+
+    const botonCambiar = page.getByRole('button', { name: 'Cambiar' }).first()
+    await expect(botonCambiar).toBeVisible()
+    await botonCambiar.click()
+
+    const modalCambio = page.getByRole('dialog')
+    await expect(modalCambio).toBeVisible()
+    await modalCambio.getByLabel(/Código o QR/i).fill(skuProd2.trim())
+    await modalCambio.getByRole('button', { name: 'Buscar' }).click()
+
+    await expect(page.getByText('Diferencia: $ 0 (cambio directo, sin diferencia de precio).')).toBeVisible()
+
+    await modalCambio.getByRole('button', { name: 'Confirmar cambio' }).click()
+    await shell.expectSuccessToast('Cambio de producto registrado correctamente.')
+
+    await expect(page.getByText('Cambiado').first()).toBeVisible()
+    await expect(page.getByText(nombreProd2).first()).toBeVisible()
+  })
+})
+
