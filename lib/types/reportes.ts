@@ -152,3 +152,49 @@ export interface FinanzasContextoPeriodo {
   mes_desde: string
   mes_hasta: string
 }
+
+// ─── Reportes Revendedoras (Slice 9 / REQ-RV-DB-08) ─────────────────
+
+export interface PerfilRevendedoraRow {
+  id_revendedora: string
+  nombre: string
+  apellido: string
+  telefono: string | null
+  email: string | null
+  estado: string
+  piezas_en_poder: number
+  valor_en_poder: number
+  total_vendido: number
+  comision_liquidada: number
+  comision_estimada: number
+  adeudado: number
+  cantidad_ventas: number
+  ticket_promedio: number
+  piezas_entregadas_historico: number
+  rotacion_pct: number
+}
+
+export interface CumplimientoObjetivosRow {
+  id_revendedora: string
+  nombre: string
+  apellido: string
+  vendido_periodo: number
+  id_regla: string | null
+  tramo_actual_desde: number
+  porcentaje_actual: number
+  proximo_tramo_desde: number | null
+  proximo_porcentaje: number | null
+  falta_para_proximo: number | null
+}
+
+export interface ResumenCanalRow {
+  ventas_local_monto: number
+  ventas_local_cant: number
+  ventas_revendedora_monto: number
+  ventas_revendedora_cant: number
+  comision_revendedora_monto: number
+  stock_central_cant: number
+  stock_central_valor: number
+  stock_revendedoras_cant: number
+  stock_revendedoras_valor: number
+}

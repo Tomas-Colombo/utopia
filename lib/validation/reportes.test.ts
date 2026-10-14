@@ -66,4 +66,23 @@ describe('searchParamsReportesSchema', () => {
     })
     expect(res.success).toBe(false)
   })
+
+  it('acepta id_revendedora uuid valido y rechaza uuid invalido', () => {
+    const resValido = searchParamsReportesSchema.safeParse({
+      desde: '2023-01-01',
+      hasta: '2023-12-31',
+      id_revendedora: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+    })
+    expect(resValido.success).toBe(true)
+    if (resValido.success) {
+      expect(resValido.data.id_revendedora).toBe('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11')
+    }
+
+    const resInvalido = searchParamsReportesSchema.safeParse({
+      desde: '2023-01-01',
+      hasta: '2023-12-31',
+      id_revendedora: 'no-es-un-uuid',
+    })
+    expect(resInvalido.success).toBe(false)
+  })
 })

@@ -55,6 +55,29 @@ describe('bloquesVisibles', () => {
     expect(bloques).not.toContain('mercaderia')
   })
 
+  it('retorna bloques de revendedoras si tiene acceso', () => {
+    const session = {
+      rolId: '123',
+      tenantId: '123',
+      modulosHabilitados: ['revendedoras'],
+      permisos: { revendedoras: ['ver'] }
+    } as unknown as Session
+    const bloques = bloquesVisibles(session)
+    expect(bloques).toContain('revendedoras')
+    expect(bloques).not.toContain('mercaderia')
+  })
+
+  it('no retorna revendedoras si solo tiene ver_propio', () => {
+    const session = {
+      rolId: '123',
+      tenantId: '123',
+      modulosHabilitados: ['revendedoras'],
+      permisos: { revendedoras: ['ver_propio'] }
+    } as unknown as Session
+    const bloques = bloquesVisibles(session)
+    expect(bloques).not.toContain('revendedoras')
+  })
+
   it('retorna vacío si no tiene modulos', () => {
     const session = {
       rolId: '123',

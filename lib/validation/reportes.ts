@@ -10,6 +10,7 @@ export const searchParamsReportesSchema = z.strictObject({
   hasta: dateStringSchema,
   limite: z.coerce.number().min(1).max(100).default(5),
   orden: z.enum(['ganancia', 'unidades', 'monto']).default('ganancia'),
+  id_revendedora: z.string().uuid().optional(),
 }).superRefine((data, ctx) => {
   if (!esFechaValida(data.desde) || !esFechaValida(data.hasta)) return
 

@@ -1,7 +1,16 @@
 import { Session } from '../dal/session'
 import { hasModuleAccess } from '../dal/guard'
 
-export type TipoBloqueFinanzas = 'resultados' | 'flujo' | 'serie' | 'cobrar' | 'gastos' | 'mercaderia' | 'ranking' | 'proveedores'
+export type TipoBloqueFinanzas =
+  | 'resultados'
+  | 'flujo'
+  | 'serie'
+  | 'cobrar'
+  | 'gastos'
+  | 'mercaderia'
+  | 'ranking'
+  | 'proveedores'
+  | 'revendedoras'
 
 /**
  * REQ-APP-04: Mapeo de bloques a módulos y permisos requeridos para verlos
@@ -27,6 +36,11 @@ export function bloquesVisibles(session: Session): TipoBloqueFinanzas[] {
   // - proveedores → módulo rendiciones
   if (hasModuleAccess(session, 'rendiciones', 'ver')) {
     visibles.push('proveedores')
+  }
+
+  // - revendedoras → módulo revendedoras
+  if (hasModuleAccess(session, 'revendedoras', 'ver')) {
+    visibles.push('revendedoras')
   }
 
   return visibles
