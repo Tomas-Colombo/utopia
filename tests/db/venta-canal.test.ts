@@ -238,8 +238,36 @@ describe.skipIf(!hasTestDb)('Venta por canal — Slice 6a (REQ-RV-DB-05)', () =>
       .eq('id_detalle_venta', idDetalle)
     expect(errComision).toBeNull()
 
-    // 3. Simular liquidación sellando un id_liquidacion (vía dummy uuid)
-    const dummyLiqId = '123e4567-e89b-12d3-a456-426614174000'
+    // 3. Simular liquidación sellando un id_liquidacion
+    const { data: revInmut } = await f.serviceRole
+      .from('revendedora')
+      .insert({
+        id_tenant: f.tenantId,
+        nombre: 'Rev',
+        apellido: 'Inmut',
+        activo: true,
+      })
+      .select('id_revendedora')
+      .single()
+
+    const { data: liqInmut } = await f.serviceRole
+      .from('liquidacion_revendedora')
+      .insert({
+        id_tenant: f.tenantId,
+        id_revendedora: revInmut!.id_revendedora,
+        periodo_desde: '2026-05-01',
+        periodo_hasta: '2026-05-31',
+        monto_vendido: 100000,
+        monto_comision: 10000,
+        monto_a_cobrar: 90000,
+        cantidad_lineas: 1,
+        porcentaje_aplicado: 10,
+        estado: 'pendiente',
+      })
+      .select('id_liquidacion')
+      .single()
+
+    const dummyLiqId = liqInmut!.id_liquidacion
     const { error: errSellar } = await f.serviceRole
       .from('detalle_venta')
       .update({ id_liquidacion: dummyLiqId })
@@ -347,10 +375,28 @@ describe.skipIf(!hasTestDb)('Venta por canal — Slice 6a (REQ-RV-DB-05)', () =>
     expect(errDev?.message).toMatch(/devolucion-venta-revendedora/)
 
     // 2. Sellar id_liquidacion para simular liquidación
-    await f.serviceRole
+    const { data: liqAnul } = await f.serviceRole
+      .from('liquidacion_revendedora')
+      .insert({
+        id_tenant: f.tenantId,
+        id_revendedora: idRev,
+        periodo_desde: '2026-05-01',
+        periodo_hasta: '2026-05-31',
+        monto_vendido: 100000,
+        monto_comision: 10000,
+        monto_a_cobrar: 90000,
+        cantidad_lineas: 1,
+        porcentaje_aplicado: 10,
+        estado: 'pendiente',
+      })
+      .select('id_liquidacion')
+      .single()
+
+    const { error: errSellarAnul } = await f.serviceRole
       .from('detalle_venta')
-      .update({ id_liquidacion: '123e4567-e89b-12d3-a456-426614174000' })
+      .update({ id_liquidacion: liqAnul!.id_liquidacion })
       .eq('id_detalle_venta', idDetalle)
+    expect(errSellarAnul).toBeNull()
 
     // 3. Anulación de venta liquidada -> rechazada con venta-liquidada
     const { error: errAnularLiq } = await f.authenticated.rpc('sp_anular_venta', {

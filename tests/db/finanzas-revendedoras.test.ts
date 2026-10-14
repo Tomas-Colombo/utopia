@@ -1,5 +1,4 @@
 import { describe, expect, test } from 'vitest'
-import { randomUUID } from 'crypto'
 import { createTenantWithUser, signInAs, unwrapFixture, withScopedTenant, hasTestDb } from './_helpers'
 import { createServiceRoleTestClient } from '@/lib/dal/supabase-test'
 
@@ -117,14 +116,31 @@ describe.skipIf(!hasTestDb)('Finanzas de revendedoras — Slice 6b (REQ-RV-DB-08
     expect(rErr).toBeNull()
     const idRevendedora = rId as string
 
-    // Regla de comisión propia para R1 (10% fijo para tramo 0)
+    // Fechas dinámicas para el mes M (actual) y mes M+1
     const hoy = new Date().toISOString().slice(0, 10)
+    const pDesdeM = hoy.slice(0, 8) + '01'
+    const pHastaM = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0)
+      .toISOString()
+      .slice(0, 10)
+
+    const mesSig = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 15)
+    const pDesdeM1 = mesSig.toISOString().slice(0, 8) + '01'
+    const pHastaM1 = new Date(mesSig.getFullYear(), mesSig.getMonth() + 1, 0)
+      .toISOString()
+      .slice(0, 10)
+    const fechaLiqM1 = `${pDesdeM1.slice(0, 7)}-05`
+    const fechaPagoM1 = `${pDesdeM1.slice(0, 7)}-10T12:00:00Z`
+
+    // Regla de comisión propia para R1 (Tramo 1: 10%, Tramo 2: 15%)
     const { error: reglaErr } = await authenticated.rpc('sp_crear_regla_comision', {
       p_ambito: 'revendedora',
       p_nombre: 'Comision R1',
       p_id_revendedora: idRevendedora,
-      p_vigente_desde: hoy,
-      p_escalas: [{ objetivo_desde: 0, porcentaje: 10 }],
+      p_vigente_desde: pDesdeM,
+      p_escalas: [
+        { objetivo_desde: 0, porcentaje: 10 },
+        { objetivo_desde: 100000.01, porcentaje: 15 },
+      ],
     })
     expect(reglaErr).toBeNull()
 
@@ -153,7 +169,7 @@ describe.skipIf(!hasTestDb)('Finanzas de revendedoras — Slice 6b (REQ-RV-DB-08
     expect(errV1).toBeNull()
     expect(v1).toBeTruthy()
 
-    // V2 — Venta revendedora (ítem 2, preview 10%, liquidada con $10.000)
+    // V2 — Venta revendedora (ítem 2, preview 10%)
     const { data: v2, error: errV2 } = await authenticated.rpc('sp_registrar_venta', {
       p_lineas: [{ id_item: items[1] }],
       p_forma_pago: 'efectivo',
@@ -163,19 +179,7 @@ describe.skipIf(!hasTestDb)('Finanzas de revendedoras — Slice 6b (REQ-RV-DB-08
     expect(errV2).toBeNull()
     expect(v2).toBeTruthy()
 
-    // Simular liquidación de V2: sellar id_liquidacion y monto_comision = 10.000
-    const idLiq = randomUUID()
-    const { error: liqErr } = await sr
-      .from('detalle_venta')
-      .update({
-        id_liquidacion: idLiq,
-        monto_comision: 10_000,
-      })
-      .eq('id_venta', v2)
-    expect(liqErr).toBeNull()
-
-    // Cambiar la regla de R1 para V3: crear nueva regla o terminar la anterior y poner 15%
-    // Para V3, actualizamos directamente preview a 15 para testear el snapshot del 15%
+    // V3 — Venta revendedora (ítem 3, preview 10% base)
     const { data: v3, error: errV3 } = await authenticated.rpc('sp_registrar_venta', {
       p_lineas: [{ id_item: items[2] }],
       p_forma_pago: 'efectivo',
@@ -185,21 +189,21 @@ describe.skipIf(!hasTestDb)('Finanzas de revendedoras — Slice 6b (REQ-RV-DB-08
     expect(errV3).toBeNull()
     expect(v3).toBeTruthy()
 
-    // Ajustar preview a 15% en V3 para el escenario (15% de 100.000 = 15.000)
-    // El trigger permite modificar porcentaje_comision_preview solo si la línea no está congelada?
-    // En 00088 porcentaje_comision_preview está en congelados, así que podemos actualizarlo antes o verificar la regla
-    // Verificamos si v3 tomó el 10% de la regla vigente; para que tome 15% creamos regla con 15% o actualizamos via service-role
-    // Pero en 00088 porcentaje_comision_preview no se puede tocar por UPDATE directo.
-    // Probemos si el 10% dio 10.000. Si queremos exactamente 15.000, creamos regla propia con 15% antes de vender V3.
-    // Probamos qué porcentaje tomó V3:
+    // Excluir V3 con sp_excluir_detalle_liquidacion
     const { data: detV3 } = await sr
       .from('detalle_venta')
-      .select('porcentaje_comision_preview')
+      .select('id_detalle_venta, porcentaje_comision_preview')
       .eq('id_venta', v3)
       .single()
     expect(Number(detV3?.porcentaje_comision_preview)).toBe(10)
 
-    // V4 — Venta revendedora (ítem 3) y luego anulada en M
+    const { error: excErr } = await authenticated.rpc('sp_excluir_detalle_liquidacion', {
+      p_id_detalle: detV3!.id_detalle_venta,
+      p_motivo: 'Excluida de L1 segun escenario dorado',
+    })
+    expect(excErr).toBeNull()
+
+    // V4 — Venta revendedora (ítem 4) y luego anulada en M
     const { data: v4, error: errV4 } = await authenticated.rpc('sp_registrar_venta', {
       p_lineas: [{ id_item: items[3] }],
       p_forma_pago: 'efectivo',
@@ -214,7 +218,7 @@ describe.skipIf(!hasTestDb)('Finanzas de revendedoras — Slice 6b (REQ-RV-DB-08
     })
     expect(errAnul).toBeNull()
 
-    // G1 — Gasto de $5.000
+    // G1 — Gasto de $5.000 en M
     const { data: catG } = await sr
       .from('categoria_gasto')
       .insert({ id_tenant: tenantId, nombre: 'Servicios' })
@@ -228,10 +232,90 @@ describe.skipIf(!hasTestDb)('Finanzas de revendedoras — Slice 6b (REQ-RV-DB-08
     })
     expect(gErr).toBeNull()
 
+    // L1 — Generar liquidación para el período Mes M
+    const { data: idLiq, error: liqErr } = await authenticated.rpc('sp_generar_liquidacion', {
+      p_id_revendedora: idRevendedora,
+      p_desde: pDesdeM,
+      p_hasta: pHastaM,
+      p_observaciones: 'L1 Mes M',
+    })
+    expect(liqErr).toBeNull()
+    expect(idLiq).toBeDefined()
+
+    // DR-2: Simular fecha de liquidación en Mes M+1 (2026-06-05)
+    await sr
+      .from('liquidacion_revendedora')
+      .update({ fecha_liquidacion: fechaLiqM1 })
+      .eq('id_liquidacion', idLiq as string)
+
+    // Posición Financiera y Cuenta Corriente ANTES del pago de L1
+    const { data: posAntesData } = await authenticated.rpc('rf_finanzas_posicion').single()
+    const posAntes = posAntesData as { por_cobrar?: { a_cobrar?: number } }
+    expect(Number(posAntes.por_cobrar?.a_cobrar)).toBe(190_000)
+
+    const { data: ccAntesData } = await authenticated.rpc('rf_cuenta_corriente_revendedora', {
+      p_id_revendedora: idRevendedora,
+    }).single()
+    const ccAntes = ccAntesData as {
+      total_vendido?: number
+      total_comision_liquidada?: number
+      total_liquidado?: number
+      total_pagado?: number
+      adeudado?: number
+    }
+    expect(Number(ccAntes.total_vendido)).toBe(200_000)
+    expect(Number(ccAntes.total_comision_liquidada)).toBe(10_000)
+    expect(Number(ccAntes.total_liquidado)).toBe(90_000)
+    expect(Number(ccAntes.total_pagado)).toBe(0)
+    expect(Number(ccAntes.adeudado)).toBe(190_000)
+
+    // PAGO_L1 — Pagar liquidación L1 en Mes M+1 (2026-06-10) con $90.000
+    const { data: ctaBanco } = await sr
+      .from('cuenta_destino')
+      .insert({
+        id_tenant: tenantId,
+        nombre: 'Banco Tenant',
+        tipo: 'banco',
+        activo: true,
+      })
+      .select('id_cuenta_destino')
+      .single()
+
+    const { error: pagoErr } = await authenticated.rpc('sp_marcar_liquidacion_pagada', {
+      p_id_liquidacion: idLiq as string,
+      p_id_cuenta: ctaBanco!.id_cuenta_destino,
+      p_monto: 90_000,
+      p_metodo: 'transferencia',
+      p_referencia: 'TR-PAGO-L1',
+      p_fecha: fechaPagoM1,
+    })
+    expect(pagoErr).toBeNull()
+
+    // Posición Financiera y Cuenta Corriente DESPUÉS del pago de L1
+    const { data: posDespData } = await authenticated.rpc('rf_finanzas_posicion').single()
+    const posDesp = posDespData as { por_cobrar?: { a_cobrar?: number } }
+    expect(Number(posDesp.por_cobrar?.a_cobrar)).toBe(100_000)
+
+    const { data: ccDespData } = await authenticated.rpc('rf_cuenta_corriente_revendedora', {
+      p_id_revendedora: idRevendedora,
+    }).single()
+    const ccDesp = ccDespData as {
+      total_vendido?: number
+      total_comision_liquidada?: number
+      total_liquidado?: number
+      total_pagado?: number
+      adeudado?: number
+    }
+    expect(Number(ccDesp.total_vendido)).toBe(200_000)
+    expect(Number(ccDesp.total_comision_liquidada)).toBe(10_000)
+    expect(Number(ccDesp.total_liquidado)).toBe(90_000)
+    expect(Number(ccDesp.total_pagado)).toBe(90_000)
+    expect(Number(ccDesp.adeudado)).toBe(100_000)
+
     // 6. Consultar v_linea_venta
     const { data: lineasVenta, error: lineasErr } = await authenticated
       .from('v_linea_venta')
-      .select('id_venta, precio_venta, costo, comision, comision_estimada, estado_venta')
+      .select('id_venta, precio_venta, costo, comision, comision_estimada, estado_venta, fecha_liquidacion')
       .in('id_venta', [v1, v2, v3, v4])
     expect(lineasErr).toBeNull()
     expect(lineasVenta).toHaveLength(4)
@@ -246,6 +330,7 @@ describe.skipIf(!hasTestDb)('Finanzas de revendedoras — Slice 6b (REQ-RV-DB-08
 
     expect(Number(l2?.comision)).toBe(10_000)
     expect(Number(l2?.comision_estimada)).toBe(0)
+    expect(l2?.fecha_liquidacion).toBe(fechaLiqM1)
 
     expect(Number(l3?.comision)).toBe(0)
     expect(Number(l3?.comision_estimada)).toBe(10_000)
@@ -253,63 +338,91 @@ describe.skipIf(!hasTestDb)('Finanzas de revendedoras — Slice 6b (REQ-RV-DB-08
     expect(Number(l4?.comision)).toBe(0)
     expect(Number(l4?.comision_estimada)).toBe(0)
 
-    // 7. Evaluar rf_finanzas_resultados para el período M
-    const pDesde = hoy.slice(0, 8) + '01'
-    const pHasta = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0)
-      .toISOString()
-      .slice(0, 10)
-
-    const { data, error: resErr } = await authenticated
+    // 7. Evaluar rf_finanzas_resultados para el período M (DR-2: liquidación en M+1 no reescribe M)
+    const { data: resMData, error: resMErr } = await authenticated
       .rpc('rf_finanzas_resultados', {
-        p_desde: pDesde,
-        p_hasta: pHasta,
+        p_desde: pDesdeM,
+        p_hasta: pHastaM,
       })
       .single()
 
-    expect(resErr).toBeNull()
-    expect(data).toBeDefined()
-    const res = data as Record<string, unknown>
+    expect(resMErr).toBeNull()
+    expect(resMData).toBeDefined()
+    const resM = resMData as Record<string, unknown>
 
-    expect(Number(res.ventas_brutas)).toBe(400_000)
-    expect(Number(res.anulaciones)).toBe(100_000)
-    expect(Number(res.devoluciones)).toBe(0)
-    expect(Number(res.ventas_netas)).toBe(300_000)
-    expect(Number(res.costo_mercaderia)).toBe(120_000)
-    expect(Number(res.ganancia_sobre_ventas)).toBe(180_000)
-    expect(Number(res.costo_cobro)).toBe(0)
-    expect(Number(res.incobrables)).toBe(0)
-    expect(Number(res.bajas_inventario)).toBe(0)
-    expect(Number(res.ganancia_despues_de_costos)).toBe(180_000)
-    expect(Number(res.gastos)).toBe(5_000)
+    expect(Number(resM.ventas_brutas)).toBe(400_000)
+    expect(Number(resM.anulaciones)).toBe(100_000)
+    expect(Number(resM.devoluciones)).toBe(0)
+    expect(Number(resM.ventas_netas)).toBe(300_000)
+    expect(Number(resM.costo_mercaderia)).toBe(120_000)
+    expect(Number(resM.ganancia_sobre_ventas)).toBe(180_000)
+    expect(Number(resM.costo_cobro)).toBe(0)
+    expect(Number(resM.incobrables)).toBe(0)
+    expect(Number(resM.bajas_inventario)).toBe(0)
+    expect(Number(resM.ganancia_despues_de_costos)).toBe(180_000)
+    expect(Number(resM.gastos)).toBe(5_000)
 
-    // Nuevas columnas de comisión
-    expect(Number(res.comision_liquidada)).toBe(10_000)
-    expect(Number(res.comision_pendiente_estimada)).toBe(10_000)
-    expect(Number(res.ganancia_final)).toBe(165_000)
-    expect(Number(res.cantidad_ventas)).toBe(3)
-    expect(Number(res.ticket_promedio)).toBe(100_000)
+    // DR-2: comision_liquidada es 0 en M porque fecha_liquidacion cayó en M+1
+    expect(Number(resM.comision_liquidada)).toBe(0)
+    expect(Number(resM.comision_pendiente_estimada)).toBe(10_000)
+    expect(Number(resM.ganancia_final)).toBe(175_000)
+    expect(Number(resM.cantidad_ventas)).toBe(3)
+    expect(Number(resM.ticket_promedio)).toBe(100_000)
 
-    // 8. Evaluar rf_finanzas_flujo para el período M (DR-14)
-    const { data: flujoData, error: flujoErr } = await authenticated
+    // 8. Evaluar rf_finanzas_flujo para el período M (DR-14: cuenta_revendedora no entra a caja)
+    const { data: flujoMData, error: flujoMErr } = await authenticated
       .rpc('rf_finanzas_flujo', {
-        p_desde: pDesde,
-        p_hasta: pHasta,
+        p_desde: pDesdeM,
+        p_hasta: pHastaM,
       })
       .single()
 
-    expect(flujoErr).toBeNull()
-    expect(flujoData).toBeDefined()
-    const flujo = flujoData as Record<string, unknown>
+    expect(flujoMErr).toBeNull()
+    expect(flujoMData).toBeDefined()
+    const flujoM = flujoMData as Record<string, unknown>
 
-    expect(Number(flujo.cobrado)).toBe(100_000)
-    expect(Number(flujo.devuelto_clientes)).toBe(0)
-    expect(Number(flujo.costo_cobro)).toBe(0)
-    expect(Number(flujo.neto_cobros)).toBe(100_000)
-    expect(Number(flujo.compras_mercaderia)).toBe(160_000)
-    expect(Number(flujo.pagos_proveedores)).toBe(0)
-    expect(Number(flujo.gastos)).toBe(5_000)
-    expect(Number(flujo.flujo_neto)).toBe(-65_000)
-    expect(flujo.por_acreditar).toEqual({})
+    expect(Number(flujoM.cobrado)).toBe(100_000)
+    expect(Number(flujoM.devuelto_clientes)).toBe(0)
+    expect(Number(flujoM.costo_cobro)).toBe(0)
+    expect(Number(flujoM.neto_cobros)).toBe(100_000)
+    expect(Number(flujoM.compras_mercaderia)).toBe(160_000)
+    expect(Number(flujoM.pagos_proveedores)).toBe(0)
+    expect(Number(flujoM.gastos)).toBe(5_000)
+    expect(Number(flujoM.flujo_neto)).toBe(-65_000)
+    expect(flujoM.por_acreditar).toEqual({})
+
+    // 9. Evaluar rf_finanzas_resultados para el período M+1 (DR-2: devenga comision_liquidada)
+    const { data: resM1Data, error: resM1Err } = await authenticated
+      .rpc('rf_finanzas_resultados', {
+        p_desde: pDesdeM1,
+        p_hasta: pHastaM1,
+      })
+      .single()
+
+    expect(resM1Err).toBeNull()
+    const resM1 = resM1Data as Record<string, unknown>
+    expect(Number(resM1.ventas_netas)).toBe(0)
+    expect(Number(resM1.costo_mercaderia)).toBe(0)
+    expect(Number(resM1.gastos)).toBe(0)
+    expect(Number(resM1.comision_liquidada)).toBe(10_000)
+    expect(Number(resM1.comision_pendiente_estimada)).toBe(0)
+    expect(Number(resM1.ganancia_final)).toBe(-10_000)
+
+    // 10. Evaluar rf_finanzas_flujo para el período M+1 (DR-3/DR-14: cobro de liquidacion L1)
+    const { data: flujoM1Data, error: flujoM1Err } = await authenticated
+      .rpc('rf_finanzas_flujo', {
+        p_desde: pDesdeM1,
+        p_hasta: pHastaM1,
+      })
+      .single()
+
+    expect(flujoM1Err).toBeNull()
+    const flujoM1 = flujoM1Data as Record<string, unknown>
+    expect(Number(flujoM1.cobrado)).toBe(90_000)
+    expect(Number(flujoM1.neto_cobros)).toBe(90_000)
+    expect(Number(flujoM1.compras_mercaderia)).toBe(0)
+    expect(Number(flujoM1.gastos)).toBe(0)
+    expect(Number(flujoM1.flujo_neto)).toBe(90_000)
   })
 
   test('con modulo revendedoras apagado: comision_liquidada y comision_pendiente_estimada son 0 (REQ-RV-MOD)', async () => {
