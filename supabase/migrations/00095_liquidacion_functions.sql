@@ -261,3 +261,161 @@ $$;
 
 grant execute on function preview_liquidacion(uuid, date, date) to authenticated;
 
+-- ─── 2. sp_generar_liquidacion (INVOKER) ─────────────────────────────
+
+create or replace function sp_generar_liquidacion(
+  p_id_revendedora uuid,
+  p_desde          date,
+  p_hasta          date,
+  p_observaciones  text default null,
+  p_ip             inet default null
+) returns uuid
+language plpgsql
+security invoker
+as $$
+declare
+  v_tenant            uuid := auth_tenant_id();
+  v_actor             uuid := auth.uid();
+  v_id_liq            uuid;
+  v_rango             tstzrange;
+  v_total_candidato   numeric := 0;
+  v_count_candidato   integer := 0;
+  v_porcentaje        numeric := 0;
+  v_vendido_real      numeric := 0;
+  v_comision_real     numeric := 0;
+  v_cobrar_real       numeric := 0;
+  v_count_real        integer := 0;
+begin
+  if v_tenant is null then
+    raise exception 'no-tenant' using errcode = '42501';
+  end if;
+
+  if auth_revendedora_id() is not null then
+    raise exception 'no-permission' using errcode = '42501';
+  end if;
+
+  if not exists (
+    select 1 from tenant_modulo tm
+    join modulo m on m.id_modulo = tm.id_modulo
+    where tm.id_tenant = v_tenant and m.codigo = 'revendedoras' and tm.habilitado = true
+  ) then
+    raise exception 'modulo-revendedoras-deshabilitado' using errcode = '42501';
+  end if;
+
+  if not exists (
+    select 1 from revendedora
+    where id_tenant = v_tenant and id_revendedora = p_id_revendedora and activo = true
+    for update
+  ) then
+    raise exception 'revendedora-not-found' using errcode = '42704';
+  end if;
+
+  v_rango := fn_rango_tenant(p_desde, p_hasta);
+
+  -- Sumar total del período sobre líneas candidatas bloqueándolas con FOR UPDATE
+  with lineas_candidatas as (
+    select dv.id_detalle_venta, dv.precio_venta
+    from detalle_venta dv
+    join venta v on v.id_venta = dv.id_venta
+    left join devolucion_venta dev on dev.id_detalle_venta = dv.id_detalle_venta
+    where dv.id_tenant = v_tenant
+      and v.id_tenant = v_tenant
+      and v.canal = 'revendedora'
+      and v.id_revendedora = p_id_revendedora
+      and v.estado_venta = 'registrada'
+      and dev.id_devolucion is null
+      and dv.id_liquidacion is null
+      and dv.excluida_liquidacion = false
+      and v.fecha <@ v_rango
+    for update of dv
+  )
+  select
+    coalesce(sum(precio_venta), 0),
+    count(*)
+  into v_total_candidato, v_count_candidato
+  from lineas_candidatas;
+
+  if v_count_candidato = 0 then
+    raise exception 'liquidacion-vacia' using errcode = '22023';
+  end if;
+
+  -- Resolver comisión UNA SOLA VEZ con el total acumulado del período
+  select coalesce(porcentaje, 0) into v_porcentaje
+    from fn_resolver_comision(p_id_revendedora, p_hasta, v_total_candidato, 'revendedora')
+   limit 1;
+  v_porcentaje := coalesce(v_porcentaje, 0);
+
+  -- Insertar cabecera inicial
+  insert into liquidacion_revendedora (
+    id_tenant, id_revendedora, periodo_desde, periodo_hasta,
+    monto_vendido, monto_comision, monto_a_cobrar,
+    cantidad_lineas, porcentaje_aplicado, estado,
+    fecha_liquidacion, observaciones, id_usuario_alta
+  ) values (
+    v_tenant, p_id_revendedora, p_desde, p_hasta,
+    v_total_candidato, round(v_total_candidato * (v_porcentaje / 100.0), 2),
+    v_total_candidato - round(v_total_candidato * (v_porcentaje / 100.0), 2),
+    v_count_candidato, v_porcentaje, 'pendiente',
+    (now() at time zone 'UTC')::date, p_observaciones, v_actor
+  ) returning id_liquidacion into v_id_liq;
+
+  -- Sellar id_liquidacion y escribir monto_comision por línea
+  update detalle_venta dv
+     set id_liquidacion = v_id_liq,
+         monto_comision = round(dv.precio_venta * (v_porcentaje / 100.0), 2)
+    from venta v
+   where v.id_venta = dv.id_venta
+     and dv.id_tenant = v_tenant
+     and v.id_tenant = v_tenant
+     and v.canal = 'revendedora'
+     and v.id_revendedora = p_id_revendedora
+     and v.estado_venta = 'registrada'
+     and dv.id_liquidacion is null
+     and dv.excluida_liquidacion = false
+     and v.fecha <@ v_rango
+     and not exists (
+       select 1 from devolucion_venta dev
+        where dev.id_detalle_venta = dv.id_detalle_venta
+     );
+
+  -- Recalcular cabecera desde las filas realmente selladas (guarda de concurrencia)
+  select
+    coalesce(sum(precio_venta), 0),
+    coalesce(sum(monto_comision), 0),
+    count(*)
+  into v_vendido_real, v_comision_real, v_count_real
+  from detalle_venta
+  where id_liquidacion = v_id_liq
+    and id_tenant = v_tenant;
+
+  v_cobrar_real := v_vendido_real - v_comision_real;
+
+  update liquidacion_revendedora
+     set monto_vendido = v_vendido_real,
+         monto_comision = v_comision_real,
+         monto_a_cobrar = v_cobrar_real,
+         cantidad_lineas = v_count_real
+   where id_liquidacion = v_id_liq;
+
+  insert into auditoria (id_tenant, id_usuario, entidad, entidad_id, accion, cambios, ip)
+  values (
+    v_tenant, v_actor, 'liquidacion_revendedora', v_id_liq::text, 'generar_liquidacion',
+    jsonb_build_object(
+      'id_revendedora', p_id_revendedora,
+      'periodo_desde', p_desde,
+      'periodo_hasta', p_hasta,
+      'monto_vendido', v_vendido_real,
+      'monto_comision', v_comision_real,
+      'monto_a_cobrar', v_cobrar_real,
+      'porcentaje_aplicado', v_porcentaje,
+      'cantidad_lineas', v_count_real
+    ),
+    p_ip
+  );
+
+  return v_id_liq;
+end;
+$$;
+
+grant execute on function sp_generar_liquidacion(uuid, date, date, text, inet) to authenticated;
+
