@@ -22,7 +22,7 @@ const SLUGS_DE_LA_APP = [
   'lineas-vacias', 'monto-invalido', 'motivo-requerido', 'no-es-pdf', 'nombre-corto',
   'nombre-invalido', 'observaciones-requeridas', 'pago-sin-cuenta', 'password-corto',
   'porcentaje-invalido', 'propia-con-procesador', 'proveedor-requerido',
-  'recargo-duplicado', 'rol-requerido', 'sin-lineas', 'valor-invalido',
+  'recargo-duplicado', 'rol-requerido', 'sin-lineas', 'telefono-invalido', 'valor-invalido',
   // Validación de esquema (zod)
   'payload-invalido', 'campo-desconocido', 'permisos-no-objeto', 'permisos-no-array',
   'modulo-desconocido', 'accion-invalida', 'acciones-duplicadas', 'id-rol-invalido',

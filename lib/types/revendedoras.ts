@@ -167,3 +167,71 @@ export interface CuentaCorrienteRevendedora {
   adeudado: number
 }
 
+export type EstadoCuentaRevendedora = 'al_dia' | 'con_saldo' | 'atrasada'
+
+export interface PanelRevendedoraRow {
+  id_revendedora: string
+  nombre: string
+  apellido: string
+  email: string | null
+  telefono: string | null
+  activo: boolean
+  items_en_poder: number
+  monto_en_poder: number
+  vendido_periodo: number
+  comision_liquidada: number
+  comision_estimada: number
+  adeudado: number
+  fecha_ultima_venta: string | null
+  declaraciones_pendientes: number
+  estado_cuenta: EstadoCuentaRevendedora
+  total_filas: number
+  kpi_en_poder: number
+  kpi_en_local: number
+  kpi_adeudado_total: number
+  kpi_liquidaciones_pendientes_monto: number
+  kpi_liquidaciones_pendientes_cant: number
+}
+
+export interface TotalesPanelRevendedoras {
+  en_poder: number
+  en_local: number
+  adeudado_total: number
+  liquidaciones_pendientes_monto: number
+  liquidaciones_pendientes_cant: number
+}
+
+export interface PanelRevendedorasResponse {
+  totales: TotalesPanelRevendedoras
+  revendedoras: PanelRevendedoraRow[]
+  total: number
+}
+
+export interface QuienTieneItemResponse {
+  id_revendedora: string
+  nombre: string
+  apellido: string
+  telefono: string | null
+  email: string | null
+  id_consignacion: string
+  fecha_entrega: string
+  estado_detalle: string
+}
+
+export const ORDEN_PANEL_REVENDEDORAS_LABEL: Record<string, string> = {
+  apellido_asc: 'Apellido (A-Z)',
+  apellido_desc: 'Apellido (Z-A)',
+  nombre_asc: 'Nombre (A-Z)',
+  nombre_desc: 'Nombre (Z-A)',
+  adeudado_desc: 'Mayor deuda',
+  adeudado_asc: 'Menor deuda',
+  vendido_desc: 'Mayor venta del período',
+  vendido_asc: 'Menor venta del período',
+  items_poder_desc: 'Más piezas en poder',
+  items_poder_asc: 'Menos piezas en poder',
+  ultima_venta_desc: 'Venta más reciente',
+  ultima_venta_asc: 'Venta más antigua',
+}
+
+export type OrdenPanelRevendedoras = keyof typeof ORDEN_PANEL_REVENDEDORAS_LABEL
+

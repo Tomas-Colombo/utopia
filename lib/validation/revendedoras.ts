@@ -166,3 +166,60 @@ export const marcarLiquidacionPagadaSchema = z.strictObject({
 })
 export type MarcarLiquidacionPagadaPayload = z.infer<typeof marcarLiquidacionPagadaSchema>
 
+export const panelRevendedorasQuerySchema = z.object({
+  desde: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'fecha-invalida').optional(),
+  hasta: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'fecha-invalida').optional(),
+  estado: z.enum(['todos', 'activa', 'inactiva']).default('todos'),
+  cuenta: z.enum(['todos', 'con_saldo', 'atrasada', 'declaraciones_pendientes']).default('todos'),
+  q: z.string().max(100).optional(),
+  orden: z
+    .enum([
+      'apellido_asc',
+      'apellido_desc',
+      'nombre_asc',
+      'nombre_desc',
+      'adeudado_asc',
+      'adeudado_desc',
+      'vendido_asc',
+      'vendido_desc',
+      'items_poder_asc',
+      'items_poder_desc',
+      'ultima_venta_asc',
+      'ultima_venta_desc',
+    ])
+    .default('apellido_asc'),
+  page: z.coerce.number().int().min(1).default(1),
+})
+export type PanelRevendedorasQuery = z.infer<typeof panelRevendedorasQuerySchema>
+
+export const altaRevendedoraUnificadaSchema = z.strictObject({
+  nombre: z.string().trim().min(2, 'nombre-corto').max(60, 'nombre-largo'),
+  apellido: z.string().trim().min(2, 'apellido-invalido').max(60, 'apellido-invalido'),
+  telefono: z
+    .string()
+    .trim()
+    .max(30, 'telefono-invalido')
+    .nullable()
+    .optional()
+    .transform((val) => (val ? val : null)),
+  email: z
+    .string()
+    .trim()
+    .email('email-invalido')
+    .nullable()
+    .optional()
+    .or(z.literal(''))
+    .transform((val) => (val ? val : null)),
+  notas: z
+    .string()
+    .trim()
+    .max(1000, 'observaciones-largas')
+    .nullable()
+    .optional()
+    .transform((val) => (val ? val : null)),
+  crear_acceso: z.boolean().default(false),
+  password_acceso: z.string().min(8, 'password-corto').optional(),
+  comision_propia: z.coerce.number().min(0, 'porcentaje-invalido').max(100, 'porcentaje-invalido').optional(),
+})
+export type AltaRevendedoraUnificadaPayload = z.infer<typeof altaRevendedoraUnificadaSchema>
+
