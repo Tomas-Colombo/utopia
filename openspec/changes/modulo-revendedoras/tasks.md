@@ -127,10 +127,10 @@ Mayor riesgo del cambio. `/judgment-day` sobre `ventas` antes de empezar.
 
 Después de la consignación (Slice 4) y antes de la liquidación: da visibilidad temprana.
 
-- [ ] Test primero: panel con 2 tenants; filtros; permisos por acción; 200 revendedoras sin N+1.
-- [ ] `rf_panel_revendedoras` (`INVOKER`) y DAL; `/revendedoras` pasa a ser el panel con
+- [x] Test primero: panel con 2 tenants; filtros; permisos por acción; 200 revendedoras sin N+1.
+- [x] `rf_panel_revendedoras` (`INVOKER`) y DAL; `/revendedoras` pasa a ser el panel con
   tarjetas, filtros y CSV; ficha con pestañas; vista "quién tiene qué" (ADM-12).
-- [ ] Las pestañas de Ventas, Cuenta y Liquidaciones se completan en los slices 6c y 7b.
+- [x] Las pestañas de Ventas, Cuenta y Liquidaciones se completan en los slices 6c y 7b.
 
 ## Slice 7a — Liquidación: schema + SP (~400) ⚠⚠ · REQ-RV-DB-06
 
