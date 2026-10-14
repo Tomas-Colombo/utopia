@@ -272,6 +272,13 @@ const MENSAJES: Record<string, string> = {
   'revendedora-invalida-liquidacion': 'La revendedora seleccionada no es válida o no pertenece al negocio.',
   'pago-revendedora-inmutable': 'Ese pago no se puede modificar ni anular porque ya quedó registrado.',
 
+  // ─── Declaraciones de venta (Revendedoras) ─────────────────────────
+  'item-no-en-poder': 'El artículo no está en tu poder.',
+  'declaracion-duplicada': 'Este producto ya tiene una declaración de venta pendiente.',
+  'declaracion-no-encontrada': 'Esa declaración de venta ya no existe. Recargá la página.',
+  'declaracion-no-pendiente': 'Esta declaración de venta ya no está pendiente.',
+  'no-revendedora': 'Esta acción sólo puede ser realizada por una revendedora.',
+
   'regla-not-found': 'Esa regla ya no existe. Recargá la página.',
   'regla-comision-not-found': 'Esa regla de comisión ya no existe. Recargá la página.',
   'regla-solapada': 'Ya existe una regla de comisión activa con fechas solapadas.',
