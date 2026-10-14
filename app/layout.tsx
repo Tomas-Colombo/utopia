@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Archivo, Archivo_Black, Space_Mono } from "next/font/google";
+import { Archivo, JetBrains_Mono } from "next/font/google";
 import { InlineScript } from "@/components/theming/InlineScript";
 import { ThemeProvider } from "@/components/theming/ThemeProvider";
 import {
@@ -8,29 +8,22 @@ import {
 } from "@/components/theming/themeStorage";
 import "./globals.css";
 
-// Display — headings/hero numerals (design §8.4). Archivo Black only ships
-// weight 400 on Google Fonts.
-const archivoBlack = Archivo_Black({
-  variable: "--font-display",
-  subsets: ["latin"],
-  weight: "400",
-  fallback: ["Inter", "system-ui", "sans-serif"],
-});
-
-// Body/UI — primary UI font (design §8.4). Variable font; the design's
-// observed weights (400/500/600/700) are requested explicitly.
+// One family for everything: Archivo is variable on weight AND width. Omitting
+// `weight` loads the whole variable file; `axes: ["wdth"]` adds the width axis
+// that `.font-display` / `.font-figure` drive through `font-stretch`
+// (globals.css). Verified in node_modules/next/dist/docs (font.md, `axes`).
 const archivo = Archivo({
-  variable: "--font-body",
+  variable: "--font-archivo",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  axes: ["wdth"],
   fallback: ["Inter", "system-ui", "sans-serif"],
 });
 
-// Mono/eyebrow — small uppercase labels, timestamps (design §8.4).
-const spaceMono = Space_Mono({
-  variable: "--font-mono",
+// Mono/eyebrow — small uppercase labels, timestamps, amounts.
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-jetbrains",
   subsets: ["latin"],
-  weight: ["400", "700"],
+  weight: ["400", "500"],
   fallback: ["ui-monospace", "SFMono-Regular", "monospace"],
 });
 
@@ -52,7 +45,7 @@ export default function RootLayout({
       // first-time visitor (or a browser with localStorage blocked) gets.
       data-theme={DEFAULT_THEME}
       suppressHydrationWarning
-      className={`${archivoBlack.variable} ${archivo.variable} ${spaceMono.variable} h-full antialiased`}
+      className={`${archivo.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
       <head>
         {/* Blocking, synchronous, and deliberately before <body>: this is the
