@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import Link from 'next/link'
 import { FechaChip } from './FechaChip'
 
 export interface BandKpi {
@@ -6,6 +7,8 @@ export interface BandKpi {
   value: ReactNode
   /** `warn` recolors the value with the warn channel that is AA on the band. */
   tone?: 'default' | 'warn'
+  /** Small caption under the value. */
+  sub?: ReactNode
 }
 
 interface PageBandProps {
@@ -19,6 +22,9 @@ interface PageBandProps {
   kpis?: BandKpi[]
   /** Right-hand side of the KPI row (secondary action + main action). */
   actions?: ReactNode
+  /** Explicit "volver" link to the parent section (detail / form pages). */
+  backHref?: string
+  backLabel?: string
 }
 
 /**
@@ -35,7 +41,7 @@ interface PageBandProps {
  * strip, which is what lets the shared form components work on a dark surface
  * without per-call overrides.
  */
-export function PageBand({ breadcrumb, title, filters, kpis, actions }: PageBandProps) {
+export function PageBand({ breadcrumb, title, filters, kpis, actions, backHref, backLabel }: PageBandProps) {
   return (
     <header aria-label="Barra superior" className="band-scope bg-band text-band-ink">
       <div className="flex flex-col gap-4 px-6 pl-16 pt-4 md:pl-6">
@@ -59,9 +65,24 @@ export function PageBand({ breadcrumb, title, filters, kpis, actions }: PageBand
         </div>
 
         <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-3">
-          <h1 className="font-display text-[32px] uppercase leading-[.9] text-band-ink">
-            {title}
-          </h1>
+          <div className="flex min-w-0 items-center gap-3">
+            {backHref && (
+              <Link
+                href={backHref}
+                aria-label={backLabel ?? 'Volver'}
+                title={backLabel ?? 'Volver'}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-band-muted transition-colors hover:text-band-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-band-ink"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M19 12H5" />
+                  <path d="M12 19l-7-7 7-7" />
+                </svg>
+              </Link>
+            )}
+            <h1 className="font-display text-[32px] uppercase leading-[.9] text-band-ink">
+              {title}
+            </h1>
+          </div>
           {filters}
         </div>
 
@@ -82,13 +103,18 @@ export function PageBand({ breadcrumb, title, filters, kpis, actions }: PageBand
                     >
                       {k.value}
                     </dd>
+                    {k.sub && <div className="mt-1 text-xs text-band-muted">{k.sub}</div>}
                   </div>
                 ))}
               </dl>
             ) : (
               <span />
             )}
-            {actions && <div className="flex flex-wrap items-center gap-2 pb-4 md:pb-0">{actions}</div>}
+            {actions && (
+              <div className={`flex flex-wrap items-center gap-2 ${kpis?.length ? 'pb-4 md:pb-0' : 'py-4'}`}>
+                {actions}
+              </div>
+            )}
           </div>
         )}
       </div>

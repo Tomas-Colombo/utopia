@@ -1,4 +1,5 @@
 import { Skeleton } from '@/components/ui/Skeleton'
+import { PageBand } from './PageBand'
 
 /**
  * Primitivas para los `loading.tsx` de cada módulo.
@@ -14,16 +15,7 @@ import { Skeleton } from '@/components/ui/Skeleton'
 
 /** Encabezado con el título real. `Topbar` pide `session`, que acá no existe. */
 export function SkeletonTopbar({ title }: { title: string }) {
-  return (
-    <header
-      className="sticky top-0 z-10 flex items-center justify-between gap-4 border-b border-line bg-topbar px-6 py-3 pl-16 pr-24 backdrop-blur md:pl-6"
-      aria-label="Barra superior"
-    >
-      <h1 className="truncate font-display text-lg uppercase tracking-[-0.01em] text-ink">
-        {title}
-      </h1>
-    </header>
-  )
+  return <PageBand breadcrumb={[title]} title={title} />
 }
 
 /** Grilla de KPIs. Coincide con `grid-cols-2 md:grid-cols-4` de las pages. */
