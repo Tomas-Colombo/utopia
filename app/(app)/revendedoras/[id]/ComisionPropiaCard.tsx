@@ -143,7 +143,7 @@ export function ComisionPropiaCard({
       <div className="rounded-md border border-border bg-muted/30 p-4 space-y-3">
         <div className="flex items-baseline justify-between">
           <span className="text-sm font-medium text-foreground">Porcentaje base / tramos:</span>
-          <span className="text-xl font-bold text-rosa">
+          <span className="text-xl font-bold text-ink">
             {resolucion.origen === 'ninguna'
               ? '0%'
               : resolucion.origen === 'propia' && reglaPropia?.escalas.length === 1 && reglaPropia.escalas[0].objetivo_desde === 0

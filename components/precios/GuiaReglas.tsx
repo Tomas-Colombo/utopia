@@ -77,11 +77,11 @@ export function GuiaReglas() {
         </p>
         <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-card p-4 text-sm font-mono">
           <span className="rounded bg-card-2 px-2 py-1">Producto</span>
-          <span className="text-muted-2">&gt;</span>
+          <span className="text-muted">&gt;</span>
           <span className="rounded bg-card-2 px-2 py-1">Categoría</span>
-          <span className="text-muted-2">&gt;</span>
+          <span className="text-muted">&gt;</span>
           <span className="rounded bg-card-2 px-2 py-1">Proveedor</span>
-          <span className="text-muted-2">&gt;</span>
+          <span className="text-muted">&gt;</span>
           <span className="rounded bg-card-2 px-2 py-1">Global</span>
         </div>
         <p className="mt-4 text-sm text-muted">
@@ -244,7 +244,7 @@ function Paso({
   return (
     <div className="rounded-lg border border-border bg-card p-4">
       <div className="mb-1 flex items-center gap-2">
-        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-accent-pink text-xs font-mono text-white">
+        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-block text-xs font-mono text-white">
           {numero}
         </span>
         <span className="font-medium text-text">{titulo}</span>

@@ -238,7 +238,7 @@ export function ConsignacionDetalleView({
           <div className="mt-1 font-mono">
             {cons.detalles.length}
             {pendientes > 0 && (
-              <span className="text-terracota"> ({pendientes} pendientes)</span>
+              <span className="text-warn-ink"> ({pendientes} pendientes)</span>
             )}
           </div>
         </div>
@@ -351,7 +351,7 @@ export function ConsignacionDetalleView({
                       ? `$ ${Number(d.item.costo_ingreso).toLocaleString('es-AR', { maximumFractionDigits: 0 })}`
                       : '—'}
                   </td>
-                  <td className="px-4 py-3 text-xs">{d.motivo ?? <span className="text-muted-2">—</span>}</td>
+                  <td className="px-4 py-3 text-xs">{d.motivo ?? <span className="text-muted">—</span>}</td>
                   <td className="px-4 py-3">
                     <Badge variant={DETALLE_VARIANT[d.estado]}>
                       {ESTADO_DETALLE_LABEL[d.estado]}
@@ -445,7 +445,7 @@ export function ConsignacionDetalleView({
             </div>
           </div>
         ) : (
-          <div className={cons.observaciones ? '' : 'text-muted-2'}>
+          <div className={cons.observaciones ? '' : 'text-muted'}>
             {cons.observaciones || 'Sin observaciones.'}
           </div>
         )}

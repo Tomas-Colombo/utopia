@@ -57,7 +57,7 @@ export function BloqueMercaderia({ posicion }: BloqueMercaderiaProps) {
               </span>
               <Link 
                 href="/inventario?filtro=sin-precio" 
-                className="text-xs font-bold underline text-alerta-ink hover:text-alerta-ink/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rosa rounded"
+                className="text-xs font-bold underline text-alerta-ink hover:text-alerta-ink/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink rounded"
               >
                 Revisar →
               </Link>

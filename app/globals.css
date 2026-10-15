@@ -1,14 +1,16 @@
 @import "tailwindcss";
 
 /* ============================================================================
-   Utopía — design system v2 (streetwear / urbano)
-   Source of truth: "Utopia Sistema.dc.html" (Claude Design project).
+   Utopía — tema "Grafito + Lino" (v6).
+   Source of truth for the VALUES: handoff/theme-grafito.css.
 
-   Naming: the canonical token names come from the design file itself
-   (--panel, --line, --ink, --rosa, ...). The previous generation of names
-   (--card, --border, --text, --accent-pink, ...) is kept as ALIASES pointing
-   at the new values so the ~100 existing components keep working while the
-   palette changes underneath them. Prefer the canonical names in new code.
+   Naming: the canonical names are the ones in the theme file (--panel, --line,
+   --ink, --accent, --band, --warn, ...). The previous generation of names
+   (--card, --border, --text, ...) stays as ALIASES pointing at the new values
+   so the ~100 existing components keep working. Prefer the canonical names in
+   new code. Errors live in the --alerta channel; the one warm accent is
+   --accent (lino), reserved for the main action, the active nav marker and
+   the current day in a chart.
    ========================================================================= */
 
 /* ---- Light ---------------------------------------------------------------- */
@@ -20,90 +22,89 @@
   color-scheme: light;
 
   /* Surfaces */
-  --bg: #F7F5F1;
+  --bg: #F3F0EE;
   --panel: #FFFFFF;
-  --panel-2: #FBFAF7;
-  --line: #EAE5DE;
-  --line-2: #E1DAD0;
+  --panel-2: #F8F6F4;
+  --line: #EFECE8;
+  --line-2: #E4E1DC;
 
   /* Text */
-  --ink: #141210;
-  --muted: #5A5652;
-  --muted-2: #8A837A;
-  --dim: #A29A8F;
+  --ink: #141416;
+  --muted: #4A4A50;
+  --muted-2: #7A7A80;
+  --dim: #9A9AA0;
 
-  /* Contrast block — inverts between themes (ink in light, bone in dark) */
-  --block: #131312;
-  --block-ink: #FAF8F4;
-  --block-dim: #8F8B84;
+  /* Navigation rail and the dark strip on top of each page (title + KPIs) */
+  --sidebar: #141416;
+  --band: #1C1C20;
+  --band-ink: #F1F0EE;
+  --band-muted: #A6A6AD;
+  --band-line: rgb(255 255 255 / 0.12);
 
-  /* Navigation rail — dark in both themes, darker still in dark mode */
-  --sidebar: #131312;
+  /* Contrast block — primary button on a light page; inverts in dark */
+  --block: #141416;
+  --block-ink: #F1F0EE;
+  --block-dim: #A6A6AD;
 
-  /* Accents */
-  --rosa: #E9A6BC;
-  --terra: #B87A5A;
-  --ok: #3E8E5A;
+  /* Accent (lino): ONLY the main action, the active nav marker, the current
+     day in a chart, the logo. Text on it is always --accent-ink. */
+  --accent: #EDE4D3;
+  --accent-ink: #141416;
 
-  /* Striped image placeholders */
-  --sw1: #F0ECE6;
-  --sw2: #E4DED5;
-
-  /* Form-control surface. Deliberately NOT --panel: a control that shares the
-     panel's colour disappears into the card it sits on, which is exactly how
-     every <select> in the app used to read. The border does the heavy lifting
-     in light mode (white on white needs an edge), the fill does it in dark. */
-  --control: #FBF8F4;
-  --control-line: #978B7B;
-  --control-hover: #F5F1EA;
-  /* Row highlight inside the open dropdown — replaces the platform's blue.
-     The mix ratio is themed rather than shared: rosa is itself a light colour,
-     so mixing it into a near-white surface barely moves the luminance and the
-     row needs a much heavier dose here than platinum does on the dark base. */
-  --control-active: color-mix(in oklab, var(--rosa) 40%, var(--control));
-
-  /* Derived accents. color-mix keeps them in step when --rosa is themed. */
-  --rosa-bg: color-mix(in oklab, var(--rosa) 32%, var(--bg));
-  --rosa-ink: color-mix(in oklab, var(--rosa) 70%, #3a1420);
-  --ok-bg: color-mix(in oklab, var(--ok) 15%, var(--bg));
-  --terra-bg: color-mix(in oklab, var(--terra) 17%, var(--bg));
-  --hover: color-mix(in oklab, var(--rosa) 7%, var(--panel));
-
-  /* Alert channel — the ONE surface that stays pink in every theme.
-     Light mode aliases the rosa accent, so nothing here changes what light
-     already looked like; the split only pays off in dark, where --rosa turns
-     platinum and an alarm still has to read as an alarm. Use these ONLY for
-     errors, danger, negative values and threshold breaches — never for links,
-     chips or selected states, which are supposed to follow the accent. */
-  --alerta: var(--rosa);
-  --alerta-ink: var(--rosa-ink);
-  --alerta-bg: var(--rosa-bg);
+  /* State channels. "Pagada" is an ink dot (no green); warn is the booking /
+     about-to-expire channel; alerta is errors and negatives. */
+  --ok: #141416;
+  --warn: #B37A12;
+  --warn-ink: #8A5C0C;
+  --warn-on-dark: #EDBE7A;
+  /* Darkened from the spec's #B4442F: that pair measured 4.26:1 on alerta-bg,
+     under AA for text. Same red-clay hue, a few points darker. */
+  --alerta: #A93D29;
+  --alerta-ink: #7E2A1B;
+  --alerta-bg: color-mix(in oklab, #A93D29 10%, var(--bg));
   /* Text that sits ON --alerta-ink. It cannot be derived: --alerta-ink is a
-     DARK pink in light mode and a LIGHT pink in dark mode, so the readable
+     DARK red in light mode and a LIGHT one in dark mode, so the readable
      foreground flips with it. */
   --alerta-on: #FAF8F4;
 
+  /* Striped image placeholders */
+  --placeholder-a: #EFECE8;
+  --placeholder-b: #E4E1DC;
+  --sw1: var(--placeholder-a);
+  --sw2: var(--placeholder-b);
+
+  /* Form-control surface. Deliberately NOT --panel in dark (a control that
+     shares the card's colour disappears into it); in light the border does the
+     work. Focus is an ink border, never a colour. */
+  --control: #FFFFFF;
+  --control-line: #D6D3CE;
+  --hover: #F6F4F2;
+  --control-hover: var(--hover);
+  /* Row highlight inside the open dropdown — replaces the platform's blue. */
+  --control-active: color-mix(in oklab, var(--accent) 55%, var(--control));
+
+  /* Derived tints */
+  --ok-bg: color-mix(in oklab, var(--ok) 8%, var(--bg));
+  --warn-bg: color-mix(in oklab, var(--warn) 10%, var(--bg));
+
   /* Navigation rail internals. The rail is dark in BOTH themes, so its text
-     can never ride on --ink — which is why these were inline literals in
-     SidebarClient. They are tokens now because the platinum palette needs a
-     COOL set of them while light keeps the warm greys it always had. */
-  --sidebar-ink: #8B8681;
-  --sidebar-ink-2: #6F6C67;
-  --sidebar-ink-3: #5C5A56;
-  --sidebar-ink-hi: #E8E3DB;
-  --sidebar-ink-hi-2: #EFEAE2;
-  --sidebar-line: #262523;
-  --sidebar-active-ink: #131312;
-  --sidebar-avatar: linear-gradient(135deg, #E9A6BC, #C97E97);
+     can never ride on --ink. */
+  --sidebar-ink: #9A9AA0;
+  --sidebar-ink-2: #8E8E95;
+  --sidebar-ink-3: #84848B;
+  --sidebar-ink-hi: #E8E7E5;
+  --sidebar-ink-hi-2: #F1F0EE;
+  --sidebar-line: rgb(255 255 255 / 0.08);
+  --sidebar-active-ink: var(--accent-ink);
+  --sidebar-avatar: rgb(255 255 255 / 0.08);
 
   /* Chevron stroke for native <select>. A data: URI cannot read currentColor,
      so the colour is baked per theme. */
-  --select-arrow: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'><path d='M1 1.5 6 6.5 11 1.5' stroke='%23A29A8F' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  --select-arrow: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'><path d='M1 1.5 6 6.5 11 1.5' stroke='%237A7A80' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/></svg>");
 
-  /* Brand mark on the auth screens. The logo is a brushed-chrome PNG, which
-     all but disappears on a light surface — light mode darkens it into pewter
-     instead of fading it. Baked per theme for the same reason as
-     --select-arrow above: a filter cannot read a theme token. */
+  /* Brand mark on the auth screens. The logo is a light PNG, which all but
+     disappears on a light surface — light mode darkens it instead of fading
+     it. Baked per theme because a filter cannot read a theme token. */
   --logo-auth: brightness(0.42) contrast(1.3) opacity(0.8);
 
   /* Density / rhythm */
@@ -120,92 +121,67 @@
   --card-3: var(--sw1);
   --card-4: var(--sw2);
   --sidebar-bg: var(--sidebar);
-  --accent-pink: var(--rosa);
-  --pink-bg: var(--rosa-bg);
-  --pink-strong: var(--rosa-ink);
-  --terracota: var(--terra);
   --success: var(--ok);
 }
 
-/* ---- Dark — "platino" ----------------------------------------------------
-   Replaces the earlier warm-asphalt ("chocolate") dark theme. The axis moves
-   from warm (brown / bone) to cold (graphite / chrome): the base drops to
-   #0C0D0F and the text climbs to #F4F6F8, so the contrast is harder instead
-   of muted.
-
-   The accent is no longer pink. --rosa now carries a PLATINUM value, which is
-   what makes the active sidebar pill, the primary button and the highlighted
-   chart bars turn chrome-on-near-black without touching a single call site.
-   Pink survives only in the --alerta-* channel below.
-
-   Kept from the previous dark theme: --sidebar still goes darker than light
-   mode rather than being held constant. */
+/* ---- Dark ---------------------------------------------------------------- */
 :root[data-theme="dark"] {
   color-scheme: dark;
 
-  --bg: #0C0D0F;
-  --panel: #15171A;
-  --panel-2: #1B1E22;
-  --line: #282C31;
-  --line-2: #3B4148;
+  --bg: #0F0F11;
+  --panel: #18181B;
+  --panel-2: #1E1E22;
+  --line: #26262B;
+  --line-2: #34343A;
 
-  --ink: #F4F6F8;
-  --muted: #B9C0C7;
-  --muted-2: #8E97A0;
-  --dim: #79828B;
+  --ink: #F1F0EE;
+  --muted: #B4B4BA;
+  --muted-2: #8C8C93;
+  --dim: #6E6E75;
 
-  --block: #DDE2E7;
-  --block-ink: #0E1013;
-  --block-dim: #5D666F;
+  --sidebar: #0B0B0D;
+  --band: #141416;
+  --band-ink: #F1F0EE;
+  --band-muted: #A6A6AD;
+  --band-line: rgb(255 255 255 / 0.10);
 
-  --sidebar: #08090B;
+  --block: #F1F0EE;
+  --block-ink: #141416;
+  --block-dim: #5D5D64;
 
-  /* Chrome reads as intended on the dark backdrop; only dial it back so it
-     sits behind the form instead of competing with it. */
-  --logo-auth: opacity(0.62);
+  --accent: #EDE4D3;
+  --accent-ink: #141416;
 
-  --rosa: #C4CDD6;
-  --terra: #9BA7B2;
-  --ok: #6FD39A;
-
-  --sw1: #20242A;
-  --sw2: #2E343B;
-
-  /* Sits ABOVE --panel, not level with it, so the control reads as a control
-     on top of a card instead of a hole in it. */
-  --control: #21262C;
-  --control-line: #626A72;
-  --control-hover: #272D34;
-  --control-active: color-mix(in oklab, var(--rosa) 24%, var(--control));
-
-  /* Literal, not color-mix: the platinum ramp is hand-picked, and mixing a
-     desaturated grey into the base would collapse the step between them. */
-  --rosa-bg: #232930;
-  --rosa-ink: #E4EAF0;
-  --terra-bg: #232930;
-  --ok-bg: color-mix(in oklab, var(--ok) 16%, var(--bg));
-  --hover: color-mix(in oklab, var(--rosa) 9%, var(--panel));
-
-  /* Alerts stay pink — same hue the chocolate dark theme used, so low stock
-     and an exceeded budget still read as an alarm against the cold base
-     instead of blending into the platinum accent. Literal rather than
-     color-mix so `lib/design-tokens/dark.ts` can mirror it exactly and the
-     jsdom contrast suite actually guards these values. */
-  --alerta: #F0AEC4;
-  --alerta-ink: #F4BFD0;
-  --alerta-bg: #2E1E26;
+  --ok: #F1F0EE;
+  --warn: #EDBE7A;
+  --warn-ink: #EDBE7A;
+  --warn-on-dark: #EDBE7A;
+  --alerta: #E58C78;
+  --alerta-ink: #F2B3A5;
+  --alerta-bg: #2A1A17;
   --alerta-on: #17150F;
 
-  --sidebar-ink: #858E97;
-  --sidebar-ink-2: #6B747D;
-  --sidebar-ink-3: #575F67;
-  --sidebar-ink-hi: #E4EAF0;
-  --sidebar-ink-hi-2: #F4F6F8;
-  --sidebar-line: #16181C;
-  --sidebar-active-ink: #0E1013;
-  --sidebar-avatar: linear-gradient(135deg, #C4CDD6, #8E97A0);
+  --placeholder-a: #1E1E22;
+  --placeholder-b: #2A2A2F;
 
-  --select-arrow: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'><path d='M1 1.5 6 6.5 11 1.5' stroke='%2379828B' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  --control: #1E1E22;
+  --control-line: #3A3A40;
+  --hover: #1E1E22;
+  --control-active: color-mix(in oklab, var(--accent) 24%, var(--control));
+
+  --ok-bg: color-mix(in oklab, var(--ok) 10%, var(--bg));
+  --warn-bg: color-mix(in oklab, var(--warn) 10%, var(--bg));
+
+  --sidebar-ink: #9A9AA0;
+  --sidebar-ink-2: #8E8E95;
+  --sidebar-ink-3: #84848B;
+  --sidebar-ink-hi: #E8E7E5;
+  --sidebar-ink-hi-2: #F1F0EE;
+  --sidebar-line: rgb(255 255 255 / 0.06);
+
+  --logo-auth: opacity(0.62);
+
+  --select-arrow: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'><path d='M1 1.5 6 6.5 11 1.5' stroke='%238C8C93' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/></svg>");
 }
 
 /* Tailwind 4 CSS-first theme mapping. `inline` is required (not plain
@@ -220,17 +196,24 @@
   --color-line: var(--line);
   --color-line-2: var(--line-2);
   --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-muted-2: var(--muted-2);
   --color-dim: var(--dim);
+  --color-band: var(--band);
+  --color-band-ink: var(--band-ink);
+  --color-band-muted: var(--band-muted);
+  --color-band-line: var(--band-line);
   --color-block: var(--block);
   --color-block-ink: var(--block-ink);
   --color-block-dim: var(--block-dim);
-  --color-rosa: var(--rosa);
-  --color-rosa-bg: var(--rosa-bg);
-  --color-rosa-ink: var(--rosa-ink);
-  --color-terra: var(--terra);
-  --color-terra-bg: var(--terra-bg);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
   --color-ok: var(--ok);
   --color-ok-bg: var(--ok-bg);
+  --color-warn: var(--warn);
+  --color-warn-ink: var(--warn-ink);
+  --color-warn-bg: var(--warn-bg);
+  --color-warn-on-dark: var(--warn-on-dark);
   --color-sw1: var(--sw1);
   --color-sw2: var(--sw2);
   --color-hover: var(--hover);
@@ -240,8 +223,9 @@
   --color-control: var(--control);
   --color-control-line: var(--control-line);
   --color-control-hover: var(--control-hover);
+  --color-control-active: var(--control-active);
 
-  /* Alert channel — pink in every theme (see :root). */
+  /* Alert channel */
   --color-alerta: var(--alerta);
   --color-alerta-bg: var(--alerta-bg);
   --color-alerta-ink: var(--alerta-ink);
@@ -267,32 +251,36 @@
   --color-card-3: var(--card-3);
   --color-card-4: var(--card-4);
   --color-sidebar: var(--sidebar-bg);
-  --color-accent-pink: var(--accent-pink);
-  --color-pink-bg: var(--pink-bg);
-  --color-pink-strong: var(--pink-strong);
-  --color-terracota: var(--terracota);
   --color-success: var(--success);
-  --color-muted: var(--muted);
-  --color-muted-2: var(--muted-2);
 
-  --font-display: var(--font-display);
-  --font-body: var(--font-body);
-  --font-mono: var(--font-mono);
+  /* Fonts. next/font publishes --font-archivo / --font-jetbrains on <html>
+     (app/layout.tsx); every family here resolves to one of those two. */
+  --font-sans: var(--font-archivo), system-ui, sans-serif;
+  --font-display: var(--font-archivo), system-ui, sans-serif;
+  --font-body: var(--font-archivo), system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
+
+  /* Shape: nothing rounder than 6px. Pills and avatars use rounded-full. */
+  --radius-sm: 3px;
+  --radius: 5px;
+  --radius-md: 5px;
+  --radius-lg: 6px;
+  --radius-xl: 6px;
+  --radius-2xl: 6px;
+  --radius-3xl: 6px;
 }
 
 @layer base {
   body {
     background: var(--bg);
     color: var(--ink);
-    font-family: var(--font-body), system-ui, sans-serif;
+    font-family: var(--font-archivo), system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
   }
 
+  /* Plain links read as ink; the accent is not a link colour. */
   a {
-    color: var(--terra);
-  }
-  a:hover {
-    color: var(--rosa-ink);
+    color: var(--ink);
   }
 
   ::-webkit-scrollbar {
@@ -313,7 +301,7 @@
      `px-2 py-1 text-xs` and win. Everything that defines what a dropdown LOOKS
      like is unlayered further down — see the block after this layer. */
   select {
-    font-family: var(--font-body), system-ui, sans-serif;
+    font-family: var(--font-archivo), system-ui, sans-serif;
     font-size: 13.5px;
     padding: 0.5rem 0.75rem;
   }
@@ -327,6 +315,64 @@
       opacity: 1;
       transform: none;
     }
+  }
+}
+
+/* ---- Typography helpers ---------------------------------------------------
+   Layered as components so a utility (`leading-tight`, `font-semibold`, a size)
+   still wins. The theme file ships `line-height: .9` on .font-display; here it
+   is left out on purpose — ~58 existing call sites wrap onto two lines and
+   would collapse into each other. Page titles opt in with `leading-[.9]`. */
+@layer components {
+  .font-display {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-stretch: 125%;
+    letter-spacing: -0.035em;
+  }
+  .font-figure {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-stretch: 112%;
+    letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums;
+  }
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+}
+
+/* ---- Dark band scope -------------------------------------------------------
+   Inside the page band (components/shell/PageBand.tsx) the surface is dark in
+   BOTH themes, so the ordinary tokens are remapped for the subtree. Tailwind's
+   `@theme inline` utilities read the variables directly (`text-ink` is
+   `color: var(--ink)`), which is what makes this work without per-component
+   overrides. The legacy alias --text has to be restated: an alias is computed
+   where it is declared (:root), so it would not follow --ink on its own.
+   The alerta values are the dark theme's, because the light ones are unreadable
+   on a near-black strip. */
+@layer components {
+  .band-scope {
+    color-scheme: dark;
+    --ink: var(--band-ink);
+    --text: var(--band-ink);
+    --muted: var(--band-muted);
+    --muted-2: var(--band-muted);
+    --dim: var(--band-muted);
+    --line-2: rgb(255 255 255 / 0.28);
+    --hover: rgb(255 255 255 / 0.08);
+    --control: rgb(255 255 255 / 0.06);
+    --control-line: rgb(255 255 255 / 0.24);
+    --control-hover: rgb(255 255 255 / 0.1);
+    --block: var(--band-ink);
+    --block-ink: var(--band);
+    --alerta: #E58C78;
+    --alerta-ink: #F2B3A5;
+    --alerta-bg: #2A1A17;
   }
 }
 
@@ -370,13 +416,14 @@ select:not([multiple]):not([size]) {
 
 select:hover:not(:disabled) {
   background-color: var(--control-hover);
-  border-color: var(--rosa);
+  border-color: var(--muted-2);
 }
 
+/* Focus = ink border (the 1px ring keeps it visible against a same-ink hover). */
 select:focus-visible {
   outline: none;
-  border-color: var(--rosa);
-  box-shadow: 0 0 0 2px var(--rosa-bg);
+  border-color: var(--ink);
+  box-shadow: 0 0 0 1px var(--ink);
 }
 
 select:disabled {
@@ -403,12 +450,11 @@ select option {
   padding: 8px 12px;
 }
 
-/* Near-black literal, not a token: --rosa is light in BOTH themes (pink in
-   light, platinum in dark), so the readable foreground does not flip. Same
-   rationale as the primary Button. */
+/* --accent is light in BOTH themes and --accent-ink is near-black in both, so
+   the pair holds without flipping. */
 select option:checked {
-  background-color: var(--rosa);
-  color: #131312;
+  background-color: var(--accent);
+  color: var(--accent-ink);
   font-weight: 600;
 }
 
@@ -419,7 +465,7 @@ select option:disabled {
 select optgroup {
   background-color: var(--panel-2);
   color: var(--dim);
-  font-family: var(--font-mono), ui-monospace, monospace;
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
   font-size: 10px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -481,7 +527,7 @@ select optgroup {
 
   ::picker(select) {
     border: 1px solid var(--control-line);
-    border-radius: 10px;
+    border-radius: 6px;
     background: var(--control);
     box-shadow: 0 10px 28px rgb(0 0 0 / 0.3);
     padding: 4px;
@@ -494,7 +540,7 @@ select optgroup {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    border-radius: 6px;
+    border-radius: 4px;
     padding: 7px 10px;
     background: transparent;
     color: var(--ink);
@@ -512,8 +558,8 @@ select optgroup {
   }
 
   select option:checked {
-    background: var(--rosa);
-    color: #131312;
+    background: var(--accent);
+    color: var(--accent-ink);
     font-weight: 600;
   }
 

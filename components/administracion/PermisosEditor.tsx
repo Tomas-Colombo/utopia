@@ -59,7 +59,7 @@ export function PermisosEditor({
                           disabled={disabled}
                         />
                       ) : (
-                        <span className="text-muted-2">—</span>
+                        <span className="text-muted">—</span>
                       )}
                     </td>
                   )

@@ -12,7 +12,7 @@ const initialState: LoginActionState = { ok: false }
  * against whatever the shader happens to be drawing underneath.
  */
 const FIELD_CLASS =
-  'rounded-md border border-border-2 bg-panel/70 px-3 py-2 text-sm text-text backdrop-blur-sm transition-colors focus-visible:border-rosa focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rosa-bg'
+  'rounded-md border border-border-2 bg-panel/70 px-3 py-2 text-sm text-text backdrop-blur-sm transition-colors focus-visible:border-ink focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ink'
 
 /**
  * Login form (design §5, spec 3.1/3.2). `useActionState` is React 19's
@@ -58,7 +58,7 @@ export function LoginForm() {
       <button
         type="submit"
         disabled={pending}
-        className="rounded-md bg-accent-pink px-4 py-2 text-sm font-semibold text-sidebar disabled:opacity-60"
+        className="rounded-md bg-block px-4 py-2 text-sm font-semibold text-block-ink disabled:opacity-60"
       >
         {pending ? 'Ingresando…' : 'Ingresar'}
       </button>

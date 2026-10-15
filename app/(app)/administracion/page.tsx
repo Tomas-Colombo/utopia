@@ -14,7 +14,7 @@ function cardLink(c: { href: string; label: string; value: string }) {
     <Link
       key={c.href}
       href={c.href}
-      className="rounded-lg border border-border bg-card p-5 hover:bg-card-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
+      className="rounded-lg border border-border bg-card p-5 hover:bg-card-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
     >
       <div className="text-sm text-muted">{c.label}</div>
       <div className="mt-1 font-display text-2xl">{c.value}</div>
@@ -52,7 +52,7 @@ export default async function AdministracionHome() {
         <section className="rounded-lg border border-border bg-card overflow-x-auto">
           <div className="border-b border-border px-4 py-3 flex items-center justify-between">
             <h3 className="font-display text-lg">Últimas acciones auditadas</h3>
-            <Link href="/administracion/auditoria" className="text-sm text-pink-strong hover:underline">
+            <Link href="/administracion/auditoria" className="text-sm text-ink underline decoration-line-2 underline-offset-2 hover:decoration-ink">
               Ver historial completo
             </Link>
           </div>

@@ -136,8 +136,8 @@ export function GraficoTendencia({ serie, tieneGastos }: GraficoTendenciaProps) 
                       y={height - padding.bottom - cH} 
                       width={barWidth * 0.7} 
                       height={cH} 
-                      fill="var(--color-ink)" 
-                      opacity="0.7"
+                      fill="var(--color-muted)" 
+                      opacity="0.55"
                       rx="2"
                     />
                     
@@ -147,7 +147,7 @@ export function GraficoTendencia({ serie, tieneGastos }: GraficoTendenciaProps) 
                       y={height - padding.bottom - gH} 
                       width={barWidth * 0.5} 
                       height={gH} 
-                      fill="var(--color-rosa)"
+                      fill="var(--color-ink)"
                       rx="1"
                     />
 
@@ -168,8 +168,8 @@ export function GraficoTendencia({ serie, tieneGastos }: GraficoTendenciaProps) 
             
             <div className="absolute top-2 right-4 flex gap-4 text-xs bg-card/80 p-2 rounded backdrop-blur">
               <div className="flex items-center gap-1"><div className="w-3 h-3 bg-muted opacity-30 rounded-sm"></div>Ventas netas</div>
-              <div className="flex items-center gap-1"><div className="w-3 h-3 bg-ink opacity-70 rounded-sm"></div>Cobrado neto</div>
-              <div className="flex items-center gap-1"><div className="w-3 h-3 bg-rosa rounded-sm"></div>Ganancia</div>
+              <div className="flex items-center gap-1"><div className="w-3 h-3 bg-muted opacity-55 rounded-sm"></div>Cobrado neto</div>
+              <div className="flex items-center gap-1"><div className="w-3 h-3 bg-ink rounded-sm"></div>Ganancia</div>
             </div>
           </figure>
         )}

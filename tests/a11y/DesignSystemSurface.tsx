@@ -103,13 +103,13 @@ export function DesignSystemSurface() {
             <FilterBar value="" onChange={noop} placeholder="Buscar productos…" />
           </label>
           {/*
-            text-text y no text-terracota: el terracota no llega a AA como
-            texto chico suelto sobre el fondo claro (~3.2:1). El acento queda
-            solo en la decoracion del subrayado.
+            text-text y no text-warn: el warn (#B37A12) no llega a AA como
+            texto chico suelto sobre el fondo claro (3.2:1; el texto es warn-ink).
+            El canal queda solo en la decoracion del subrayado.
           */}
           <button
             type="button"
-            className="whitespace-nowrap text-sm font-semibold text-text underline decoration-terracota underline-offset-2"
+            className="whitespace-nowrap text-sm font-semibold text-text underline decoration-warn underline-offset-2"
           >
             Limpiar filtros
           </button>
@@ -152,6 +152,41 @@ export function DesignSystemSurface() {
       </section>
 
       <section>
+        <h2 className="font-display text-xl text-text">Canales de estado</h2>
+        {/*
+          Cada par que los componentes usan como texto chico, medido en ambos
+          temas. alerta sobre alerta-bg midio 4.26:1 con el #B4442F del tema y
+          por eso se oscurecio; sin este bloque nada lo vigilaba.
+        */}
+        <div className="mt-4 flex flex-col gap-3">
+          <p className="rounded-md bg-alerta-bg px-3 py-2 text-sm text-alerta">
+            Error de validacion (alerta sobre alerta-bg)
+          </p>
+          <p className="rounded-md bg-alerta-bg px-3 py-2 text-sm text-alerta-ink">
+            Error de validacion (alerta-ink sobre alerta-bg)
+          </p>
+          <p className="rounded-md bg-warn-bg px-3 py-2 text-sm text-warn-ink">
+            Reserva por vencer (warn-ink sobre warn-bg)
+          </p>
+          <p className="text-sm text-warn-ink">Vence el 12/10 (warn-ink sobre el fondo)</p>
+          <p className="text-sm text-alerta">Stock negativo (alerta sobre el fondo)</p>
+          <p className="text-sm text-muted">Texto secundario (muted sobre el fondo)</p>
+          <p className="rounded-md bg-card px-3 py-2 text-sm text-warn-ink">
+            Reserva por vencer (warn-ink sobre la tarjeta)
+          </p>
+          <p className="rounded-md bg-card px-3 py-2 text-sm text-alerta">
+            Error (alerta sobre la tarjeta)
+          </p>
+          <button type="button" className="rounded-md bg-accent px-4 py-2 text-sm font-bold text-accent-ink">
+            Nueva venta
+          </button>
+          <button type="button" className="rounded-md bg-block px-4 py-2 text-sm font-bold text-block-ink">
+            Exportar
+          </button>
+        </div>
+      </section>
+
+      <section>
         <h2 className="font-display text-xl text-text">Skeleton</h2>
         <div className="mt-4 flex flex-col gap-3">
           <Skeleton width="60%" height="1.5rem" />
@@ -162,10 +197,9 @@ export function DesignSystemSurface() {
 
       <section>
         <h2 className="font-display text-xl text-text">ConfirmDialog</h2>
-        {/* text-sidebar y no text-bg — ver la nota de contraste en Badge.tsx. */}
         <button
           type="button"
-          className="mt-4 rounded-md bg-pink-strong px-4 py-2 text-sm font-semibold text-sidebar"
+          className="mt-4 rounded-md bg-alerta-ink px-4 py-2 text-sm font-semibold text-alerta-on"
         >
           Eliminar producto
         </button>

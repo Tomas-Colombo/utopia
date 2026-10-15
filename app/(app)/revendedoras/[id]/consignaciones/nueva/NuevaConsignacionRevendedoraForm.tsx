@@ -150,7 +150,7 @@ export function NuevaConsignacionRevendedoraForm({
         <button
           type="button"
           onClick={() => handleQuitarItem(r.id_item)}
-          className="text-terracota hover:underline text-sm font-medium"
+          className="text-warn-ink hover:underline text-sm font-medium"
         >
           Quitar
         </button>
@@ -232,7 +232,7 @@ export function NuevaConsignacionRevendedoraForm({
           </Button>
         </div>
 
-        {errorItem && <div className="text-sm text-terracota font-medium">{errorItem}</div>}
+        {errorItem && <div className="text-sm text-warn-ink font-medium">{errorItem}</div>}
 
         <div className="space-y-2">
           <div className="flex items-center justify-between">

@@ -11,13 +11,15 @@ import { useSyncExternalStore } from 'react'
  * recomputes from the browser clock, and `suppressHydrationWarning` absorbs the
  * text difference instead of blanking the slot and shifting the layout.
  */
-export function FechaChip() {
+export function FechaChip({ onDark = false }: { onDark?: boolean }) {
   const label = useSyncExternalStore(subscribeToClock, getLabel, getLabel)
 
   return (
     <span
       suppressHydrationWarning
-      className="hidden font-mono text-[10.5px] uppercase tracking-[0.06em] text-muted-2 sm:inline"
+      className={`hidden font-mono text-[10.5px] uppercase tracking-[0.06em] sm:inline ${
+        onDark ? 'text-band-muted' : 'text-muted'
+      }`}
     >
       {label}
     </span>

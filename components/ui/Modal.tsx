@@ -98,7 +98,7 @@ export function Modal({ open, title, onClose, children, footer, size = 'md' }: M
               type="button"
               aria-label="Cerrar"
               onClick={onClose}
-              className="rounded-md p-1 text-muted hover:bg-card-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink"
+              className="rounded-md p-1 text-muted hover:bg-card-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
             >
               <span aria-hidden>×</span>
             </button>

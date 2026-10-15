@@ -74,7 +74,7 @@ export function ConsignacionesRevendedoraTable({
       render: (r) => (
         <Link
           href={`/revendedoras/${idRevendedora}/consignaciones/${r.id_consignacion_revendedora}`}
-          className="text-pink-strong hover:underline text-sm font-medium"
+          className="text-ink underline decoration-line-2 underline-offset-2 hover:decoration-ink text-sm font-medium"
         >
           Ver detalle
         </Link>

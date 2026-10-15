@@ -220,7 +220,7 @@ export function PresupuestosView({ initial }: { initial: Cat[] }) {
                       <span className="text-xs text-alerta-ink">
                         Baja
                         {c.fechaBaja && (
-                          <span className="text-muted-2">
+                          <span className="text-muted">
                             {' · '}
                             {new Date(c.fechaBaja).toLocaleDateString('es-AR')}
                           </span>

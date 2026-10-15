@@ -116,24 +116,24 @@ export default async function ProveedorPerfilPage(props: {
                   href={wa}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-pink-strong hover:underline"
+                  className="text-ink underline decoration-line-2 underline-offset-2 hover:decoration-ink"
                 >
                   {proveedor.telefono} · WhatsApp
                 </a>
               ) : (
-                <span className="text-muted-2">—</span>
+                <span className="text-muted">—</span>
               )}
             </Dato>
             <Dato label="Email">
-              {proveedor.email ?? <span className="text-muted-2">—</span>}
+              {proveedor.email ?? <span className="text-muted">—</span>}
             </Dato>
             <Dato label="CUIT">
-              {proveedor.cuit ?? <span className="text-muted-2">—</span>}
+              {proveedor.cuit ?? <span className="text-muted">—</span>}
             </Dato>
             <Dato label="Días de rotación">
               {proveedor.dias_rotacion != null
                 ? `${proveedor.dias_rotacion} días`
-                : <span className="text-muted-2">—</span>}
+                : <span className="text-muted">—</span>}
             </Dato>
           </dl>
 
@@ -220,7 +220,7 @@ export default async function ProveedorPerfilPage(props: {
                         <span className="font-mono text-xs uppercase">{i.tipo_ingreso}</span>
                       </td>
                       <td className="px-4 py-3 font-mono text-xs">
-                        {i.numero_remito ?? <span className="text-muted-2">—</span>}
+                        {i.numero_remito ?? <span className="text-muted">—</span>}
                       </td>
                       <td className="px-4 py-3 text-right font-mono">{i.total_lineas}</td>
                       <td className="px-4 py-3 text-right font-mono">{i.total_cantidad}</td>
@@ -228,7 +228,7 @@ export default async function ProveedorPerfilPage(props: {
                       <td className="px-4 py-3 text-right">
                         <Link
                           href={`/inventario/ingresos/${i.id_ingreso}?from=${encodeURIComponent(volverAqui('ing_page', ingPage))}`}
-                          className="text-sm text-pink-strong hover:underline"
+                          className="text-sm text-ink underline decoration-line-2 underline-offset-2 hover:decoration-ink"
                         >
                           Ver
                         </Link>
@@ -290,7 +290,7 @@ export default async function ProveedorPerfilPage(props: {
                       <td className="px-4 py-3 text-right">
                         <Link
                           href={`/consignaciones/${c.id_consignacion}?from=${encodeURIComponent(volverAqui('cons_page', consPage))}`}
-                          className="text-sm text-pink-strong hover:underline"
+                          className="text-sm text-ink underline decoration-line-2 underline-offset-2 hover:decoration-ink"
                         >
                           Ver
                         </Link>
@@ -344,7 +344,7 @@ export default async function ProveedorPerfilPage(props: {
                       <td className="px-4 py-3 text-xs text-muted">
                         {r.periodo_desde && r.periodo_hasta
                           ? `${new Date(r.periodo_desde).toLocaleDateString('es-AR')} → ${new Date(r.periodo_hasta).toLocaleDateString('es-AR')}`
-                          : <span className="text-muted-2">—</span>}
+                          : <span className="text-muted">—</span>}
                       </td>
                       <td className="px-4 py-3">
                         <Badge variant={r.estado === 'pendiente' ? 'warning' : 'success'}>
@@ -356,7 +356,7 @@ export default async function ProveedorPerfilPage(props: {
                       <td className="px-4 py-3 text-right">
                         <Link
                           href={`/rendiciones/${r.id_rendicion}?from=${encodeURIComponent(volverAqui('rend_page', rendPage))}`}
-                          className="text-sm text-pink-strong hover:underline"
+                          className="text-sm text-ink underline decoration-line-2 underline-offset-2 hover:decoration-ink"
                         >
                           Ver
                         </Link>

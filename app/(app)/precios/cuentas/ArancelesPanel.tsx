@@ -675,7 +675,7 @@ export function ArancelesPanel({
                               recargo no llega a cubrir la comisión. */}
                           <td
                             className={`px-3 py-2 text-right font-mono ${
-                              margen !== null && margen < 0 ? 'text-terracota' : ''
+                              margen !== null && margen < 0 ? 'text-warn-ink' : ''
                             }`}
                           >
                             {margen === null
@@ -755,7 +755,7 @@ export function ArancelesPanel({
             {!editandoRet && (
               <span className="ml-2 font-mono text-sm">
                 {totalRetenciones === 0 ? (
-                  <span className="text-muted-2">ninguna</span>
+                  <span className="text-muted">ninguna</span>
                 ) : (
                   `${redondear(totalRetenciones)}% total`
                 )}

@@ -90,9 +90,9 @@ export default async function InventarioHome(props: {
         <AlertasReposicion alertas={alertasRepo} />
 
         {alertasRot.length > 0 && (
-          <section className="rounded-lg border border-terracota bg-card p-4">
+          <section className="rounded-lg border border-warn bg-card p-4">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="font-display text-lg text-terracota">
+              <h3 className="font-display text-lg text-warn-ink">
                 Rotación vencida
               </h3>
               <span className="text-xs text-muted">
@@ -112,7 +112,7 @@ export default async function InventarioHome(props: {
                   </div>
                   <div className="text-right text-xs shrink-0">
                     <div className="font-mono">{a.dias_transcurridos}d</div>
-                    <div className="text-terracota">+{a.dias_excedidos}</div>
+                    <div className="text-warn-ink">+{a.dias_excedidos}</div>
                   </div>
                 </Link>
               ))}

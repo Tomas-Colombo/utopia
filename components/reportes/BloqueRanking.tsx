@@ -77,7 +77,7 @@ export function BloqueRanking({ ranking, ordenActual }: BloqueRankingProps) {
           <select 
             value={ordenActual}
             onChange={handleOrdenChange}
-            className="flex h-9 w-full sm:w-auto items-center justify-between rounded-md border border-border bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-bg-page focus:outline-none focus:ring-1 focus:ring-rosa disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex h-9 w-full sm:w-auto items-center justify-between rounded-md border border-border bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-bg-page focus:outline-none focus:ring-1 focus:ring-ink disabled:cursor-not-allowed disabled:opacity-50"
             aria-label="Ordenar ranking por"
           >
             <option value="ganancia">Mayor ganancia</option>
@@ -86,7 +86,7 @@ export function BloqueRanking({ ranking, ordenActual }: BloqueRankingProps) {
           </select>
           <button
             onClick={exportarCSV}
-            className="h-9 px-3 text-sm font-medium border border-border rounded-md hover:bg-panel transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rosa"
+            className="h-9 px-3 text-sm font-medium border border-border rounded-md hover:bg-panel transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink"
           >
             Exportar CSV
           </button>

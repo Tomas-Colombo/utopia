@@ -342,7 +342,7 @@ export function ConsignacionRevendedoraDetalleView({
               <button
                 type="button"
                 onClick={handleSelectAllEnPoder}
-                className="text-xs text-pink-strong hover:underline font-medium"
+                className="text-xs text-ink underline decoration-line-2 underline-offset-2 hover:decoration-ink font-medium"
               >
                 {selectedItems.length === itemsEnPoder.length
                   ? 'Deseleccionar todos'

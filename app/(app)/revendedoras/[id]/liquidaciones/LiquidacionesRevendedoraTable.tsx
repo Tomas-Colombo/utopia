@@ -22,7 +22,7 @@ export function LiquidacionesRevendedoraTable({
       render: (l) => (
         <Link
           href={`/revendedoras/${idRevendedora}/liquidaciones/${l.id_liquidacion}`}
-          className="font-mono text-xs hover:underline text-rosa"
+          className="font-mono text-xs text-ink hover:underline"
         >
           {new Date(l.periodo_desde).toLocaleDateString('es-AR')} →{' '}
           {new Date(l.periodo_hasta).toLocaleDateString('es-AR')}

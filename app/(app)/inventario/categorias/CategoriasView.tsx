@@ -136,7 +136,7 @@ export function CategoriasView({ initial }: { initial: CategoriaRow[] }) {
             ))}
           </div>
         ) : (
-          <span className="text-muted-2">—</span>
+          <span className="text-muted">—</span>
         ),
     },
     {

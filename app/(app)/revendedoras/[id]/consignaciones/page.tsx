@@ -54,7 +54,7 @@ export default async function ConsignacionesRevendedoraPage(props: {
               {puedeCrear && (
                 <Link
                   href={`/revendedoras/${id}/consignaciones/nueva`}
-                  className="rounded-md bg-accent-pink px-4 py-2 font-body text-sm font-semibold text-sidebar"
+                  className="rounded-md bg-block px-4 py-2 font-body text-sm font-semibold text-block-ink"
                 >
                   Nueva consignación
                 </Link>

@@ -33,7 +33,7 @@ export function BloqueProveedores({ posicion }: BloqueProveedoresProps) {
           <div className="mt-auto">
             <Link 
               href="/rendiciones?estado=pendiente" 
-              className="inline-flex items-center text-sm font-medium underline text-ink hover:text-ink/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rosa rounded"
+              className="inline-flex items-center text-sm font-medium underline text-ink hover:text-ink/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink rounded"
             >
               Ver rendiciones pendientes →
             </Link>

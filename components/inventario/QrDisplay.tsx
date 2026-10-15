@@ -101,7 +101,7 @@ export function QrDisplay({
         <button
           type="button"
           onClick={handleCopy}
-          className="font-mono text-xs text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-pink rounded px-2 py-1"
+          className="font-mono text-xs text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-ink rounded px-2 py-1"
           aria-label="Copiar código"
         >
           {copied ? '¡Copiado!' : value}

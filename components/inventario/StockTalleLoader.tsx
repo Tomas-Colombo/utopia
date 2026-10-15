@@ -132,7 +132,7 @@ export function StockTalleLoader({
               className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-2.5 py-0.5 text-xs"
             >
               <b className="font-mono">{l.cantidad}</b>
-              <span className="text-muted-2">×</span>
+              <span className="text-muted">×</span>
               {l.talle ?? 'sin talle'}
               {!disabled && (
                 <button

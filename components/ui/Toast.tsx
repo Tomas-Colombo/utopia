@@ -81,9 +81,9 @@ export function useToast(): ToastAPI {
 }
 
 const VARIANT_CLASS: Record<ToastVariant, string> = {
-  success: 'bg-success text-sidebar',
-  error: 'bg-alerta-ink text-sidebar',
-  info: 'bg-accent-pink text-sidebar',
+  success: 'bg-block text-block-ink',
+  error: 'bg-alerta-ink text-alerta-on',
+  info:'border border-line-2 bg-panel text-ink',
 }
 
 const SEMANTIC_PREFIX: Record<ToastVariant, string> = {
@@ -122,7 +122,7 @@ function ToastItemView({ item, onDismiss }: { item: ToastItem; onDismiss: () => 
         type="button"
         onClick={onDismiss}
         aria-label="Cerrar notificación"
-        className="rounded p-0.5 text-sidebar/80 hover:text-sidebar focus:outline-none focus-visible:ring-2 focus-visible:ring-sidebar"
+        className="rounded p-0.5 opacity-80 hover:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-current"
       >
         <span aria-hidden>×</span>
       </button>

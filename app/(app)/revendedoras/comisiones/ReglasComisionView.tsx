@@ -320,7 +320,7 @@ export function ReglasComisionView({ reglas, canEdit }: ReglasComisionViewProps)
             <div className="rounded-md border border-border bg-muted/40 p-3 space-y-2">
               <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 <span>Simulador de cálculo</span>
-                <span className="text-rosa">Estimación</span>
+                <span className="text-ink">Estimación</span>
               </div>
               <div className="flex items-center gap-4">
                 <div className="flex-1">

@@ -4,7 +4,7 @@ type KpiTone = 'default' | 'muted'
 const BOX: Record<KpiVariant, string> = {
   default: 'border-border bg-card',
   alert: 'border-alerta-ink bg-alerta-bg',
-  highlight: 'border-accent-pink bg-card',
+  highlight: 'border-ink bg-card',
   nested: 'border-border bg-card-2',
 }
 
@@ -33,7 +33,7 @@ export function Kpi({ label, value, sub, variant = 'default', tone = 'default' }
         {label}
       </div>
       <div
-        className={`mt-1 font-display text-2xl leading-tight tabular-nums md:text-xl lg:text-2xl [overflow-wrap:anywhere] ${
+        className={`mt-1 font-figure text-2xl leading-tight md:text-xl lg:text-2xl [overflow-wrap:anywhere] ${
           tone === 'muted' ? 'text-muted' : 'text-text'
         }`}
       >

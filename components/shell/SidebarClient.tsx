@@ -108,7 +108,7 @@ export function SidebarClient({
             aria-label={collapsed ? 'Expandir barra lateral' : 'Minimizar barra lateral'}
             aria-expanded={!collapsed}
             title={collapsed ? 'Expandir' : 'Minimizar'}
-            className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-sidebar-ink-2 transition-colors hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-rosa ${
+            className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-sidebar-ink-2 transition-colors hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ink-hi ${
               collapsed ? '' : 'absolute right-3 top-1/2 -translate-y-1/2'
             }`}
           >
@@ -131,7 +131,7 @@ export function SidebarClient({
         aria-label="Abrir menú"
         aria-expanded={mobileOpen}
         aria-controls="mobile-nav-drawer"
-        className="fixed left-3 top-3 z-40 inline-flex h-9 w-9 items-center justify-center rounded-md border border-line-2 bg-panel text-ink shadow-sm hover:bg-panel-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-rosa md:hidden"
+        className="fixed left-3 top-3 z-40 inline-flex h-9 w-9 items-center justify-center rounded-md border border-line-2 bg-panel text-ink shadow-sm hover:bg-panel-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink md:hidden"
       >
         <MenuIcon />
       </button>
@@ -158,7 +158,7 @@ export function SidebarClient({
                 type="button"
                 onClick={() => setMobileOpen(false)}
                 aria-label="Cerrar menú"
-                className="absolute right-3 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-sidebar-ink-2 transition-colors hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-rosa"
+                className="absolute right-3 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-sidebar-ink-2 transition-colors hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ink-hi"
               >
                 <CloseIcon />
               </button>
@@ -232,12 +232,18 @@ function NavContent({
                       aria-current={active ? 'page' : undefined}
                       title={collapsed ? item.label : undefined}
                       aria-label={item.label}
-                      className={`flex items-center gap-[11px] rounded-md py-2.5 text-[13.5px] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-rosa ${
+                      className={`relative flex items-center gap-[11px] rounded-md py-2.5 text-[13.5px] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ink-hi ${
                         active
-                          ? 'bg-rosa font-semibold text-sidebar-active-ink'
+                          ? 'bg-white/5 font-semibold text-sidebar-ink-hi-2'
                           : 'font-medium text-sidebar-ink hover:bg-white/5 hover:text-sidebar-ink-hi'
                       } ${collapsed ? 'justify-center px-0' : 'px-[13px]'}`}
                     >
+                      {active && (
+                        <span
+                          aria-hidden
+                          className="absolute left-0 top-1/2 h-[14px] w-[3px] -translate-y-1/2 rounded-sm bg-accent"
+                        />
+                      )}
                       <span className="shrink-0" aria-hidden>
                         <NavIcon name={item.icon} />
                       </span>
@@ -258,7 +264,7 @@ function NavContent({
         <div className={`flex items-center gap-[11px] ${collapsed ? 'justify-center' : ''}`}>
           <span
             aria-hidden
-            className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full font-display text-[13px] text-sidebar-active-ink"
+            className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full font-display text-[13px] text-sidebar-ink-hi-2"
             style={{ background: 'var(--sidebar-avatar)' }}
           >
             {initialOf(email)}
@@ -280,7 +286,7 @@ function NavContent({
             type="submit"
             title={collapsed ? 'Cerrar sesión' : undefined}
             aria-label="Cerrar sesión"
-            className={`mt-1 flex w-full items-center gap-[11px] rounded-md py-2 text-[13px] font-medium text-sidebar-ink transition-colors hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-rosa ${
+            className={`mt-1 flex w-full items-center gap-[11px] rounded-md py-2 text-[13px] font-medium text-sidebar-ink transition-colors hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ink-hi ${
               collapsed ? 'justify-center px-0' : 'px-[13px]'
             }`}
           >

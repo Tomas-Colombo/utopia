@@ -185,7 +185,7 @@ export function ControlDePreciosView({
                   <tr
                     key={r.id_producto}
                     className={`border-b border-border-2 ${
-                      selected.has(r.id_producto) ? 'bg-pink-bg/40' : ''
+                      selected.has(r.id_producto) ? 'bg-line/60' : ''
                     }`}
                   >
                     <td className="px-3 py-3">
@@ -201,11 +201,11 @@ export function ControlDePreciosView({
                       {r.sku && <div className="font-mono text-xs text-muted">{r.sku}</div>}
                     </td>
                     <td className="px-3 py-3">
-                      {r.categoria_nombre ?? <span className="text-muted-2">—</span>}
+                      {r.categoria_nombre ?? <span className="text-muted">—</span>}
                     </td>
                     <td className="px-3 py-3 text-xs">
                       {r.regla_margen_nombre ?? (
-                        <span className="text-muted-2 italic">Sin regla → costo</span>
+                        <span className="text-muted italic">Sin regla → costo</span>
                       )}
                     </td>
                     <td className="px-3 py-3 text-right font-mono">{fmt(r.costo_vigente)}</td>
@@ -213,7 +213,7 @@ export function ControlDePreciosView({
                     <td className="px-3 py-3 text-right font-mono">{fmt(r.precio_proyectado)}</td>
                     <td className="px-3 py-3 text-right font-mono">
                       {r.diferencia_pct == null ? (
-                        <span className="text-muted-2">—</span>
+                        <span className="text-muted">—</span>
                       ) : (
                         <span
                           className={

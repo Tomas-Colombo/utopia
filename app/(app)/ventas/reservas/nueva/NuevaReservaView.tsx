@@ -366,7 +366,7 @@ export function NuevaReservaView({
                             }}
                             onMouseEnter={() => setResaltado(i)}
                             className={`flex cursor-pointer items-center justify-between gap-2 px-3 py-2 text-sm ${
-                              activo ? 'bg-pink-bg text-text' : 'text-text'
+                              activo ? 'bg-line text-text' : 'text-text'
                             }`}
                           >
                             <span>{p.nombre}</span>

@@ -53,7 +53,7 @@ export default async function FichaItemPage(props: {
             </p>
             <Link
               href="/inventario/ficha"
-              className="inline-flex items-center rounded-md bg-accent-pink px-4 py-2 text-sm font-semibold text-sidebar"
+              className="inline-flex items-center rounded-md bg-block px-4 py-2 text-sm font-semibold text-block-ink"
             >
               Volver a escanear
             </Link>
@@ -142,7 +142,7 @@ export default async function FichaItemPage(props: {
                   <h3 className="font-display text-lg">En poder de revendedora</h3>
                   <Link
                     href={`/revendedoras/${enPoderDe.id_revendedora}`}
-                    className="text-sm font-semibold text-rosa hover:underline"
+                    className="text-sm font-semibold text-ink underline decoration-line-2 underline-offset-2 hover:decoration-ink"
                   >
                     Ver revendedora
                   </Link>

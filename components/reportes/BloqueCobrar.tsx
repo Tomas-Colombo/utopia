@@ -49,7 +49,7 @@ export function BloqueCobrar({ porCobrar, puedeVerVentas }: BloqueCobrarProps) {
               <div className="mt-2">
                 <Link 
                   href="/cuotas?estado=vencidas" 
-                  className="text-xs font-medium underline text-alerta-ink hover:text-alerta-ink/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rosa rounded"
+                  className="text-xs font-medium underline text-alerta-ink hover:text-alerta-ink/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink rounded"
                 >
                   Ver cuotas vencidas →
                 </Link>

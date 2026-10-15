@@ -56,7 +56,7 @@ export default async function RendicionesPage() {
             </p>
             <Link
               href="/rendiciones/nueva"
-              className="inline-flex items-center rounded-md bg-accent-pink px-4 py-2 text-sm font-semibold text-sidebar"
+              className="inline-flex items-center rounded-md bg-block px-4 py-2 text-sm font-semibold text-block-ink"
             >
               Generar rendición
             </Link>
@@ -106,7 +106,7 @@ export default async function RendicionesPage() {
                     <td className="px-4 py-3 text-right">
                       <Link
                         href={`/rendiciones/${r.id_rendicion}`}
-                        className="text-sm text-pink-strong hover:underline"
+                        className="text-sm text-ink underline decoration-line-2 underline-offset-2 hover:decoration-ink"
                       >
                         Ver
                       </Link>

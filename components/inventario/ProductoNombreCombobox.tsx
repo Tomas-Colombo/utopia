@@ -99,8 +99,8 @@ export function ProductoNombreCombobox({
                 e.preventDefault()
                 elegir(p)
               }}
-              className={`cursor-pointer px-3 py-2 text-sm hover:bg-pink-bg ${
-                p.id_producto === value.idProducto ? 'bg-pink-bg' : 'text-text'
+              className={`cursor-pointer px-3 py-2 text-sm hover:bg-line ${
+                p.id_producto === value.idProducto ? 'bg-line' : 'text-text'
               }`}
             >
               {p.nombre}

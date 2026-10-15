@@ -119,7 +119,7 @@ export default async function ConsignacionesPage(props: {
             </p>
             <Link
               href="/consignaciones/nueva"
-              className="inline-flex items-center rounded-md bg-accent-pink px-4 py-2 text-sm font-semibold text-sidebar"
+              className="inline-flex items-center rounded-md bg-block px-4 py-2 text-sm font-semibold text-block-ink"
             >
               Nueva devolución
             </Link>

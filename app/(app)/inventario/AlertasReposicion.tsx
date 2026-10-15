@@ -11,7 +11,7 @@ const VISIBLE_EN_TARJETA = 2
 /**
  * Bloque "Reposición urgente" de la home de inventario.
  *
- * Mantiene la tarjeta rosa acotada: sólo se listan los primeros
+ * Mantiene la tarjeta de alerta acotada: sólo se listan los primeros
  * {@link VISIBLE_EN_TARJETA} productos y el resto vive detrás de un botón
  * "Ver todos" que abre un modal con la lista completa. Así la tarjeta no
  * crece indefinidamente cuando aparecen decenas de productos bajo mínimo.

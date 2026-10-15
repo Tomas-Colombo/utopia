@@ -106,7 +106,7 @@ export function NuevaRevendedoraForm({
               type="checkbox"
               checked={crearAcceso}
               onChange={(e) => setCrearAcceso(e.target.checked)}
-              className="rounded border-border text-rosa focus:ring-rosa"
+              className="rounded border-border text-ink focus:ring-ink"
             />
             <span>Crear acceso al sistema para la revendedora</span>
           </label>
@@ -139,7 +139,7 @@ export function NuevaRevendedoraForm({
               type="checkbox"
               checked={comisionPropiaCheck}
               onChange={(e) => setComisionPropiaCheck(e.target.checked)}
-              className="rounded border-border text-rosa focus:ring-rosa"
+              className="rounded border-border text-ink focus:ring-ink"
             />
             <span>Asignar porcentaje de comisión particular</span>
           </label>

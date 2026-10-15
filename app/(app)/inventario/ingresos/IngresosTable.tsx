@@ -71,7 +71,7 @@ export function IngresosTable({
         </p>
         <Link
           href="/inventario/ingresos/nuevo"
-          className="inline-flex items-center rounded-md bg-accent-pink px-4 py-2 text-sm font-semibold text-sidebar"
+          className="inline-flex items-center rounded-md bg-block px-4 py-2 text-sm font-semibold text-block-ink"
         >
           Nuevo ingreso
         </Link>
@@ -125,7 +125,7 @@ export function IngresosTable({
                   <div className="flex justify-end gap-3">
                     <Link
                       href={`/inventario/ingresos/${r.id_ingreso}`}
-                      className="text-sm text-pink-strong hover:underline"
+                      className="text-sm text-ink underline decoration-line-2 underline-offset-2 hover:decoration-ink"
                     >
                       Abrir
                     </Link>

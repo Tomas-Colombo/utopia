@@ -88,7 +88,7 @@ export default async function GastosPage({
         <section className="rounded-lg border border-border bg-card overflow-x-auto">
           <div className="border-b border-border px-4 py-3 flex items-center justify-between">
             <h3 className="font-display text-lg">Presupuestos del mes</h3>
-            <Link href="/gastos/presupuestos" className="text-sm text-pink-strong hover:underline">
+            <Link href="/gastos/presupuestos" className="text-sm text-ink underline decoration-line-2 underline-offset-2 hover:decoration-ink">
               Ajustar presupuestos
             </Link>
           </div>

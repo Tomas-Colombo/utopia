@@ -89,7 +89,7 @@ export function BloqueRevendedoras({
         <button
           onClick={exportarCSV}
           disabled={perfiles.length === 0}
-          className="self-start sm:self-auto h-9 px-3 text-sm font-medium border border-border rounded-md hover:bg-panel transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rosa disabled:opacity-50"
+          className="self-start sm:self-auto h-9 px-3 text-sm font-medium border border-border rounded-md hover:bg-panel transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink disabled:opacity-50"
         >
           Exportar CSV
         </button>

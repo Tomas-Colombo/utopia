@@ -16,7 +16,7 @@ export function RevendedoraVentasTable({ rows }: RevendedoraVentasTableProps) {
       key: 'fecha',
       label: 'Fecha',
       render: (v) => (
-        <Link href={`/ventas/${v.id_venta}`} className="font-mono hover:underline text-rosa">
+        <Link href={`/ventas/${v.id_venta}`} className="font-mono text-ink hover:underline">
           {new Date(v.fecha).toLocaleDateString('es-AR')}
         </Link>
       ),

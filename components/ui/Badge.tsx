@@ -8,20 +8,15 @@ export interface BadgeProps {
   ariaLabel?: string
 }
 
-// Solid variant background + `text-sidebar` (the one token that stays fixed
-// near-black in BOTH themes, REQ-DS-07) — verified ≥4.5:1 AA in light AND
-// dark theme. Colored text on a neutral card background (the first attempt)
-// FAILED AA in light theme for success/warning/danger (~3.0-3.7:1, computed
-// against both --bg and --card-3); `terracota`/`pinkStrong`/`success` as
-// TEXT are only AA-safe on the DARK bg they were raised for (design §8.3),
-// not on light backgrounds. Solid-bg + near-black text sidesteps that
-// entirely (REQ-DS-04).
+// Tinted background + the matching ink token, never colour alone: success also
+// carries a 7px dot and every non-neutral variant a sr-only prefix below. Each
+// pair is measured by the contrast suite (tests/a11y) in both themes.
 const VARIANT_CLASS: Record<BadgeVariant, string> = {
-  success: 'bg-success text-sidebar',
-  warning: 'bg-terracota text-sidebar',
-  danger: 'bg-alerta-ink text-sidebar',
+  success: 'border border-border-2 bg-card-2 text-text',
+  warning: 'bg-warn-bg text-warn-ink',
+  danger: 'bg-alerta-bg text-alerta-ink',
   neutral: 'bg-card-3 text-muted',
-  info: 'bg-accent-pink text-sidebar',
+  info: 'bg-card-4 text-text',
 }
 
 // Variants that convey meaning beyond the visible label MUST NOT rely on
@@ -47,6 +42,9 @@ export function Badge({ children, variant = 'neutral', ariaLabel }: BadgeProps) 
       aria-label={ariaLabel}
       className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-xs uppercase ${VARIANT_CLASS[variant]}`}
     >
+      {variant === 'success' && (
+        <span aria-hidden className="h-[7px] w-[7px] shrink-0 rounded-full bg-ok" />
+      )}
       {prefix && <span className="sr-only">{prefix}</span>}
       {children}
     </span>

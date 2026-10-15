@@ -26,12 +26,12 @@ export function ProveedoresTableClient({ rows }: { rows: Row[] }) {
             href={r.wa}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-pink-strong hover:underline"
+            className="text-ink underline decoration-line-2 underline-offset-2 hover:decoration-ink"
           >
             {r.telefono} · WhatsApp
           </a>
         ) : (
-          <span className="text-muted-2">—</span>
+          <span className="text-muted">—</span>
         ),
     },
     {
@@ -39,7 +39,7 @@ export function ProveedoresTableClient({ rows }: { rows: Row[] }) {
       label: 'Rotación',
       align: 'right',
       render: (r) =>
-        r.dias_rotacion != null ? `${r.dias_rotacion} días` : <span className="text-muted-2">—</span>,
+        r.dias_rotacion != null ? `${r.dias_rotacion} días` : <span className="text-muted">—</span>,
     },
     {
       key: 'activo',
@@ -57,7 +57,7 @@ export function ProveedoresTableClient({ rows }: { rows: Row[] }) {
       render: (r) => (
         <Link
           href={`/proveedores/${r.id_proveedor}`}
-          className="text-sm text-pink-strong hover:underline"
+          className="text-sm text-ink underline decoration-line-2 underline-offset-2 hover:decoration-ink"
         >
           Ver
         </Link>

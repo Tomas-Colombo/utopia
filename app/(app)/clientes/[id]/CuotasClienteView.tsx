@@ -210,7 +210,7 @@ export function CuotasClienteView({
       label: 'Saldo',
       align: 'right',
       render: (c) => {
-        if (!esDeuda(c.estado)) return <span className="text-muted-2">—</span>
+        if (!esDeuda(c.estado)) return <span className="text-muted">—</span>
         return (
           <div>
             <span className="font-mono font-semibold">{money(saldoCuota(c))}</span>
@@ -296,7 +296,7 @@ export function CuotasClienteView({
                   vencido
                     ? 'border-alerta-ink bg-alerta-bg'
                     : esteMes
-                      ? 'border-pink-strong/40 bg-pink-bg'
+                      ? 'border-line-2 bg-line'
                       : 'border-border bg-card-2'
                 }`}
               >

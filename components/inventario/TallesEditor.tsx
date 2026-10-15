@@ -67,7 +67,7 @@ export function TallesEditor({
         </Button>
       </div>
       {value.length === 0 ? (
-        <p className="text-xs text-muted-2">Sin talles. Los productos de esta categoría se cargarán sin talle.</p>
+        <p className="text-xs text-muted">Sin talles. Los productos de esta categoría se cargarán sin talle.</p>
       ) : (
         <div className="flex flex-wrap gap-2">
           {value.map((t) => (

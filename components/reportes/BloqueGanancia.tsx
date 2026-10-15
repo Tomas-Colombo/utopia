@@ -42,7 +42,7 @@ export function BloqueGanancia({ resultados, tieneGastos }: BloqueGananciaProps)
         <h2 id="h2-ganancia" className="font-display text-lg">Cómo se arma tu ganancia</h2>
         <button
           onClick={exportarCSV}
-          className="h-9 px-3 text-sm font-medium border border-border rounded-md hover:bg-panel transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rosa"
+          className="h-9 px-3 text-sm font-medium border border-border rounded-md hover:bg-panel transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink"
         >
           Exportar CSV
         </button>

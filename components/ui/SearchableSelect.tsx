@@ -105,15 +105,15 @@ export function SearchableSelect({
         aria-controls={listboxId}
         aria-haspopup="listbox"
         aria-label={ariaLabel}
-        className={`flex w-full items-center justify-between gap-2 rounded-md border bg-control px-3 py-2 text-left text-[13.5px] transition-colors hover:border-rosa focus:outline-none focus-visible:ring-2 focus-visible:ring-rosa-bg ${
-          open ? 'border-rosa' : 'border-control-line'
-        } ${selectedOption ? 'text-ink' : 'text-dim'}`}
+        className={`flex w-full items-center justify-between gap-2 rounded-md border bg-control px-3 py-2 text-left text-[13.5px] transition-colors hover:border-muted-2 focus:outline-none focus-visible:ring-1 focus-visible:ring-ink ${
+          open ? 'border-ink' : 'border-control-line'
+        } ${selectedOption ? 'text-ink' : 'text-muted'}`}
         onClick={() => (open ? closeListbox() : openListbox())}
       >
         <span className="truncate">{selectedOption ? selectedOption.label : placeholder}</span>
         <span
           aria-hidden
-          className={`shrink-0 text-dim transition-transform ${open ? 'rotate-180' : ''}`}
+          className={`shrink-0 text-muted transition-transform ${open ? 'rotate-180' : ''}`}
         >
           <ChevronDown />
         </span>
@@ -132,11 +132,11 @@ export function SearchableSelect({
             onChange={(event) => handleSearchChange(event.target.value)}
             onKeyDown={handleSearchKeyDown}
             autoFocus
-            className="w-full border-b border-control-line bg-control-hover px-3 py-2 text-[13.5px] text-ink outline-none placeholder:text-dim"
+            className="w-full border-b border-control-line bg-control-hover px-3 py-2 text-[13.5px] text-ink outline-none placeholder:text-muted"
           />
           <ul id={listboxId} role="listbox" className="max-h-60 overflow-auto py-1">
             {filteredOptions.length === 0 ? (
-              <li className="px-3 py-2 font-mono text-[11px] uppercase tracking-[0.12em] text-dim">
+              <li className="px-3 py-2 font-mono text-[11px] uppercase tracking-[0.12em] text-muted">
                 No results
               </li>
             ) : (
@@ -151,9 +151,9 @@ export function SearchableSelect({
                   // The label is the li's ONLY child on purpose: wrapping it in
                   // a <span> would make getByText return the span instead of
                   // the option element that carries the ARIA state.
-                  className={`cursor-pointer truncate px-3 py-2 text-[13.5px] aria-selected:font-semibold ${
-                    option.disabled ? 'cursor-not-allowed text-dim' : 'text-ink'
-                  } ${index === highlightIndex ? 'bg-rosa text-[#131312]' : ''}`}
+                  className={`cursor-pointer truncate px-3 py-2 text-[13.5px] aria-selected:bg-accent aria-selected:font-semibold aria-selected:text-accent-ink ${
+                    option.disabled ? 'cursor-not-allowed text-muted' : 'text-ink'
+                  } ${index === highlightIndex ? 'bg-control-active' : ''}`}
                 >
                   {option.label}
                 </li>

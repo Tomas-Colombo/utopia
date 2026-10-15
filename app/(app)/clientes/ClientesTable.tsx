@@ -85,7 +85,7 @@ export function ClientesTable({
         ) : (
           // Los clientes anteriores a 00058 tienen todo el nombre en `nombre`.
           // No es un dato faltante por descuido: nunca se pidió por separado.
-          <span className="text-muted-2" title="Cargado antes de separar el apellido">
+          <span className="text-muted" title="Cargado antes de separar el apellido">
             —
           </span>
         ),
@@ -111,12 +111,12 @@ export function ClientesTable({
                 href={wa}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-pink-strong hover:underline"
+                className="text-ink underline decoration-line-2 underline-offset-2 hover:decoration-ink"
               >
                 {c.telefono} · WhatsApp
               </a>
             ) : (
-              (c.telefono ?? <span className="text-muted-2">—</span>)
+              (c.telefono ?? <span className="text-muted">—</span>)
             )}
             {c.email && <div className="text-muted">{c.email}</div>}
           </div>

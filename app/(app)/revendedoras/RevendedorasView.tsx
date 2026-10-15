@@ -29,7 +29,7 @@ export function RevendedorasView({ data, canCreate }: { data: RevendedoraRow[], 
       key: 'nombre',
       label: 'Nombre',
       render: (r) => (
-        <Link href={`/revendedoras/${r.id_revendedora}`} className="font-medium text-rosa hover:underline">
+        <Link href={`/revendedoras/${r.id_revendedora}`} className="font-medium text-ink underline decoration-line-2 underline-offset-2 hover:decoration-ink">
           {r.nombre} {r.apellido}
         </Link>
       ),

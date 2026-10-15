@@ -162,7 +162,7 @@ export function EditarProductoModal({
             type="checkbox"
             checked={activo}
             onChange={(e) => setActivo(e.target.checked)}
-            className="h-4 w-4 rounded border-border text-accent-pink focus:ring-accent-pink"
+            className="h-4 w-4 rounded border-border text-ink focus:ring-ink"
           />
           Producto activo
         </label>

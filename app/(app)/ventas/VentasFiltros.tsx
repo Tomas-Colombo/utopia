@@ -69,7 +69,7 @@ export function VentasFiltros({
         e.preventDefault()
         if (!rangoInvertido) aplicar(d, h, canal)
       }}
-      className="rounded-lg border border-border bg-card p-4 flex flex-wrap items-end gap-3"
+      className="flex flex-wrap items-end gap-3"
       aria-label="Filtrar ventas por período"
     >
       <div className="w-40">
