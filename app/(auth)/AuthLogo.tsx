@@ -10,7 +10,7 @@
  * and change SRC below. The asset MUST have a real alpha channel; a mark on a
  * baked black background would show as a rectangle over the backdrop.
  */
-const SRC = '/logo-u.png'
+const SRC = '/logo-u.webp'
 
 export function AuthLogo() {
   return (
