@@ -172,8 +172,8 @@ Después de la consignación (Slice 4) y antes de la liquidación: da visibilida
 
 Excepción DEFINER (DR-13) **aprobada por el usuario el 2026-10-09**; no volver a pedirla. Alcance: solo funciones `rvp_*`.
 
-- [ ] Test primero: snapshot sin columnas prohibidas, aislamiento A/B/otro tenant, módulo apagado.
-- [ ] `rvp_mi_stock`, `rvp_mis_ventas`, `rvp_mi_cuenta`, `rvp_mis_liquidaciones`; `search_path`
+- [x] Test primero: snapshot sin columnas prohibidas, aislamiento A/B/otro tenant, módulo apagado.
+- [x] `rvp_mi_stock`, `rvp_mis_ventas`, `rvp_mi_cuenta`, `rvp_mis_liquidaciones`; `search_path`
   fijo, identidad solo del claim. Actualizar la regla de `AGENTS.md`.
 
 ## Slice 9d — Pantallas de la revendedora y confirmación del local (~400)
