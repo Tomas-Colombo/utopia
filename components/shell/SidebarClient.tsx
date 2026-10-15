@@ -211,7 +211,7 @@ function NavContent({
 
   return (
     <>
-      <nav className="min-h-0 flex-1 overflow-y-auto px-3 pb-4 pt-0.5">
+      <nav className="min-h-0 flex-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden px-3 pb-4 pt-0.5">
         {groups.map((group) => (
           <div key={group.label}>
             {collapsed ? (

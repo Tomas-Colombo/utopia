@@ -10,7 +10,7 @@ export function Logo({ nombre, logoUrl }: { nombre: string; logoUrl: string | nu
       <img
         src={logoUrl}
         alt={nombre}
-        className="h-9 w-auto max-w-full shrink-0 select-none object-contain"
+        className="h-auto max-h-14 w-full select-none object-contain"
       />
     )
   }
