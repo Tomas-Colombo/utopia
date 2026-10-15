@@ -59,6 +59,10 @@ supabase/      migrations + stored procedures  — business invariants live here
   limits are enforced by the guards.
 - **Writes go through `sp_*` stored procedures** called from `lib/dal`. A
   multi-table write assembled in TypeScript breaks between two awaits.
+- **Reads are INVOKER, never DEFINER** (with one approved exception DR-13:
+  `rvp_*` read functions for the Revendedoras portal, strictly reading
+  identity from `auth_revendedora_id()`, explicit column whitelist without
+  costs/margins, and enforced by snapshot tests).
 - Allowed SQL outside `lib/dal`: auth (`app/(auth)/login/actions.ts`,
   `logoutAction`) and `proxy.ts`. **Known debt, do not add to it** (move when
   you're in the file): `app/api/ventas/lookup-item/route.ts`,
