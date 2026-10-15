@@ -71,6 +71,12 @@ export default async function InventarioHome(props: {
       <Topbar
         title="Inventario"
         session={session}
+        kpis={[
+          { label: 'Stock disponible', value: resumen.stockDisponibleTotal.toLocaleString('es-AR') },
+          { label: 'Productos activos', value: resumen.productosActivos.toString() },
+          { label: 'Bajo mínimo', value: resumen.productosBajoMinimo.toString(), tone: resumen.productosBajoMinimo > 0 ? 'warn' : 'default' },
+          { label: 'Proveedores', value: proveedoresActivos.toString() },
+        ]}
         actions={
           <div className="flex items-center gap-2">
             <Link href="/inventario/ingresos/nuevo">
@@ -125,18 +131,6 @@ export default async function InventarioHome(props: {
           </section>
         )}
 
-        {/* Métricas */}
-        <section className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          <Kpi label="Stock disponible" value={resumen.stockDisponibleTotal.toLocaleString('es-AR')} />
-          <Kpi label="Productos activos" value={resumen.productosActivos.toString()} />
-          <Kpi
-            label="Bajo mínimo"
-            value={resumen.productosBajoMinimo.toString()}
-            variant={resumen.productosBajoMinimo > 0 ? 'alert' : 'default'}
-          />
-          <Kpi label="Proveedores" value={proveedoresActivos.toString()} />
-        </section>
-
 {/* Productos — buscador único (escáner + SKU) + tabla */}
         <section className="space-y-3">
           <h3 className="font-display text-lg">Productos</h3>
@@ -157,28 +151,5 @@ export default async function InventarioHome(props: {
         </section>
       </main>
     </>
-  )
-}
-
-function Kpi({
-  label,
-  value,
-  variant = 'default',
-}: {
-  label: string
-  value: string
-  variant?: 'default' | 'alert'
-}) {
-  return (
-    <div
-      className={`rounded-lg border p-4 ${
-        variant === 'alert'
-          ? 'border-alerta-ink bg-alerta-bg'
-          : 'border-border bg-card'
-      }`}
-    >
-      <div className="text-xs uppercase font-mono text-muted">{label}</div>
-      <div className="mt-1 font-display text-2xl text-text">{value}</div>
-    </div>
   )
 }

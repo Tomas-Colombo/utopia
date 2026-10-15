@@ -54,11 +54,31 @@ export default async function RevendedorasPage(props: PageProps) {
 
   return (
     <>
-      <Topbar title="Revendedoras" session={session} />
+      <Topbar
+        title="Revendedoras"
+        session={session}
+        kpis={[
+          {
+            label: 'Mercadería en revendedoras',
+            value: panelData.totales.en_poder.toString(),
+            sub: `${panelData.totales.en_local} en el local`,
+          },
+          {
+            label: 'Total adeudado al local',
+            value: `$ ${Number(panelData.totales.adeudado_total).toLocaleString('es-AR', { maximumFractionDigits: 0 })}`,
+            tone: Number(panelData.totales.adeudado_total) > 0 ? 'warn' : 'default',
+            sub: 'Saldo pendiente de cobro',
+          },
+          {
+            label: 'Liquidaciones pendientes',
+            value: `$ ${Number(panelData.totales.liquidaciones_pendientes_monto).toLocaleString('es-AR', { maximumFractionDigits: 0 })}`,
+            sub: `${panelData.totales.liquidaciones_pendientes_cant} por cobrar`,
+          },
+        ]}
+      />
       <main className="flex-1 p-6">
         <RevendedorasPanelView
           data={panelData.revendedoras}
-          totales={panelData.totales}
           total={panelData.total}
           canCreate={canCreate}
           filtros={{

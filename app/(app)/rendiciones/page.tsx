@@ -2,7 +2,6 @@ import Link from 'next/link'
 import { Topbar } from '@/components/shell/Topbar'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
-import { Kpi } from '@/components/ui/Kpi'
 import { verifySession } from '@/lib/dal/session'
 import { listRendiciones } from '@/lib/dal/rendiciones/rendicion'
 import {
@@ -26,6 +25,12 @@ export default async function RendicionesPage() {
       <Topbar
         title="Rendiciones"
         session={session}
+        kpis={[
+          { label: 'Total', value: rows.length.toString() },
+          { label: 'Pendientes de pago', value: pendientes.length.toString(), tone: pendientes.length > 0 ? 'warn' : 'default' },
+          { label: 'Monto adeudado', value: `$ ${totalPendiente.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`, tone: totalPendiente > 0 ? 'warn' : 'default' },
+          { label: 'Pagadas', value: (rows.length - pendientes.length).toString() },
+        ]}
         actions={
           <Link href="/rendiciones/nueva">
             <Button size="sm">Generar rendición</Button>
@@ -33,20 +38,6 @@ export default async function RendicionesPage() {
         }
       />
       <main className="flex-1 p-6 space-y-6">
-        <section className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          <Kpi label="Total" value={rows.length.toString()} />
-          <Kpi
-            label="Pendientes de pago"
-            value={pendientes.length.toString()}
-            variant={pendientes.length > 0 ? 'alert' : 'default'}
-          />
-          <Kpi
-            label="Monto adeudado"
-            value={`$ ${totalPendiente.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`}
-            variant={totalPendiente > 0 ? 'alert' : 'default'}
-          />
-          <Kpi label="Pagadas" value={(rows.length - pendientes.length).toString()} />
-        </section>
 
         {rows.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border bg-card p-10 text-center">

@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import { Topbar } from '@/components/shell/Topbar'
 import { Button } from '@/components/ui/Button'
-import { Kpi } from '@/components/ui/Kpi'
 import { verifySession } from '@/lib/dal/session'
 import {
   listCategoriasGasto,
@@ -54,6 +53,12 @@ export default async function GastosPage({
       <Topbar
         title="Gastos"
         session={session}
+        kpis={[
+          { label: 'Gastado este mes', value: `$ ${totalMes.toLocaleString('es-AR', { maximumFractionDigits: 0 })}` },
+          { label: 'Categorías excedidas', value: excedidos.toString(), tone: excedidos > 0 ? 'warn' : 'default' },
+          { label: 'Cerca del límite', value: cerca.toString(), tone: cerca > 0 ? 'warn' : 'default' },
+          { label: 'Categorías activas', value: presupuestos.length.toString() },
+        ]}
         actions={
           <div className="flex gap-2">
             <Link href="/gastos/presupuestos">
@@ -66,23 +71,6 @@ export default async function GastosPage({
         }
       />
       <main className="flex-1 p-6 space-y-6">
-        <section className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          <Kpi
-            label="Gastado este mes"
-            value={`$ ${totalMes.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`}
-          />
-          <Kpi
-            label="Categorías excedidas"
-            value={excedidos.toString()}
-            variant={excedidos > 0 ? 'alert' : 'default'}
-          />
-          <Kpi
-            label="Cerca del límite"
-            value={cerca.toString()}
-            variant={cerca > 0 ? 'alert' : 'default'}
-          />
-          <Kpi label="Categorías activas" value={presupuestos.length.toString()} />
-        </section>
 
         {/* Presupuestos por categoría */}
         <section className="rounded-lg border border-border bg-card overflow-x-auto">

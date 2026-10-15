@@ -1,5 +1,4 @@
 import { Topbar } from '@/components/shell/Topbar'
-import { Kpi } from '@/components/ui/Kpi'
 import { verifySession } from '@/lib/dal/session'
 import { listDeudores } from '@/lib/dal/cuotas/cuota'
 import { hoyISO } from '@/lib/utils/hoy'
@@ -48,50 +47,37 @@ export default async function CuotasPage(props: {
 
   return (
     <>
-      <Topbar title="Cuotas" session={session} />
-      <main className="flex-1 space-y-6 p-6">
-        {/* KPIs del conjunto FILTRADO, no del total global: un contador que
-            ignora el filtro activo miente sobre lo que se está mirando.
-
-            El orden es el de urgencia, de izquierda a derecha: lo que ya está
-            vencido, lo que vence hoy, lo que viene, y el total. "Vencido"
-            arranca la fila porque es lo único que ya salió mal. */}
-        <section className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          {/* Caja de alerta cuando hay mora: el mismo número en gris se lee
-              como un dato más de la fila. */}
-          <Kpi
-            label="Vencido"
-            value={money(resumen.vencido)}
-            variant={resumen.vencido > 0 ? 'alert' : 'nested'}
-            tone={resumen.vencido > 0 ? undefined : 'muted'}
-            sub={
+      <Topbar
+        title="Cuotas"
+        session={session}
+        kpis={[
+          {
+            label: 'Vencido',
+            value: money(resumen.vencido),
+            tone: resumen.vencido > 0 ? 'warn' : 'default',
+            sub:
               resumen.vencido > 0
                 ? `${resumen.clientesVencidos} cliente${resumen.clientesVencidos === 1 ? '' : 's'} · requiere gestión`
-                : 'Nadie atrasado'
-            }
-          />
-          {/* Vencer hoy todavía se puede cobrar: es aviso, no alarma. Pero
-              tiene que VERSE, que es justamente lo que faltaba: hasta ahora
-              una cuota que vencía hoy no aparecía en ningún indicador. */}
-          <Kpi
-            label="Vence hoy"
-            value={money(resumen.venceHoy)}
-            variant={resumen.venceHoy > 0 ? 'highlight' : 'nested'}
-            tone={resumen.venceHoy > 0 ? undefined : 'muted'}
-            sub={
+                : 'Nadie atrasado',
+          },
+          {
+            label: 'Vence hoy',
+            value: money(resumen.venceHoy),
+            sub:
               resumen.venceManana > 0
                 ? `Mañana ${money(resumen.venceManana)}`
-                : 'Mañana no vence nada'
-            }
-          />
-          <Kpi label="Vence este mes" value={money(resumen.venceEsteMes)} variant="nested" />
-          <Kpi
-            label="A cobrar"
-            value={money(resumen.aCobrar)}
-            variant="nested"
-            sub={`${resumen.clientesConDeuda} cliente${resumen.clientesConDeuda === 1 ? '' : 's'} con deuda`}
-          />
-        </section>
+                : 'Mañana no vence nada',
+          },
+          { label: 'Vence este mes', value: money(resumen.venceEsteMes) },
+          {
+            label: 'A cobrar',
+            value: money(resumen.aCobrar),
+            sub: `${resumen.clientesConDeuda} cliente${resumen.clientesConDeuda === 1 ? '' : 's'} con deuda`,
+          },
+        ]}
+      />
+      <main className="flex-1 space-y-6 p-6">
+        {/* Los KPIs de la franja son del conjunto FILTRADO, no del total global. */}
 
         <CuotasView
           rows={pagina}

@@ -11,14 +11,11 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { escapeCsvField, downloadCsv, csvNegative } from '@/lib/utils/csv'
 import type {
   PanelRevendedoraRow,
-  TotalesPanelRevendedoras,
 } from '@/lib/types/revendedoras'
-import { RevendedorasKpiCards } from './RevendedorasKpiCards'
 import { RevendedorasFiltrosBar } from './RevendedorasFiltrosBar'
 
 interface RevendedorasPanelViewProps {
   data: PanelRevendedoraRow[]
-  totales: TotalesPanelRevendedoras
   total: number
   canCreate: boolean
   filtros: {
@@ -34,7 +31,6 @@ interface RevendedorasPanelViewProps {
 
 export function RevendedorasPanelView({
   data,
-  totales,
   total,
   canCreate,
   filtros,
@@ -254,8 +250,6 @@ export function RevendedorasPanelView({
 
   return (
     <div className="flex flex-col gap-6">
-      {/* KPI Cards */}
-      <RevendedorasKpiCards totales={totales} />
 
       {/* Acciones principales */}
       <div className="flex flex-wrap items-center justify-between gap-3">

@@ -7,7 +7,6 @@ import { listGananciaPorProducto } from '@/lib/dal/reportes/reportes'
 import { listCategoriasActivas } from '@/lib/dal/inventario/categoria'
 import { listProductosParaBuscador } from '@/lib/dal/inventario/producto'
 import { normalizar } from '@/lib/inventario/producto-match'
-import { Kpi } from '@/components/ui/Kpi'
 import { GananciaProyectadaClient } from './GananciaProyectadaClient'
 
 const GANANCIA_PAGE_SIZE = 20
@@ -45,22 +44,17 @@ export default async function PreciosHome(props: {
 
   return (
     <>
-      <Topbar title="Precios y Cuentas" session={session} />
+      <Topbar
+        title="Precios y Cuentas"
+        session={session}
+        kpis={[
+          { label: 'Reglas activas', value: reglas.length.toString() },
+          { label: 'Precios desactualizados', value: desactualizados.toString(), tone: desactualizados > 0 ? 'warn' : 'default' },
+          { label: 'Sin precio', value: sinPrecio.toString(), tone: sinPrecio > 0 ? 'warn' : 'default' },
+          { label: 'Con margen aplicado', value: conRegla.toString() },
+        ]}
+      />
       <main className="flex-1 p-6 space-y-6">
-        <section className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          <Kpi label="Reglas activas" value={reglas.length.toString()} />
-          <Kpi
-            label="Precios desactualizados"
-            value={desactualizados.toString()}
-            variant={desactualizados > 0 ? 'alert' : 'default'}
-          />
-          <Kpi
-            label="Sin precio"
-            value={sinPrecio.toString()}
-            variant={sinPrecio > 0 ? 'alert' : 'default'}
-          />
-          <Kpi label="Con margen aplicado" value={conRegla.toString()} />
-        </section>
 
         <section className="grid grid-cols-1 gap-3 md:grid-cols-3">
           <Link
