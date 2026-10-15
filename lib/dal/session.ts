@@ -36,6 +36,8 @@ export interface Session {
   subdominioOk: boolean
   /** `id_revendedora` del usuario si es una revendedora (puesto por el Auth Hook) */
   idRevendedora: string | null
+  /** Marca del tenant para el shell. `logoUrl` null → se muestra el nombre. */
+  marca: { nombre: string; logoUrl: string | null }
 }
 
 /** Claims que nos interesan del access token verificado. */
@@ -142,6 +144,7 @@ export const verifySession = cache(async (): Promise<Session> => {
       modulosHabilitados: moduloHabilitado ? ['revendedoras'] : [],
       subdominioOk,
       idRevendedora: claims.id_revendedora,
+      marca: marcaDe(ctx),
     }
   }
 
@@ -154,6 +157,7 @@ export const verifySession = cache(async (): Promise<Session> => {
     modulosHabilitados: ctx?.ok ? ctx.modulos_habilitados ?? [] : [],
     subdominioOk: ctx?.ok ? ctx.subdominio_ok : false,
     idRevendedora: null,
+    marca: marcaDe(ctx),
   }
 })
 
@@ -167,5 +171,11 @@ type SessionContextRpc =
       permisos: RolePermissions | null
       subdominio_ok: boolean
       modulos_habilitados: string[] | null
+      marca?: { nombre: string; logo_url: string | null } | null
     }
   | { ok: false; reason: 'no-session' }
+
+function marcaDe(ctx: SessionContextRpc | null): Session['marca'] {
+  const m = ctx?.ok ? ctx.marca : null
+  return { nombre: m?.nombre ?? '', logoUrl: m?.logo_url ?? null }
+}

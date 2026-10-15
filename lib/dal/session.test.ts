@@ -51,6 +51,7 @@ const emptyContext = {
   modulosHabilitados: [],
   subdominioOk: false,
   idRevendedora: null,
+  marca: { nombre: '', logoUrl: null },
 }
 
 beforeEach(() => {

@@ -36,6 +36,7 @@ describe('revendedoras declaraciones actions (bandeja local)', () => {
     modulosHabilitados: ['revendedoras'],
     subdominioOk: true,
     idRevendedora: null,
+    marca: { nombre: 'Test', logoUrl: null },
   } as sessionModule.Session
 
   const mockRevendedoraSession = {
@@ -47,6 +48,7 @@ describe('revendedoras declaraciones actions (bandeja local)', () => {
     modulosHabilitados: ['revendedoras'],
     subdominioOk: true,
     idRevendedora: 'rev-uuid-123',
+    marca: { nombre: 'Test', logoUrl: null },
   } as sessionModule.Session
 
   beforeEach(() => {

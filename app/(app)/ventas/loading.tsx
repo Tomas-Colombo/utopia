@@ -7,7 +7,7 @@ export default function LoadingVentas() {
       {/* Mismo título y mismos rótulos que la page real: sólo los valores
           van a guion hasta que lleguen los datos. */}
       <PageBand
-        breadcrumb={['Utopía', 'Ventas']}
+        breadcrumb={['Ventas']}
         title="Ventas"
         kpis={[
           { label: 'Ventas del período', value: '—' },

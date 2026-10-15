@@ -70,6 +70,7 @@ export function Sidebar({ session }: { session: Session }) {
       groups={groups}
       email={session.user.email}
       rolNombre={session.rolNombre}
+      marca={session.marca}
     />
   )
 }

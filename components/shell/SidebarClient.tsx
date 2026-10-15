@@ -36,9 +36,11 @@ export function SidebarClient({
   groups,
   email,
   rolNombre,
+  marca,
 }: {
   groups: SidebarNavGroup[]
   email: string
+  marca: { nombre: string; logoUrl: string | null }
   rolNombre: string | null
 }) {
   const pathname = usePathname()
@@ -101,7 +103,7 @@ export function SidebarClient({
             collapsed ? 'flex-col justify-center gap-2 px-2' : 'justify-center'
           }`}
         >
-          <Logo compact />
+          <Logo nombre={marca.nombre} logoUrl={marca.logoUrl} />
           <button
             type="button"
             onClick={toggleCollapsed}
@@ -153,7 +155,7 @@ export function SidebarClient({
             className="absolute inset-y-0 left-0 flex w-[252px] max-w-[80%] flex-col bg-sidebar text-sidebar-ink shadow-xl"
           >
             <div className="relative flex items-center justify-center px-5 pb-5 pt-[22px]">
-              <Logo compact />
+              <Logo nombre={marca.nombre} logoUrl={marca.logoUrl} />
               <button
                 type="button"
                 onClick={() => setMobileOpen(false)}

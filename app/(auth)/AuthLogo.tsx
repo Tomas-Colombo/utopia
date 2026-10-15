@@ -17,7 +17,7 @@ export function AuthLogo() {
     // eslint-disable-next-line @next/next/no-img-element -- static brand mark, same rationale as components/shell/Logo.tsx
     <img
       src={SRC}
-      alt="Utopía"
+      alt="Evoraltech"
       className="h-20 w-auto shrink-0 select-none object-contain sm:h-24"
       style={{ filter: 'var(--logo-auth)' }}
     />

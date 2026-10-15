@@ -36,6 +36,7 @@ describe('mi-cuenta actions (portal revendedora)', () => {
     modulosHabilitados: ['revendedoras'],
     subdominioOk: true,
     idRevendedora: 'rev-uuid-123',
+    marca: { nombre: 'Test', logoUrl: null },
   } as sessionModule.Session
 
   const mockOperadorSession = {
@@ -47,6 +48,7 @@ describe('mi-cuenta actions (portal revendedora)', () => {
     modulosHabilitados: ['revendedoras'],
     subdominioOk: true,
     idRevendedora: null,
+    marca: { nombre: 'Test', logoUrl: null },
   } as sessionModule.Session
 
   beforeEach(() => {

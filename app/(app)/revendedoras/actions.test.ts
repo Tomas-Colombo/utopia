@@ -284,6 +284,7 @@ describe('revendedoras actions', () => {
       modulosHabilitados: ['revendedoras'],
       subdominioOk: true,
       idRevendedora: 'rev-uuid-1',
+      marca: { nombre: 'Test', logoUrl: null },
     } as sessionModule.Session
 
     beforeEach(() => {
