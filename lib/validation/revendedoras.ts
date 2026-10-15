@@ -223,3 +223,43 @@ export const altaRevendedoraUnificadaSchema = z.strictObject({
 })
 export type AltaRevendedoraUnificadaPayload = z.infer<typeof altaRevendedoraUnificadaSchema>
 
+export const declararVentaRevendedoraSchema = z.strictObject({
+  id_item: z.string().uuid('id-item-invalido'),
+  nota: z
+    .string()
+    .trim()
+    .max(500, 'observaciones-largas')
+    .optional()
+    .default(''),
+})
+export type DeclararVentaRevendedoraPayload = z.infer<typeof declararVentaRevendedoraSchema>
+
+export const retirarDeclaracionSchema = z.strictObject({
+  id_declaracion: z.string().uuid('id-declaracion-invalido'),
+})
+export type RetirarDeclaracionPayload = z.infer<typeof retirarDeclaracionSchema>
+
+export const confirmarDeclaracionVentaSchema = z.strictObject({
+  id_declaracion: z.string().uuid('id-declaracion-invalido'),
+})
+export type ConfirmarDeclaracionVentaPayload = z.infer<typeof confirmarDeclaracionVentaSchema>
+
+export const rechazarDeclaracionVentaSchema = z.strictObject({
+  id_declaracion: z.string().uuid('id-declaracion-invalido'),
+  motivo: z.string().trim().min(1, 'motivo-requerido').max(500, 'motivo-largo'),
+})
+export type RechazarDeclaracionVentaPayload = z.infer<typeof rechazarDeclaracionVentaSchema>
+
+export const paginacionQuerySchema = z.strictObject({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(200).default(50),
+})
+
+export const declaracionesLocalQuerySchema = z.strictObject({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(200).default(50),
+  estado: z.enum(['todas', 'pendiente', 'confirmada', 'rechazada', 'retirada']).default('todas'),
+  id_revendedora: z.string().uuid().optional(),
+})
+export type DeclaracionesLocalQuery = z.infer<typeof declaracionesLocalQuerySchema>
+

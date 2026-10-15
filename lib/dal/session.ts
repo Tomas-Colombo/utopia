@@ -1,7 +1,7 @@
 import { cache } from 'react'
 import { headers } from 'next/headers'
 import { AuthorizationError } from './errors'
-import { createServerClient } from './supabase'
+import { createServerClient, createServiceClient } from './supabase'
 
 /**
  * Shape of `rol.permisos` (JSONB in DB):
@@ -99,6 +99,52 @@ export const verifySession = cache(async (): Promise<Session> => {
   })
   const ctx = (data ?? null) as SessionContextRpc | null
 
+  if (claims.id_revendedora) {
+    // Para revendedoras, la RLS restrictiva (00078) deniega SELECT directo a usuario, rol y tenant_modulo
+    // para prevenir fuga de datos hacia PostgREST.
+    // Usamos el cliente administrativo para resolver su rol/permisos (invariante REQ-RV-ACC-03)
+    // y el estado del módulo revendedoras para el tenant.
+    const admin = createServiceClient()
+    const [{ data: userRow }, { data: modRow }, { data: tenantRow }] = await Promise.all([
+      admin
+        .from('usuario')
+        .select('id_rol, rol:id_rol(nombre, permisos)')
+        .eq('id_usuario', claims.sub)
+        .maybeSingle(),
+      admin
+        .from('tenant_modulo')
+        .select('habilitado, modulo!inner(codigo)')
+        .eq('id_tenant', tenantId)
+        .eq('modulo.codigo', 'revendedoras')
+        .maybeSingle(),
+      subdominio
+        ? admin
+            .from('tenant')
+            .select('id_tenant')
+            .eq('id_tenant', tenantId)
+            .eq('subdominio', subdominio)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
+    ])
+
+    const rolObj = userRow?.rol as { nombre?: string; permisos?: RolePermissions } | null
+    const rolNombre = rolObj?.nombre ?? 'Revendedora'
+    const permisos = rolObj?.permisos ?? { revendedoras: ['ver_propio', 'declarar'] }
+    const moduloHabilitado = Boolean(modRow?.habilitado)
+    const subdominioOk = subdominio ? Boolean(tenantRow) : false
+
+    return {
+      user: { id: claims.sub, email: claims.email ?? '' },
+      tenantId,
+      rolId: userRow?.id_rol ?? 'revendedora-role-id',
+      rolNombre,
+      permisos,
+      modulosHabilitados: moduloHabilitado ? ['revendedoras'] : [],
+      subdominioOk,
+      idRevendedora: claims.id_revendedora,
+    }
+  }
+
   return {
     user: { id: claims.sub, email: claims.email ?? '' },
     tenantId,
@@ -107,7 +153,7 @@ export const verifySession = cache(async (): Promise<Session> => {
     permisos: ctx?.ok ? ctx.permisos ?? {} : {},
     modulosHabilitados: ctx?.ok ? ctx.modulos_habilitados ?? [] : [],
     subdominioOk: ctx?.ok ? ctx.subdominio_ok : false,
-    idRevendedora: claims.id_revendedora ?? null,
+    idRevendedora: null,
   }
 })
 

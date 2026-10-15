@@ -260,6 +260,9 @@ export function RevendedorasPanelView({
       {/* Acciones principales */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
+          <Button variant="secondary" onClick={() => router.push('/revendedoras/declaraciones')}>
+            Declaraciones
+          </Button>
           <Button variant="secondary" onClick={() => router.push('/revendedoras/comisiones')}>
             Reglas de comisión
           </Button>

@@ -32,6 +32,10 @@ export default async function AppShellLayout({
     throw error
   }
 
+  if (session.idRevendedora) {
+    redirect('/mi-cuenta')
+  }
+
   // In production every request under (app) is served from a tenant
   // subdomain — the proxy injects the header and `verifyTenantMatch`
   // must succeed. In localhost/dev without a subdomain the proxy
@@ -46,10 +50,6 @@ export default async function AppShellLayout({
       if (error instanceof AuthorizationError) redirect('/login?e=tenant-mismatch')
       throw error
     }
-  }
-
-  if (session.idRevendedora) {
-    redirect('/mi-cuenta')
   }
 
   return (

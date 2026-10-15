@@ -20,6 +20,9 @@ import { createServerClient } from '@/lib/dal/supabase'
 export async function GET(req: NextRequest) {
   try {
     const session = await verifySession()
+    if (session.idRevendedora) {
+      throw new AuthorizationError('no-permission')
+    }
     await requireModuleRole(session, 'consignaciones', 'ver')
   } catch (e) {
     if (e instanceof AuthorizationError) {

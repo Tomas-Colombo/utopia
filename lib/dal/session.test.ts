@@ -1,14 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { getClaimsMock, rpcMock, createServerClientMock, headersMock } = vi.hoisted(() => ({
+const { getClaimsMock, rpcMock, createServerClientMock, createServiceClientMock, headersMock } = vi.hoisted(() => ({
   getClaimsMock: vi.fn(),
   rpcMock: vi.fn(),
   createServerClientMock: vi.fn(),
+  createServiceClientMock: vi.fn(),
   headersMock: vi.fn(),
 }))
 
 vi.mock('./supabase', () => ({
   createServerClient: createServerClientMock,
+  createServiceClient: createServiceClientMock,
 }))
 
 vi.mock('next/headers', () => ({
@@ -174,5 +176,115 @@ describe('verifySession — contexto de sesión (sp_session_context, 00041)', ()
       modulosHabilitados: [],
       subdominioOk: false,
     })
+  })
+})
+
+describe('verifySession — sesión de revendedora (REQ-RV-ACC-01/03/40)', () => {
+  it('resuelve permisos y módulo habilitado cuando el JWT tiene id_revendedora', async () => {
+    getClaimsMock.mockResolvedValue(
+      claimsResult({
+        sub: 'user-rev-1',
+        email: 'rev@test.com',
+        tenant_id: 'tenant-1',
+        id_revendedora: 'rev-uuid-1',
+      }),
+    )
+
+    createServiceClientMock.mockReturnValue({
+      from: vi.fn((table: string) => {
+        if (table === 'usuario') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            maybeSingle: vi.fn().mockResolvedValue({
+              data: {
+                id_rol: 'rol-rev-uuid',
+                rol: {
+                  nombre: 'Revendedora',
+                  permisos: { revendedoras: ['ver_propio', 'declarar'] },
+                },
+              },
+              error: null,
+            }),
+          }
+        }
+        if (table === 'tenant_modulo') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            maybeSingle: vi.fn().mockResolvedValue({
+              data: { habilitado: true },
+              error: null,
+            }),
+          }
+        }
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+        }
+      }),
+    })
+
+    const { verifySession } = await import('./session')
+    const session = await verifySession()
+
+    expect(session.idRevendedora).toBe('rev-uuid-1')
+    expect(session.rolNombre).toBe('Revendedora')
+    expect(session.permisos).toEqual({ revendedoras: ['ver_propio', 'declarar'] })
+    expect(session.modulosHabilitados).toEqual(['revendedoras'])
+  })
+
+  it('resuelve modulosHabilitados vacío si el módulo revendedoras está apagado', async () => {
+    getClaimsMock.mockResolvedValue(
+      claimsResult({
+        sub: 'user-rev-1',
+        email: 'rev@test.com',
+        tenant_id: 'tenant-1',
+        id_revendedora: 'rev-uuid-1',
+      }),
+    )
+
+    createServiceClientMock.mockReturnValue({
+      from: vi.fn((table: string) => {
+        if (table === 'usuario') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            maybeSingle: vi.fn().mockResolvedValue({
+              data: {
+                id_rol: 'rol-rev-uuid',
+                rol: {
+                  nombre: 'Revendedora',
+                  permisos: { revendedoras: ['ver_propio', 'declarar'] },
+                },
+              },
+              error: null,
+            }),
+          }
+        }
+        if (table === 'tenant_modulo') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            maybeSingle: vi.fn().mockResolvedValue({
+              data: { habilitado: false },
+              error: null,
+            }),
+          }
+        }
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+        }
+      }),
+    })
+
+    const { verifySession } = await import('./session')
+    const session = await verifySession()
+
+    expect(session.idRevendedora).toBe('rev-uuid-1')
+    expect(session.modulosHabilitados).toEqual([])
   })
 })

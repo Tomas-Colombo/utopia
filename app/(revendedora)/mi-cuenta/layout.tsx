@@ -1,0 +1,99 @@
+import { redirect } from 'next/navigation'
+import { verifySession, type Session } from '@/lib/dal/session'
+import { requireModuleRole } from '@/lib/dal/guard'
+import { AuthorizationError } from '@/lib/dal/errors'
+import { ToastProvider } from '@/components/ui/Toast'
+import { ThemeToggle } from '@/components/theming/ThemeToggle'
+import { logoutAction } from '@/app/(app)/actions'
+import { PortalNav } from './PortalNav'
+
+export default async function RevendedoraLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  let session: Session
+  try {
+    session = await verifySession()
+  } catch (err) {
+    if (err instanceof AuthorizationError) redirect('/login')
+    throw err
+  }
+
+  // Si entra un operador (sin claim de revendedora), redirigir al panel del local
+  if (!session.idRevendedora) {
+    redirect('/revendedoras')
+  }
+
+  // Módulo apagado: pantalla clara sin 500
+  const moduloHabilitado = session.modulosHabilitados.includes('revendedoras')
+  if (!moduloHabilitado) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center p-6 bg-bg text-text text-center">
+        <div className="max-w-md w-full p-8 rounded-xl border border-border bg-card shadow-sm space-y-4">
+          <div className="w-12 h-12 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center mx-auto text-2xl font-bold">
+            !
+          </div>
+          <h1 className="text-xl font-bold font-display">Módulo deshabilitado</h1>
+          <p className="text-sm text-muted">
+            El módulo de revendedoras no está habilitado para este negocio. Si pensás que es un error, comunicate con el local.
+          </p>
+          <form action={logoutAction} className="pt-2">
+            <button
+              type="submit"
+              className="min-h-[44px] min-w-[44px] px-4 py-2 text-sm font-medium rounded-lg border border-border hover:bg-card-hover transition-colors"
+            >
+              Cerrar sesión
+            </button>
+          </form>
+        </div>
+      </div>
+    )
+  }
+
+  try {
+    await requireModuleRole(session, 'revendedoras', 'ver_propio')
+  } catch (err) {
+    if (err instanceof AuthorizationError) redirect('/login?e=no-permission')
+    throw err
+  }
+
+  return (
+    <ToastProvider>
+      <div className="min-h-screen bg-bg text-text flex flex-col">
+        {/* Header superior móvil / desktop */}
+        <header className="border-b border-border bg-card px-4 py-3 sticky top-0 z-30">
+          <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <span className="font-display font-semibold text-lg tracking-tight">
+                Portal Revendedoras
+              </span>
+              <span className="text-xs px-2 py-0.5 rounded-full bg-accent/10 text-accent font-medium">
+                Revendedora
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <ThemeToggle />
+              <form action={logoutAction}>
+                <button
+                  type="submit"
+                  aria-label="Cerrar sesión"
+                  title="Cerrar sesión"
+                  className="min-h-[44px] min-w-[44px] px-3 py-2 text-xs font-medium rounded-lg border border-border hover:bg-card-hover text-muted hover:text-text transition-colors"
+                >
+                  Salir
+                </button>
+              </form>
+            </div>
+          </div>
+        </header>
+
+        {/* Contenido principal móvil primero */}
+        <div className="flex-1 max-w-4xl w-full mx-auto p-4 sm:p-6 space-y-6">
+          <PortalNav />
+          <main className="space-y-6">{children}</main>
+        </div>
+      </div>
+    </ToastProvider>
+  )
+}

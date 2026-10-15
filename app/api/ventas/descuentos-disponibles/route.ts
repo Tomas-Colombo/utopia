@@ -17,6 +17,9 @@ import { listDescuentosDisponiblesVenta } from '@/lib/dal/precios/resolucion'
 export async function GET(req: NextRequest) {
   try {
     const session = await verifySession()
+    if (session.idRevendedora) {
+      throw new AuthorizationError('no-permission')
+    }
     await requireModuleRole(session, 'ventas', 'ver')
   } catch (e) {
     if (e instanceof AuthorizationError) {

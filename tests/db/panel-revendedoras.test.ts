@@ -207,4 +207,84 @@ describe('Panel de gestión del local — Slice 4b (REQ-RV-ADM)', () => {
     // El orden por defecto es apellido_asc
     expect(fb[0].apellido < fb[1].apellido).toBe(true)
   })
+
+  test('declaraciones_pendientes refleja el conteo real y funciona el filtro (00107)', async () => {
+    const user = await createTenantWithUser('PanelDecPend')
+    const sr = user.serviceRole
+    const auth = await signInAs(user)
+    const tenantId = user.tenantId
+
+    await habilitarModulo(tenantId, 'revendedoras')
+
+    const { data: rev } = await sr
+      .from('revendedora')
+      .insert({ id_tenant: tenantId, nombre: 'Valeria', apellido: 'Perez', activo: true })
+      .select('id_revendedora')
+      .single()
+
+    const { data: cat } = await sr
+      .from('categoria')
+      .insert({ id_tenant: tenantId, nombre: 'Cat Dec', talles: [] })
+      .select('id_categoria')
+      .single()
+
+    const { data: prod } = await sr
+      .from('producto')
+      .insert({ id_tenant: tenantId, id_categoria: cat!.id_categoria, nombre: 'Pantalon Dec', precio_venta: 50_000 })
+      .select('id_producto')
+      .single()
+
+    const { data: item } = await sr
+      .from('item_producto')
+      .insert({
+        id_tenant: tenantId,
+        id_producto: prod!.id_producto,
+        estado_item: 'en_revendedora',
+        qr_code: `QR-PANEL-DEC-${tenantId.slice(0, 8)}`,
+        costo_ingreso: 25_000,
+        tipo_ingreso: 'compra',
+      })
+      .select('id_item')
+      .single()
+
+    // Panel antes de declarar: declaraciones_pendientes = 0
+    const { data: pAntes } = await auth.rpc('rf_panel_revendedoras', {})
+    const rowAntes = (pAntes as PanelRevendedoraRow[])[0]
+    expect(Number(rowAntes.declaraciones_pendientes)).toBe(0)
+
+    // Insertar declaración pendiente
+    const { data: dec } = await sr
+      .from('declaracion_venta_revendedora')
+      .insert({
+        id_tenant: tenantId,
+        id_revendedora: rev!.id_revendedora,
+        id_item: item!.id_item,
+        fecha: new Date().toISOString().slice(0, 10),
+        estado: 'pendiente',
+        nota: 'Prueba',
+      })
+      .select('id_declaracion')
+      .single()
+
+    // Panel con declaración pendiente: declaraciones_pendientes = 1
+    const { data: pDesp } = await auth.rpc('rf_panel_revendedoras', {})
+    const rowDesp = (pDesp as PanelRevendedoraRow[])[0]
+    expect(Number(rowDesp.declaraciones_pendientes)).toBe(1)
+
+    // Filtro declaraciones_pendientes devuelve la fila
+    const { data: pFiltro } = await auth.rpc('rf_panel_revendedoras', {
+      p_filtro_cuenta: 'declaraciones_pendientes',
+    })
+    expect(pFiltro as PanelRevendedoraRow[]).toHaveLength(1)
+
+    // Marcar como confirmada: declaraciones_pendientes vuelve a 0
+    await sr
+      .from('declaracion_venta_revendedora')
+      .update({ estado: 'confirmada' })
+      .eq('id_declaracion', dec!.id_declaracion)
+
+    const { data: pFin } = await auth.rpc('rf_panel_revendedoras', {})
+    const rowFin = (pFin as PanelRevendedoraRow[])[0]
+    expect(Number(rowFin.declaraciones_pendientes)).toBe(0)
+  })
 })

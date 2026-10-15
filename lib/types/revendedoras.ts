@@ -235,3 +235,81 @@ export const ORDEN_PANEL_REVENDEDORAS_LABEL: Record<string, string> = {
 
 export type OrdenPanelRevendedoras = keyof typeof ORDEN_PANEL_REVENDEDORAS_LABEL
 
+export interface RvpMiCuentaRow {
+  piezas_en_poder: number
+  valor_en_poder: number
+  total_vendido: number
+  comision_liquidada: number
+  comision_estimada: number
+  total_adeudado: number
+  total_pagado: number
+  declaraciones_pendientes: number
+  porcentaje_comision_actual: number
+  tramo_comision_actual: string
+}
+
+export interface RvpMiStockRow {
+  id_item: string
+  id_producto: string
+  nombre_producto: string
+  sku: string
+  talle: string | null
+  precio_venta: number
+  fecha_entrega: string
+  declaracion_pendiente: boolean
+}
+
+export interface RvpMisVentasRow {
+  id_venta: string
+  fecha_venta: string
+  total_venta: number
+  cantidad_piezas: number
+  comision_total: number
+  liquidada: boolean
+  id_liquidacion: string | null
+}
+
+export interface RvpMisLiquidacionesRow {
+  id_liquidacion: string
+  fecha_liquidacion: string
+  periodo_desde: string
+  periodo_hasta: string
+  total_venta: number
+  monto_comision: number
+  monto_a_cobrar: number
+  estado: 'pendiente' | 'pagada'
+  total_pagado: number
+}
+
+export interface RvpMisDeclaracionesRow {
+  id_declaracion: string
+  id_item: string
+  fecha: string
+  nota: string | null
+  estado: 'pendiente' | 'confirmada' | 'rechazada' | 'retirada'
+  motivo_rechazo: string | null
+  nombre_producto: string
+  sku: string
+  talle: string | null
+  precio_venta: number
+}
+
+export interface DeclaracionVentaLocalRow {
+  id_declaracion: string
+  id_tenant: string
+  id_revendedora: string
+  revendedora_nombre: string
+  revendedora_apellido: string
+  id_item: string
+  nombre_producto: string
+  sku: string
+  talle: string | null
+  precio_venta: number
+  fecha: string
+  nota: string | null
+  estado: 'pendiente' | 'confirmada' | 'rechazada' | 'retirada'
+  id_venta: string | null
+  motivo_rechazo: string | null
+  created_at: string
+}
+

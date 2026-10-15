@@ -273,4 +273,45 @@ describe('revendedoras actions', () => {
       expect(res).toEqual({ ok: false, reason: 'payload-invalido' })
     })
   })
+
+  describe('REQ-RV-ACC-42: rechazo de sesión de revendedora en acciones administrativas', () => {
+    const revendedoraSession = {
+      user: { id: 'user-rev-1', email: 'rev@test.com' },
+      tenantId: 'tenant-1',
+      rolId: 'rol-rev',
+      rolNombre: 'Revendedora',
+      permisos: { revendedoras: ['ver_propio', 'declarar'] },
+      modulosHabilitados: ['revendedoras'],
+      subdominioOk: true,
+      idRevendedora: 'rev-uuid-1',
+    } as sessionModule.Session
+
+    beforeEach(() => {
+      vi.mocked(sessionModule.verifySession).mockResolvedValue(revendedoraSession)
+      vi.mocked(guard.requireModuleRole).mockRejectedValue(new AuthorizationError('no-permission'))
+    })
+
+    it('crearRevendedoraUnificadaAction rechaza sesión de revendedora', async () => {
+      const res = await crearRevendedoraUnificadaAction({ nombre: 'X', apellido: 'Y' })
+      expect(res).toEqual({ ok: false, reason: 'no-permission' })
+    })
+
+    it('crearRevendedoraAction rechaza sesión de revendedora', async () => {
+      const res = await crearRevendedoraAction({ nombre: 'X', apellido: 'Y' })
+      expect(res).toEqual({ ok: false, reason: 'no-permission' })
+    })
+
+    it('editarRevendedoraAction rechaza sesión de revendedora', async () => {
+      const res = await editarRevendedoraAction('123e4567-e89b-12d3-a456-426614174000', {
+        nombre: 'X',
+        apellido: 'Y',
+      })
+      expect(res).toEqual({ ok: false, reason: 'no-permission' })
+    })
+
+    it('bajaRevendedoraAction rechaza sesión de revendedora', async () => {
+      const res = await bajaRevendedoraAction('123e4567-e89b-12d3-a456-426614174000')
+      expect(res).toEqual({ ok: false, reason: 'no-permission' })
+    })
+  })
 })

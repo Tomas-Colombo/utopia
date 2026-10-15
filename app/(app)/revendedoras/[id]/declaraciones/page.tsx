@@ -1,9 +1,10 @@
 import { notFound } from 'next/navigation'
 import { Topbar } from '@/components/shell/Topbar'
 import { verifySession } from '@/lib/dal/session'
-import { requireModuleRole } from '@/lib/dal/guard'
-import { obtenerRevendedora } from '@/lib/dal/revendedoras'
+import { requireModuleRole, hasPermission } from '@/lib/dal/guard'
+import { obtenerRevendedora, listarDeclaracionesLocal } from '@/lib/dal/revendedoras'
 import { RevendedoraTabs } from '../RevendedoraTabs'
+import { DeclaracionesTableView } from '../../declaraciones/DeclaracionesTableView'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -16,10 +17,20 @@ export const metadata = {
 export default async function DeclaracionesRevendedoraPage(props: PageProps) {
   const session = await verifySession()
   await requireModuleRole(session, 'revendedoras', 'ver')
+  const puedeGestionar = hasPermission(session, 'revendedoras', 'crear')
 
   const { id } = await props.params
   const revendedora = await obtenerRevendedora(session, id)
   if (!revendedora) notFound()
+
+  const res = await listarDeclaracionesLocal(session, {
+    id_revendedora: id,
+    page: 1,
+    limit: 100,
+    estado: 'todas',
+  })
+
+  const declaraciones = res.ok ? res.data.declaraciones : []
 
   return (
     <>
@@ -31,13 +42,20 @@ export default async function DeclaracionesRevendedoraPage(props: PageProps) {
       <main className="flex-1 p-6 space-y-6 max-w-5xl">
         <RevendedoraTabs idRevendedora={revendedora.id_revendedora} activeTab="declaraciones" />
 
-        <div className="rounded-lg border border-dashed border-border bg-card p-10 text-center">
-          <p className="font-display text-lg mb-2">Declaraciones de venta</p>
-          <p className="text-sm text-muted max-w-md mx-auto">
-            Las declaraciones de venta de la revendedora estarán disponibles en el Slice 9b. Desde
-            aquí se podrán revisar y confirmar las ventas autodeclaradas por las revendedoras desde su
-            portal.
-          </p>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-bold font-display tracking-tight">
+              Declaraciones de venta de {revendedora.nombre}
+            </h2>
+            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-accent/10 text-accent">
+              {declaraciones.length} {declaraciones.length === 1 ? 'declaración' : 'declaraciones'}
+            </span>
+          </div>
+
+          <DeclaracionesTableView
+            declaraciones={declaraciones}
+            puedeGestionar={puedeGestionar}
+          />
         </div>
       </main>
     </>
