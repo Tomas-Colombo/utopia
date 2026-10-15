@@ -16,7 +16,7 @@ import {
   inicioDelDiaSiguiente,
   mesActual,
 } from '@/lib/fechas'
-import { VentasFiltros } from './VentasFiltros'
+import { FiltroPeriodo } from '@/components/shell/FiltroPeriodo'
 import { VentasPaginacion } from './VentasPaginacion'
 import { hoyISO } from '@/lib/utils/hoy'
 
@@ -99,14 +99,33 @@ export default async function VentasHome(props: {
   return (
     <>
       <PageBand
-        breadcrumb={['Utopía', 'Ventas']}
+        breadcrumb={['Ventas']}
         title="Ventas"
         filters={
-          <VentasFiltros
+          <FiltroPeriodo
+            basePath="/ventas"
+            ariaLabel="Filtrar ventas por período"
+            idPrefix="ventas"
             desde={desde}
             hasta={hasta}
-            tieneModuloRevendedoras={tieneModuloRevendedoras}
-            canal={canalFiltro}
+            extras={
+              tieneModuloRevendedoras
+                ? [
+                    {
+                      param: 'canal',
+                      label: 'Canal',
+                      value: canalFiltro ?? '',
+                      ancho: 'w-36',
+                      aplicarAlCambiar: true,
+                      options: [
+                        { value: '', label: 'Todos' },
+                        { value: 'local', label: 'Local' },
+                        { value: 'revendedora', label: 'Revendedora' },
+                      ],
+                    },
+                  ]
+                : []
+            }
           />
         }
         kpis={[

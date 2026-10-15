@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import { Topbar } from '@/components/shell/Topbar'
 import { Button } from '@/components/ui/Button'
-import { Kpi } from '@/components/ui/Kpi'
 import { hasPermission } from '@/lib/dal/guard'
 import { verifySession } from '@/lib/dal/session'
 import { listConsignaciones } from '@/lib/dal/consignaciones/consignacion'
@@ -13,7 +12,7 @@ import {
   anioActual,
 } from '@/lib/fechas'
 import { type EstadoConsignacion } from '@/lib/types/consignaciones'
-import { ConsignacionesFiltros } from './ConsignacionesFiltros'
+import { FiltroPeriodo } from '@/components/shell/FiltroPeriodo'
 import { ConsignacionesTableClient } from './ConsignacionesTableClient'
 
 function esEstado(v: string | undefined): v is EstadoConsignacion {
@@ -79,6 +78,43 @@ export default async function ConsignacionesPage(props: {
       <Topbar
         title="Devoluciones a proveedor"
         session={session}
+        filters={
+          <FiltroPeriodo
+            basePath="/consignaciones"
+            ariaLabel="Filtrar devoluciones"
+            idPrefix="cons"
+            desde={desde}
+            hasta={hasta}
+            extras={[
+              {
+                param: 'proveedor',
+                label: 'Proveedor',
+                value: idProveedor ?? '',
+                ancho: 'w-52',
+                options: [
+                  { value: '', label: 'Todos' },
+                  ...proveedores.map((p) => ({ value: p.id_proveedor, label: p.nombre })),
+                ],
+              },
+              {
+                param: 'estado',
+                label: 'Estado',
+                value: estado ?? '',
+                options: [
+                  { value: '', label: 'Todos' },
+                  { value: 'activa', label: 'Activa' },
+                  { value: 'cerrada', label: 'Cerrada' },
+                ],
+              },
+            ]}
+          />
+        }
+        kpis={[
+          { label: 'Lotes en el filtro', value: rows.length.toString() },
+          { label: 'Activos', value: activas.toString() },
+          { label: 'Ítems pendientes', value: pendientesTotales.toString(), tone: pendientesTotales > 0 ? 'warn' : 'default' },
+          { label: 'Ítems devueltos', value: devueltosTotales.toString() },
+        ]}
         actions={
           <Link href="/consignaciones/nueva">
             <Button size="sm">Nueva devolución</Button>
@@ -86,24 +122,6 @@ export default async function ConsignacionesPage(props: {
         }
       />
       <main className="flex-1 p-6 space-y-6">
-        <ConsignacionesFiltros
-          desde={desde}
-          hasta={hasta}
-          idProveedor={idProveedor ?? ''}
-          estado={estado ?? ''}
-          proveedores={proveedores.map((p) => ({ id: p.id_proveedor, nombre: p.nombre }))}
-        />
-
-        <section className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          <Kpi label="Lotes en el filtro" value={rows.length.toString()} />
-          <Kpi label="Activos" value={activas.toString()} />
-          <Kpi
-            label="Ítems pendientes"
-            value={pendientesTotales.toString()}
-            variant={pendientesTotales > 0 ? 'alert' : 'default'}
-          />
-          <Kpi label="Ítems devueltos" value={devueltosTotales.toString()} />
-        </section>
 
         {rows.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border bg-card p-10 text-center">

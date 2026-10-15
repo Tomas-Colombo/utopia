@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import { BloqueResumen } from './BloqueResumen'
+import { resumenKpis } from './BloqueResumen'
 import { BloqueGanancia } from './BloqueGanancia'
 import { BloqueMovimientoPlata } from './BloqueMovimientoPlata'
 import { GraficoTendencia } from './GraficoTendencia'
@@ -55,21 +55,21 @@ describe('Componentes de Reportes (Bloques 1-5)', () => {
     }
   }
 
-  it('renderiza BloqueResumen', () => {
-    render(
-      <BloqueResumen 
-        resultados={mockResultados} 
-        resultadosPrev={null}
-        flujo={mockFlujo}
-        flujoPrev={null}
-        posicion={mockPosicion}
-        tieneGastos={true}
-      />
-    )
-    expect(screen.getByText('Vendiste')).toBeDefined()
-    expect(screen.getByText('Te quedó de ganancia')).toBeDefined()
-    expect(screen.getByText('Entró a caja')).toBeDefined()
-    expect(screen.getByText('Te deben')).toBeDefined()
+  it('arma los KPIs del resumen', () => {
+    const kpis = resumenKpis({
+      resultados: mockResultados,
+      resultadosPrev: null,
+      flujo: mockFlujo,
+      flujoPrev: null,
+      posicion: mockPosicion,
+      tieneGastos: true,
+    })
+    expect(kpis.map((k) => k.label)).toEqual([
+      'Vendiste',
+      'Te quedó de ganancia',
+      'Entró a caja',
+      'Te deben',
+    ])
   })
 
   it('renderiza BloqueGanancia', () => {

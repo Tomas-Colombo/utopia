@@ -1,4 +1,4 @@
-import { contenido, fillEstable } from '../pages/AppShell'
+import { barraSuperior, contenido, fillEstable } from '../pages/AppShell'
 import { expect, test } from '../fixtures/test'
 import { isoDate } from '../support/data'
 
@@ -51,8 +51,8 @@ test.describe('Reportes', () => {
     const desde = isoDate(-30)
     const hasta = isoDate(0)
 
-    await fillEstable(contenido(page).getByLabel(/^Desde/), desde)
-    await fillEstable(contenido(page).getByLabel(/^Hasta/), hasta)
+    await fillEstable(barraSuperior(page).getByLabel(/^Desde/), desde)
+    await fillEstable(barraSuperior(page).getByLabel(/^Hasta/), hasta)
     await page.getByRole('button', { name: 'Aplicar' }).click()
 
     await expect(page).toHaveURL(new RegExp(`desde=${desde}`))

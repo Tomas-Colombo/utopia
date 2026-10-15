@@ -13,11 +13,11 @@ import {
   getCumplimientoObjetivos,
   getResumenCanal,
 } from '@/lib/dal/reportes'
-import { ReportesPeriodoForm } from './ReportesPeriodoForm'
+import { FiltroPeriodo } from '@/components/shell/FiltroPeriodo'
 import { periodoAnterior } from '@/lib/fechas'
 import { searchParamsReportesSchema } from '@/lib/validation/reportes'
 
-import { BloqueResumen } from '@/components/reportes/BloqueResumen'
+import { resumenKpis } from '@/components/reportes/BloqueResumen'
 import { BloqueGanancia } from '@/components/reportes/BloqueGanancia'
 import { BloqueMovimientoPlata } from '@/components/reportes/BloqueMovimientoPlata'
 import { GraficoTendencia } from '@/components/reportes/GraficoTendencia'
@@ -87,24 +87,33 @@ export default async function ReportesPage(props: {
 
   return (
     <>
-      <Topbar title="Tablero financiero" session={session} />
+      <Topbar
+        title="Tablero financiero"
+        session={session}
+        filters={
+          <FiltroPeriodo
+            basePath="/reportes"
+            ariaLabel="Filtrar tablero por período"
+            idPrefix="rp"
+            desde={desde}
+            hasta={hasta}
+          />
+        }
+        kpis={
+          puedeVerVentas && resultadosReq.ok && flujoReq.ok
+            ? resumenKpis({
+                resultados: resultadosReq.data!,
+                resultadosPrev: resultadosPrevReq.ok ? resultadosPrevReq.data : null,
+                flujo: flujoReq.data!,
+                flujoPrev: flujoPrevReq.ok ? flujoPrevReq.data : null,
+                posicion: posicionReq.ok ? posicionReq.data : null,
+                tieneGastos,
+              })
+            : undefined
+        }
+      />
       <main className="flex-1 p-6 space-y-6">
-        <ReportesPeriodoForm desde={desde} hasta={hasta} />
-        
-        {puedeVerVentas && (
-          resultadosReq.ok && flujoReq.ok ? (
-            <BloqueResumen
-              resultados={resultadosReq.data!}
-              resultadosPrev={resultadosPrevReq.ok ? resultadosPrevReq.data : null}
-              flujo={flujoReq.data!}
-              flujoPrev={flujoPrevReq.ok ? flujoPrevReq.data : null}
-              posicion={posicionReq.ok ? posicionReq.data : null}
-              tieneGastos={tieneGastos}
-            />
-          ) : (
-            <BloqueError />
-          )
-        )}
+        {puedeVerVentas && !(resultadosReq.ok && flujoReq.ok) && <BloqueError />}
 
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           {resultadosReq.ok ? (

@@ -24,6 +24,14 @@ export function contenido(page: Page): Locator {
 }
 
 /**
+ * The page band (`<header aria-label="Barra superior">`). Period filters and
+ * KPIs live here, outside `<main>`.
+ */
+export function barraSuperior(page: Page): Locator {
+  return page.locator('header[aria-label="Barra superior"]')
+}
+
+/**
  * The status `<Badge>` inside a table row.
  *
  * Badges prepend a screen-reader prefix ("Success: Activa"), so their text is

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Field } from '@/components/ui/Field'
 import { Input } from '@/components/ui/Input'
+import { Select } from '@/components/ui/Select'
 import {
   anioActual,
   hoyRango,
@@ -22,64 +23,88 @@ const PRESETS: Array<{ id: Preset; label: string; rango: () => RangoFechas }> = 
   { id: 'anio', label: 'Este año', rango: anioActual },
 ]
 
+/** Desplegable extra que acompaña al período (canal, proveedor, estado…). */
+export interface FiltroExtra {
+  /** Nombre del query param. Un valor vacío no se manda. */
+  param: string
+  label: string
+  value: string
+  options: Array<{ value: string; label: string }>
+  /** Clase de ancho de Tailwind (estática, para que el JIT la vea). */
+  ancho?: string
+  /** Aplica en el momento de elegir, sin esperar a "Aplicar". */
+  aplicarAlCambiar?: boolean
+}
+
 /**
- * Filtro de período del listado de ventas. El rango vive en la URL (`?desde=`
- * y `?hasta=`, días calendario inclusivos) para que sea compartible y
- * sobreviva a un refresh; el server re-consulta con esos valores.
+ * Filtro de período de las pages con franja (`PageBand`): Desde / Hasta,
+ * desplegables opcionales, presets y "Aplicar". Pensado para ir en el slot
+ * `filters` de la franja.
+ *
+ * Todo vive en la URL (`?desde=&hasta=` + los params de los extras, días
+ * calendario inclusivos) para que el filtro sea compartible y sobreviva a un
+ * refresh; el server re-consulta con esos valores.
  *
  * Los presets se calculan en el cliente a propósito: el rango tiene que salir
  * de la zona horaria del USUARIO, no de la del server. Todo el cálculo pasa
  * por `lib/fechas`, que evita el corrimiento de día de `toISOString()`.
  */
-export function VentasFiltros({
+export function FiltroPeriodo({
+  basePath,
+  ariaLabel,
+  idPrefix,
   desde,
   hasta,
-  tieneModuloRevendedoras = false,
-  canal: canalInicial = '',
+  extras = [],
 }: RangoFechas & {
-  tieneModuloRevendedoras?: boolean
-  canal?: string
+  basePath: string
+  ariaLabel: string
+  /** Prefijo de los ids de los controles (únicos por page). */
+  idPrefix: string
+  extras?: FiltroExtra[]
 }) {
   const router = useRouter()
   const [d, setD] = useState(desde)
   const [h, setH] = useState(hasta)
-  const [canal, setCanal] = useState(canalInicial)
+  const [vals, setVals] = useState<Record<string, string>>(() =>
+    Object.fromEntries(extras.map((e) => [e.param, e.value])),
+  )
   const [pendiente, startTransition] = useTransition()
 
   const rangoInvertido = d > h
 
-  function aplicar(nuevoDesde: string, nuevoHasta: string, nuevoCanal = canal) {
-    const params = new URLSearchParams({ desde: nuevoDesde, hasta: nuevoHasta })
-    if (tieneModuloRevendedoras && nuevoCanal) {
-      params.set('canal', nuevoCanal)
+  function aplicar(nd: string, nh: string, nv: Record<string, string>) {
+    const params = new URLSearchParams({ desde: nd, hasta: nh })
+    for (const e of extras) {
+      if (nv[e.param]) params.set(e.param, nv[e.param])
     }
-    startTransition(() => router.push(`/ventas?${params.toString()}`))
+    startTransition(() => router.push(`${basePath}?${params.toString()}`))
   }
 
   function aplicarPreset(preset: Preset) {
     const { desde: nd, hasta: nh } = PRESETS.find((p) => p.id === preset)!.rango()
     setD(nd)
     setH(nh)
-    aplicar(nd, nh, canal)
+    aplicar(nd, nh, vals)
   }
 
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault()
-        if (!rangoInvertido) aplicar(d, h, canal)
+        if (!rangoInvertido) aplicar(d, h, vals)
       }}
       className="flex flex-wrap items-end gap-3"
-      aria-label="Filtrar ventas por período"
+      aria-label={ariaLabel}
     >
       <div className="w-40">
         <Field
-          htmlFor="ventas-desde"
+          htmlFor={`${idPrefix}-desde`}
           label="Desde"
           error={rangoInvertido ? 'Posterior a "Hasta"' : undefined}
         >
           <Input
-            id="ventas-desde"
+            id={`${idPrefix}-desde`}
             type="date"
             value={d}
             max={h}
@@ -90,9 +115,9 @@ export function VentasFiltros({
         </Field>
       </div>
       <div className="w-40">
-        <Field htmlFor="ventas-hasta" label="Hasta">
+        <Field htmlFor={`${idPrefix}-hasta`} label="Hasta">
           <Input
-            id="ventas-hasta"
+            id={`${idPrefix}-hasta`}
             type="date"
             value={h}
             min={d}
@@ -102,28 +127,28 @@ export function VentasFiltros({
         </Field>
       </div>
 
-      {tieneModuloRevendedoras && (
-        <div className="w-36">
-          <Field htmlFor="ventas-canal" label="Canal">
-            <select
-              id="ventas-canal"
-              aria-label="Filtrar por canal"
-              value={canal}
+      {extras.map((x) => (
+        <div key={x.param} className={x.ancho ?? 'w-40'}>
+          <Field htmlFor={`${idPrefix}-${x.param}`} label={x.label}>
+            <Select
+              id={`${idPrefix}-${x.param}`}
+              value={vals[x.param] ?? ''}
               onChange={(e) => {
-                const val = e.target.value
-                setCanal(val)
-                if (!rangoInvertido) aplicar(d, h, val)
+                const next = { ...vals, [x.param]: e.target.value }
+                setVals(next)
+                if (x.aplicarAlCambiar && !rangoInvertido) aplicar(d, h, next)
               }}
               disabled={pendiente}
-              className="w-full rounded-md border border-border bg-card-2 px-3 py-2 text-sm"
             >
-              <option value="">Todos</option>
-              <option value="local">Local</option>
-              <option value="revendedora">Revendedora</option>
-            </select>
+              {x.options.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </Select>
           </Field>
         </div>
-      )}
+      ))}
 
       <div className="flex flex-wrap gap-2 ml-auto">
         {PRESETS.map((p) => (

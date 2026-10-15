@@ -1,4 +1,4 @@
-import { contenido } from '../pages/AppShell'
+import { barraSuperior, contenido } from '../pages/AppShell'
 import { expect, test } from '../fixtures/test'
 
 /**
@@ -32,7 +32,7 @@ test.describe('Devoluciones a proveedor', () => {
   test('los filtros del listado se reflejan en la URL', async ({ page, seed }) => {
     await page.goto('/consignaciones')
 
-    await contenido(page).getByLabel(/^Proveedor/).selectOption({ label: seed.proveedorConsignatario.nombre })
+    await barraSuperior(page).getByLabel(/^Proveedor/).selectOption({ label: seed.proveedorConsignatario.nombre })
     await page.getByRole('button', { name: 'Aplicar' }).click()
 
     await expect(page).toHaveURL(new RegExp(`proveedor=${seed.proveedorConsignatario.id}`))

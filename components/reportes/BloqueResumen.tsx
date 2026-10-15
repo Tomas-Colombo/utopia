@@ -1,5 +1,4 @@
-import React from 'react'
-import { Kpi } from '@/components/ui/Kpi'
+import type { BandKpi } from '@/components/shell/PageBand'
 import { VariacionBadge } from './VariacionBadge'
 import type { FinanzasResultadosRow, FinanzasFlujoRow, FinanzasPosicion } from '@/lib/types/reportes'
 
@@ -15,7 +14,7 @@ function variacionPct(actual: number, previo: number | null): number | null {
   return (actual - previo) / Math.abs(previo)
 }
 
-interface BloqueResumenProps {
+interface ResumenKpisInput {
   resultados: FinanzasResultadosRow
   resultadosPrev: FinanzasResultadosRow | null
   flujo: FinanzasFlujoRow
@@ -24,55 +23,40 @@ interface BloqueResumenProps {
   tieneGastos: boolean
 }
 
-export function BloqueResumen({
+/**
+ * Los cuatro números de arriba del tablero. Viven en la franja de la página
+ * (`PageBand`), así que esto devuelve datos y no JSX de layout.
+ */
+export function resumenKpis({
   resultados,
   resultadosPrev,
   flujo,
   flujoPrev,
   posicion,
-  tieneGastos
-}: BloqueResumenProps) {
-  // Vendiste (ventas_netas)
+  tieneGastos,
+}: ResumenKpisInput): BandKpi[] {
   const varVentas = resultadosPrev ? variacionPct(resultados.ventas_netas, resultadosPrev.ventas_netas) : null
-  
-  // Te quedó de ganancia (ganancia_final si gastos, ganancia_sobre_ventas si no)
+
+  // ganancia_final si hay módulo de gastos, ganancia_sobre_ventas si no
   const gananciaActual = tieneGastos ? resultados.ganancia_final : resultados.ganancia_sobre_ventas
-  const gananciaPrev = resultadosPrev ? (tieneGastos ? resultadosPrev.ganancia_final : resultadosPrev.ganancia_sobre_ventas) : null
+  const gananciaPrev = resultadosPrev
+    ? tieneGastos ? resultadosPrev.ganancia_final : resultadosPrev.ganancia_sobre_ventas
+    : null
   const varGanancia = gananciaPrev !== null ? variacionPct(gananciaActual, gananciaPrev) : null
 
-  // Entró a caja (neto_cobros)
   const varCobros = flujoPrev ? variacionPct(flujo.neto_cobros, flujoPrev.neto_cobros) : null
 
-  // Te deben (por_cobrar)
+  // Por cobrar es un stock a la fecha: no tiene "previo" en la arquitectura actual.
   const porCobrar = posicion?.por_cobrar?.a_cobrar ?? null
-  // Cuentas por cobrar es un stock a la fecha, no tiene un "previo" en la arquitectura actual.
-  const varCobrar = null
 
-  return (
-    <section aria-labelledby="h2-resumen" className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
-      <h2 id="h2-resumen" className="sr-only">Resumen de ventas y caja</h2>
-      
-      <Kpi 
-        label="Vendiste" 
-        value={formatMoney(resultados.ventas_netas)}
-        sub={<VariacionBadge variacion={varVentas} />}
-      />
-      <Kpi 
-        label={tieneGastos ? "Te quedó de ganancia" : "Ganancia (antes de gastos)"}
-        value={formatMoney(gananciaActual)}
-        sub={<VariacionBadge variacion={varGanancia} />}
-      />
-      <Kpi 
-        label="Entró a caja" 
-        value={formatMoney(flujo.neto_cobros)}
-        sub={<VariacionBadge variacion={varCobros} />}
-      />
-      <Kpi 
-        label="Te deben" 
-        value={formatMoney(porCobrar)}
-        sub={<VariacionBadge variacion={varCobrar} />}
-        tone="muted"
-      />
-    </section>
-  )
+  return [
+    { label: 'Vendiste', value: formatMoney(resultados.ventas_netas), sub: <VariacionBadge variacion={varVentas} /> },
+    {
+      label: tieneGastos ? 'Te quedó de ganancia' : 'Ganancia (antes de gastos)',
+      value: formatMoney(gananciaActual),
+      sub: <VariacionBadge variacion={varGanancia} />,
+    },
+    { label: 'Entró a caja', value: formatMoney(flujo.neto_cobros), sub: <VariacionBadge variacion={varCobros} /> },
+    { label: 'Te deben', value: formatMoney(porCobrar), sub: <VariacionBadge variacion={null} /> },
+  ]
 }

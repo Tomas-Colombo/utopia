@@ -373,6 +373,7 @@
     --alerta: #E58C78;
     --alerta-ink: #F2B3A5;
     --alerta-bg: #2A1A17;
+    --ok: var(--band-ink);
   }
 }
 
