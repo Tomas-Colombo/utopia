@@ -19,6 +19,9 @@ package-lock.json
 
 # testing
 /coverage
+# Output of `pnpm gate` (report.txt/json + one log per step). Regenerated on
+# every run; the report is pasted into the PR/chat, never committed.
+/.gate/
 /e2e/.auth
 /e2e/.artifacts
 /e2e/.report
