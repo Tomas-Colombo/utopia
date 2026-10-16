@@ -15,30 +15,27 @@ store. Next.js 16 App Router + React 19 + TS 5 + Tailwind 4 + Supabase
 This file is the single source of truth for every agent (Claude, Codex,
 Copilot). Personal preferences live in the provider's memory, never here.
 `CLAUDE.md` is only `@AGENTS.md`. Where docs disagree with code, the code wins.
+The working procedure (roles, prompt, report, when to stop) is in
+`docs/protocolo-agentes.md`.
 
 # Commands
 
 | Need | Command | Needs |
 | --- | --- | --- |
 | Dev server | `pnpm dev` | `.env.local` |
-| Typecheck | `pnpm typecheck` | — |
-| Lint | `pnpm lint` | — |
+| Gate: typecheck + lint + unit | `pnpm gate` | — |
+| Gate + `db reset` + `tests/db` + DOWN check | `pnpm gate:db` | Docker + `supabase start` + `.env.local` |
+| Gate:db + build | `pnpm gate:full` | same as above |
 | Unit tests (use while working) | `npx vitest run --exclude 'tests/db/**'` | — |
-| DB tests | `npx vitest run tests/db` | `supabase start` + Docker |
-| Unit + DB | `pnpm test` | `supabase start` + Docker |
+| Last definition of a SQL function | `pnpm sp:last <name>` | — |
+| Pre-commit hook (once per clone) | `pnpm hooks:install` | — |
 | E2E | `pnpm test:e2e` | dev server + DB |
-| Coverage | `pnpm test:coverage` | — |
-| Build | `pnpm build` | — |
 | New customer | `pnpm provision-tenant` | `.env.local` |
 
-**Gate before saying "done"**:
-`pnpm typecheck && pnpm lint && npx vitest run --exclude 'tests/db/**' && pnpm build`.
-CI is the real gate: lint → local Supabase → build → typecheck → unit + DB
-tests with coverage → Playwright. Skipping DB tests locally is fine; CI won't.
-
-Without Docker, DB suites fail with `ECONNREFUSED 127.0.0.1:54321` — report it
-as **not verified**, never as passing. DB suites skip silently when
-`.env.local` is missing, which reads like passing: check the test count.
+Run `pnpm gate` (fast), `pnpm gate:db` (touching SQL) or `pnpm gate:full`
+(closing a slice). Report only the content of `.gate/report.txt`. Exit code 2
+means "not verified" (no Docker, Supabase stopped, DB suites skipped): report
+it as such, never as passing.
 
 # Architecture (non-negotiable)
 
@@ -50,26 +47,21 @@ supabase/      migrations + stored procedures  — business invariants live here
 ```
 
 - **Tenant isolation is the one invariant.** Every domain table has
-  `id_tenant`; RLS filters by the JWT `tenant_id` claim. RLS is the only thing
-  doing it (with one exception: `id_revendedora` restrictive policies also apply
-  for the Revendedoras module). The service-role key bypasses RLS: only
-  `lib/dal/supabase*.ts`, `scripts/provision-tenant.mts`, `tests/db/`, `e2e/` may touch it.
-- **RLS filters by tenant and nothing else** (except restrictive revendedora policies).
-  No per-user policy: any session sees the whole tenant. Per-user/per-module
-  limits are enforced by the guards.
+  `id_tenant`; RLS filters by the JWT `tenant_id` claim and nothing else, plus
+  the restrictive `id_revendedora` policies of the Revendedoras module. No
+  per-user policy: per-user/per-module limits live in the guards. The
+  service-role key bypasses RLS: only `lib/dal/supabase*.ts`,
+  `scripts/provision-tenant.mts`, `tests/db/`, `e2e/` may touch it.
 - **Writes go through `sp_*` stored procedures** called from `lib/dal`. A
   multi-table write assembled in TypeScript breaks between two awaits.
-- **Reads are INVOKER, never DEFINER** (with one approved exception DR-13:
-  `rvp_*` read functions for the Revendedoras portal, strictly reading
-  identity from `auth_revendedora_id()`, explicit column whitelist without
-  costs/margins, and enforced by snapshot tests). The only other DEFINER
-  functions permitted in the database are `fn_auto_crear_rol_revendedora` and
-  `sp_enlazar_revendedora_usuario` (enforced by `tests/db/rvp-lecturas.test.ts`).
-
+- **INVOKER / DEFINER**: writes and reads are always INVOKER. DEFINER only for
+  the `rvp_*` portal reads (identity from `auth_revendedora_id()`, column
+  whitelist without costs/margins) and the two listed exceptions
+  `fn_auto_crear_rol_revendedora`, `sp_enlazar_revendedora_usuario`. Enforced
+  by `tests/db/rvp-lecturas.test.ts`.
 - Allowed SQL outside `lib/dal`: auth (`app/(auth)/login/actions.ts`,
-  `logoutAction`) and `proxy.ts`. **Known debt, do not add to it** (move when
-  you're in the file): `app/api/ventas/lookup-item/route.ts`,
-  `components/theming/persistThemePreference.ts`.
+  `logoutAction`) and `proxy.ts`. **Known debt, do not add to it**:
+  `app/api/ventas/lookup-item/route.ts`, `components/theming/persistThemePreference.ts`.
 
 ## Every mutation is a Server Action with three gates
 
@@ -78,67 +70,62 @@ It is a public POST endpoint; TS types are erased at runtime. In order:
 1. **Authorize**: `requireModuleRole(session, '<modulo>', '<accion>')`. The
    route `layout.tsx` gates `ver` only and is not a boundary for actions.
 2. **Validate**: zod schema from `lib/validation/**`, `safeParse`,
-   `strictObject`. Build it from the domain catalogue (e.g. `permisosSchema`
-   from `CATALOGO_PERMISOS`) so there are never two lists.
+   `strictObject`, built from the domain catalogue (e.g. `permisosSchema` from
+   `CATALOGO_PERMISOS`) so there are never two lists.
 3. **Call the DAL** with `parsed.data`, never the raw input.
 
 Return `{ ok: true } | { ok: false, reason }`; `reason` is a kebab-case slug,
-never prose or a Postgres error.
-
-## Errors the operator reads
-
-`lib/errores/mensajes.ts` is the only place a user-facing message lives; UI
-calls `mensajeDeError(reason)`, never shows `res.reason`. Spanish, voseo, final
-full stop, no jargon (no "SKU", "tenant", "payload", table names): the reader
-sells clothes. A test enforces it. A new slug raised by an `sp_*` goes in the
-catalogue and in the inventory list of `lib/errores/mensajes.test.ts`.
+never prose or a Postgres error. `lib/errores/mensajes.ts` is the only place a
+user-facing message lives (UI calls `mensajeDeError(reason)`): Spanish, voseo,
+final full stop, no jargon. A new slug raised by an `sp_*` goes in the
+catalogue and in the inventory of `lib/errores/mensajes.test.ts`.
 
 ## Design for N, not for 1
 
 For any screen over a list: queries per element? what at 200? who controls N?
 If N comes from URL or input, cap and dedupe. An `await` in a `for` means a
-batch domain function is missing: add it to `lib/dal`. Don't borrow another
-use case's heavy loader just to satisfy "no SQL outside the DAL".
+batch domain function is missing: add it to `lib/dal`.
 
 # Modules: three lists that do not match
 
 Route groups, permission modules and DAL domains differ (e.g. `clientes/` and
-`cuotas/` are gated by permission `ventas`; `proveedores/` by `inventario`).
-Never guess a permission from a folder name — see `docs/modulos.md`.
+`cuotas/` are gated by permission `ventas`). Never guess a permission from a
+folder name — see `docs/modulos.md`.
 
-# Tests
+# Rules for agents
 
-Colocated `*.test.ts`; describe behaviour, not implementation. Coverage
-(`vitest.config.mts`) measures a deliberate subset of pure logic; DAL, routes
-and domain components are covered by DB + Playwright. Adding a pure tested
-module to `include` is welcome; lowering a threshold to pass is not.
-
-# How to work by size of change
-
-- **Small** (one file, mechanical, obvious): do it, run the gate.
-- **Medium** (a feature slice, 2+ files, new logic): state the approach in 3-5
-  lines first, then implement, then gate. Update `docs/modulos.md` if module
-  ownership changes.
-- **Large / schema / new module**: spec first in `openspec/changes/<name>/`
-  (proposal → spec → design → tasks), get approval, then apply. Migrations
-  need a `-- DOWN:` comment header (see `supabase/README.md`).
-- **Unapproved ideas** go to `docs/propuestas/`, not to code.
-- If a rule changes, update its doc **in the same commit**.
+- **Migrations**: never edit a migration that is on main; fix forward with a
+  new one (next free number). Every migration has a `-- DOWN:` block
+  (prose lines as `-- NOTE:`); `pnpm gate:db` executes it.
+- **Changing an `sp_*`**: run `pnpm sp:last <name>` first, copy that
+  definition, and show only the intended diff.
+- **Config**: do not modify tsconfig, next, eslint, playwright or vitest
+  config, nor keep tool-regenerated changes: revert them.
+- **Specs**: do not tick human gates in `tasks.md`; do not edit
+  `specs/golden.md` without the user's OK.
+- **STOP AND ASK** when existing behavior conflicts with the spec or with the
+  finance logic: do not change a shared `sp_*`, config, a merged migration or
+  the golden on your own.
+- **A test fails**: say whether the test or the code is wrong, citing the spec
+  line, before touching an assertion. Before deleting a file, `rg` who imports it.
+- **"Not verified" is a valid report; fabricating output is the only serious error.**
+- **Reports**: detail to files; chat summary ≤ 10 lines.
 
 # Conventions
 
 - **Commits**: Conventional Commits, subject and body in Spanish. Never any
   `Co-Authored-By` or AI attribution (project rule; overrides provider defaults).
+  Add files by name, never `git add -A`.
 - **Language**: Spanish for domain code/comments (`app/**`, `lib/dal/**`,
   `lib/<dominio>/**`); English in `components/ui/**` and in this file. UI copy
   Spanish, voseo ("Elegí un proveedor").
 - Comments explain *why* (what broke before), not what. Match surrounding code.
-- **Reports** (commit, PR, summary): paste the raw output of every check you
-  claim, with counts (`tests/db`: files and tests). No output, no claim: say "not verified".
-- **Changing an `sp_*`**: copy its LAST definition (`rg -l "function sp_x"
-  supabase/migrations | sort | tail -1`), never an older one. Never edit a migration already applied to a shared DB.
-- **A test fails**: say whether the test or the code is wrong, citing the spec
-  line, before touching an assertion. Before deleting a file, `rg` who imports it.
+- **Tests**: colocated `*.test.ts`, behaviour not implementation; row fixtures
+  from `tests/factories/`. Coverage measures a deliberate subset of pure
+  logic; adding to `include` is welcome, lowering a threshold is not.
+- **Size of change**: small → do it and gate; medium → approach in 3-5 lines
+  first; large/schema/new module → spec in `openspec/changes/<name>/`
+  (template `openspec/templates/spec.md`) and approval first.
 
 # Before touching X, read Y
 
@@ -152,8 +139,4 @@ module to `include` is welcome; lowering a threshold to pass is not.
 | A multi-step feature | `openspec/config.yaml`, then `openspec/changes/` |
 | Revendedoras module | `ingenieria/`: local-only draft plans (gitignored), not a contract. Never read `ingenieria/utopia-intructivo/Seguridad/` (secrets). May be absent: ask the user |
 
-# Keeping this file useful
-
-A rule enters only if an agent made the same mistake twice, or if the decision
-would surprise a newcomer. Keep it ≤150 lines; detail goes to `docs/`. If a
-rule can be enforced by lint or a test, enforce it there instead of here.
+A rule enters here only if an agent made the same mistake twice; keep ≤150 lines, detail to `docs/`, and prefer enforcing a rule by lint or test.
