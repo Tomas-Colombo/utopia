@@ -42,8 +42,8 @@ Reglas de este slice:
   atribución de IA. Trabajá en la rama feat/modulo-revendedoras-slice-<N>. No hagas push
   ni abras PR sin mi OK. Agregá archivos por nombre, nunca git add -A.
 
-Al terminar: corré el checklist de cierre de docs/protocolo-agentes.md, pegá el reporte
-con el formato de ese documento y PARÁ. No empieces el slice <N+1>. Incluí además:
+Al terminar: corré pnpm gate:full, pegá el contenido de .gate/report.txt en el reporte
+con el formato de docs/protocolo-agentes.md y PARÁ. No empieces el slice <N+1>. Incluí además:
 - Lista de archivos creados/modificados (git show --stat HEAD).
 - Para cada REQ del slice: cómo lo verificaste (test o comando) o "no verificado".
 - Decisiones que te apartan del spec, aunque sean chicas.
