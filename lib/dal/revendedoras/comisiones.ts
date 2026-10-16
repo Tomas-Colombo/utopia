@@ -9,35 +9,15 @@ import type {
   GuardarComisionPropiaInput,
   TerminarReglaInput,
 } from '@/lib/validation/comisiones'
+import { extractErrorSlug, type ReglaSlug } from './slug-error'
 
-export function extractErrorSlug(error: unknown): string {
-  if (!error) return 'error-desconocido'
-  const errObj =
-    typeof error === 'object' && error !== null
-      ? (error as Record<string, unknown>)
-      : null
-  const code = typeof errObj?.code === 'string' ? errObj.code : ''
-  const msg = typeof errObj?.message === 'string' ? errObj.message : String(error)
-
-  if (
-    code === '23P01' ||
-    msg.includes('regla-solapada') ||
-    msg.includes('regla_comision_general_no_solapada') ||
-    msg.includes('regla_comision_propia_no_solapada') ||
-    msg.includes('solapada')
-  ) {
-    return 'regla-solapada'
-  }
-
-  const cleaned = msg.replace(/^.*sp_[a-zA-Z0-9_]+:\s*/, '').trim()
-  const candidate = cleaned.split(':')[0]?.trim().toLowerCase() || ''
-
-  if (candidate && /^[a-z0-9_-]+$/.test(candidate)) {
-    return candidate
-  }
-
-  return 'error-desconocido'
-}
+const REGLAS_SLUG: readonly ReglaSlug[] = [
+  {
+    slug: 'regla-solapada',
+    codigo: '23P01',
+    contiene: ['regla-solapada', 'regla_comision_general_no_solapada', 'regla_comision_propia_no_solapada', 'solapada'],
+  },
+]
 
 /**
  * Lista las reglas de comisión activas con sus escalas ordenadas por fecha de vigencia descendente.
@@ -202,7 +182,7 @@ export async function crearReglaGeneral(
   })
 
   if (error) {
-    return { ok: false, reason: extractErrorSlug(error) }
+    return { ok: false, reason: extractErrorSlug(error, REGLAS_SLUG, { guionBajo: true }) }
   }
 
   return { ok: true, id_regla: resData }
@@ -240,7 +220,7 @@ export async function guardarComisionPropia(
   })
 
   if (error) {
-    return { ok: false, reason: extractErrorSlug(error) }
+    return { ok: false, reason: extractErrorSlug(error, REGLAS_SLUG, { guionBajo: true }) }
   }
 
   return { ok: true, id_regla: resData }
@@ -262,7 +242,7 @@ export async function terminarRegla(
   })
 
   if (error) {
-    return { ok: false, reason: extractErrorSlug(error) }
+    return { ok: false, reason: extractErrorSlug(error, REGLAS_SLUG, { guionBajo: true }) }
   }
 
   return { ok: true }

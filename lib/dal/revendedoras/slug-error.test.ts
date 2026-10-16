@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { extractErrorSlug } from './consignacion'
+import { extractErrorSlug, type ReglaSlug } from './slug-error'
+
+const REGLAS_CONSIGNACION: readonly ReglaSlug[] = [
+  { slug: 'item-ya-en-consignacion-revendedora', codigo: '23505', contiene: ['consignacion_revendedora_detalle_item_activo_uk'] },
+]
 
 describe('extractErrorSlug', () => {
   it('corta sufijos con id o parámetros después de dos puntos', () => {
@@ -42,7 +46,7 @@ describe('extractErrorSlug', () => {
       extractErrorSlug({
         code: '23505',
         message: 'duplicate key value violates unique constraint "consignacion_revendedora_detalle_item_activo_uk"',
-      })
+      }, REGLAS_CONSIGNACION)
     ).toBe('item-ya-en-consignacion-revendedora')
   })
 
@@ -50,5 +54,17 @@ describe('extractErrorSlug', () => {
     expect(extractErrorSlug(null)).toBe('error-desconocido')
     expect(extractErrorSlug(undefined)).toBe('error-desconocido')
     expect(extractErrorSlug({ message: 'Something completely random broke here' })).toBe('error-desconocido')
+  })
+
+  it('devuelve la línea completa con detalle para las reglas conDetalle', () => {
+    const reglas: ReglaSlug[] = [{ slug: 'precio-no-resoluble', conDetalle: true }]
+    expect(
+      extractErrorSlug({ message: 'sp_x: precio-no-resoluble: producto 7 (sin-precio-lista)\nCONTEXT: ...' }, reglas),
+    ).toBe('precio-no-resoluble: producto 7 (sin-precio-lista)')
+  })
+
+  it('acepta guion bajo en el slug genérico solo si se pide', () => {
+    expect(extractErrorSlug({ message: 'algo_raro' })).toBe('error-desconocido')
+    expect(extractErrorSlug({ message: 'algo_raro' }, [], { guionBajo: true })).toBe('algo_raro')
   })
 })

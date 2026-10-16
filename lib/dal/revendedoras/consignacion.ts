@@ -14,27 +14,15 @@ import { resolverCodigo } from '../inventario/codigo'
 import { listItemsDisponibles } from '../inventario/item'
 import type { ItemProductoRow } from '../../types/inventario'
 import type { LineaCarrito } from '../../types/ventas'
+import { extractErrorSlug, type ReglaSlug } from './slug-error'
 
-export function extractErrorSlug(error: unknown): string {
-  if (!error) return 'error-desconocido'
-  const errObj = typeof error === 'object' && error !== null ? (error as Record<string, unknown>) : null
-  const code = typeof errObj?.code === 'string' ? errObj.code : ''
-  const msg = typeof errObj?.message === 'string' ? errObj.message : String(error)
-
-  if (code === '23505' || msg.includes('consignacion_revendedora_detalle_item_activo_uk')) {
-    return 'item-ya-en-consignacion-revendedora'
-  }
-
-  // Remove potential Postgres prefix e.g. "sp_crear_consignacion_revendedora_con_items: "
-  const cleaned = msg.replace(/^.*sp_[a-zA-Z0-9_]+:\s*/, '').trim()
-  const candidate = cleaned.split(':')[0]?.trim().toLowerCase() || ''
-
-  if (candidate && /^[a-z0-9-]+$/.test(candidate)) {
-    return candidate
-  }
-
-  return 'error-desconocido'
-}
+const REGLAS_SLUG: readonly ReglaSlug[] = [
+  {
+    slug: 'item-ya-en-consignacion-revendedora',
+    codigo: '23505',
+    contiene: ['consignacion_revendedora_detalle_item_activo_uk'],
+  },
+]
 
 export async function listConsignacionesRevendedora(
   idRevendedora: string
@@ -660,7 +648,7 @@ export async function crearConsignacionRevendedora(
   })
 
   if (error) {
-    return { ok: false, reason: extractErrorSlug(error) }
+    return { ok: false, reason: extractErrorSlug(error, REGLAS_SLUG) }
   }
 
   return { ok: true, id_consignacion_revendedora: data as string }
@@ -678,7 +666,7 @@ export async function editarConsignacionRevendedora(
   })
 
   if (error) {
-    return { ok: false, reason: extractErrorSlug(error) }
+    return { ok: false, reason: extractErrorSlug(error, REGLAS_SLUG) }
   }
 
   return { ok: true }
@@ -693,7 +681,7 @@ export async function confirmarConsignacionRevendedora(
   })
 
   if (error) {
-    return { ok: false, reason: extractErrorSlug(error) }
+    return { ok: false, reason: extractErrorSlug(error, REGLAS_SLUG) }
   }
 
   return { ok: true, itemsConfirmados: Number(data) }
@@ -711,7 +699,7 @@ export async function registrarDevolucionRevendedora(
   })
 
   if (error) {
-    return { ok: false, reason: extractErrorSlug(error) }
+    return { ok: false, reason: extractErrorSlug(error, REGLAS_SLUG) }
   }
 
   return { ok: true, itemsDevueltos: Number(data) }
@@ -726,7 +714,7 @@ export async function cerrarConsignacionRevendedora(
   })
 
   if (error) {
-    return { ok: false, reason: extractErrorSlug(error) }
+    return { ok: false, reason: extractErrorSlug(error, REGLAS_SLUG) }
   }
 
   return { ok: true }
@@ -741,7 +729,7 @@ export async function eliminarConsignacionRevendedora(
   })
 
   if (error) {
-    return { ok: false, reason: extractErrorSlug(error) }
+    return { ok: false, reason: extractErrorSlug(error, REGLAS_SLUG) }
   }
 
   return { ok: true }

@@ -13,31 +13,20 @@ import type {
   PagoRevendedoraRow,
   PreviewLiquidacionResponse,
 } from '@/lib/types/revendedoras'
+import { extractErrorSlug, type ReglaSlug } from './slug-error'
 
-function extractErrorSlug(error: { code?: string; message?: string }): string {
-  const msg = error.message || ''
-  const code = error.code || ''
-
-  if (code === '42501' || msg.includes('no-permission')) return 'no-permission'
-  if (msg.includes('modulo-revendedoras-deshabilitado')) return 'modulo-revendedoras-deshabilitado'
-  if (msg.includes('revendedora-not-found')) return 'revendedora-not-found'
-  if (msg.includes('liquidacion-vacia')) return 'liquidacion-vacia'
-  if (msg.includes('detalle-not-found')) return 'detalle-not-found'
-  if (msg.includes('detalle-ya-liquidado')) return 'detalle-ya-liquidado'
-  if (msg.includes('liquidacion-no-encontrada')) return 'liquidacion-no-encontrada'
-  if (msg.includes('liquidacion-ya-pagada')) return 'liquidacion-ya-pagada'
-  if (msg.includes('cuenta-invalida-liquidacion')) return 'cuenta-invalida-liquidacion'
-  if (msg.includes('monto-pago-invalido')) return 'monto-pago-invalido'
-
-  const cleaned = msg.replace(/^.*(?:sp|preview|rf)_[a-zA-Z0-9_]+:\s*/, '').trim()
-  const candidate = cleaned.split(':')[0]?.trim().toLowerCase() || ''
-
-  if (candidate && /^[a-z0-9-]+$/.test(candidate)) {
-    return candidate
-  }
-
-  return 'error-desconocido'
-}
+const REGLAS_SLUG: readonly ReglaSlug[] = [
+  { slug: 'no-permission', codigo: '42501' },
+  { slug: 'modulo-revendedoras-deshabilitado' },
+  { slug: 'revendedora-not-found' },
+  { slug: 'liquidacion-vacia' },
+  { slug: 'detalle-not-found' },
+  { slug: 'detalle-ya-liquidado' },
+  { slug: 'liquidacion-no-encontrada' },
+  { slug: 'liquidacion-ya-pagada' },
+  { slug: 'cuenta-invalida-liquidacion' },
+  { slug: 'monto-pago-invalido' },
+]
 
 export async function previewLiquidacion(
   payload: PreviewLiquidacionPayload,
@@ -50,7 +39,7 @@ export async function previewLiquidacion(
   })
 
   if (error) {
-    return { ok: false, reason: extractErrorSlug(error) }
+    return { ok: false, reason: extractErrorSlug(error, REGLAS_SLUG) }
   }
 
   const res = data as PreviewLiquidacionResponse
@@ -120,7 +109,7 @@ export async function generarLiquidacion(
   })
 
   if (error) {
-    return { ok: false, reason: extractErrorSlug(error) }
+    return { ok: false, reason: extractErrorSlug(error, REGLAS_SLUG) }
   }
 
   return { ok: true, data: data as string }
@@ -136,7 +125,7 @@ export async function excluirDetalleLiquidacion(
   })
 
   if (error) {
-    return { ok: false, reason: extractErrorSlug(error) }
+    return { ok: false, reason: extractErrorSlug(error, REGLAS_SLUG) }
   }
 
   return { ok: true }
@@ -151,7 +140,7 @@ export async function reincluirDetalleLiquidacion(
   })
 
   if (error) {
-    return { ok: false, reason: extractErrorSlug(error) }
+    return { ok: false, reason: extractErrorSlug(error, REGLAS_SLUG) }
   }
 
   return { ok: true }
@@ -171,7 +160,7 @@ export async function marcarLiquidacionPagada(
   })
 
   if (error) {
-    return { ok: false, reason: extractErrorSlug(error) }
+    return { ok: false, reason: extractErrorSlug(error, REGLAS_SLUG) }
   }
 
   return { ok: true }
@@ -188,7 +177,7 @@ export async function obtenerCuentaCorrienteRevendedora(
     .single()
 
   if (error) {
-    return { ok: false, reason: extractErrorSlug(error) }
+    return { ok: false, reason: extractErrorSlug(error, REGLAS_SLUG) }
   }
 
   const row = data as Record<string, unknown>
@@ -218,7 +207,7 @@ export async function listarLiquidacionesRevendedora(
     .limit(200)
 
   if (error) {
-    return { ok: false, reason: extractErrorSlug(error) }
+    return { ok: false, reason: extractErrorSlug(error, REGLAS_SLUG) }
   }
 
   return { ok: true, data: (data ?? []) as LiquidacionRevendedoraRow[] }
@@ -252,7 +241,7 @@ export async function obtenerLiquidacionConDetalle(
     .single()
 
   if (liqErr) {
-    return { ok: false, reason: extractErrorSlug(liqErr) }
+    return { ok: false, reason: extractErrorSlug(liqErr, REGLAS_SLUG) }
   }
 
   const { data: lineasData, error: lineasErr } = await supabase
@@ -269,7 +258,7 @@ export async function obtenerLiquidacionConDetalle(
     .eq('id_liquidacion', idLiquidacion)
 
   if (lineasErr) {
-    return { ok: false, reason: extractErrorSlug(lineasErr) }
+    return { ok: false, reason: extractErrorSlug(lineasErr, REGLAS_SLUG) }
   }
 
   interface DetalleVentaRowJoin {

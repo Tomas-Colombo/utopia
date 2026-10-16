@@ -1,5 +1,5 @@
 import { createServerClient } from '../supabase'
-import { extractErrorSlug } from './consignacion'
+import { extractErrorSlug } from './slug-error'
 import type {
   PanelRevendedoraRow,
   PanelRevendedorasResponse,

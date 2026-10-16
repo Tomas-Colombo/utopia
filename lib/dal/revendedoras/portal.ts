@@ -13,31 +13,20 @@ import type {
   RvpMisLiquidacionesRow,
   RvpMisDeclaracionesRow,
 } from '@/lib/types/revendedoras'
+import { extractErrorSlug, type ReglaSlug } from './slug-error'
 
-function extractErrorSlug(error: { code?: string; message?: string }): string {
-  const msg = error.message || ''
-  const code = error.code || ''
-
-  if (code === '42501' || msg.includes('no-permission')) return 'no-permission'
-  if (msg.includes('modulo-revendedoras-deshabilitado')) return 'modulo-revendedoras-deshabilitado'
-  if (msg.includes('no-revendedora')) return 'no-revendedora'
-  if (msg.includes('item-no-en-poder')) return 'item-no-en-poder'
-  if (msg.includes('declaracion-duplicada')) return 'declaracion-duplicada'
-  if (msg.includes('declaracion-no-encontrada')) return 'declaracion-no-encontrada'
-  if (msg.includes('declaracion-no-pendiente')) return 'declaracion-no-pendiente'
-  if (msg.includes('item-not-found')) return 'item-not-found'
-  if (msg.includes('item-invalido')) return 'item-invalido'
-  if (msg.includes('item-no-disponible')) return 'item-no-disponible'
-
-  const cleaned = msg.replace(/^.*(?:sp|rvp|rf)_[a-zA-Z0-9_]+:\s*/, '').trim()
-  const candidate = cleaned.split(':')[0]?.trim().toLowerCase() || ''
-
-  if (candidate && /^[a-z0-9-]+$/.test(candidate)) {
-    return candidate
-  }
-
-  return 'error-desconocido'
-}
+const REGLAS_SLUG: readonly ReglaSlug[] = [
+  { slug: 'no-permission', codigo: '42501' },
+  { slug: 'modulo-revendedoras-deshabilitado' },
+  { slug: 'no-revendedora' },
+  { slug: 'item-no-en-poder' },
+  { slug: 'declaracion-duplicada' },
+  { slug: 'declaracion-no-encontrada' },
+  { slug: 'declaracion-no-pendiente' },
+  { slug: 'item-not-found' },
+  { slug: 'item-invalido' },
+  { slug: 'item-no-disponible' },
+]
 
 export async function obtenerMiCuenta(
   session: Session,
@@ -47,7 +36,7 @@ export async function obtenerMiCuenta(
   const { data, error } = await supabase.rpc('rvp_mi_cuenta')
 
   if (error) {
-    return { ok: false, reason: extractErrorSlug(error) }
+    return { ok: false, reason: extractErrorSlug(error, REGLAS_SLUG) }
   }
 
   const row = Array.isArray(data) ? data[0] : data
@@ -98,7 +87,7 @@ export async function listarMiStock(
   })
 
   if (error) {
-    return { ok: false, reason: extractErrorSlug(error) }
+    return { ok: false, reason: extractErrorSlug(error, REGLAS_SLUG) }
   }
 
   return {
@@ -128,7 +117,7 @@ export async function listarMisVentas(
   })
 
   if (error) {
-    return { ok: false, reason: extractErrorSlug(error) }
+    return { ok: false, reason: extractErrorSlug(error, REGLAS_SLUG) }
   }
 
   return {
@@ -161,7 +150,7 @@ export async function listarMisLiquidaciones(
   })
 
   if (error) {
-    return { ok: false, reason: extractErrorSlug(error) }
+    return { ok: false, reason: extractErrorSlug(error, REGLAS_SLUG) }
   }
 
   return {
@@ -192,7 +181,7 @@ export async function listarMisDeclaraciones(
   })
 
   if (error) {
-    return { ok: false, reason: extractErrorSlug(error) }
+    return { ok: false, reason: extractErrorSlug(error, REGLAS_SLUG) }
   }
 
   return {
@@ -224,7 +213,7 @@ export async function declararVentaRevendedora(
   })
 
   if (error) {
-    return { ok: false, reason: extractErrorSlug(error) }
+    return { ok: false, reason: extractErrorSlug(error, REGLAS_SLUG) }
   }
 
   return { ok: true, data: data as string }
@@ -241,7 +230,7 @@ export async function retirarDeclaracion(
   })
 
   if (error) {
-    return { ok: false, reason: extractErrorSlug(error) }
+    return { ok: false, reason: extractErrorSlug(error, REGLAS_SLUG) }
   }
 
   return { ok: true }

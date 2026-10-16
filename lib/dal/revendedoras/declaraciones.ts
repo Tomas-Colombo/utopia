@@ -9,32 +9,18 @@ import type {
   DeclaracionesLocalQuery,
 } from '@/lib/validation/revendedoras'
 import type { DeclaracionVentaLocalRow } from '@/lib/types/revendedoras'
+import { extractErrorSlug, type ReglaSlug } from './slug-error'
 
-function extractErrorSlug(error: { code?: string; message?: string }): string {
-  const msg = error.message || ''
-  const code = error.code || ''
-
-  if (code === '42501' || msg.includes('no-permission')) return 'no-permission'
-  if (msg.includes('modulo-revendedoras-deshabilitado')) return 'modulo-revendedoras-deshabilitado'
-  if (msg.includes('precio-no-resoluble')) {
-    const match = msg.match(/precio-no-resoluble[^\n]*/)
-    return match ? match[0].trim() : 'precio-no-resoluble'
-  }
-  if (msg.includes('declaracion-no-encontrada')) return 'declaracion-no-encontrada'
-  if (msg.includes('declaracion-no-pendiente')) return 'declaracion-no-pendiente'
-  if (msg.includes('motivo-requerido')) return 'motivo-requerido'
-  if (msg.includes('item-no-disponible')) return 'item-no-disponible'
-  if (msg.includes('item-no-en-revendedora')) return 'item-no-en-revendedora'
-
-  const cleaned = msg.replace(/^.*(?:sp|rvp|rf)_[a-zA-Z0-9_]+:\s*/, '').trim()
-  const candidate = cleaned.split(':')[0]?.trim().toLowerCase() || ''
-
-  if (candidate && /^[a-z0-9-]+$/.test(candidate)) {
-    return candidate
-  }
-
-  return 'error-desconocido'
-}
+const REGLAS_SLUG: readonly ReglaSlug[] = [
+  { slug: 'no-permission', codigo: '42501' },
+  { slug: 'modulo-revendedoras-deshabilitado' },
+  { slug: 'precio-no-resoluble', conDetalle: true },
+  { slug: 'declaracion-no-encontrada' },
+  { slug: 'declaracion-no-pendiente' },
+  { slug: 'motivo-requerido' },
+  { slug: 'item-no-disponible' },
+  { slug: 'item-no-en-revendedora' },
+]
 
 export async function listarDeclaracionesLocal(
   session: Session,
@@ -95,7 +81,7 @@ export async function listarDeclaracionesLocal(
   const { data, count, error } = await q
 
   if (error) {
-    return { ok: false, reason: extractErrorSlug(error) }
+    return { ok: false, reason: extractErrorSlug(error, REGLAS_SLUG) }
   }
 
   interface DeclaracionDbRow {
@@ -161,7 +147,7 @@ export async function confirmarDeclaracionVenta(
   })
 
   if (error) {
-    return { ok: false, reason: extractErrorSlug(error) }
+    return { ok: false, reason: extractErrorSlug(error, REGLAS_SLUG) }
   }
 
   return { ok: true, data: data as string }
@@ -183,7 +169,7 @@ export async function rechazarDeclaracionVenta(
   })
 
   if (error) {
-    return { ok: false, reason: extractErrorSlug(error) }
+    return { ok: false, reason: extractErrorSlug(error, REGLAS_SLUG) }
   }
 
   return { ok: true }
