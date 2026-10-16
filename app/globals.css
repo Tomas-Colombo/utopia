@@ -38,7 +38,8 @@
   --sidebar: #141416;
   --band: #1C1C20;
   --band-ink: #F1F0EE;
-  --band-muted: #A6A6AD;
+  --band-muted: #B9AEBD;
+  --band-label: #8E7F93;
   --band-line: rgb(255 255 255 / 0.12);
 
   /* Contrast block — primary button on a light page; inverts in dark */
@@ -89,9 +90,9 @@
 
   /* Navigation rail internals. The rail is dark in BOTH themes, so its text
      can never ride on --ink. */
-  --sidebar-ink: #9A9AA0;
-  --sidebar-ink-2: #8E8E95;
-  --sidebar-ink-3: #84848B;
+  --sidebar-ink: #B9AEBD;
+  --sidebar-ink-2: #7A6A80;
+  --sidebar-ink-3: #7A6A80;
   --sidebar-ink-hi: #E8E7E5;
   --sidebar-ink-hi-2: #F1F0EE;
   --sidebar-line: rgb(255 255 255 / 0.08);
@@ -125,7 +126,10 @@
 }
 
 /* ---- Dark ---------------------------------------------------------------- */
-:root[data-theme="dark"] {
+/* `.auth-surface` (login, settings) is ALWAYS dark: it takes the same palette
+   whatever the stored theme is. */
+:root[data-theme="dark"],
+.auth-surface {
   color-scheme: dark;
 
   --bg: #0F0F11;
@@ -142,7 +146,8 @@
   --sidebar: #0B0B0D;
   --band: #141416;
   --band-ink: #F1F0EE;
-  --band-muted: #A6A6AD;
+  --band-muted: #B9AEBD;
+  --band-label: #8E7F93;
   --band-line: rgb(255 255 255 / 0.10);
 
   --block: #F1F0EE;
@@ -172,9 +177,9 @@
   --ok-bg: color-mix(in oklab, var(--ok) 10%, var(--bg));
   --warn-bg: color-mix(in oklab, var(--warn) 10%, var(--bg));
 
-  --sidebar-ink: #9A9AA0;
-  --sidebar-ink-2: #8E8E95;
-  --sidebar-ink-3: #84848B;
+  --sidebar-ink: #B9AEBD;
+  --sidebar-ink-2: #7A6A80;
+  --sidebar-ink-3: #7A6A80;
   --sidebar-ink-hi: #E8E7E5;
   --sidebar-ink-hi-2: #F1F0EE;
   --sidebar-line: rgb(255 255 255 / 0.06);
@@ -202,6 +207,7 @@
   --color-band: var(--band);
   --color-band-ink: var(--band-ink);
   --color-band-muted: var(--band-muted);
+  --color-band-label: var(--band-label);
   --color-band-line: var(--band-line);
   --color-block: var(--block);
   --color-block-ink: var(--block-ink);
@@ -344,6 +350,27 @@
     letter-spacing: 0.14em;
     text-transform: uppercase;
   }
+}
+
+/* ---- Auth surface ----------------------------------------------------------
+   The auth pages are fixed to dark (the palette comes from the dark block
+   above, selected by `.auth-surface`). The dark --bg (#0F0F11) is near-black,
+   nothing like the Grafito of the app shell (rail / band, #1C1C20), so --bg is
+   re-seated here: page, legibility scrim and backdrop read as the same
+   graphite. Declared after the dark block so it wins at equal specificity. */
+.auth-surface {
+  --bg: #1C1C20;
+  /* Aliases are resolved where they are declared (:root), so with a stored
+     light theme they would stay light here: restate them. */
+  --text: var(--ink);
+  --topbar: color-mix(in srgb, var(--bg) 85%, transparent);
+  --border: var(--line);
+  --border-2: var(--line-2);
+  --card: var(--panel);
+  --card-2: var(--panel-2);
+  --card-3: var(--sw1);
+  --card-4: var(--sw2);
+  --success: var(--ok);
 }
 
 /* ---- Dark band scope -------------------------------------------------------

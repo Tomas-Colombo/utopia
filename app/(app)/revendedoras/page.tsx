@@ -1,3 +1,4 @@
+import { BandAction } from '@/components/shell/BandAction'
 import { Topbar } from '@/components/shell/Topbar'
 import { verifySession } from '@/lib/dal/session'
 import { hasPermission } from '@/lib/dal/guard'
@@ -75,12 +76,25 @@ export default async function RevendedorasPage(props: PageProps) {
             sub: `${panelData.totales.liquidaciones_pendientes_cant} por cobrar`,
           },
         ]}
+        actions={
+          <>
+            {canCreate && (
+              <BandAction
+                href="/revendedoras/nuevo"
+                tone="primary"
+                title="Nueva revendedora"
+                description="Dar de alta y asignar mercadería."
+              />
+            )}
+            <BandAction href="/revendedoras/declaraciones" title="Declaraciones" description="Ventas declaradas por revisar" />
+            <BandAction href="/revendedoras/comisiones" title="Reglas de comisión" />
+          </>
+        }
       />
       <main className="flex-1 p-6">
         <RevendedorasPanelView
           data={panelData.revendedoras}
           total={panelData.total}
-          canCreate={canCreate}
           filtros={{
             desde: query.desde,
             hasta: query.hasta,

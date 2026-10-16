@@ -1,6 +1,6 @@
 import Link from 'next/link'
+import { BandAction } from '@/components/shell/BandAction'
 import { Topbar } from '@/components/shell/Topbar'
-import { Button } from '@/components/ui/Button'
 import { hasPermission } from '@/lib/dal/guard'
 import { verifySession } from '@/lib/dal/session'
 import { listConsignaciones } from '@/lib/dal/consignaciones/consignacion'
@@ -116,9 +116,12 @@ export default async function ConsignacionesPage(props: {
           { label: 'Ítems devueltos', value: devueltosTotales.toString() },
         ]}
         actions={
-          <Link href="/consignaciones/nueva">
-            <Button size="sm">Nueva devolución</Button>
-          </Link>
+          <BandAction
+            href="/consignaciones/nueva"
+            tone="primary"
+            title="Nueva devolución"
+            description="Devolver mercadería a un proveedor."
+          />
         }
       />
       <main className="flex-1 p-6 space-y-6">

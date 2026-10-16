@@ -21,7 +21,7 @@ export default function AuthLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <div className="relative flex flex-1 items-center justify-center overflow-hidden bg-bg px-4 py-12">
+    <div className="auth-surface relative flex flex-1 items-center justify-center overflow-hidden bg-bg px-4 py-12">
       <AuthBackdrop />
       <div className="relative z-10 w-full max-w-md">{children}</div>
     </div>

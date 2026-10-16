@@ -150,7 +150,8 @@ export function FiltroPeriodo({
         </div>
       ))}
 
-      <div className="flex flex-wrap gap-2 ml-auto">
+      <div className="ml-auto flex flex-wrap items-center gap-2">
+        <div className="flex rounded-[5px] bg-white/[0.06] p-[3px]">
         {PRESETS.map((p) => (
           <Button
             key={p.id}
@@ -163,6 +164,7 @@ export function FiltroPeriodo({
             {p.label}
           </Button>
         ))}
+        </div>
         <Button type="submit" disabled={pendiente || rangoInvertido}>
           {pendiente ? 'Filtrando…' : 'Aplicar'}
         </Button>

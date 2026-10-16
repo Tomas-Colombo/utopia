@@ -1,6 +1,6 @@
 import Link from 'next/link'
+import { BandAction } from '@/components/shell/BandAction'
 import { Topbar } from '@/components/shell/Topbar'
-import { Button } from '@/components/ui/Button'
 import { verifySession } from '@/lib/dal/session'
 import {
   listCategoriasGasto,
@@ -60,14 +60,10 @@ export default async function GastosPage({
           { label: 'Categorías activas', value: presupuestos.length.toString() },
         ]}
         actions={
-          <div className="flex gap-2">
-            <Link href="/gastos/presupuestos">
-              <Button size="sm" variant="secondary">Presupuestos</Button>
-            </Link>
-            <Link href="/gastos/nuevo">
-              <Button size="sm">Nuevo gasto</Button>
-            </Link>
-          </div>
+          <>
+            <BandAction href="/gastos/nuevo" tone="primary" title="Nuevo gasto" description="Registrar un gasto del local." />
+            <BandAction href="/gastos/presupuestos" title="Presupuestos" description="Límites por categoría" />
+          </>
         }
       />
       <main className="flex-1 p-6 space-y-6">

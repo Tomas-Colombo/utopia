@@ -16,6 +16,8 @@ interface PageBandProps {
    *  a link named like a sidebar item would double the nav landmark. */
   breadcrumb: string[]
   title: string
+  /** One line under the title (scope, counts). */
+  subtitle?: ReactNode
   /** Period filter etc. Rendered inside the `band-scope`, so ordinary
    *  Input/Button/Field components re-theme themselves for the dark strip. */
   filters?: ReactNode
@@ -41,13 +43,14 @@ interface PageBandProps {
  * strip, which is what lets the shared form components work on a dark surface
  * without per-call overrides.
  */
-export function PageBand({ breadcrumb, title, filters, kpis, actions, backHref, backLabel }: PageBandProps) {
+export function PageBand({ breadcrumb, title, subtitle, filters, kpis, actions, backHref, backLabel }: PageBandProps) {
+  const hasKpis = !!kpis && kpis.length > 0
   return (
     <header aria-label="Barra superior" className="band-scope bg-band text-band-ink">
-      <div className="flex flex-col gap-4 px-6 pl-16 pt-4 md:pl-6">
+      <div className="flex flex-col gap-3.5 px-6 pl-16 pb-4 pt-3 md:px-6 md:pb-5">
         <div className="flex items-center justify-between gap-4">
           <nav aria-label="Ubicación">
-            <ol className="eyebrow flex items-center gap-2 text-band-muted">
+            <ol className="eyebrow flex items-center gap-2 text-band-label">
               {breadcrumb.map((item, i) => {
                 const last = i === breadcrumb.length - 1
                 return (
@@ -79,39 +82,43 @@ export function PageBand({ breadcrumb, title, filters, kpis, actions, backHref, 
                 </svg>
               </Link>
             )}
-            <h1 className="font-display text-[32px] uppercase leading-[.9] text-band-ink">
-              {title}
-            </h1>
+            <div className="flex min-w-0 flex-col gap-2">
+              <h1 className="font-display text-3xl text-band-ink md:text-[38px]">{title}</h1>
+              {subtitle && <p className="text-[13px] text-band-muted">{subtitle}</p>}
+            </div>
           </div>
           {filters}
+          {/* Without KPIs there is no column to hang the actions on: they sit on the title row. */}
+          {!hasKpis && actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
         </div>
 
-        {(kpis?.length || actions) && (
-          <div className="flex flex-col gap-4 border-t border-band-line md:flex-row md:items-center md:justify-between">
-            {kpis && kpis.length > 0 ? (
-              <dl className="grid grid-cols-2 md:flex">
+        {hasKpis && (
+          <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_260px]">
+            {kpis && (
+              <dl
+                style={{ ["--kpi-cols" as string]: `minmax(0,1.7fr) repeat(${kpis.length - 1},minmax(0,1fr))` }}
+                className="grid grid-cols-2 border-t border-band-line md:[grid-template-columns:var(--kpi-cols)]"
+              >
                 {kpis.map((k) => (
                   <div
                     key={k.label}
-                    className="min-w-0 py-4 pr-4 md:pr-8 md:[&:not(:first-child)]:border-l md:[&:not(:first-child)]:border-band-line md:[&:not(:first-child)]:pl-8"
+                    className="flex min-w-0 flex-col gap-2 pb-1 pr-4 pt-3 md:[&:not(:first-child)]:border-l md:[&:not(:first-child)]:border-band-line md:[&:not(:first-child)]:pl-4"
                   >
-                    <dt className="eyebrow text-band-muted">{k.label}</dt>
+                    <dt className="eyebrow text-band-label">{k.label}</dt>
                     <dd
-                      className={`font-figure mt-1 text-2xl leading-tight [overflow-wrap:anywhere] ${
+                      className={`font-figure text-[28px] leading-none [overflow-wrap:anywhere] md:text-[32px] ${
                         k.tone === 'warn' ? 'text-warn-on-dark' : 'text-band-ink'
                       }`}
                     >
                       {k.value}
                     </dd>
-                    {k.sub && <div className="mt-1 text-xs text-band-muted">{k.sub}</div>}
+                    {k.sub && <div className="text-xs text-band-muted">{k.sub}</div>}
                   </div>
                 ))}
               </dl>
-            ) : (
-              <span />
             )}
             {actions && (
-              <div className={`flex flex-wrap items-center gap-2 ${kpis?.length ? 'pb-4 md:pb-0' : 'py-4'}`}>
+              <div className="flex flex-col gap-2 [&_a]:block [&_button]:w-full [&_button]:justify-between">
                 {actions}
               </div>
             )}

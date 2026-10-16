@@ -17,7 +17,6 @@ import { RevendedorasFiltrosBar } from './RevendedorasFiltrosBar'
 interface RevendedorasPanelViewProps {
   data: PanelRevendedoraRow[]
   total: number
-  canCreate: boolean
   filtros: {
     desde?: string
     hasta?: string
@@ -32,7 +31,6 @@ interface RevendedorasPanelViewProps {
 export function RevendedorasPanelView({
   data,
   total,
-  canCreate,
   filtros,
 }: RevendedorasPanelViewProps) {
   const router = useRouter()
@@ -254,21 +252,10 @@ export function RevendedorasPanelView({
       {/* Acciones principales */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <Button variant="secondary" onClick={() => router.push('/revendedoras/declaraciones')}>
-            Declaraciones
-          </Button>
-          <Button variant="secondary" onClick={() => router.push('/revendedoras/comisiones')}>
-            Reglas de comisión
-          </Button>
           <Button variant="secondary" onClick={exportarCsv} disabled={data.length === 0}>
             Exportar CSV
           </Button>
         </div>
-        {canCreate && (
-          <Button onClick={() => router.push('/revendedoras/nuevo')}>
-            Nueva revendedora
-          </Button>
-        )}
       </div>
 
       {/* Barra de Filtros Unificada */}

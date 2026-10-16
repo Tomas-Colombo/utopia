@@ -12,6 +12,8 @@ import { PageBand, type BandKpi } from './PageBand'
  */
 interface TopbarProps {
   title: string
+  /** One line under the title, same contract as `PageBand`. */
+  subtitle?: React.ReactNode
   session: Session
   actions?: React.ReactNode
   backHref?: string
@@ -22,11 +24,12 @@ interface TopbarProps {
   filters?: React.ReactNode
 }
 
-export function Topbar({ title, actions, backHref, backLabel, kpis, filters }: TopbarProps) {
+export function Topbar({ title, subtitle, actions, backHref, backLabel, kpis, filters }: TopbarProps) {
   return (
     <PageBand
       breadcrumb={[title]}
       title={title}
+      subtitle={subtitle}
       actions={actions}
       kpis={kpis}
       filters={filters}

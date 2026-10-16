@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { BandAction } from '@/components/shell/BandAction'
 import { Topbar } from '@/components/shell/Topbar'
 import { Button } from '@/components/ui/Button'
 import { verifySession } from '@/lib/dal/session'
@@ -70,6 +71,7 @@ export default async function InventarioHome(props: {
     <>
       <Topbar
         title="Inventario"
+        subtitle={`${resumen.productosActivos} productos activos`}
         session={session}
         kpis={[
           { label: 'Stock disponible', value: resumen.stockDisponibleTotal.toLocaleString('es-AR') },
@@ -77,18 +79,26 @@ export default async function InventarioHome(props: {
           { label: 'Bajo mínimo', value: resumen.productosBajoMinimo.toString(), tone: resumen.productosBajoMinimo > 0 ? 'warn' : 'default' },
           { label: 'Proveedores', value: proveedoresActivos.toString() },
         ]}
-        actions={
+        filters={
           <div className="flex items-center gap-2">
-            <Link href="/inventario/ingresos/nuevo">
-              <Button size="sm">Nuevo ingreso</Button>
+            <Link href="/inventario/categorias">
+              <Button size="sm" variant="secondary">Categorías</Button>
             </Link>
             <Link href="/inventario/productos/nuevo">
-              <Button size="sm">Nuevo producto</Button>
-            </Link>
-            <Link href="/inventario/categorias">
-              <Button size="sm">Categorías</Button>
+              <Button size="sm" variant="secondary">Nuevo producto</Button>
             </Link>
           </div>
+        }
+        actions={
+          <>
+            <BandAction
+              href="/inventario/ingresos/nuevo"
+              tone="primary"
+              title="Nuevo ingreso"
+              description="Cargar mercadería de proveedor y actualizar stock."
+            />
+            <BandAction href="/inventario/ficha" title="Escanear QR" description="Abre la ficha del producto" />
+          </>
         }
       />
       <main className="flex-1 p-6 space-y-6">

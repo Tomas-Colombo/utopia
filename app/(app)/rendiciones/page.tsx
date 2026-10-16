@@ -1,7 +1,7 @@
 import Link from 'next/link'
+import { BandAction } from '@/components/shell/BandAction'
 import { Topbar } from '@/components/shell/Topbar'
 import { Badge } from '@/components/ui/Badge'
-import { Button } from '@/components/ui/Button'
 import { verifySession } from '@/lib/dal/session'
 import { listRendiciones } from '@/lib/dal/rendiciones/rendicion'
 import {
@@ -32,9 +32,12 @@ export default async function RendicionesPage() {
           { label: 'Pagadas', value: (rows.length - pendientes.length).toString() },
         ]}
         actions={
-          <Link href="/rendiciones/nueva">
-            <Button size="sm">Generar rendición</Button>
-          </Link>
+          <BandAction
+            href="/rendiciones/nueva"
+            tone="primary"
+            title="Generar rendición"
+            description="Armar la rendición de un proveedor."
+          />
         }
       />
       <main className="flex-1 p-6 space-y-6">

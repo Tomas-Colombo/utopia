@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import { BandAction } from '@/components/shell/BandAction'
 import { PageBand } from '@/components/shell/PageBand'
 import { Button } from '@/components/ui/Button'
 import { StatusDot } from '@/components/ui/StatusMark'
@@ -101,6 +102,7 @@ export default async function VentasHome(props: {
       <PageBand
         breadcrumb={['Ventas']}
         title="Ventas"
+        subtitle={`${resumen.registradas} operaciones registradas`}
         filters={
           <FiltroPeriodo
             basePath="/ventas"
@@ -143,16 +145,18 @@ export default async function VentasHome(props: {
         ]}
         actions={
           <>
-            <Link href="/ventas/reservas">
-              <Button size="sm" variant="secondary">
-                Reservas
-              </Button>
-            </Link>
-            <Link href="/ventas/nueva">
-              <Button size="sm" variant="accent">
-                Nueva venta
-              </Button>
-            </Link>
+            <BandAction
+              href="/ventas/nueva"
+              tone="primary"
+              title="Nueva venta"
+              description="Escaneo QR + búsqueda manual. Precio según forma de pago."
+            />
+            <BandAction
+              href="/ventas/reservas"
+              title="Reservas"
+              description="Cancelar o convertir en venta"
+              badge={proximasVencer > 0 ? `${proximasVencer} vencen` : undefined}
+            />
           </>
         }
       />
