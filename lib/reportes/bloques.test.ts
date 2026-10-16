@@ -78,6 +78,29 @@ describe('bloquesVisibles', () => {
     expect(bloques).not.toContain('revendedoras')
   })
 
+  it('no retorna revendedoras si tiene permiso ver pero el módulo está deshabilitado', () => {
+    const session = {
+      rolId: '123',
+      tenantId: '123',
+      modulosHabilitados: ['ventas'],
+      permisos: { revendedoras: ['ver'], ventas: ['ver'] }
+    } as unknown as Session
+    const bloques = bloquesVisibles(session)
+    expect(bloques).not.toContain('revendedoras')
+    expect(bloques).toContain('resultados')
+  })
+
+  it('no retorna revendedoras si el módulo está habilitado pero no tiene permisos en revendedoras', () => {
+    const session = {
+      rolId: '123',
+      tenantId: '123',
+      modulosHabilitados: ['revendedoras'],
+      permisos: {}
+    } as unknown as Session
+    const bloques = bloquesVisibles(session)
+    expect(bloques).not.toContain('revendedoras')
+  })
+
   it('retorna vacío si no tiene modulos', () => {
     const session = {
       rolId: '123',
@@ -100,3 +123,4 @@ describe('bloquesVisibles', () => {
     expect(bloques.length).toBe(0)
   })
 })
+

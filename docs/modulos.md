@@ -17,8 +17,10 @@ de la tabla `modulo`. Si cambia el mapeo, se actualiza acá en el mismo commit.
 | `rendiciones` | `rendiciones` | `rendiciones` |
 | `reportes` | `reportes` | `reportes` |
 | `revendedoras` | `revendedoras` | `revendedoras` |
+| `app/(revendedora)/mi-cuenta` | `revendedoras` (`ver_propio`) | `revendedoras` (portal) |
 | `ventas` | `ventas` | `ventas` |
 | — (sin ruta propia) | — | `reservas` |
+
 
 Permisos existentes (9): administracion, consignaciones, gastos, inventario,
 precios, rendiciones, reportes, revendedoras, ventas. **No existen** `clientes`, `cuotas` ni

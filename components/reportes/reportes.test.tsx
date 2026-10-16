@@ -7,6 +7,14 @@ import { GraficoTendencia } from './GraficoTendencia'
 import { BloqueCobrar } from './BloqueCobrar'
 import { BloqueError } from './BloqueError'
 
+import { BloqueRevendedoras } from './BloqueRevendedoras'
+import { fireEvent } from '@testing-library/react'
+import type {
+  ResumenCanalRow,
+  PerfilRevendedoraRow,
+  CumplimientoObjetivosRow,
+} from '@/lib/types/reportes'
+
 describe('Componentes de Reportes (Bloques 1-5)', () => {
   const mockResultados = {
     mes: '2026-10-01',
@@ -103,11 +111,22 @@ describe('Componentes de Reportes (Bloques 1-5)', () => {
     expect(screen.getByRole('link')).toBeDefined()
   })
 
-  it('renderiza BloqueError', () => {
-    render(<BloqueError onRetry={() => {}} />)
-    expect(screen.getByText('Reintentar')).toBeDefined()
+  it('renderiza BloqueError aislado sin onRetry', () => {
+    render(<BloqueError />)
+    expect(screen.getByText('No pudimos cargar esto. Probá de nuevo en un momento.')).toBeDefined()
+    expect(screen.queryByText('Reintentar')).toBeNull()
+  })
+
+  it('renderiza BloqueError con onRetry y ejecuta callback al hacer clic', () => {
+    const retryFn = vi.fn()
+    render(<BloqueError onRetry={retryFn} />)
+    const btn = screen.getByText('Reintentar')
+    expect(btn).toBeDefined()
+    fireEvent.click(btn)
+    expect(retryFn).toHaveBeenCalledTimes(1)
   })
 })
+
 
 import { BloqueMercaderia } from './BloqueMercaderia'
 import { BloqueProveedores } from './BloqueProveedores'
@@ -169,3 +188,136 @@ describe('Componentes de Reportes (Bloques 6-9)', () => {
     expect(screen.getByText('Exportar CSV')).toBeDefined()
   })
 })
+
+describe('BloqueRevendedoras (Reportes)', () => {
+  const mockResumenCanal: ResumenCanalRow = {
+    ventas_local_monto: 30000,
+    ventas_local_cant: 3,
+    ventas_revendedora_monto: 50000,
+    ventas_revendedora_cant: 5,
+    comision_revendedora_monto: 5000,
+    stock_central_cant: 20,
+    stock_central_valor: 100000,
+    stock_revendedoras_cant: 12,
+    stock_revendedoras_valor: 30000,
+  }
+
+  const mockPerfiles: PerfilRevendedoraRow[] = [
+    {
+      id_revendedora: 'rev-1',
+      nombre: 'Lucía',
+      apellido: 'Gómez',
+      telefono: '11223344',
+      email: 'lucia@example.com',
+      estado: 'activo',
+      piezas_en_poder: 6,
+      valor_en_poder: 15000,
+      total_vendido: 25000,
+      comision_liquidada: 2500,
+      comision_estimada: 1250,
+      adeudado: 8000,
+      cantidad_ventas: 5,
+      ticket_promedio: 5000,
+      piezas_entregadas_historico: 10,
+      rotacion_pct: 62.5,
+    },
+    {
+      id_revendedora: 'rev-2',
+      nombre: 'Ana',
+      apellido: 'Pérez',
+      telefono: '11223355',
+      email: 'ana@example.com',
+      estado: 'activo',
+      piezas_en_poder: 6,
+      valor_en_poder: 15000,
+      total_vendido: 25000,
+      comision_liquidada: 2500,
+      comision_estimada: 1250,
+      adeudado: 0,
+      cantidad_ventas: 5,
+      ticket_promedio: 5000,
+      piezas_entregadas_historico: 12,
+      rotacion_pct: 50,
+    },
+  ]
+
+  const mockObjetivos: CumplimientoObjetivosRow[] = [
+    {
+      id_revendedora: 'rev-1',
+      nombre: 'Lucía',
+      apellido: 'Gómez',
+      vendido_periodo: 25000,
+      id_regla: 'regla-1',
+      tramo_actual_desde: 0,
+      porcentaje_actual: 10,
+      proximo_tramo_desde: 30000,
+      proximo_porcentaje: 15,
+      falta_para_proximo: 5000,
+    },
+  ]
+
+  it('renderiza resumen del canal y tabla de perfiles', () => {
+    render(
+      <BloqueRevendedoras
+        resumenCanal={mockResumenCanal}
+        perfiles={mockPerfiles}
+        objetivos={mockObjetivos}
+        desde="2026-10-01"
+        hasta="2026-10-31"
+      />
+    )
+    expect(screen.getByText('Canal Revendedoras')).toBeDefined()
+    expect(screen.getByText('Gómez, Lucía')).toBeDefined()
+    expect(screen.getByText('Pérez, Ana')).toBeDefined()
+    expect(screen.getByText('Exportar CSV')).toBeDefined()
+  })
+
+  it('exporta CSV aplicando csvNegative a saldos adeudados mayores a cero', () => {
+    let capturedContent = ''
+    const createObjectURL = vi.fn().mockReturnValue('blob:http://localhost/csv-123')
+    const revokeObjectURL = vi.fn()
+    vi.stubGlobal('URL', { createObjectURL, revokeObjectURL })
+
+    class MockBlob {
+      constructor(content: BlobPart[]) {
+        capturedContent = content.join('')
+      }
+    }
+    vi.stubGlobal('Blob', MockBlob)
+
+    const clickMock = vi.fn()
+    const origCreateElement = document.createElement.bind(document)
+    const createElementSpy = vi.spyOn(document, 'createElement').mockImplementation(((tagName: string) => {
+      if (tagName === 'a') {
+        return { click: clickMock, setAttribute: vi.fn(), href: '', download: '' } as unknown as HTMLElement
+      }
+      return origCreateElement(tagName)
+    }) as unknown as typeof document.createElement)
+
+    render(
+      <BloqueRevendedoras
+        resumenCanal={mockResumenCanal}
+        perfiles={mockPerfiles}
+        objetivos={mockObjetivos}
+        desde="2026-10-01"
+        hasta="2026-10-31"
+      />
+    )
+
+    const exportBtn = screen.getByText('Exportar CSV')
+    fireEvent.click(exportBtn)
+
+    expect(clickMock).toHaveBeenCalled()
+    expect(capturedContent).toContain('"Gómez, Lucía"')
+    // Con adeudado 8000 > 0, csvNegative(8000) genera "-8000" y escapeCsvField lo sanitiza a "'-8000"
+    expect(capturedContent).toContain(`"'-8000"`)
+    // Con adeudado 0, no aplica csvNegative y queda "0" sin signo negativo
+    expect(capturedContent).toContain(',"0",')
+
+
+    createElementSpy.mockRestore()
+    vi.unstubAllGlobals()
+  })
+
+})
+

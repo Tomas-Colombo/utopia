@@ -1,6 +1,6 @@
-import { barraSuperior, contenido, fillEstable } from '../pages/AppShell'
+import { contenido } from '../pages/AppShell'
 import { expect, test } from '../fixtures/test'
-import { isoDate } from '../support/data'
+import { serviceRoleClient } from '../support/supabase'
 
 test.describe('Rendiciones', () => {
   test('el listado muestra el estado vacío del tenant nuevo', async ({ page, shell }) => {
@@ -38,7 +38,7 @@ test.describe('Reportes', () => {
     await page.goto('/reportes')
 
     await expect(shell.titulo).toHaveText('Tablero financiero')
-    await expect(page.getByText('Vendiste')).toBeVisible()
+    await expect(page.getByText('Vendiste', { exact: true })).toBeVisible()
 
     // El gráfico de tendencia debe terminar en el mes actual
     const mesActual = Intl.DateTimeFormat('es-AR', { month: 'short', year: '2-digit' }).format(new Date())
@@ -48,14 +48,81 @@ test.describe('Reportes', () => {
   test('cambiar el período se refleja en la URL', async ({ page }) => {
     await page.goto('/reportes')
 
-    const desde = isoDate(-30)
-    const hasta = isoDate(0)
+    await page.getByRole('button', { name: 'Mes anterior' }).click()
 
-    await fillEstable(barraSuperior(page).getByLabel(/^Desde/), desde)
-    await fillEstable(barraSuperior(page).getByLabel(/^Hasta/), hasta)
-    await page.getByRole('button', { name: 'Aplicar' }).click()
+    await expect(page).toHaveURL(/desde=\d{4}-\d{2}-\d{2}/)
+    await expect(page).toHaveURL(/hasta=\d{4}-\d{2}-\d{2}/)
+  })
 
-    await expect(page).toHaveURL(new RegExp(`desde=${desde}`))
-    await expect(page).toHaveURL(new RegExp(`hasta=${hasta}`))
+  test('el bloque Canal Revendedoras está visible con módulo y permiso activos', async ({ page }) => {
+    await page.goto('/reportes')
+    await expect(page.getByText('Canal Revendedoras')).toBeVisible()
+    await expect(page.locator('section').filter({ hasText: 'Canal Revendedoras' }).getByRole('button', { name: 'Exportar CSV' })).toBeVisible()
+  })
+
+  test('el bloque Canal Revendedoras se oculta cuando el módulo está deshabilitado', async ({ page, seed }) => {
+    const sr = serviceRoleClient()
+    const { data: mod } = await sr
+      .from('modulo')
+      .select('id_modulo')
+      .eq('codigo', 'revendedoras')
+      .single()
+    expect(mod?.id_modulo).toBeDefined()
+
+    // Apagar módulo revendedoras para el tenant
+    await sr
+      .from('tenant_modulo')
+      .update({ habilitado: false })
+      .eq('id_tenant', seed.tenantId)
+      .eq('id_modulo', mod!.id_modulo)
+
+    try {
+      await page.goto('/reportes')
+      await expect(page.getByRole('heading', { name: 'Tablero financiero' })).toBeVisible()
+      await expect(page.getByText('Canal Revendedoras')).toHaveCount(0)
+    } finally {
+      // Restaurar módulo revendedoras
+      await sr
+        .from('tenant_modulo')
+        .update({ habilitado: true })
+        .eq('id_tenant', seed.tenantId)
+        .eq('id_modulo', mod!.id_modulo)
+    }
+  })
+
+  test('el bloque Canal Revendedoras se oculta si el rol no tiene permiso revendedoras:ver', async ({ page, seed }) => {
+    const sr = serviceRoleClient()
+    // Obtener el rol del usuario admin del seed
+    const { data: usuario } = await sr
+      .from('usuario')
+      .select('id_rol, rol(permisos)')
+      .eq('id_tenant', seed.tenantId)
+      .limit(1)
+      .single()
+    expect(usuario?.id_rol).toBeDefined()
+
+    const rolData = usuario?.rol as unknown as { permisos: Record<string, unknown> } | null
+    const permisosOriginales = rolData?.permisos || {}
+    // Quitar revendedoras de los permisos temporalmente
+    const permisosSinRev = { ...permisosOriginales }
+    delete permisosSinRev.revendedoras
+
+    await sr
+      .from('rol')
+      .update({ permisos: permisosSinRev })
+      .eq('id_rol', usuario!.id_rol)
+
+    try {
+      await page.goto('/reportes')
+      await expect(page.getByRole('heading', { name: 'Tablero financiero' })).toBeVisible()
+      await expect(page.getByText('Canal Revendedoras')).toHaveCount(0)
+    } finally {
+      // Restaurar permisos originales
+      await sr
+        .from('rol')
+        .update({ permisos: permisosOriginales })
+        .eq('id_rol', usuario!.id_rol)
+    }
   })
 })
+

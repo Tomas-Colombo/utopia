@@ -20,7 +20,7 @@ test.describe('Panel de gestión de revendedoras (Slice 4b)', () => {
     await expect(page.getByText(/Mercadería en revendedoras/i)).toBeVisible()
     await expect(page.getByText(/Total adeudado al local/i)).toBeVisible()
     await expect(page.getByText(/Liquidaciones pendientes/i)).toBeVisible()
-    await expect(page.getByText('Declaraciones pendientes', { exact: true })).toBeVisible()
+    await expect(page.getByRole('link', { name: /Declaraciones/i })).toBeVisible()
 
     // 3. Verificar fila en la tabla del panel
     const filaRev = page.getByRole('row', { name: new RegExp(`${nombreRev} ${apellidoRev}`) })
@@ -107,10 +107,9 @@ test.describe('Panel de gestión de revendedoras (Slice 4b)', () => {
     await expect(page.getByText(nombreProd)).toBeVisible()
     await expect(page.getByText('1', { exact: true })).toBeVisible() // 1 pieza en su poder
 
-    // 5. Ir a la pestaña "Declaraciones" (placeholder)
+    // 5. Ir a la pestaña "Declaraciones"
     await page.goto(`/revendedoras/${idRevendedora}/declaraciones`)
-    await expect(page.getByText('Declaraciones de venta', { exact: true })).toBeVisible()
-    await expect(page.getByText(/Slice 9b/i)).toBeVisible()
+    await expect(page.getByText(new RegExp(`Declaraciones de venta de ${nombreRev}`))).toBeVisible()
 
     // 6. Consultar la ficha del ítem en inventario: debe mostrar "En poder de revendedora"
     await page.goto(`/inventario/ficha/${encodeURIComponent(qrCode)}`)

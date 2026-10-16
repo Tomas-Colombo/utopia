@@ -62,7 +62,10 @@ supabase/      migrations + stored procedures  — business invariants live here
 - **Reads are INVOKER, never DEFINER** (with one approved exception DR-13:
   `rvp_*` read functions for the Revendedoras portal, strictly reading
   identity from `auth_revendedora_id()`, explicit column whitelist without
-  costs/margins, and enforced by snapshot tests).
+  costs/margins, and enforced by snapshot tests). The only other DEFINER
+  functions permitted in the database are `fn_auto_crear_rol_revendedora` and
+  `sp_enlazar_revendedora_usuario` (enforced by `tests/db/rvp-lecturas.test.ts`).
+
 - Allowed SQL outside `lib/dal`: auth (`app/(auth)/login/actions.ts`,
   `logoutAction`) and `proxy.ts`. **Known debt, do not add to it** (move when
   you're in the file): `app/api/ventas/lookup-item/route.ts`,

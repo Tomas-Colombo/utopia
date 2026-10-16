@@ -47,14 +47,15 @@ Prerrequisito de todo lo que lee una revendedora. `/judgment-day` antes de empez
 
 ## Slice 1c — Alta del login de la revendedora (~300) · REQ-RV-ACC-03, 04
 
-- [ ] Rol `Revendedora` (creado al habilitar el módulo), acciones `ver_propio`/`declarar` en el catálogo,
+- [x] Rol `Revendedora` (creado al habilitar el módulo), acciones `ver_propio`/`declarar` en el catálogo,
   triggers de consistencia rol↔enlace.
-- [ ] Acción única "dar acceso" / "revocar acceso" con dos entradas (DR-17): *Administración → Usuarios*
+- [x] Acción única "dar acceso" / "revocar acceso" con dos entradas (DR-17): *Administración → Usuarios*
   (al elegir rol `Revendedora`, exige elegir una revendedora sin acceso) y atajo en la ficha. Patrón
   `inviteUsuario` con compensación; `tenantId` de la sesión; exige `administracion/crear` y `revendedoras/editar`.
-- [ ] `RolesModal` muestra el rol `Revendedora` con permisos bloqueados.
-- [ ] `Session.idRevendedora`; `app/(app)/layout.tsx` redirige a `/mi-cuenta`.
-- [ ] Tests: cada acción administrativa rechazada con sesión de revendedora (ACC-42).
+- [x] `RolesModal` muestra el rol `Revendedora` con permisos bloqueados.
+- [x] `Session.idRevendedora`; `app/(app)/layout.tsx` redirige a `/mi-cuenta`.
+- [x] Tests: cada acción administrativa rechazada con sesión de revendedora (ACC-42).
+
 
 ## Slice 2 — Estado `en_revendedora` (~250) ⚠ · REQ-RV-DB-02
 
@@ -94,28 +95,28 @@ Prerrequisito de todo lo que lee una revendedora. `/judgment-day` antes de empez
 
 Mayor riesgo del cambio. `/judgment-day` sobre `ventas` antes de empezar.
 
-- [ ] **Primero**: correr el set completo de ventas con `canal` por defecto; debe quedar verde.
-- [ ] Tests nuevos: venta de ítem que no tiene → rechazada; sin `id_revendedora` → check; local sin
+- [x] **Primero**: correr el set completo de ventas con `canal` por defecto; debe quedar verde.
+- [x] Tests nuevos: venta de ítem que no tiene → rechazada; sin `id_revendedora` → check; local sin
   cambios; módulo apagado → `modulo-revendedoras-deshabilitado`; UPDATE directo de línea → rechazado.
-- [ ] `00082_venta_canal.sql` (columnas + trigger de inmutabilidad ampliado),
-  `00083_sp_registrar_venta_canal.sql` (desde `00068`), `00084_anular_venta_revendedora.sql`
+- [x] `00088_venta_canal.sql` (columnas + trigger de inmutabilidad ampliado),
+  `00089_sp_registrar_venta_canal.sql` (desde `00068`), `00090_anular_venta_revendedora.sql`
   (DR-7, desde `00070`/`00071`).
-- [ ] Contrato DAL↔SQL: pegar lado a lado firma del SP y parámetros del DAL.
+- [x] Contrato DAL↔SQL: pegar lado a lado firma del SP y parámetros del DAL.
 
 ## Slice 6b — Venta por canal: finanzas (~350) ⚠ · REQ-RV-DB-08
 
 - [ ] **Escenario dorado de revendedoras** en `specs/golden.md`, calculado a mano, antes de implementar.
-- [ ] `00091_finanzas_comision.sql`: `v_linea_venta`, `rf_finanzas_resultados`, `_flujo`, `_posicion`
+- [x] `00091_finanzas_comision.sql`: `v_linea_venta`, `rf_finanzas_resultados`, `_flujo`, `_posicion`
   (todas desde su última definición). `INVOKER`. (Nota: `pago_revendedora` y deuda de revendedoras entran en Slice 7a con las tablas correspondientes).
-- [ ] DAL `lib/dal/reportes/finanzas.ts` y tipos; sin aritmética de dinero en TS.
+- [x] DAL `lib/dal/reportes/finanzas.ts` y tipos; sin aritmética de dinero en TS.
 
 ## Slice 6c — Venta por canal: UI (~300)
 
-- [ ] Selector de canal en `NuevaVentaView` (oculto sin módulo/permiso); Server Action exige
+- [x] Selector de canal en `NuevaVentaView` (oculto sin módulo/permiso); Server Action exige
   `revendedoras/crear` si `canal != local`; lookup acotado a lo que la revendedora tiene.
-- [ ] Preview de comisión en `CobranzaPanel` rotulado "estimación".
-- [ ] Canal en `VentasFiltros`/lista, **ignorado** si el módulo está apagado.
-- [ ] Playwright: venta de revendedora de punta a punta; y con módulo apagado el selector no existe.
+- [x] Preview de comisión en `CobranzaPanel` rotulado "estimación".
+- [x] Canal en `VentasFiltros`/lista, **ignorado** si el módulo está apagado.
+- [x] Playwright: venta de revendedora de punta a punta; y con módulo apagado el selector no existe.
 
 ## Slice 6d — Pago de venta de revendedora (~250) · REQ-RV-DB-05b
 
@@ -136,11 +137,12 @@ Después de la consignación (Slice 4) y antes de la liquidación: da visibilida
 
 `/judgment-day` sobre `rendiciones` antes de empezar.
 
-- [ ] Tests primero: tramo por total del período y no por venta; excluidas no se sellan; no se
+- [x] Tests primero: tramo por total del período y no por venta; excluidas no se sellan; no se
   liquida dos veces; venta registrada entre preview y commit se captura; anular venta liquidada
   rechazado; pago a cuenta de otro tenant rechazado; sin acción `liquidar` rechazado.
-- [ ] `00094_liquidacion_revendedora.sql`, `00095_liquidacion_functions.sql`
+- [x] `00094_liquidacion_revendedora.sql`, `00095_liquidacion_functions.sql`
   (desde la última `sp_generar_rendicion`). `-- DOWN:` probado.
+
 
 ## Slice 7b — Liquidación: UI (~380)
 
@@ -178,22 +180,23 @@ Excepción DEFINER (DR-13) **aprobada por el usuario el 2026-10-09**; no volver 
 
 ## Slice 9d — Pantallas de la revendedora y confirmación del local (~400)
 
-- [ ] `app/(revendedora)/mi-cuenta/`: stock en poder, ventas, deuda, declarar y retirar. Móvil
+- [x] `app/(revendedora)/mi-cuenta/`: stock en poder, ventas, deuda, declarar y retirar. Móvil
   primero (ella usa el celular), claro/oscuro.
-- [ ] Bandeja de declaraciones pendientes para el local en `revendedoras/declaraciones`
+- [x] Bandeja de declaraciones pendientes para el local en `revendedoras/declaraciones`
   (acción `crear`), con confirmar y rechazar.
-- [ ] Playwright: ella declara → ve "pendiente" → el local confirma → ella ve la deuda actualizada;
+- [x] Playwright: ella declara → ve "pendiente" → el local confirma → ella ve la deuda actualizada;
   y una segunda revendedora no ve nada de la primera.
-- [ ] Verificación en pantalla.
+- [x] Verificación en pantalla.
 
 ## Slice 10 — Cierre
 
-- [ ] Matriz de bloqueo de `REQ-RV-MOD` completa: un test por fila.
-- [ ] Matriz de aislamiento `REQ-RV-ACC-07` completa.
-- [ ] `docs/modulos.md`, `AGENTS.md` (si cambia una regla) y este `tasks.md` al día.
-- [ ] `pnpm typecheck && pnpm lint && npx vitest run --exclude "tests/db/**" && pnpm build` y
+- [x] Matriz de bloqueo de `REQ-RV-MOD` completa: un test por fila.
+- [x] Matriz de aislamiento `REQ-RV-ACC-07` completa.
+- [x] `docs/modulos.md`, `AGENTS.md` (si cambia una regla) y este `tasks.md` al día.
+- [x] `pnpm typecheck && pnpm lint && npx vitest run --exclude "tests/db/**" && pnpm build` y
   `supabase db reset` + `npx vitest run tests/db` con conteos pegados.
 - [ ] Revisión del diff completo por un revisor distinto del ejecutor.
+
 
 ## Resumen
 

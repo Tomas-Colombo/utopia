@@ -70,21 +70,21 @@ dashboard SQL Editor of the project being rolled back, and run it.
 
 The Auth Hook function itself (`public.custom_access_token_hook`) is created by
 a migration (see `design.md` §5/§14). Registering it as the active hook is a
-**manual dashboard step**, required in **both** `utopia-dev` and `utopia-test`:
+**MANDATORY manual dashboard step per project** in Supabase (`utopia-dev`, `utopia-test`, staging, and production):
 
 1. Open the Supabase dashboard for the project.
 2. Go to **Auth → Hooks**.
 3. Under **Custom Access Token**, click **Function**.
 4. Select `public.custom_access_token_hook` from the dropdown.
 5. Click **Save**.
-6. Repeat steps 1–5 for the other project (`utopia-dev` / `utopia-test`).
+6. Repeat steps 1–5 for every Supabase project created.
 
-The hook function is created by `supabase/migrations/00008_auth_hook_tenant_id.sql`
-(Slice 5). This manual dashboard registration step remains blocked until
-`utopia-dev`/`utopia-test` exist (postponed to end of Slice 8) — apply the
-migration SQL, then complete this checklist for each project once created.
+> **CRITICAL**: If this manual dashboard step is skipped on a newly provisioned Supabase project,
+> issued JWT access tokens will NOT contain the `tenant_id` claim (nor `id_revendedora`), causing
+> PostgreSQL RLS and application guards to immediately reject all authenticated user operations.
 
-**Important (Slice 1b — Revendedoras)**: the hook logic is extended by `00077_revendedora_id_usuario.sql`
-to inject the `id_revendedora` claim. After applying migration 00077 to an environment,
-verify that the hook `public.custom_access_token_hook` is still selected in the Auth -> Hooks
-dashboard.
+**Important (Módulo Revendedoras)**: the hook logic is extended by `00077_revendedora_id_usuario.sql`
+and `00080_hook_seguridad_revendedora.sql` to inject the `id_revendedora` claim when a user has the
+`Revendedora` role linked to a revendedora entity. After applying these migrations or provisioning a new
+environment, verify that `public.custom_access_token_hook` is active in **Auth → Hooks**.
+
