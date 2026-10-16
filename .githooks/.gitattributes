@@ -1,0 +1,2 @@
+# Hooks run under sh: a CRLF checkout (core.autocrlf) breaks the shebang.
+* text eol=lf

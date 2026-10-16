@@ -1,0 +1,26 @@
+#!/bin/sh
+# Pre-commit: typecheck of the whole project + lint of the staged files only.
+# Install once per clone with `pnpm hooks:install` (core.hooksPath).
+#
+# Skipping it (`git commit --no-verify`) needs an explicit reason written in
+# the commit body or the report; see docs/protocolo-agentes.md.
+#
+# Plain POSIX sh: it runs under Git Bash on Windows, no husky/lefthook.
+
+echo "pre-commit: typecheck..."
+if ! pnpm -s typecheck; then
+  echo "pre-commit: typecheck falló; commit bloqueado." >&2
+  exit 1
+fi
+
+# NUL-separated so route folders like app/(app)/[codigo] survive intact.
+if git diff --cached --name-only --diff-filter=ACMR -z -- '*.ts' '*.tsx' '*.mts' '*.js' '*.mjs' | grep -qz .; then
+  echo "pre-commit: lint de los archivos staged..."
+  if ! git diff --cached --name-only --diff-filter=ACMR -z -- '*.ts' '*.tsx' '*.mts' '*.js' '*.mjs' \
+    | xargs -0 pnpm -s exec eslint --no-warn-ignored; then
+    echo "pre-commit: lint falló; commit bloqueado." >&2
+    exit 1
+  fi
+fi
+
+exit 0
