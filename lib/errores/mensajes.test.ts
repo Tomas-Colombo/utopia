@@ -36,7 +36,7 @@ const SLUGS_DE_LA_APP = [
   'consignacion-ya-confirmada', 'consignacion-no-confirmada', 'consignacion-confirmada', 'consignacion-con-items-en-poder',
   'cuota-no-cobrable', 'cuota-no-incobrable', 'cuota-not-found',
   'descripcion-requerida', 'detalle-not-found', 'detalle-venta-not-found',
-  'detalle-ya-devuelto', 'detalle-ya-cambiado', 'cambio-venta-con-cuotas-abiertas', 'item-no-en-poder-revendedora', 'diferencia-negativa-no-permitida', 'diferencia-requiere-medio-y-cuenta', 'detalle-ya-rendido', 'devolucion-venta-con-cuotas-abiertas',
+  'detalle-ya-devuelto', 'detalle-ya-cambiado', 'linea-ya-cambiada', 'cambio-venta-con-cuotas-abiertas', 'item-no-en-poder-revendedora', 'diferencia-negativa-no-permitida', 'diferencia-requiere-medio-y-cuenta', 'detalle-ya-rendido', 'devolucion-venta-con-cuotas-abiertas',
   'detalle-no-pendiente', 'invalid-transition', 'item-no-disponible-para-reserva',
   'item-no-puede-darse-de-baja', 'precio-no-resoluble',
   'excede-disponibles', 'falta-categoria', 'falta-producto',
@@ -113,6 +113,33 @@ describe('slug envuelto en el error del SP', () => {
     const msg = mensajeDeError(crudo)
     expect(msg).toBe('Ya existe un producto con ese código.')
     expect(msg).not.toContain('producto_tenant_sku_uk')
+  })
+
+  it('traduce triggers de rol y enlace de revendedora (00079)', () => {
+    expect(mensajeDeError('error: No se puede eliminar el rol Revendedora')).toBe(
+      'No podés eliminar el rol Revendedora.',
+    )
+    expect(mensajeDeError('error: No se puede renombrar el rol Revendedora')).toBe(
+      'No podés cambiarle el nombre al rol Revendedora.',
+    )
+    expect(
+      mensajeDeError('error: Un usuario con rol Revendedora debe estar enlazado a una revendedora'),
+    ).toBe('Un usuario con rol Revendedora debe estar enlazado a una revendedora.')
+    expect(
+      mensajeDeError('error: La revendedora enlazada debe tener un usuario con rol Revendedora'),
+    ).toBe('La revendedora enlazada debe tener un usuario con rol Revendedora.')
+  })
+
+  it('traduce constraints de revendedora', () => {
+    expect(
+      mensajeDeError('error: violates check constraint "consignacion_revendedora_periodo_valido"'),
+    ).toBe('La fecha hasta no puede ser anterior a la fecha desde.')
+    expect(
+      mensajeDeError('error: violates check constraint "regla_comision_vigencia_valida"'),
+    ).toBe('La vigencia hasta no puede ser anterior a la vigencia desde.')
+    expect(
+      mensajeDeError('error: duplicate key value violates unique constraint "declaracion_venta_revendedora_item_pendiente_uk"'),
+    ).toBe('Ese ítem ya tiene una declaración pendiente.')
   })
 })
 

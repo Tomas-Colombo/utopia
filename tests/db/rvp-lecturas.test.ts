@@ -1,7 +1,6 @@
 import { describe, expect, test, afterAll } from 'vitest'
-import { execSync } from 'node:child_process'
 import { createServiceRoleTestClient } from '@/lib/dal/supabase-test'
-import { hasTestDb, signInAs, createTenantWithUser } from './_helpers'
+import { hasTestDb, signInAs, createTenantWithUser, runPsql } from './_helpers'
 import { ventaFixture } from './_fixtures-ventas'
 
 describe.skipIf(!hasTestDb)('Slice 9c — Funciones de lectura rvp_* (REQ-RV-ACC-20…23, DR-13)', () => {
@@ -454,10 +453,7 @@ describe.skipIf(!hasTestDb)('Slice 9c — Funciones de lectura rvp_* (REQ-RV-ACC
   test('7. search_path fijo y permisos limitados a authenticated', async () => {
     // Verificar en pg_proc que las funciones rvp_* tienen secdef y search_path seguro
     const query = "select json_agg(t) from (select proname, prosecdef, proconfig from pg_proc where proname like 'rvp_%') t;"
-    const output = execSync(
-      `psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -tA -c "${query}"`,
-      { env: { ...process.env, PGPASSWORD: 'postgres' } }
-    ).toString().trim()
+    const output = runPsql(query)
     const procs = JSON.parse(output || '[]') as Array<{
       proname: string
       prosecdef: boolean
@@ -474,10 +470,7 @@ describe.skipIf(!hasTestDb)('Slice 9c — Funciones de lectura rvp_* (REQ-RV-ACC
 
   test('8. Guardia anti-propagación de DEFINER: sólo rvp_* y funciones base autorizadas', async () => {
     const query = "select json_agg(t) from (select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.prosecdef = true) t;"
-    const output = execSync(
-      `psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -tA -c "${query}"`,
-      { env: { ...process.env, PGPASSWORD: 'postgres' } }
-    ).toString().trim()
+    const output = runPsql(query)
     const defProcs = JSON.parse(output || '[]') as Array<{ proname: string }>
 
     // Lista blanca estricta de funciones SECURITY DEFINER que NO empiezan con rvp_
@@ -494,5 +487,54 @@ describe.skipIf(!hasTestDb)('Slice 9c — Funciones de lectura rvp_* (REQ-RV-ACC
         `Función SECURITY DEFINER no autorizada en public: ${name}`
       ).toContain(name)
     }
+  })
+
+  test('9. rvp_mi_cuenta: proximo_tramo_comision solo expone tramos de su regla cuando tiene regla con escala (DR-13)', async () => {
+    const fixture = await setupRvpFixture()
+    const { fA, authAna, idRevA, idRevB } = fixture
+
+    // Crear regla con escala para Revendedora A
+    const { data: idReglaA, error: errRegA } = await fA.authenticated.rpc('sp_crear_regla_comision', {
+      p_ambito: 'revendedora',
+      p_nombre: 'Escala Reven A',
+      p_id_revendedora: idRevA,
+      p_escalas: [
+        { objetivo_desde: 0, porcentaje: 10 },
+        { objetivo_desde: 100000, porcentaje: 15 },
+        { objetivo_desde: 200000, porcentaje: 20 },
+      ],
+    })
+    expect(errRegA).toBeNull()
+    expect(idReglaA).toBeDefined()
+
+    // Crear regla con escala DISTINTA para Revendedora B
+    const { data: idReglaB, error: errRegB } = await fA.authenticated.rpc('sp_crear_regla_comision', {
+      p_ambito: 'revendedora',
+      p_nombre: 'Escala Reven B',
+      p_id_revendedora: idRevB,
+      p_escalas: [
+        { objetivo_desde: 0, porcentaje: 5 },
+        { objetivo_desde: 500000, porcentaje: 30 },
+      ],
+    })
+    expect(errRegB).toBeNull()
+    expect(idReglaB).toBeDefined()
+
+    // Consultar rvp_mi_cuenta con la sesión de Ana
+    const { data: cuentaA, error: errA } = await authAna.rpc('rvp_mi_cuenta')
+    expect(errA).toBeNull()
+    expect(cuentaA).toHaveLength(1)
+
+    const rvpA = cuentaA![0]
+    expect(rvpA.proximo_tramo_comision).not.toBeNull()
+    const tramoA = rvpA.proximo_tramo_comision as {
+      tramo_actual: number
+      proximo_porcentaje: number
+      objetivo_desde: number
+      falta: number
+    }
+    // Debe corresponder al primer escalón de A (100000 -> 15%) y NO al de B (500000 -> 30%)
+    expect(Number(tramoA.objetivo_desde)).toBe(100000)
+    expect(Number(tramoA.proximo_porcentaje)).toBe(15)
   })
 })

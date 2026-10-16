@@ -122,6 +122,50 @@ describe.skipIf(!hasTestDb)('Inmutabilidad de ventas (00068)', () => {
       expect(data?.id_rendicion).toBe(idRendicion)
     })
 
+    it('UPDATE de monto_comision y excluida_liquidacion pasa en línea no liquidada y tira detalle-venta-inmutable en línea liquidada (00088)', async () => {
+      const { f, idDetalle } = await ventaContado('inmut-det-comis')
+
+      // 1. Línea no liquidada (id_liquidacion is null): UPDATE pasa
+      const { error: errNoLiq } = await f.authenticated
+        .from('detalle_venta')
+        .update({ monto_comision: 500, excluida_liquidacion: true })
+        .eq('id_detalle_venta', idDetalle)
+      expect(errNoLiq).toBeNull()
+
+      const { data: detUpdated } = await f.serviceRole
+        .from('detalle_venta')
+        .select('monto_comision, excluida_liquidacion')
+        .eq('id_detalle_venta', idDetalle)
+        .single()
+      expect(Number(detUpdated?.monto_comision)).toBe(500)
+      expect(detUpdated?.excluida_liquidacion).toBe(true)
+
+      // 2. Línea liquidada: asignar id_liquidacion con serviceRole
+      const idLiq = await crearLiquidacion(f)
+      await f.serviceRole
+        .from('detalle_venta')
+        .update({ id_liquidacion: idLiq })
+        .eq('id_detalle_venta', idDetalle)
+
+      // Intentar modificar monto_comision con sesión autenticada
+      const { error: errLiqComis } = await f.authenticated
+        .from('detalle_venta')
+        .update({ monto_comision: 600 })
+        .eq('id_detalle_venta', idDetalle)
+
+      expect(errLiqComis).not.toBeNull()
+      expect(errLiqComis?.message).toMatch(/detalle-venta-inmutable: linea ya liquidada no se puede modificar/)
+
+      // Intentar modificar excluida_liquidacion con sesión autenticada
+      const { error: errLiqExcl } = await f.authenticated
+        .from('detalle_venta')
+        .update({ excluida_liquidacion: false })
+        .eq('id_detalle_venta', idDetalle)
+
+      expect(errLiqExcl).not.toBeNull()
+      expect(errLiqExcl?.message).toMatch(/detalle-venta-inmutable: linea ya liquidada no se puede modificar/)
+    })
+
     it('DELETE de un detalle_venta levanta detalle-venta-inmutable', async () => {
       const { f, idDetalle } = await ventaContado('inmut-det-delete')
 
@@ -224,4 +268,37 @@ async function crearRendicion(f: VentaFixture): Promise<string> {
   ) as { id_rendicion: string }
 
   return rend.id_rendicion
+}
+
+/** Una liquidación de revendedora, solo para tener un `id_liquidacion` válido. */
+async function crearLiquidacion(f: VentaFixture): Promise<string> {
+  const rev = unwrapFixture(
+    'revendedora insert',
+    await f.serviceRole
+      .from('revendedora')
+      .insert({ id_tenant: f.tenantId, nombre: 'Rev', apellido: 'Inmut' })
+      .select('id_revendedora')
+      .single(),
+  ) as { id_revendedora: string }
+
+  const liq = unwrapFixture(
+    'liquidacion insert',
+    await f.serviceRole
+      .from('liquidacion_revendedora')
+      .insert({
+        id_tenant: f.tenantId,
+        id_revendedora: rev.id_revendedora,
+        periodo_desde: '2026-01-01',
+        periodo_hasta: '2026-01-31',
+        monto_vendido: 1000,
+        monto_comision: 100,
+        monto_a_cobrar: 900,
+        cantidad_lineas: 1,
+        porcentaje_aplicado: 10,
+      })
+      .select('id_liquidacion')
+      .single(),
+  ) as { id_liquidacion: string }
+
+  return liq.id_liquidacion
 }

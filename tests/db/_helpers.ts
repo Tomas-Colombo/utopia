@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto'
+import { execSync } from 'node:child_process'
 import type { PostgrestSingleResponse } from '@supabase/supabase-js'
 import { createAnonTestClient, createServiceRoleTestClient } from '@/lib/dal/supabase-test'
 
@@ -198,3 +199,18 @@ export async function createUserWithoutTenant(prefix: string) {
 export async function resetTestData(): Promise<void> {
   // Intentionally empty — see the doc comment above.
 }
+
+/**
+ * Ejecuta una consulta SQL sincrónica vía psql con variables de entorno o valores por defecto del stack local.
+ */
+export function runPsql(query: string): string {
+  const host = process.env.SUPABASE_DB_HOST || '127.0.0.1'
+  const port = process.env.SUPABASE_DB_PORT || '54322'
+  const user = process.env.SUPABASE_DB_USER || 'postgres'
+  const db = process.env.SUPABASE_DB_NAME || 'postgres'
+  const password = process.env.PGPASSWORD || 'postgres'
+  return execSync(`psql -h ${host} -p ${port} -U ${user} -d ${db} -tA -c "${query.replace(/"/g, '\\"')}"`, {
+    env: { ...process.env, PGPASSWORD: password },
+  }).toString().trim()
+}
+

@@ -183,6 +183,7 @@ const MENSAJES: Record<string, string> = {
   'item-no-esta-vendido': 'El ítem no pertenece a esta venta o no está vendido.',
   'detalle-ya-devuelto': 'Esa línea de la venta ya fue devuelta.',
   'detalle-ya-cambiado': 'Esa línea de la venta ya fue cambiada por otro producto.',
+  'linea-ya-cambiada': 'Esta prenda ya fue cambiada en otra operación y no puede devolverse.',
   'cambio-venta-con-cuotas-abiertas': 'No se puede cambiar el producto porque la venta tiene cuotas sin pagar.',
   'item-no-en-poder-revendedora': 'El producto entregado no está en poder de esa revendedora.',
   'diferencia-negativa-no-permitida': 'El nuevo producto no puede tener un precio menor al original.',
@@ -397,6 +398,20 @@ const CONSTRAINTS: Record<string, string> = {
   detalle_reserva_item_activa_uk: 'Ese ítem ya está en una reserva activa.',
   consignacion_detalle_item_pendiente_uk: 'Ese ítem ya está apartado en otra consignación.',
   consignacion_revendedora_detalle_item_activo_uk: 'Ese ítem ya está incluido en otra consignación activa de revendedora.',
+  declaracion_venta_revendedora_item_pendiente_uk: 'Ese ítem ya tiene una declaración pendiente.',
+  'No se puede eliminar el rol Revendedora': 'No podés eliminar el rol Revendedora.',
+  'No se puede renombrar el rol Revendedora': 'No podés cambiarle el nombre al rol Revendedora.',
+  'Un usuario con rol Revendedora debe estar enlazado a una revendedora':
+    'Un usuario con rol Revendedora debe estar enlazado a una revendedora.',
+  'La revendedora enlazada debe tener un usuario con rol Revendedora':
+    'La revendedora enlazada debe tener un usuario con rol Revendedora.',
+  consignacion_revendedora_periodo_valido: 'La fecha hasta no puede ser anterior a la fecha desde.',
+  regla_comision_vigencia_valida: 'La vigencia hasta no puede ser anterior a la vigencia desde.',
+  venta_canal_revendedora_exige_id: 'Una venta por canal revendedora exige indicar la revendedora.',
+  pago_venta_cuenta_destino_check: 'Este medio de pago exige indicar una cuenta de destino.',
+  liquidacion_revendedora_periodo_check: 'El período hasta no puede ser anterior al período desde.',
+  pago_revendedora_monto_check: 'El monto del pago debe ser mayor a cero.',
+  cambio_venta_diferencia_check: 'La diferencia de cambio no puede ser negativa.',
 }
 
 /**
