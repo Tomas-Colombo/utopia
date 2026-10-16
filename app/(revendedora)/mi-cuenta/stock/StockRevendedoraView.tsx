@@ -83,7 +83,6 @@ export function StockRevendedoraView({ items }: Props) {
                   </span>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 mt-2 text-xs text-muted">
-                  <span className="px-2 py-0.5 rounded bg-muted/10 font-mono">{item.sku}</span>
                   {item.talle && (
                     <span className="px-2 py-0.5 rounded bg-muted/10">Talle: {item.talle}</span>
                   )}
@@ -123,10 +122,11 @@ export function StockRevendedoraView({ items }: Props) {
           <div className="space-y-4">
             <div className="p-3 rounded-lg bg-card-hover border border-border space-y-1">
               <p className="text-sm font-semibold">{selectedItem.nombre_producto}</p>
-              <div className="flex gap-2 text-xs text-muted font-mono">
-                <span>{selectedItem.sku}</span>
-                {selectedItem.talle && <span>· Talle {selectedItem.talle}</span>}
-              </div>
+              {selectedItem.talle && (
+                <div className="text-xs text-muted">
+                  <span>Talle: {selectedItem.talle}</span>
+                </div>
+              )}
               <p className="text-sm font-bold text-accent pt-1">
                 Precio de venta: {formatearMoneda(selectedItem.precio_venta)}
               </p>

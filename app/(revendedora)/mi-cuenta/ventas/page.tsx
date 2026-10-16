@@ -24,38 +24,42 @@ export default async function MisVentasPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight">Historial de ventas</h1>
+          <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight">Prendas vendidas</h1>
           <p className="text-sm text-muted">
-            Ventas registradas y confirmadas a tu nombre.
+            Detalle por prenda de las ventas registradas y confirmadas a tu nombre.
           </p>
         </div>
         <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-accent/10 text-accent">
-          {ventas.length} {ventas.length === 1 ? 'venta' : 'ventas'}
+          {ventas.length} {ventas.length === 1 ? 'prenda' : 'prendas'}
         </span>
       </div>
 
       {ventas.length === 0 ? (
         <div className="p-8 text-center rounded-xl border border-dashed border-border bg-card">
-          <p className="text-muted text-sm">No tenés ventas registradas todavía.</p>
+          <p className="text-muted text-sm">No tenés prendas vendidas registradas todavía.</p>
         </div>
       ) : (
         <div className="space-y-3">
           {ventas.map((v) => (
             <div
-              key={v.id_venta}
+              key={v.id_detalle_venta}
               className="p-4 rounded-xl border border-border bg-card shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4"
             >
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   <span className="font-semibold text-base">
-                    {formatearMoneda(v.total_venta)}
+                    {v.descripcion}
                   </span>
-                  <span className="text-xs text-muted">
-                    · {v.cantidad_piezas} {v.cantidad_piezas === 1 ? 'prenda' : 'prendas'}
-                  </span>
+                  {v.talle && (
+                    <span className="text-xs px-2 py-0.5 rounded bg-muted/10 font-medium">
+                      Talle: {v.talle}
+                    </span>
+                  )}
                 </div>
-                <div className="text-xs text-muted">
-                  Fecha: {new Date(v.fecha_venta).toLocaleDateString('es-AR')}
+                <div className="flex items-center gap-3 text-xs text-muted">
+                  <span>Precio: <strong className="text-foreground">{formatearMoneda(v.precio_venta)}</strong></span>
+                  <span>·</span>
+                  <span>Fecha: {new Date(v.fecha_venta).toLocaleDateString('es-AR')}</span>
                 </div>
               </div>
 

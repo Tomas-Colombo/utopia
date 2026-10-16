@@ -33,7 +33,24 @@ export default async function DeclaracionesBandejaPage(props: PageProps) {
 
   const res = await listarDeclaracionesLocal(session, query)
 
-  const declaraciones = res.ok ? res.data.declaraciones : []
+  if (!res.ok) {
+    return (
+      <>
+        <Topbar
+          title="Bandeja de declaraciones"
+          session={session}
+          backHref="/revendedoras"
+        />
+        <main className="flex-1 p-6 space-y-6 max-w-7xl">
+          <div className="p-6 rounded-xl border border-destructive/30 bg-destructive/5 text-destructive">
+            <p className="font-medium">No se pudieron cargar las declaraciones.</p>
+          </div>
+        </main>
+      </>
+    )
+  }
+
+  const declaraciones = res.data.declaraciones
   const estadoActual = query.estado
 
   return (

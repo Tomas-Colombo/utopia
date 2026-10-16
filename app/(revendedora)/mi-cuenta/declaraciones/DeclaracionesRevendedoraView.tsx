@@ -63,9 +63,8 @@ export function DeclaracionesRevendedoraView({ declaraciones }: Props) {
                 <div>
                   <h2 className="font-semibold text-base">{d.nombre_producto}</h2>
                   <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-muted">
-                    <span className="font-mono">{d.sku}</span>
-                    {d.talle && <span>· Talle {d.talle}</span>}
-                    <span>· Declarada el {new Date(d.fecha).toLocaleDateString('es-AR')}</span>
+                    {d.talle && <span>Talle {d.talle} ·</span>}
+                    <span>Declarada el {new Date(d.fecha).toLocaleDateString('es-AR')}</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">

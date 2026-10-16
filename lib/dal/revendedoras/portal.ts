@@ -135,12 +135,16 @@ export async function listarMisVentas(
     ok: true,
     data: ((data ?? []) as unknown as Record<string, unknown>[]).map((r) => ({
       id_venta: String(r.id_venta),
+      id_detalle_venta: String(r.id_detalle_venta),
+      descripcion: String(r.descripcion ?? 'Prenda'),
+      talle: r.talle ? String(r.talle) : null,
       fecha_venta: String(r.fecha_venta),
-      total_venta: Number(r.monto_vendido ?? r.precio_venta ?? 0),
-      cantidad_piezas: 1,
+      precio_venta: Number(r.precio_venta ?? 0),
+      comision_liquidada: Number(r.comision_liquidada ?? 0),
+      comision_estimada: Number(r.comision_estimada ?? 0),
       comision_total: Number(r.comision_liquidada ?? 0) + Number(r.comision_estimada ?? 0),
       liquidada: r.estado_liquidacion === 'liquidada',
-      id_liquidacion: null,
+      fecha_liquidacion: r.fecha_liquidacion ? String(r.fecha_liquidacion) : null,
     })),
   }
 }

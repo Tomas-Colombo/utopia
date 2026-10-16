@@ -64,14 +64,14 @@ export async function listarDeclaracionesLocal(
       id_venta,
       motivo_rechazo,
       created_at,
-      revendedora:id_revendedora (
+      revendedora:revendedora!declaracion_venta_revendedora_fk (
         nombre,
         apellido
       ),
-      item:id_item (
+      item:item_producto!declaracion_venta_item_fk (
         id_item,
         talle,
-        producto:id_producto (
+        producto:producto (
           nombre,
           sku,
           precio_venta

@@ -108,16 +108,16 @@ test.describe('Portal de revendedora y declaraciones (Slice 9d)', () => {
       await rev1Page.waitForURL(/\/mi-cuenta(\?|$)/)
 
       // Verificación en Resumen de portal
-      await expect(rev1Page.getByText('Resumen de tu cuenta')).toBeVisible()
-      await expect(rev1Page.getByText('Prendas en tu poder')).toBeVisible()
+      await expect(rev1Page.getByRole('heading', { name: 'Tu resumen de cuenta' })).toBeVisible()
+      await expect(rev1Page.getByText('Mercadería en tu poder')).toBeVisible()
 
       // 2. Va a Mi stock y declara venta de Producto 1
-      await rev1Page.getByRole('link', { name: 'Mi stock' }).click()
+      await rev1Page.getByRole('link', { name: 'Mi stock', exact: true }).click()
       await rev1Page.waitForURL(/\/mi-cuenta\/stock/)
       await expect(rev1Page.getByText(nombreProd1)).toBeVisible()
       await expect(rev1Page.getByText(nombreProd2)).toBeVisible()
 
-      const cardProd1 = rev1Page.locator('div').filter({ hasText: nombreProd1 }).first()
+      const cardProd1 = rev1Page.getByRole('heading', { name: nombreProd1 }).locator('xpath=ancestor::div[contains(@class, "bg-card")]')
       await cardProd1.getByRole('button', { name: 'Declarar venta' }).click()
 
       // Modal de declaración
@@ -129,14 +129,14 @@ test.describe('Portal de revendedora y declaraciones (Slice 9d)', () => {
       await expect(rev1Page.getByText('Pendiente de confirmar')).toBeVisible()
 
       // En la solapa Declaraciones se ve el registro pendiente
-      await rev1Page.getByRole('link', { name: 'Declaraciones' }).click()
+      await rev1Page.getByRole('link', { name: 'Declaraciones', exact: true }).click()
       await rev1Page.waitForURL(/\/mi-cuenta\/declaraciones/)
       await expect(rev1Page.getByText(nombreProd1)).toBeVisible()
       await expect(rev1Page.getByText('Pendiente', { exact: true })).toBeVisible()
 
       // 3. El local entra a la bandeja y confirma la declaración
       await page.goto('/revendedoras/declaraciones')
-      await expect(page.getByRole('heading', { name: 'Declaraciones de revendedoras' })).toBeVisible()
+      await expect(page.getByRole('heading', { name: 'Declaraciones de venta' })).toBeVisible()
       const filaDec1 = page.getByRole('row', { name: new RegExp(nombreProd1) })
       await expect(filaDec1).toBeVisible()
       await filaDec1.getByRole('button', { name: 'Confirmar' }).click()
@@ -147,11 +147,11 @@ test.describe('Portal de revendedora y declaraciones (Slice 9d)', () => {
       await expect(page.getByText('Declaración confirmada')).toBeVisible()
 
       // 4. Revendedora 1 ve la venta confirmada y su deuda actualizada
-      await rev1Page.getByRole('link', { name: 'Mis ventas' }).click()
+      await rev1Page.getByRole('link', { name: 'Mis ventas', exact: true }).click()
       await rev1Page.waitForURL(/\/mi-cuenta\/ventas/)
       await expect(rev1Page.getByText(nombreProd1)).toBeVisible()
 
-      await rev1Page.getByRole('link', { name: 'Resumen' }).click()
+      await rev1Page.getByRole('link', { name: 'Resumen', exact: true }).click()
       await rev1Page.waitForURL(/\/mi-cuenta(\?|$)/)
       await expect(rev1Page.getByText('Total vendido')).toBeVisible()
 
@@ -169,21 +169,22 @@ test.describe('Portal de revendedora y declaraciones (Slice 9d)', () => {
         await rev2Page.waitForURL(/\/mi-cuenta(\?|$)/)
 
         // Resumen limpio para revendedora 2
-        await expect(rev2Page.getByText('No tenés prendas en tu poder')).toBeVisible()
+        await expect(rev2Page.getByRole('heading', { name: 'Tu resumen de cuenta' })).toBeVisible()
 
         // Stock vacío
-        await rev2Page.getByRole('link', { name: 'Mi stock' }).click()
+        await rev2Page.getByRole('link', { name: 'Mi stock', exact: true }).click()
         await rev2Page.waitForURL(/\/mi-cuenta\/stock/)
+        await expect(rev2Page.getByText('No tenés prendas en tu poder en este momento.')).toBeVisible()
         await expect(rev2Page.getByText(nombreProd1)).not.toBeVisible()
         await expect(rev2Page.getByText(nombreProd2)).not.toBeVisible()
 
         // Ventas vacías
-        await rev2Page.getByRole('link', { name: 'Mis ventas' }).click()
+        await rev2Page.getByRole('link', { name: 'Mis ventas', exact: true }).click()
         await rev2Page.waitForURL(/\/mi-cuenta\/ventas/)
         await expect(rev2Page.getByText(nombreProd1)).not.toBeVisible()
 
         // Declaraciones vacías
-        await rev2Page.getByRole('link', { name: 'Declaraciones' }).click()
+        await rev2Page.getByRole('link', { name: 'Declaraciones', exact: true }).click()
         await rev2Page.waitForURL(/\/mi-cuenta\/declaraciones/)
         await expect(rev2Page.getByText(nombreProd1)).not.toBeVisible()
       } finally {
@@ -210,7 +211,7 @@ test.describe('Portal de revendedora y declaraciones (Slice 9d)', () => {
       // =============================================================
       // Revendedora 1 declara Producto 2
       await rev1Page.goto('/mi-cuenta/stock')
-      const cardProd2 = rev1Page.locator('div').filter({ hasText: nombreProd2 }).first()
+      const cardProd2 = rev1Page.getByRole('heading', { name: nombreProd2 }).locator('xpath=ancestor::div[contains(@class, "bg-card")]')
       await cardProd2.getByRole('button', { name: 'Declarar venta' }).click()
       await rev1Page.locator('#nota-declaracion').fill('Declarada por error de código')
       await rev1Page.getByRole('button', { name: 'Confirmar declaración' }).click()
@@ -270,7 +271,7 @@ test.describe('Portal de revendedora y declaraciones (Slice 9d)', () => {
 
       // Al reactivar, vuelve a renderizar el portal
       await rev1Page.goto('/mi-cuenta')
-      await expect(rev1Page.getByRole('heading', { name: 'Resumen de tu cuenta' })).toBeVisible()
+      await expect(rev1Page.getByRole('heading', { name: 'Tu resumen de cuenta' })).toBeVisible()
     } finally {
       await rev1Context.close()
     }

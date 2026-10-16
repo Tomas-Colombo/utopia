@@ -261,12 +261,16 @@ export interface RvpMiStockRow {
 
 export interface RvpMisVentasRow {
   id_venta: string
+  id_detalle_venta: string
+  descripcion: string
+  talle: string | null
   fecha_venta: string
-  total_venta: number
-  cantidad_piezas: number
+  precio_venta: number
+  comision_liquidada: number
+  comision_estimada: number
   comision_total: number
   liquidada: boolean
-  id_liquidacion: string | null
+  fecha_liquidacion: string | null
 }
 
 export interface RvpMisLiquidacionesRow {
