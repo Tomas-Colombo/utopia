@@ -3,8 +3,9 @@ import { redirect } from 'next/navigation'
 import { Topbar } from '@/components/shell/Topbar'
 import { Badge } from '@/components/ui/Badge'
 import { verifySession } from '@/lib/dal/session'
-import { findItemByQr, listItemsByProducto } from '@/lib/dal/inventario/item'
-import { findProductoBySku } from '@/lib/dal/inventario/producto'
+import { resolverCodigo } from '@/lib/dal/inventario/codigo'
+import { listItemsByProducto } from '@/lib/dal/inventario/item'
+import { parsearSku } from '@/lib/inventario/codigo'
 import type { EstadoItem } from '@/lib/types/inventario'
 
 const ESTADO_LABEL: Record<EstadoItem, string> = {
@@ -42,21 +43,14 @@ export default async function BuscarCodigoPage(props: {
   const { codigo } = await props.params
   const decoded = decodeURIComponent(codigo).trim()
 
-  // 1) QR exacto → ficha del ítem (los QR son 24 hex, nunca chocan con un SKU).
-  const item = await findItemByQr(decoded)
-  if (item) {
-    redirect(`/inventario/ficha/${encodeURIComponent(decoded)}`)
+  // QR exacto → ficha del ítem (los QR son 24 hex, nunca chocan con un SKU).
+  const resuelto = await resolverCodigo(decoded)
+  if (resuelto?.tipo === 'item') {
+    redirect(`/inventario/ficha/${encodeURIComponent(resuelto.item.qr_code)}`)
   }
 
-  // 2) SKU con talle opcional. Base = PREFIJO-####, talle = resto.
-  const upper = decoded.toUpperCase()
-  const match = upper.match(/^([A-Z]+-\d+)(?:-(.+))?$/)
-  const baseSku = match?.[1] ?? upper
-  const talle = match?.[2] ?? null
-
-  const producto = await findProductoBySku(baseSku)
-
-  if (!producto) {
+  if (!resuelto) {
+    const { baseSku } = parsearSku(decoded)
     return (
       <>
         <Topbar title="Código no encontrado" session={session} backHref="/inventario/ficha" />
@@ -79,6 +73,7 @@ export default async function BuscarCodigoPage(props: {
     )
   }
 
+  const { producto, talle } = resuelto
   const todos = await listItemsByProducto(producto.id_producto)
   const items = talle
     ? todos.filter((it) => (it.talle ?? '').toUpperCase() === talle)

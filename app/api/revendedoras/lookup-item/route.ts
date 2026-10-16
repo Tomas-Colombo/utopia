@@ -34,7 +34,12 @@ export async function GET(req: NextRequest) {
   }
 
   if (modo === 'venta') {
-    const result = await lookupItemParaVentaRevendedora(code, idRevendedora, idProducto)
+    // Unidades que ya están en el carrito: no son candidatas.
+    const excluir = (req.nextUrl.searchParams.get('excluir') ?? '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
+    const result = await lookupItemParaVentaRevendedora(code, idRevendedora, idProducto, excluir)
     if (!result.ok) {
       return NextResponse.json(result)
     }

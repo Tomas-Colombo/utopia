@@ -2,12 +2,8 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { AuthorizationError } from '@/lib/dal/errors'
 import { requireModuleRole } from '@/lib/dal/guard'
 import { verifySession } from '@/lib/dal/session'
-import {
-  contarDisponiblesPorTalle,
-  findItemByQr,
-  listItemsDisponibles,
-} from '@/lib/dal/inventario/item'
-import { findProductoBySku } from '@/lib/dal/inventario/producto'
+import { resolverCodigo } from '@/lib/dal/inventario/codigo'
+import { contarDisponiblesPorTalle, listItemsDisponibles } from '@/lib/dal/inventario/item'
 import { calcularSnapshotPrecio } from '@/lib/dal/precios/resolucion'
 import { createServerClient } from '@/lib/dal/supabase'
 import type { FormaPago, MedioPagoRecargo } from '@/lib/types/precios'
@@ -110,9 +106,13 @@ export async function GET(req: NextRequest) {
   let advertencia: string | null = null
 
   if (input) {
-    // 1) QR exacto.
-    const porQr = await findItemByQr(input)
-    if (porQr) {
+    // QR exacto, o SKU con talle opcional. El path `qr` legacy es estricto:
+    // sólo QR.
+    const resuelto = await resolverCodigo(input, { sku: Boolean(code) })
+    if (!resuelto) return NextResponse.json({ ok: false, reason: 'item-not-found' })
+
+    if (resuelto.tipo === 'item') {
+      const porQr = resuelto.item
       if (porQr.estado_item !== 'disponible') {
         return NextResponse.json({
           ok: false,
@@ -126,15 +126,9 @@ export async function GET(req: NextRequest) {
         else return NextResponse.json({ ok: false, reason: 'item-en-reserva', id_reserva: rid })
       }
       item = porQr
-    } else if (code) {
-      // 2) SKU con talle opcional (sólo por `code`; el path `qr` legacy es estricto).
-      const upper = input.toUpperCase()
-      const m = upper.match(/^([A-Z]+-\d+)(?:-(.+))?$/)
-      const baseSku = m?.[1] ?? upper
-      const talle = m?.[2] ?? null
-
-      const producto = await findProductoBySku(baseSku)
-      if (!producto) return NextResponse.json({ ok: false, reason: 'item-not-found' })
+    } else {
+      const { producto, talle } = resuelto
+      const baseSku = producto.sku
 
       const candidatos = (await listItemsDisponibles(producto.id_producto, talle)).filter(
         (c) => !excluidos.has(c.id_item),
@@ -161,11 +155,9 @@ export async function GET(req: NextRequest) {
           id_reserva: bloqueante,
         })
       }
-    } else {
-      return NextResponse.json({ ok: false, reason: 'item-not-found' })
     }
   } else if (idProductoParam) {
-    // 3) Búsqueda por producto (venta sin lector QR).
+    // Búsqueda por producto (venta sin lector QR).
     const { data: prod } = await supabase
       .from('producto')
       .select('id_producto, categoria:categoria(talles)')

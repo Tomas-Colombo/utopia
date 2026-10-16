@@ -10,6 +10,9 @@ import type {
   RegistrarDevolucionRevendedoraPayload,
 } from '../../validation/revendedoras'
 import { calcularSnapshotPrecio } from '../precios/resolucion'
+import { resolverCodigo } from '../inventario/codigo'
+import { listItemsDisponibles } from '../inventario/item'
+import type { ItemProductoRow } from '../../types/inventario'
 import type { LineaCarrito } from '../../types/ventas'
 
 export function extractErrorSlug(error: unknown): string {
@@ -268,131 +271,104 @@ export async function lookupItemParaConsignacionRevendedora(
     if (!rev.activo) return { ok: false, reason: 'revendedora-inactiva' }
   }
 
-  // 1. Buscar el item por qr_code
-  const { data: itemDirecto, error: itemError } = await supabase
-    .from('item_producto')
-    .select(`
-      id_item,
-      id_producto,
-      qr_code,
-      talle,
-      estado_item,
-      producto (
-        nombre,
-        sku,
-        precio_venta
-      )
-    `)
-    .eq('qr_code', qr)
-    .maybeSingle()
+  // QR exacto, SKU (con talle opcional) o nombre de producto.
+  const resuelto = await resolverCodigo(qr, { nombre: true })
+  if (!resuelto) return { ok: false, reason: 'item-not-found' }
 
-  if (itemError) throw itemError
-
-  let item = itemDirecto
-  if (!item) {
-    const { data: prod } = await supabase
-      .from('producto')
-      .select('id_producto')
-      .or(`nombre.ilike.%${qr}%,sku.eq.${qr}`)
-      .limit(1)
-      .maybeSingle()
-
-    if (prod) {
-      const { data: itemDeProd } = await supabase
-        .from('item_producto')
-        .select(`
-          id_item,
-          id_producto,
-          qr_code,
-          talle,
-          estado_item,
-          producto (
-            nombre,
-            sku,
-            precio_venta
-          )
-        `)
-        .eq('id_producto', prod.id_producto)
-        .eq('estado_item', 'disponible')
-        .limit(1)
-        .maybeSingle()
-      if (itemDeProd) {
-        item = itemDeProd
-      }
+  let candidatos: ItemProductoRow[]
+  if (resuelto.tipo === 'item') {
+    if (resuelto.item.estado_item !== 'disponible') {
+      return { ok: false, reason: 'item-no-disponible', estado: resuelto.item.estado_item }
     }
+    candidatos = [resuelto.item]
+  } else {
+    // Sin talle en el código vale cualquier unidad (`undefined`), no sólo las
+    // que no tienen talle (`null`).
+    candidatos = await listItemsDisponibles(
+      resuelto.producto.id_producto,
+      resuelto.talle ?? undefined,
+    )
+    if (candidatos.length === 0) return { ok: false, reason: 'item-not-found' }
   }
 
-  if (!item) return { ok: false, reason: 'item-not-found' }
-
-  if (item.estado_item !== 'disponible') {
-    return { ok: false, reason: 'item-no-disponible', estado: item.estado_item }
+  // Por SKU o nombre se toma la primera unidad libre. Antes se tomaba la
+  // primera disponible y, si estaba reservada, se rechazaba el código aunque
+  // hubiera otras unidades libres del mismo producto.
+  const bloqueos = await motivosDeBloqueo(candidatos.map((c) => c.id_item))
+  const item = candidatos.find((c) => !bloqueos.has(c.id_item))
+  if (!item) {
+    return { ok: false, reason: bloqueos.get(candidatos[0].id_item) ?? 'item-not-found' }
   }
 
-  // 2. Verificar que no esté en una reserva activa
-  const { data: reserva } = await supabase
-    .from('detalle_reserva')
-    .select('id_reserva')
-    .eq('id_item', item.id_item)
-    .eq('estado', 'activa')
-    .limit(1)
-    .maybeSingle()
-
-  if (reserva) {
-    return { ok: false, reason: 'item-en-reserva' }
-  }
-
-  // 3. Verificar que no esté apartado en consignación de proveedor
-  const { data: consigProv } = await supabase
-    .from('consignacion_detalle')
-    .select('id_consignacion_detalle')
-    .eq('id_item', item.id_item)
-    .eq('estado', 'pendiente')
-    .limit(1)
-    .maybeSingle()
-
-  if (consigProv) {
-    return { ok: false, reason: 'item-ya-en-consignacion-pendiente' }
-  }
-
-  // 4. Verificar que no esté ya en consignación de revendedora activa
-  const { data: consigRev } = await supabase
-    .from('consignacion_revendedora_detalle')
-    .select('id_consignacion_revendedora_detalle, estado_detalle')
-    .eq('id_item', item.id_item)
-    .in('estado_detalle', ['pendiente', 'en_poder'])
-    .limit(1)
-    .maybeSingle()
-
-  if (consigRev) {
-    return { ok: false, reason: 'item-ya-en-consignacion-revendedora' }
-  }
-
-  type ProductoRel = {
-    nombre: string
-    sku: string | null
-    precio_venta: number | null
-  } | null
-
-  const prod = item.producto as unknown as ProductoRel
+  const producto =
+    resuelto.tipo === 'producto'
+      ? resuelto.producto
+      : await getProductoParaLookup(supabase, item.id_producto)
 
   return {
     ok: true,
     data: {
       id_item: item.id_item,
       id_producto: item.id_producto,
-      nombre_producto: prod?.nombre || 'Producto',
+      nombre_producto: producto?.nombre || 'Producto',
       codigo_barra: item.qr_code,
-      sku: prod?.sku || '',
+      sku: producto?.sku || '',
       talle: item.talle || null,
-      precio_actual: Number(prod?.precio_venta || 0),
+      precio_actual: Number(producto?.precio_venta || 0),
     },
   }
+}
+
+async function getProductoParaLookup(
+  supabase: Awaited<ReturnType<typeof createServerClient>>,
+  idProducto: string,
+): Promise<{ nombre: string; sku: string | null; precio_venta: number | null } | null> {
+  const { data, error } = await supabase
+    .from('producto')
+    .select('nombre, sku, precio_venta')
+    .eq('id_producto', idProducto)
+    .maybeSingle()
+  if (error) throw error
+  return data
+}
+
+/**
+ * Por qué no se puede consignar cada ítem: reserva activa, consignación de
+ * proveedor pendiente o consignación de revendedora abierta. Tres consultas
+ * para todos los candidatos juntos, no tres por candidato.
+ */
+async function motivosDeBloqueo(ids: string[]): Promise<Map<string, string>> {
+  const supabase = await createServerClient()
+  const [reservas, consigProv, consigRev] = await Promise.all([
+    supabase.from('detalle_reserva').select('id_item').in('id_item', ids).eq('estado', 'activa'),
+    supabase
+      .from('consignacion_detalle')
+      .select('id_item')
+      .in('id_item', ids)
+      .eq('estado', 'pendiente'),
+    supabase
+      .from('consignacion_revendedora_detalle')
+      .select('id_item')
+      .in('id_item', ids)
+      .in('estado_detalle', ['pendiente', 'en_poder']),
+  ])
+  for (const r of [reservas, consigProv, consigRev]) if (r.error) throw r.error
+
+  const filas = (r: { data: unknown }) => (r.data ?? []) as { id_item: string }[]
+  // Se cargan de menor a mayor prioridad para que gane el mismo motivo que
+  // devolvían los chequeos secuenciales de antes: la reserva primero.
+  const motivos = new Map<string, string>()
+  for (const f of filas(consigRev)) motivos.set(f.id_item, 'item-ya-en-consignacion-revendedora')
+  for (const f of filas(consigProv)) motivos.set(f.id_item, 'item-ya-en-consignacion-pendiente')
+  for (const f of filas(reservas)) motivos.set(f.id_item, 'item-en-reserva')
+  return motivos
 }
 
 export async function lookupItemParaVentaRevendedora(
   code: string | undefined,
   idRevendedora: string,
   idProducto?: string,
+  excluir: string[] = [],
 ): Promise<
   | {
       ok: true
@@ -432,68 +408,46 @@ export async function lookupItemParaVentaRevendedora(
   if (!rev.activo) return { ok: false, reason: 'revendedora-inactiva' }
 
   let itemId: string | null = null
+  let prodId: string | null = idProducto ?? null
 
   if (code) {
-    const { data: itemPorQr, error: qrErr } = await supabase
-      .from('item_producto')
-      .select('id_item, id_producto, qr_code, estado_item')
-      .eq('qr_code', code)
-      .maybeSingle()
-
-    if (qrErr) throw qrErr
-
-    if (itemPorQr) {
-      itemId = itemPorQr.id_item
-    }
+    const resuelto = await resolverCodigo(code, { nombre: true })
+    if (resuelto?.tipo === 'item') itemId = resuelto.item.id_item
+    else if (resuelto && !prodId) prodId = resuelto.producto.id_producto
   }
 
-  if (!itemId) {
-    let prodId: string | null = idProducto ?? null
-    if (!prodId && code) {
-      const upper = code.toUpperCase()
-      const m = upper.match(/^([A-Z0-9_-]+)/)
-      const baseSku = m ? m[1] : upper
-
-      const { data: prod } = await supabase
-        .from('producto')
-        .select('id_producto')
-        .or(`sku.eq.${baseSku},nombre.ilike.%${code}%`)
-        .limit(1)
-        .maybeSingle()
-
-      if (prod) {
-        prodId = prod.id_producto
-      }
-    }
-
-    if (prodId) {
-      const { data: itemsCandidatos } = await supabase
-        .from('consignacion_revendedora_detalle')
-        .select(`
+  if (!itemId && prodId) {
+    const { data: itemsCandidatos, error: candErr } = await supabase
+      .from('consignacion_revendedora_detalle')
+      .select(`
+        id_item,
+        consignacion_revendedora!inner (
+          id_revendedora,
+          confirmada,
+          estado
+        ),
+        item:item_producto!inner (
           id_item,
-          consignacion_revendedora!inner (
-            id_revendedora,
-            confirmada,
-            estado
-          ),
-          item:item_producto!inner (
-            id_item,
-            id_producto,
-            estado_item
-          )
-        `)
-        .eq('consignacion_revendedora.id_revendedora', idRevendedora)
-        .eq('consignacion_revendedora.confirmada', true)
-        .eq('consignacion_revendedora.estado', 'abierta')
-        .eq('estado_detalle', 'en_poder')
-        .eq('item.id_producto', prodId)
-        .eq('item.estado_item', 'en_revendedora')
-        .limit(1)
+          id_producto,
+          estado_item
+        )
+      `)
+      .eq('consignacion_revendedora.id_revendedora', idRevendedora)
+      .eq('consignacion_revendedora.confirmada', true)
+      .eq('consignacion_revendedora.estado', 'abierta')
+      .eq('estado_detalle', 'en_poder')
+      .eq('item.id_producto', prodId)
+      .eq('item.estado_item', 'en_revendedora')
+      .limit(25)
+    if (candErr) throw candErr
 
-      if (itemsCandidatos && itemsCandidatos.length > 0) {
-        itemId = itemsCandidatos[0].id_item
-      }
-    }
+    // `excluir` son las unidades que ya están en el carrito. Sin saltearlas,
+    // la segunda unidad del mismo producto devolvía otra vez la primera y el
+    // carrito la rebotaba como duplicada.
+    const excluidos = new Set(excluir)
+    itemId =
+      ((itemsCandidatos ?? []) as { id_item: string }[]).find((c) => !excluidos.has(c.id_item))
+        ?.id_item ?? null
   }
 
   if (!itemId) {
