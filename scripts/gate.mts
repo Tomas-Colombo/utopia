@@ -3,6 +3,7 @@
  *
  *   pnpm gate        typecheck + lint + unit tests
  *   pnpm gate:db     + supabase db reset + tests/db + DOWN check of new migrations
+ *                    (scripts/gate-down.mts)
  *   pnpm gate:full   + next build
  *
  * Why a script and not a chain of `&&` in package.json: agents used to report
@@ -20,6 +21,7 @@
 
 import { spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { verificarDowns } from './gate-down.mts'
 
 type Nivel = 'gate' | 'gate:db' | 'gate:full'
 type Estado = 'OK' | 'FAIL' | 'NOT VERIFIED' | 'NOT RUN'
@@ -149,6 +151,33 @@ function pasoDb(): Paso {
   return pasoVitest('db', 'tests/db', true)
 }
 
+/** See scripts/gate-down.mts. The base branch can be overridden with GATE_BASE. */
+function pasoDown(): Paso {
+  const base = process.env.GATE_BASE || 'main'
+  if (git(`rev-parse --verify --quiet ${base}`) === '') {
+    return { nombre: 'down', estado: 'NOT VERIFIED', detalle: `no existe la rama base ${base}` }
+  }
+  const resultados = verificarDowns(base, `${DIR}/down.log`)
+  const items = resultados.map((r) => `${r.archivo}: ${r.estado} (${r.detalle})`)
+  if (resultados.length === 0) {
+    return { nombre: 'down', estado: 'OK', detalle: `0 migrations nuevas vs ${base}` }
+  }
+  const malos = resultados.filter((r) => r.estado !== 'OK' && r.estado !== 'NO REVERSIBLE')
+  if (malos.length > 0) {
+    const primero = malos[0]
+    const nombre = primero.archivo.split('/').pop()
+    return {
+      nombre: 'down',
+      estado: 'FAIL',
+      detalle: `${malos.length} de ${resultados.length} con problemas; ${nombre}: ${primero.estado}, ${primero.detalle}`,
+      items,
+    }
+  }
+  const noReversibles = resultados.filter((r) => r.estado === 'NO REVERSIBLE').length
+  const extra = noReversibles ? `, ${noReversibles} no reversibles (documentado)` : ''
+  return { nombre: 'down', estado: 'OK', detalle: `${resultados.length} migrations OK${extra}`, items }
+}
+
 function pasoBuild(): Paso {
   const { code, salida } = correr('pnpm build', 'build')
   if (code !== 0) return { nombre: 'build', estado: 'FAIL', detalle: `ver ${DIR}/build.log` }
@@ -188,8 +217,10 @@ if (nivel !== 'gate') {
   const sinBase = huboFallo() ? null : motivoSinBase()
   if (sinBase) {
     pasos.push({ nombre: 'db', estado: 'NOT VERIFIED', detalle: sinBase })
+    pasos.push({ nombre: 'down', estado: 'NOT VERIFIED', detalle: sinBase })
   } else {
     ejecutar('db', pasoDb)
+    ejecutar('down', pasoDown)
   }
 }
 

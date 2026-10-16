@@ -72,6 +72,14 @@ El ejecutor no dice "listo" hasta tener todo esto, con la salida pegada.
 8. **Docs**: tildar en `tasks.md` solo lo hecho y verificado, con los números de
    migración reales. Los ítems no verificados quedan sin tildar.
 
+## Convención del bloque DOWN
+
+`pnpm gate:db` ejecuta el `-- DOWN:` de cada migración nueva de la rama dentro
+de una transacción que siempre termina en ROLLBACK. El bloque son las líneas de
+comentario que siguen a `-- DOWN:`; a cada una se le quita el prefijo `-- ` y
+se ejecuta como SQL. Las notas en prosa van con prefijo `-- NOTE:` y se ignoran.
+Un DOWN que solo tiene comentarios cuenta como fallo.
+
 ## Formato del reporte de cierre
 
 ```text
