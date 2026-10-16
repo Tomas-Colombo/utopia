@@ -96,6 +96,18 @@ const MENSAJES: Record<string, string> = {
   'id-rol-invalido': 'No se pudo identificar el rol. Recargá la página y probá de nuevo.',
   'id-venta-invalido': 'No se pudo identificar la venta. Recargá la página y probá de nuevo.',
   'id-detalle-invalido': 'No se pudo identificar la línea de la venta. Recargá la página y probá de nuevo.',
+  'id-revendedora-invalido': 'No se pudo identificar la revendedora. Recargá la página y probá de nuevo.',
+  'id-consignacion-invalido': 'No se pudo identificar la entrega. Recargá la página y probá de nuevo.',
+  'id-liquidacion-invalido': 'No se pudo identificar la liquidación. Recargá la página y probá de nuevo.',
+  'id-declaracion-invalido': 'No se pudo identificar la venta declarada. Recargá la página y probá de nuevo.',
+  'id-cuenta-invalido': 'No se pudo identificar la cuenta. Elegí una cuenta de la lista.',
+  'demasiados-items': 'Son demasiadas prendas para una sola operación: el máximo es 200.',
+  'fecha-invalida': 'La fecha no es válida.',
+  'fecha-desde-invalida': 'La fecha "desde" no es válida.',
+  'fecha-hasta-invalida': 'La fecha "hasta" no es válida.',
+  'metodo-largo': 'El medio de pago no puede pasar de 50 caracteres.',
+  'referencia-larga': 'La referencia no puede pasar de 100 caracteres.',
+  'error-desconocido': 'No pudimos completar la operación. Probá de nuevo en un momento.',
 
   // ─── Nombres y textos ──────────────────────────────────────────────
   'nombre-corto': 'El nombre necesita al menos 2 caracteres.',
