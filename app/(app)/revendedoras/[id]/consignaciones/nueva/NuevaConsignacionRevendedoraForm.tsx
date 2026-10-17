@@ -1,7 +1,9 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { BuscadorProductos } from '@/components/inventario/BuscadorProductos'
+import { QrScanner } from '@/components/inventario/QrScanner'
 import { Button } from '@/components/ui/Button'
 import { Field } from '@/components/ui/Field'
 import { Input } from '@/components/ui/Input'
@@ -41,10 +43,10 @@ export function NuevaConsignacionRevendedoraForm({
   const [buscando, setBuscando] = useState(false)
   const [errorItem, setErrorItem] = useState<string | null>(null)
   const [items, setItems] = useState<ItemSeleccionado[]>([])
+  const [camaraOpen, setCamaraOpen] = useState(false)
 
-  async function handleBuscarItem(e?: React.FormEvent) {
-    if (e) e.preventDefault()
-    const codigo = codigoInput.trim()
+  async function handleBuscarItem(codigoLeido: string = codigoInput) {
+    const codigo = codigoLeido.trim()
     if (!codigo) {
       setErrorItem('Escaneá o escribí un código.')
       return
@@ -71,7 +73,10 @@ export function NuevaConsignacionRevendedoraForm({
         return
       }
 
-      setItems((prev) => [...prev, data.item])
+      // La cámara relee el mismo QR: el chequeo de arriba puede llegar tarde.
+      setItems((prev) =>
+        prev.some((i) => i.id_item === data.item.id_item) ? prev : [...prev, data.item],
+      )
       setCodigoInput('')
     } catch {
       setErrorItem('Error de conexión al buscar el ítem.')
@@ -79,6 +84,13 @@ export function NuevaConsignacionRevendedoraForm({
       setBuscando(false)
     }
   }
+
+  // QrScanner fija `onDetected` al montar; sin este ref leería la lista de
+  // ítems de ese momento y no detectaría los repetidos.
+  const buscarRef = useRef(handleBuscarItem)
+  useEffect(() => {
+    buscarRef.current = handleBuscarItem
+  })
 
   function handleQuitarItem(idItem: string) {
     setItems((prev) => prev.filter((i) => i.id_item !== idItem))
@@ -159,81 +171,93 @@ export function NuevaConsignacionRevendedoraForm({
     },
   ]
 
+  // El buscador trae su propio <form> (Enter agrega un ítem), así que el form
+  // de la consignación no puede envolverlo: el botón Guardar se asocia por id.
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <div className="space-y-6">
       <div className="border-b border-border pb-4">
         <h2 className="font-display text-xl">Nueva consignación de salida</h2>
         <p className="text-sm text-muted">Revendedora: {nombreRevendedora}</p>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <Field htmlFor="periodo-desde" label="Período desde (opcional)">
-          <Input
-            id="periodo-desde"
-            type="date"
-            value={periodoDesde}
-            onChange={(e) => setPeriodoDesde(e.target.value)}
-          />
-        </Field>
-        <Field htmlFor="periodo-hasta" label="Período hasta (opcional)">
-          <Input
-            id="periodo-hasta"
-            type="date"
-            value={periodoHasta}
-            onChange={(e) => setPeriodoHasta(e.target.value)}
-          />
-        </Field>
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <Field htmlFor="observaciones" label="Observaciones (opcional)">
-          <Textarea
-            id="observaciones"
-            rows={2}
-            value={observaciones}
-            onChange={(e) => setObservaciones(e.target.value)}
-            placeholder="Notas sobre el acuerdo o entrega..."
-          />
-        </Field>
-        <Field htmlFor="motivo" label="Motivo inicial (opcional)">
-          <Input
-            id="motivo"
-            value={motivo}
-            onChange={(e) => setMotivo(e.target.value)}
-            placeholder="Ej: Muestrario temporada primavera"
-          />
-        </Field>
-      </div>
-
-      <div className="rounded-lg border border-border bg-card-2 p-4 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-end gap-3">
-          <div className="flex-1">
-            <Field htmlFor="codigo-input" label="Escanear o ingresar código / SKU">
-              <Input
-                id="codigo-input"
-                value={codigoInput}
-                onChange={(e) => setCodigoInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault()
-                    handleBuscarItem()
-                  }
-                }}
-                placeholder="Código de barras o SKU del ítem disponible..."
-                disabled={buscando}
-              />
-            </Field>
-          </div>
-          <Button
-            type="button"
-            onClick={() => handleBuscarItem()}
-            disabled={buscando || !codigoInput.trim()}
-          >
-            {buscando ? 'Buscando...' : 'Agregar ítem'}
-          </Button>
+      <form id="nueva-consignacion" onSubmit={handleSubmit} className="space-y-6">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <Field htmlFor="periodo-desde" label="Período desde (opcional)">
+            <Input
+              id="periodo-desde"
+              type="date"
+              value={periodoDesde}
+              onChange={(e) => setPeriodoDesde(e.target.value)}
+            />
+          </Field>
+          <Field htmlFor="periodo-hasta" label="Período hasta (opcional)">
+            <Input
+              id="periodo-hasta"
+              type="date"
+              value={periodoHasta}
+              onChange={(e) => setPeriodoHasta(e.target.value)}
+            />
+          </Field>
         </div>
 
-        {errorItem && <div className="text-sm text-warn-ink font-medium">{errorItem}</div>}
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <Field htmlFor="observaciones" label="Observaciones (opcional)">
+            <Textarea
+              id="observaciones"
+              rows={2}
+              value={observaciones}
+              onChange={(e) => setObservaciones(e.target.value)}
+              placeholder="Notas sobre el acuerdo o entrega..."
+            />
+          </Field>
+          <Field htmlFor="motivo" label="Motivo inicial (opcional)">
+            <Input
+              id="motivo"
+              value={motivo}
+              onChange={(e) => setMotivo(e.target.value)}
+              placeholder="Ej: Muestrario temporada primavera"
+            />
+          </Field>
+        </div>
+
+      </form>
+
+      <div className="rounded-lg border border-border bg-card-2 p-4 space-y-4">
+        <BuscadorProductos
+          id="codigo-input"
+          label="Escanear o ingresar código / SKU"
+          hint="QR, código de barras o SKU del ítem disponible. Enter para agregar."
+          error={errorItem ?? undefined}
+          placeholder="QR, código de barras o SKU"
+          value={codigoInput}
+          onChange={(v) => {
+            setCodigoInput(v)
+            setErrorItem(null)
+          }}
+          sugerencias={[]}
+          onElegir={() => {}}
+          onSubmit={(texto) => void handleBuscarItem(texto)}
+          disabled={buscando}
+          actions={
+            <>
+              <Button type="submit" disabled={buscando || !codigoInput.trim()}>
+                {buscando ? 'Buscando...' : 'Agregar ítem'}
+              </Button>
+              <Button type="button" variant="secondary" onClick={() => setCamaraOpen((v) => !v)}>
+                {camaraOpen ? 'Cerrar' : 'Cámara'}
+              </Button>
+            </>
+          }
+        />
+
+        {camaraOpen && (
+          <div className="mx-auto max-w-xs">
+            <QrScanner
+              onDetected={(text) => void buscarRef.current(text)}
+              onClose={() => setCamaraOpen(false)}
+            />
+          </div>
+        )}
 
         <div className="space-y-2">
           <div className="flex items-center justify-between">
@@ -269,10 +293,10 @@ export function NuevaConsignacionRevendedoraForm({
         >
           Cancelar
         </Button>
-        <Button type="submit" disabled={pending || items.length === 0}>
+        <Button type="submit" form="nueva-consignacion" disabled={pending || items.length === 0}>
           {pending ? 'Guardando...' : 'Guardar borrador'}
         </Button>
       </div>
-    </form>
+    </div>
   )
 }
