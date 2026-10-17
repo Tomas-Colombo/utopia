@@ -83,7 +83,7 @@ export function PageBand({ breadcrumb, title, subtitle, filters, kpis, actions, 
               </Link>
             )}
             <div className="flex min-w-0 flex-col gap-2">
-              <h1 className="font-display text-3xl text-band-ink md:text-[38px]">{title}</h1>
+              <h1 className="font-display text-3xl leading-[1.05] text-band-ink md:text-[38px]">{title}</h1>
               {subtitle && <p className="text-[13px] text-band-muted">{subtitle}</p>}
             </div>
           </div>

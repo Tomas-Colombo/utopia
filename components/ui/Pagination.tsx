@@ -28,7 +28,7 @@ export function Pagination({ page, pageSize, total, onPageChange, disabled }: Pa
 
   return (
     <nav
-      className="flex items-center justify-between gap-4 px-1 py-2 text-sm"
+      className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-1 py-2 text-[13px] tabular-nums"
       aria-label="Paginación"
     >
       <p className="text-muted">
@@ -36,12 +36,12 @@ export function Pagination({ page, pageSize, total, onPageChange, disabled }: Pa
         <span className="font-mono text-text">{to}</span> de{' '}
         <span className="font-mono text-text">{total}</span>
       </p>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3">
         <button
           type="button"
           onClick={() => onPageChange(current - 1)}
           disabled={disabled || current <= 1}
-          className="rounded-md border border-border bg-card px-3 py-1.5 text-text hover:bg-card-2 disabled:cursor-not-allowed disabled:opacity-40"
+          className="rounded-md border border-line-2 px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:bg-hover hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ink disabled:pointer-events-none disabled:opacity-40"
         >
           Anterior
         </button>
@@ -53,7 +53,7 @@ export function Pagination({ page, pageSize, total, onPageChange, disabled }: Pa
           type="button"
           onClick={() => onPageChange(current + 1)}
           disabled={disabled || current >= totalPages}
-          className="rounded-md border border-border bg-card px-3 py-1.5 text-text hover:bg-card-2 disabled:cursor-not-allowed disabled:opacity-40"
+          className="rounded-md border border-line-2 px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:bg-hover hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ink disabled:pointer-events-none disabled:opacity-40"
         >
           Siguiente
         </button>

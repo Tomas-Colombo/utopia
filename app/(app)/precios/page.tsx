@@ -69,7 +69,7 @@ export default async function PreciosHome(props: {
         <section className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <Link
             href="/precios/reglas"
-            className="rounded-lg border border-border bg-card p-5 hover:bg-card-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
+            className="rounded-lg border border-border bg-card p-5 transition-colors hover:border-line-2 hover:bg-card-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
           >
             <div className="text-sm text-muted">Configurar</div>
             <div className="mt-1 font-display text-xl">Reglas de precios</div>
@@ -79,7 +79,7 @@ export default async function PreciosHome(props: {
           </Link>
           <Link
             href="/precios/cuentas"
-            className="rounded-lg border border-border bg-card p-5 hover:bg-card-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
+            className="rounded-lg border border-border bg-card p-5 transition-colors hover:border-line-2 hover:bg-card-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
           >
             <div className="text-sm text-muted">Configurar</div>
             <div className="mt-1 font-display text-xl">Cuentas de cobro</div>

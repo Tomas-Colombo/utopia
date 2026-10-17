@@ -40,7 +40,7 @@ export function Badge({ children, variant = 'neutral', ariaLabel }: BadgeProps) 
     <span
       data-variant={variant}
       aria-label={ariaLabel}
-      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-xs uppercase ${VARIANT_CLASS[variant]}`}
+      className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 font-mono text-[10.5px] font-medium uppercase leading-4 tracking-[0.06em] ${VARIANT_CLASS[variant]}`}
     >
       {variant === 'success' && (
         <span aria-hidden className="h-[7px] w-[7px] shrink-0 rounded-full bg-ok" />

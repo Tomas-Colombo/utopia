@@ -20,12 +20,12 @@ export function BandAction({ href, title, description, tone = 'secondary', badge
     return (
       <Link
         href={href}
-        className="flex min-h-[84px] flex-1 flex-col justify-between gap-2 rounded-[5px] bg-accent px-4 py-3 text-accent-ink transition-opacity hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-band-ink"
+        className="group flex min-h-[84px] flex-1 flex-col justify-between gap-2 rounded-md bg-accent px-4 py-3 text-accent-ink shadow-[0_1px_0_rgb(255_255_255/0.25)_inset] transition-[filter,transform] duration-150 hover:brightness-[0.97] focus:outline-none focus-visible:ring-2 focus-visible:ring-band-ink active:translate-y-px"
       >
         <span className="text-lg font-bold leading-none tracking-[-0.02em] [font-stretch:120%]">{title}</span>
         <span className="flex items-end justify-between gap-3">
           {description && <span className="text-xs leading-snug text-accent-ink/80">{description}</span>}
-          <span aria-hidden className="text-xl leading-none">→</span>
+          <span aria-hidden className="text-xl leading-none transition-transform duration-150 group-hover:translate-x-0.5">→</span>
         </span>
       </Link>
     )
@@ -33,7 +33,7 @@ export function BandAction({ href, title, description, tone = 'secondary', badge
   return (
     <Link
       href={href}
-      className="flex items-center justify-between gap-3 rounded-[5px] border border-band-line px-4 py-2.5 transition-colors hover:bg-white/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-band-ink"
+      className="flex items-center justify-between gap-3 rounded-md border border-band-line px-4 py-2.5 transition-colors duration-150 hover:border-white/20 hover:bg-white/[0.04] focus:outline-none focus-visible:ring-2 focus-visible:ring-band-ink active:translate-y-px"
     >
       <span className="flex flex-col gap-0.5">
         <span className="text-sm font-semibold">{title}</span>

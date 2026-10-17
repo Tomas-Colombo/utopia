@@ -228,7 +228,7 @@ export default async function ProveedorPerfilPage(props: {
                       <td className="px-4 py-3 text-right">
                         <Link
                           href={`/inventario/ingresos/${i.id_ingreso}?from=${encodeURIComponent(volverAqui('ing_page', ingPage))}`}
-                          className="text-sm text-ink underline decoration-line-2 underline-offset-2 hover:decoration-ink"
+                          className="-mx-2 rounded-[4px] px-2 py-1 text-xs font-medium text-muted transition-colors hover:bg-hover hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
                         >
                           Ver
                         </Link>
@@ -290,7 +290,7 @@ export default async function ProveedorPerfilPage(props: {
                       <td className="px-4 py-3 text-right">
                         <Link
                           href={`/consignaciones/${c.id_consignacion}?from=${encodeURIComponent(volverAqui('cons_page', consPage))}`}
-                          className="text-sm text-ink underline decoration-line-2 underline-offset-2 hover:decoration-ink"
+                          className="-mx-2 rounded-[4px] px-2 py-1 text-xs font-medium text-muted transition-colors hover:bg-hover hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
                         >
                           Ver
                         </Link>
@@ -356,7 +356,7 @@ export default async function ProveedorPerfilPage(props: {
                       <td className="px-4 py-3 text-right">
                         <Link
                           href={`/rendiciones/${r.id_rendicion}?from=${encodeURIComponent(volverAqui('rend_page', rendPage))}`}
-                          className="text-sm text-ink underline decoration-line-2 underline-offset-2 hover:decoration-ink"
+                          className="-mx-2 rounded-[4px] px-2 py-1 text-xs font-medium text-muted transition-colors hover:bg-hover hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
                         >
                           Ver
                         </Link>

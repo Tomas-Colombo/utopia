@@ -93,8 +93,16 @@ export function BuscadorFicha({ productos }: { productos: ProductoConDetalle[] }
           />
         ) : (
           <>
-            <div className="mx-auto mb-2 h-12 w-12 rounded-full bg-card-3 flex items-center justify-center text-2xl">
-              📷
+            <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-card-3 text-muted">
+              <svg aria-hidden viewBox="0 0 16 16" fill="none" className="h-6 w-6">
+                <path
+                  d="M2 5.5A1.5 1.5 0 0 1 3.5 4h1.3l1-1.5h4.4l1 1.5h1.3A1.5 1.5 0 0 1 14 5.5v6a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 11.5v-6Z"
+                  stroke="currentColor"
+                  strokeWidth="1.2"
+                  strokeLinejoin="round"
+                />
+                <circle cx="8" cy="8.5" r="2.25" stroke="currentColor" strokeWidth="1.2" />
+              </svg>
             </div>
             <p className="text-sm text-muted">Buscar ítem o producto mediante la cámara.</p>
             <Button variant="secondary" onClick={() => setCamaraOpen(true)} className="mt-3">

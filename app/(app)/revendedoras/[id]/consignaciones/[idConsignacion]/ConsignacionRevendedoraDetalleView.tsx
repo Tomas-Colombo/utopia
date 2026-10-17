@@ -315,11 +315,11 @@ export function ConsignacionRevendedoraDetalleView({
         </div>
         <div className="rounded-lg border border-border bg-card p-4">
           <div className="text-xs uppercase font-mono text-muted">En su poder</div>
-          <div className="mt-1 font-display text-2xl text-blue-500">{itemsEnPoder.length}</div>
+          <div className="mt-1 font-display text-2xl text-ink">{itemsEnPoder.length}</div>
         </div>
         <div className="rounded-lg border border-border bg-card p-4">
           <div className="text-xs uppercase font-mono text-muted">Vendidos</div>
-          <div className="mt-1 font-display text-2xl text-green-500">
+          <div className="mt-1 font-display text-2xl text-ink">
             {cons.detalles.filter((d) => d.estado_detalle === 'vendido').length}
           </div>
         </div>

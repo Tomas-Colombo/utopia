@@ -76,7 +76,7 @@ export function Modal({ open, title, onClose, children, footer, size = 'md' }: M
   return (
     <Portal>
       <div
-        className="fixed inset-0 z-50 flex items-center justify-center bg-text/40 p-4"
+        className="fixed inset-0 z-50 flex items-center justify-center bg-text/40 p-4 backdrop-blur-[2px]"
         onClick={onClose}
       >
         <div
@@ -88,7 +88,7 @@ export function Modal({ open, title, onClose, children, footer, size = 'md' }: M
           onKeyDown={handleKeyDown}
           // max-h + scroll is a last-resort guard: content slots cap their own
           // height, but a short viewport must never clip the dialog chrome.
-          className={`flex max-h-[calc(100vh-2rem)] w-full flex-col overflow-y-auto ${SIZE_CLASS[size]} rounded-md border border-border bg-card shadow-lg`}
+          className={`flex max-h-[calc(100vh-2rem)] w-full flex-col overflow-y-auto ${SIZE_CLASS[size]} rounded-lg border border-line bg-card shadow-[0_24px_64px_-16px_rgb(0_0_0/0.35)] motion-safe:animate-[fadeUp_0.18s_ease-out]`}
         >
           <div className="flex items-center justify-between border-b border-border px-6 py-4">
             <h2 id={titleId} className="font-display text-lg text-text">
@@ -98,7 +98,7 @@ export function Modal({ open, title, onClose, children, footer, size = 'md' }: M
               type="button"
               aria-label="Cerrar"
               onClick={onClose}
-              className="rounded-md p-1 text-muted hover:bg-card-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
+              className="-mr-2 inline-flex h-8 w-8 items-center justify-center rounded-md text-lg leading-none text-muted transition-colors hover:bg-hover hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
             >
               <span aria-hidden>×</span>
             </button>

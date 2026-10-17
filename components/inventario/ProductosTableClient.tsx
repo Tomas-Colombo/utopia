@@ -2,8 +2,9 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useMemo, useState, useTransition } from 'react'
+import { useMemo, useState, useTransition, type ReactNode } from 'react'
 import { Badge } from '@/components/ui/Badge'
+import { Button } from '@/components/ui/Button'
 import { BuscadorProductos, type SugerenciaProducto } from '@/components/inventario/BuscadorProductos'
 import { Pagination } from '@/components/ui/Pagination'
 import { Table, type Column } from '@/components/ui/Table'
@@ -104,16 +105,16 @@ export function ProductosTableClient({
   }
 
   const columns: Column<ProductoConDetalle>[] = [
-    { key: 'nombre', label: 'Producto', render: (r) => <span className="font-medium">{r.nombre}</span> },
+    { key: 'nombre', label: 'Producto', render: (r) => <span className="font-semibold text-ink">{r.nombre}</span> },
     {
       key: 'sku',
       label: 'SKU',
-      render: (r) => (r.sku ? <span className="font-mono text-xs">{r.sku}</span> : <span className="text-muted">—</span>),
+      render: (r) => (r.sku ? <span className="font-mono text-xs text-muted">{r.sku}</span> : <span className="text-dim">—</span>),
     },
     {
       key: 'categoria',
       label: 'Categoría',
-      render: (r) => r.categoria?.nombre ?? <span className="text-muted">—</span>,
+      render: (r) => r.categoria?.nombre ?? <span className="text-dim">—</span>,
     },
     {
       key: 'precio_venta',
@@ -137,7 +138,7 @@ export function ProductosTableClient({
         const bajo = tieneMinimo && r.stock_disponible < r.stock_minimo
         return (
           <div className="flex flex-wrap items-center justify-end gap-x-2 gap-y-1">
-            <span className="whitespace-nowrap font-mono">
+            <span className={`whitespace-nowrap font-mono ${bajo ? 'text-warn-ink' : ''}`}>
               {tieneMinimo
                 ? `${r.stock_disponible} / ${r.stock_minimo}`
                 : r.stock_disponible}
@@ -164,7 +165,7 @@ export function ProductosTableClient({
                 <div className="flex flex-col items-end text-xs">
                   <span className="font-mono text-muted">Central: {r.stock_disponible}</span>
                   {enRev > 0 && (
-                    <span className="font-mono text-blue-500 font-medium">
+                    <span className="font-mono font-semibold text-ink">
                       En rev.: {enRev}
                     </span>
                   )}
@@ -179,16 +180,16 @@ export function ProductosTableClient({
       label: '',
       align: 'right',
       render: (r) => (
-        <div className="flex items-center justify-end gap-3 text-sm">
+        <div className="-mr-2 flex items-center justify-end gap-0.5 whitespace-nowrap">
           <Link
             href={`/inventario/productos/${r.id_producto}/ficha`}
-            className="text-ink underline decoration-line-2 underline-offset-2 hover:decoration-ink"
+            className="rounded-[4px] px-2 py-1 text-xs font-medium text-muted transition-colors hover:bg-hover hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
           >
             Ver
           </Link>
           <Link
             href={`/inventario/ingresos/nuevo?producto=${r.id_producto}`}
-            className="text-ink underline decoration-line-2 underline-offset-2 hover:decoration-ink"
+            className="rounded-[4px] px-2 py-1 text-xs font-medium text-muted transition-colors hover:bg-hover hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
             title="Cargar un ingreso prellenado con este producto"
           >
             Restock
@@ -196,7 +197,7 @@ export function ProductosTableClient({
           <button
             type="button"
             onClick={() => setEditing(r)}
-            className="text-ink underline decoration-line-2 underline-offset-2 hover:decoration-ink"
+            className="rounded-[4px] px-2 py-1 text-xs font-medium text-muted transition-colors hover:bg-hover hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
           >
             Editar
           </button>
@@ -204,6 +205,28 @@ export function ProductosTableClient({
       ),
     },
   ]
+
+  // Chips de lo que ya está aplicado (la URL), no de lo que se está tipeando:
+  // así el chip nunca miente sobre lo que muestra la tabla.
+  const categoriaActiva = initialCategoria
+    ? categorias.find((c) => c.id_categoria === initialCategoria)?.nombre ?? null
+    : null
+  const tenenciaActiva =
+    tenenciaStock && initialTenencia
+      ? initialTenencia === 'central'
+        ? 'Stock central'
+        : initialTenencia === 'revendedoras'
+          ? 'En revendedoras'
+          : null
+      : null
+  const hayFiltros = Boolean(initialSearch || categoriaActiva || tenenciaActiva)
+
+  function limpiarFiltros() {
+    setQ('')
+    setCat('')
+    setTenencia('')
+    applyFilters('', '', '')
+  }
 
   // Elegir una sugerencia filtra la tabla a ese producto.
   function elegirSugerencia(s: SugerenciaProducto) {
@@ -271,21 +294,25 @@ export function ProductosTableClient({
                 <option value="revendedoras">En revendedoras</option>
               </select>
             )}
-            <button
-              type="button"
-              onClick={() => applyFilters()}
-              className="shrink-0 rounded-md border border-border bg-card px-4 py-2 text-sm text-text hover:bg-card-2"
-            >
+            <Button variant="neutral" onClick={() => applyFilters()} className="shrink-0">
               Aplicar
-            </button>
+            </Button>
             {scanHref && (
               <Link
                 href={scanHref}
                 aria-label="Escanear con cámara"
                 title="Escanear con cámara"
-                className="inline-flex shrink-0 items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm text-text hover:bg-card-2"
+                className="inline-flex shrink-0 items-center gap-2 rounded-md border border-line-2 px-3 py-2 text-[13px] font-medium text-muted transition-colors hover:bg-hover hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
               >
-                <span aria-hidden>📷</span>
+                <svg aria-hidden viewBox="0 0 16 16" fill="none" className="h-4 w-4">
+                  <path
+                    d="M2 5.5A1.5 1.5 0 0 1 3.5 4h1.3l1-1.5h4.4l1 1.5h1.3A1.5 1.5 0 0 1 14 5.5v6a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 11.5v-6Z"
+                    stroke="currentColor"
+                    strokeWidth="1.3"
+                    strokeLinejoin="round"
+                  />
+                  <circle cx="8" cy="8.5" r="2.25" stroke="currentColor" strokeWidth="1.3" />
+                </svg>
                 <span className="hidden sm:inline">Escanear</span>
               </Link>
             )}
@@ -293,7 +320,28 @@ export function ProductosTableClient({
         }
       />
 
-      <div className="rounded-lg border border-border bg-card overflow-x-auto">
+      {hayFiltros && (
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <span className="eyebrow text-muted">Filtrando</span>
+          {initialSearch && <FiltroChip>“{initialSearch}”</FiltroChip>}
+          {categoriaActiva && <FiltroChip>{categoriaActiva}</FiltroChip>}
+          {tenenciaActiva && <FiltroChip>{tenenciaActiva}</FiltroChip>}
+          <button
+            type="button"
+            onClick={limpiarFiltros}
+            disabled={pending}
+            className="rounded-[4px] px-2 py-1 font-medium text-muted underline decoration-line-2 underline-offset-2 transition-colors hover:text-ink hover:decoration-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ink disabled:opacity-50"
+          >
+            Limpiar filtros
+          </button>
+        </div>
+      )}
+
+      <div
+        className={`overflow-x-auto rounded-lg border border-line bg-panel shadow-[0_1px_2px_rgb(0_0_0/0.04)] transition-opacity ${
+          pending ? 'opacity-70' : ''
+        }`}
+      >
         <Table
           columns={columns}
           data={displayedRows}
@@ -318,5 +366,13 @@ export function ProductosTableClient({
         onClose={() => setEditing(null)}
       />
     </div>
+  )
+}
+
+function FiltroChip({ children }: { children: ReactNode }) {
+  return (
+    <span className="inline-flex max-w-[16rem] items-center truncate rounded-full border border-line-2 bg-panel px-2.5 py-0.5 text-xs text-ink">
+      {children}
+    </span>
   )
 }

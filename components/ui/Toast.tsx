@@ -109,7 +109,7 @@ function ToastItemView({ item, onDismiss }: { item: ToastItem; onDismiss: () => 
       // this pair instead.
       data-testid="toast"
       data-variant={item.variant}
-      className={`pointer-events-auto flex min-w-[260px] max-w-sm items-start gap-3 rounded-md px-4 py-3 text-sm shadow-lg ${VARIANT_CLASS[item.variant]}`}
+      className={`pointer-events-auto flex min-w-[260px] max-w-sm items-start gap-3 rounded-lg px-4 py-3 text-sm shadow-[0_12px_32px_-8px_rgb(0_0_0/0.35)] motion-safe:animate-[fadeUp_0.2s_ease-out] ${VARIANT_CLASS[item.variant]}`}
     >
       <div className="flex-1">
         <span className="sr-only">{SEMANTIC_PREFIX[item.variant]}</span>

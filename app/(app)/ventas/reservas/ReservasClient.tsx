@@ -113,7 +113,7 @@ export function ReservasClient({ rows }: { rows: Row[] }) {
                       )}
                       <Link
                         href={`/ventas/reservas/${r.id_reserva}`}
-                        className="text-sm text-ink underline decoration-line-2 underline-offset-2 hover:decoration-ink"
+                        className="-mx-2 rounded-[4px] px-2 py-1 text-xs font-medium text-muted transition-colors hover:bg-hover hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
                       >
                         Abrir
                       </Link>

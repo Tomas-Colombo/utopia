@@ -56,7 +56,7 @@ export function FilterBar({
     <div
       ref={containerRef}
       data-testid="filter-bar"
-      className="flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2"
+      className="flex items-center gap-2 rounded-md border border-control-line bg-control px-3 py-2 transition-colors hover:border-muted-2 focus-within:border-ink focus-within:ring-1 focus-within:ring-ink"
     >
       <input
         ref={inputRef}
@@ -66,14 +66,14 @@ export function FilterBar({
         placeholder={placeholder}
         onChange={(event) => onChange(event.target.value)}
         onKeyDown={handleInputKeyDown}
-        className="flex-1 bg-transparent text-text outline-none"
+        className="flex-1 bg-transparent text-[13.5px] text-text outline-none placeholder:text-muted"
       />
       {value !== '' && (
         <button
           type="button"
           aria-label="Clear filter"
           onClick={handleClear}
-          className="text-muted hover:text-text"
+          className="inline-flex h-5 w-5 items-center justify-center rounded-full text-muted transition-colors hover:bg-hover hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
         >
           ×
         </button>

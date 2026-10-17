@@ -101,18 +101,22 @@ export default async function InventarioHome(props: {
           </>
         }
       />
-      <main className="flex-1 p-6 space-y-6">
+      <main className="flex-1 space-y-6 p-4 sm:p-6">
         {/* Alertas — jerarquía visual §L105 */}
         <AlertasReposicion alertas={alertasRepo} />
 
         {alertasRot.length > 0 && (
-          <section className="rounded-lg border border-warn bg-card p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-display text-lg text-warn-ink">
+          <section className="rounded-lg border border-line bg-panel p-4 shadow-[0_1px_2px_rgb(0_0_0/0.04)]">
+            <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+              <h3 className="flex items-center gap-2 font-display text-lg text-ink">
+                <span aria-hidden className="h-[7px] w-[7px] shrink-0 rounded-full border-[1.5px] border-warn" />
                 Rotación vencida
               </h3>
               <span className="text-xs text-muted">
-                Evaluá devolver al proveedor · {alertasRot.length} ítem{alertasRot.length === 1 ? '' : 's'}
+                Evaluá devolver al proveedor ·{' '}
+                <span className="font-mono text-warn-ink">
+                  {alertasRot.length} ítem{alertasRot.length === 1 ? '' : 's'}
+                </span>
               </span>
             </div>
             <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
@@ -120,14 +124,14 @@ export default async function InventarioHome(props: {
                 <Link
                   key={a.id_item}
                   href={`/inventario/ficha/${encodeURIComponent(a.qr_code)}`}
-                  className="flex items-center justify-between rounded-md bg-card-2 px-3 py-2 hover:bg-card-3 text-sm"
+                  className="flex items-center justify-between gap-3 rounded-md border border-line bg-panel-2 px-3 py-2.5 text-sm transition-colors hover:border-line-2 hover:bg-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
                 >
                   <div className="min-w-0">
                     <div className="font-medium truncate">{a.producto_nombre}</div>
                     <div className="text-xs text-muted truncate">{a.proveedor_nombre}</div>
                   </div>
-                  <div className="text-right text-xs shrink-0">
-                    <div className="font-mono">{a.dias_transcurridos}d</div>
+                  <div className="shrink-0 text-right font-mono text-xs tabular-nums">
+                    <div>{a.dias_transcurridos}d</div>
                     <div className="text-warn-ink">+{a.dias_excedidos}</div>
                   </div>
                 </Link>
@@ -141,9 +145,14 @@ export default async function InventarioHome(props: {
           </section>
         )}
 
-{/* Productos — buscador único (escáner + SKU) + tabla */}
+        {/* Productos — buscador único (escáner + SKU) + tabla */}
         <section className="space-y-3">
-          <h3 className="font-display text-lg">Productos</h3>
+          <div className="flex items-baseline gap-3">
+            <h3 className="font-display text-lg">Productos</h3>
+            <span className="font-mono text-xs tabular-nums text-muted">
+              {total.toLocaleString('es-AR')} {total === 1 ? 'resultado' : 'resultados'}
+            </span>
+          </div>
           <ProductosTableClient
             rows={productosPagina}
             catalogo={catalogoBuscador}

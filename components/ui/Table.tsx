@@ -46,16 +46,16 @@ export function Table<T extends object>({
   }
 
   return (
-    <table className="w-full border-collapse text-text">
+    <table className="w-full border-collapse text-[13.5px] text-text">
       <thead>
-        <tr className="border-b border-border">
+        <tr className="border-b border-line bg-panel-2">
           {columns.map((column) => {
             const align = column.align ?? 'left'
             return (
               <th
                 key={column.key}
                 data-align={align}
-                className={`px-3 py-2 font-body ${ALIGN_CLASS[align]}`}
+                className={`whitespace-nowrap px-4 py-2.5 font-mono text-[10.5px] font-medium uppercase tracking-[0.12em] text-muted ${ALIGN_CLASS[align]}`}
               >
                 {column.label}
               </th>
@@ -67,14 +67,14 @@ export function Table<T extends object>({
         {loading ? (
           Array.from({ length: 3 }).map((_, rowIndex) => (
             <tr key={`skeleton-row-${rowIndex}`} data-testid="table-loading-row">
-              <td colSpan={columns.length} className="px-3 py-2">
+              <td colSpan={columns.length} className="px-4 py-3.5">
                 <Skeleton width="100%" height="1rem" />
               </td>
             </tr>
           ))
         ) : data.length === 0 ? (
           <tr>
-            <td colSpan={columns.length} className="px-3 py-4 text-center text-muted">
+            <td colSpan={columns.length} className="px-4 py-12 text-center text-sm text-muted">
               {emptyState ?? 'No data'}
             </td>
           </tr>
@@ -92,14 +92,20 @@ export function Table<T extends object>({
               : {}
 
             return (
-              <tr key={rowId} className="border-b border-border-2" {...rowProps}>
+              <tr
+                key={rowId}
+                className={`border-b border-line transition-colors last:border-b-0 hover:bg-hover ${
+                  onRowClick ? 'cursor-pointer focus:outline-none focus-visible:bg-hover focus-visible:shadow-[inset_2px_0_0_var(--ink)]' : ''
+                }`}
+                {...rowProps}
+              >
                 {columns.map((column) => {
                   const align = column.align ?? 'left'
                   return (
                     <td
                       key={column.key}
                       data-align={align}
-                      className={`px-3 py-2 ${ALIGN_CLASS[align]}`}
+                      className={`px-4 py-3 align-middle tabular-nums ${ALIGN_CLASS[align]}`}
                     >
                       {column.render
                         ? column.render(item)

@@ -88,9 +88,19 @@ export function BuscadorProductos({
   return (
     <form onSubmit={submit}>
       <Field htmlFor={id} label={label} error={error} hint={hint}>
-        <div className="flex gap-2">
-          <div className="relative flex-1">
+        <div className="flex flex-wrap gap-2">
+          <div className="relative min-w-[14rem] flex-1">
+            <svg
+              aria-hidden
+              viewBox="0 0 16 16"
+              fill="none"
+              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-2"
+            >
+              <circle cx="7" cy="7" r="4.75" stroke="currentColor" strokeWidth="1.5" />
+              <path d="m10.5 10.5 3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
             <Input
+              className="pl-9"
               id={id}
               autoFocus={autoFocus}
               value={value}
@@ -112,7 +122,7 @@ export function BuscadorProductos({
             {hayLista && (
               <ul
                 role="listbox"
-                className="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md border border-border bg-card-2 shadow"
+                className="absolute z-20 mt-1 max-h-72 w-full overflow-auto rounded-md border border-control-line bg-control p-1 shadow-[0_10px_28px_rgb(0_0_0/0.18)]"
               >
                 {sugerencias.map((s, i) => {
                   const activo = i === activoIdx
@@ -128,8 +138,8 @@ export function BuscadorProductos({
                         setOpen(false)
                       }}
                       onMouseEnter={() => setResaltado(i)}
-                      className={`flex cursor-pointer items-center justify-between gap-2 px-3 py-2 text-sm ${
-                        activo ? 'bg-line text-text' : 'text-text'
+                      className={`flex cursor-pointer items-center justify-between gap-3 rounded-[4px] px-2.5 py-2 text-[13.5px] text-text transition-colors ${
+                        activo ? 'bg-control-active' : ''
                       }`}
                     >
                       <span className="min-w-0 truncate">

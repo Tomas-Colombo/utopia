@@ -120,7 +120,7 @@ export function SearchableSelect({
       </button>
 
       {open && (
-        <div className="absolute z-20 mt-1 w-full overflow-hidden rounded-md border border-control-line bg-control shadow-[0_8px_24px_rgba(0,0,0,0.28)]">
+        <div className="absolute z-20 mt-1 w-full overflow-hidden rounded-md border border-control-line bg-control shadow-[0_10px_28px_rgb(0_0_0/0.18)] motion-safe:animate-[fadeUp_0.12s_ease-out]">
           <input
             ref={searchInputRef}
             type="text"
@@ -134,7 +134,7 @@ export function SearchableSelect({
             autoFocus
             className="w-full border-b border-control-line bg-control-hover px-3 py-2 text-[13.5px] text-ink outline-none placeholder:text-muted"
           />
-          <ul id={listboxId} role="listbox" className="max-h-60 overflow-auto py-1">
+          <ul id={listboxId} role="listbox" className="max-h-72 overflow-auto p-1">
             {filteredOptions.length === 0 ? (
               <li className="px-3 py-2 font-mono text-[11px] uppercase tracking-[0.12em] text-muted">
                 No results
@@ -151,7 +151,7 @@ export function SearchableSelect({
                   // The label is the li's ONLY child on purpose: wrapping it in
                   // a <span> would make getByText return the span instead of
                   // the option element that carries the ARIA state.
-                  className={`cursor-pointer truncate px-3 py-2 text-[13.5px] aria-selected:bg-accent aria-selected:font-semibold aria-selected:text-accent-ink ${
+                  className={`cursor-pointer truncate rounded-[4px] px-2.5 py-2 text-[13.5px] transition-colors aria-selected:bg-accent aria-selected:font-semibold aria-selected:text-accent-ink ${
                     option.disabled ? 'cursor-not-allowed text-muted' : 'text-ink'
                   } ${index === highlightIndex ? 'bg-control-active' : ''}`}
                 >

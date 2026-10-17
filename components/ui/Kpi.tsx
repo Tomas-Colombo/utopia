@@ -28,8 +28,8 @@ export interface KpiProps {
  */
 export function Kpi({ label, value, sub, variant = 'default', tone = 'default' }: KpiProps) {
   return (
-    <div className={`min-w-0 rounded-lg border p-4 ${BOX[variant]}`}>
-      <div className="font-mono text-xs uppercase text-muted [overflow-wrap:anywhere]">
+    <div className={`min-w-0 rounded-lg border p-4 shadow-[0_1px_2px_rgb(0_0_0/0.04)] ${BOX[variant]}`}>
+      <div className="font-mono text-[10.5px] font-medium uppercase tracking-[0.12em] text-muted [overflow-wrap:anywhere]">
         {label}
       </div>
       <div

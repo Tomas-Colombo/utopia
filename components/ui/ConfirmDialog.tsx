@@ -101,7 +101,7 @@ export function ConfirmDialog({
     <Portal>
       <div
         data-testid="confirm-dialog-backdrop"
-        className="fixed inset-0 z-50 flex items-center justify-center bg-text/40 p-4"
+        className="fixed inset-0 z-50 flex items-center justify-center bg-text/40 p-4 backdrop-blur-[2px]"
         onClick={onCancel}
       >
         <div
@@ -114,7 +114,7 @@ export function ConfirmDialog({
           // max-h + scroll: en una pantalla baja (o con una descripción larga)
           // el diálogo se recortaba y los botones quedaban fuera de vista, sin
           // forma de llegar a ellos. Mismo guard que `Modal`.
-          className="flex max-h-[calc(100vh-2rem)] w-full max-w-md flex-col overflow-y-auto rounded-md border border-border bg-card p-6 shadow-lg"
+          className="flex max-h-[calc(100vh-2rem)] w-full max-w-md flex-col overflow-y-auto rounded-lg border border-line bg-card p-6 shadow-[0_24px_64px_-16px_rgb(0_0_0/0.35)] motion-safe:animate-[fadeUp_0.18s_ease-out]"
         >
           <h2 id={titleId} className="font-display text-lg text-text">
             {title}
@@ -125,7 +125,7 @@ export function ConfirmDialog({
             <button
               type="button"
               onClick={onCancel}
-              className="rounded-md border border-border px-4 py-2 text-sm text-text"
+              className="rounded-md border border-line-2 px-4 py-2 text-[13px] font-medium text-muted transition-colors hover:bg-hover hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ink active:translate-y-px"
             >
               {cancelLabel}
             </button>
@@ -136,7 +136,7 @@ export function ConfirmDialog({
               type="button"
               data-variant={variant}
               onClick={onConfirm}
-              className={`rounded-md px-4 py-2 text-sm font-semibold ${
+              className={`rounded-md px-4 py-2 text-[13px] font-semibold transition-opacity hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink active:translate-y-px ${
                 variant === 'danger' ? 'bg-alerta-ink text-alerta-on' : 'bg-block text-block-ink'
               }`}
             >
