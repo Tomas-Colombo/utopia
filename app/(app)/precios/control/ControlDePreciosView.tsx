@@ -9,6 +9,7 @@ import { useToast } from '@/components/ui/Toast'
 import type { ProductoConPrecioStatus } from '@/lib/types/precios'
 import { recalcularBatchAction, recalcularPrecioAction } from '../actions'
 import { mensajeDeError } from '@/lib/errores/mensajes'
+import { TableFrame, DataTable, THead, TBody, Tr, Th, Td } from '@/components/ui/TableParts'
 
 type Filter = 'todos' | 'desactualizados' | 'sin-precio' | 'sin-regla'
 
@@ -154,64 +155,60 @@ export function ControlDePreciosView({
         </div>
       </div>
 
-      <div className="rounded-lg border border-border bg-card overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border text-left">
-              <th className="px-3 py-3 w-8"></th>
-              <th className="px-3 py-3">Producto</th>
-              <th className="px-3 py-3">Categoría</th>
-              <th className="px-3 py-3">Regla margen</th>
-              <th className="px-3 py-3 text-right">Costo</th>
-              <th className="px-3 py-3 text-right">Precio actual</th>
-              <th className="px-3 py-3 text-right">Precio proyectado</th>
-              <th className="px-3 py-3 text-right">Δ%</th>
-              <th className="px-3 py-3">Estado</th>
-              <th className="px-3 py-3"></th>
-            </tr>
-          </thead>
-          <tbody>
+      <TableFrame>
+        <DataTable>
+          <THead>
+            <Th className="px-3 py-3 w-8"></Th>
+            <Th className="px-3 py-3">Producto</Th>
+            <Th className="px-3 py-3">Categoría</Th>
+            <Th className="px-3 py-3">Regla margen</Th>
+            <Th align="right" className="px-3 py-3">Costo</Th>
+            <Th align="right" className="px-3 py-3">Precio actual</Th>
+            <Th align="right" className="px-3 py-3">Precio proyectado</Th>
+            <Th align="right" className="px-3 py-3">Δ%</Th>
+            <Th className="px-3 py-3">Estado</Th>
+            <Th className="px-3 py-3"></Th>
+          </THead>
+          <TBody>
             {filtered.length === 0 ? (
-              <tr>
-                <td colSpan={10} className="px-3 py-6 text-center text-muted">
+              <Tr>
+                <Td align="center" colSpan={10} className="px-3 py-6 text-muted">
                   Nada para mostrar con los filtros actuales.
-                </td>
-              </tr>
+                </Td>
+              </Tr>
             ) : (
               filtered.map((r) => {
                 const desactualizado = r.precio_venta_desactualizado
                 const sinPrecio = r.precio_venta == null
                 return (
-                  <tr
+                  <Tr
                     key={r.id_producto}
-                    className={`border-b border-border-2 ${
-                      selected.has(r.id_producto) ? 'bg-line/60' : ''
-                    }`}
+                    className={selected.has(r.id_producto) ? 'bg-line/60' : ''}
                   >
-                    <td className="px-3 py-3">
+                    <Td className="px-3 py-3">
                       <input
                         type="checkbox"
                         aria-label={`Seleccionar ${r.nombre}`}
                         checked={selected.has(r.id_producto)}
                         onChange={() => toggleSelected(r.id_producto)}
                       />
-                    </td>
-                    <td className="px-3 py-3">
+                    </Td>
+                    <Td className="px-3 py-3">
                       <div className="font-medium">{r.nombre}</div>
                       {r.sku && <div className="font-mono text-xs text-muted">{r.sku}</div>}
-                    </td>
-                    <td className="px-3 py-3">
+                    </Td>
+                    <Td className="px-3 py-3">
                       {r.categoria_nombre ?? <span className="text-muted">—</span>}
-                    </td>
-                    <td className="px-3 py-3 text-xs">
+                    </Td>
+                    <Td className="px-3 py-3 text-xs">
                       {r.regla_margen_nombre ?? (
                         <span className="text-muted italic">Sin regla → costo</span>
                       )}
-                    </td>
-                    <td className="px-3 py-3 text-right font-mono">{fmt(r.costo_vigente)}</td>
-                    <td className="px-3 py-3 text-right font-mono">{fmt(r.precio_venta)}</td>
-                    <td className="px-3 py-3 text-right font-mono">{fmt(r.precio_proyectado)}</td>
-                    <td className="px-3 py-3 text-right font-mono">
+                    </Td>
+                    <Td align="right" className="px-3 py-3 font-mono">{fmt(r.costo_vigente)}</Td>
+                    <Td align="right" className="px-3 py-3 font-mono">{fmt(r.precio_venta)}</Td>
+                    <Td align="right" className="px-3 py-3 font-mono">{fmt(r.precio_proyectado)}</Td>
+                    <Td align="right" className="px-3 py-3 font-mono">
                       {r.diferencia_pct == null ? (
                         <span className="text-muted">—</span>
                       ) : (
@@ -228,8 +225,8 @@ export function ControlDePreciosView({
                           {r.diferencia_pct}%
                         </span>
                       )}
-                    </td>
-                    <td className="px-3 py-3">
+                    </Td>
+                    <Td className="px-3 py-3">
                       {sinPrecio ? (
                         <Badge variant="danger">Sin precio</Badge>
                       ) : desactualizado ? (
@@ -237,8 +234,8 @@ export function ControlDePreciosView({
                       ) : (
                         <Badge variant="success">OK</Badge>
                       )}
-                    </td>
-                    <td className="px-3 py-3 text-right">
+                    </Td>
+                    <Td align="right" className="px-3 py-3">
                       <Button
                         size="sm"
                         variant="ghost"
@@ -247,14 +244,14 @@ export function ControlDePreciosView({
                       >
                         Recalcular
                       </Button>
-                    </td>
-                  </tr>
+                    </Td>
+                  </Tr>
                 )
               })
             )}
-          </tbody>
-        </table>
-      </div>
+          </TBody>
+        </DataTable>
+      </TableFrame>
     </div>
   )
 }

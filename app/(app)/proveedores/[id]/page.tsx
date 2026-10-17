@@ -17,6 +17,7 @@ import { ESTADO_RENDICION_LABEL } from '@/lib/types/rendiciones'
 import { BajaProveedorButton } from './BajaProveedorButton'
 import { PerfilPeriodoForm } from './PerfilPeriodoForm'
 import { PerfilPaginacion } from './PerfilPaginacion'
+import { TableFrame, DataTable, THead, TBody, Tr, Th, Td } from '@/components/ui/TableParts'
 
 const PAGE_SIZE = 10
 
@@ -186,7 +187,7 @@ export default async function ProveedorPerfilPage(props: {
 
         {/* ─── Ingresos ────────────────────────────────── */}
         <section className="space-y-2">
-          <div className="rounded-lg border border-border bg-card overflow-x-auto">
+          <TableFrame>
             <div className="border-b border-border px-4 py-3 flex items-baseline justify-between">
               <h3 className="font-display text-lg">Ingresos de mercadería</h3>
               <span className="text-xs text-muted font-mono">
@@ -198,47 +199,45 @@ export default async function ProveedorPerfilPage(props: {
                 Sin ingresos en el período seleccionado.
               </div>
             ) : (
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border text-left">
-                    <th className="px-4 py-3">Fecha</th>
-                    <th className="px-4 py-3">Tipo</th>
-                    <th className="px-4 py-3">Remito</th>
-                    <th className="px-4 py-3 text-right">Líneas</th>
-                    <th className="px-4 py-3 text-right">Cantidad</th>
-                    <th className="px-4 py-3 text-right">Costo total</th>
-                    <th className="px-4 py-3" />
-                  </tr>
-                </thead>
-                <tbody>
+              <DataTable>
+                <THead>
+                  <Th>Fecha</Th>
+                  <Th>Tipo</Th>
+                  <Th>Remito</Th>
+                  <Th align="right">Líneas</Th>
+                  <Th align="right">Cantidad</Th>
+                  <Th align="right">Costo total</Th>
+                  <Th />
+                </THead>
+                <TBody>
                   {ingresos.map((i) => (
-                    <tr key={i.id_ingreso} className="border-b border-border-2">
-                      <td className="px-4 py-3 text-xs text-muted">
+                    <Tr key={i.id_ingreso}>
+                      <Td className="text-xs text-muted">
                         {new Date(i.fecha).toLocaleDateString('es-AR')}
-                      </td>
-                      <td className="px-4 py-3">
+                      </Td>
+                      <Td>
                         <span className="font-mono text-xs uppercase">{i.tipo_ingreso}</span>
-                      </td>
-                      <td className="px-4 py-3 font-mono text-xs">
+                      </Td>
+                      <Td className="font-mono text-xs">
                         {i.numero_remito ?? <span className="text-muted">—</span>}
-                      </td>
-                      <td className="px-4 py-3 text-right font-mono">{i.total_lineas}</td>
-                      <td className="px-4 py-3 text-right font-mono">{i.total_cantidad}</td>
-                      <td className="px-4 py-3 text-right font-mono">{fmtMoney(i.total_costo)}</td>
-                      <td className="px-4 py-3 text-right">
+                      </Td>
+                      <Td align="right" className="font-mono">{i.total_lineas}</Td>
+                      <Td align="right" className="font-mono">{i.total_cantidad}</Td>
+                      <Td align="right" className="font-mono">{fmtMoney(i.total_costo)}</Td>
+                      <Td align="right">
                         <Link
                           href={`/inventario/ingresos/${i.id_ingreso}?from=${encodeURIComponent(volverAqui('ing_page', ingPage))}`}
                           className="-mx-2 rounded-[4px] px-2 py-1 text-xs font-medium text-muted transition-colors hover:bg-hover hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
                         >
                           Ver
                         </Link>
-                      </td>
-                    </tr>
+                      </Td>
+                    </Tr>
                   ))}
-                </tbody>
-              </table>
+                </TBody>
+              </DataTable>
             )}
-          </div>
+          </TableFrame>
           <PerfilPaginacion
             id={id}
             paramKey="ing_page"
@@ -250,7 +249,7 @@ export default async function ProveedorPerfilPage(props: {
 
         {/* ─── Consignaciones ─────────────────────────── */}
         <section className="space-y-2">
-          <div className="rounded-lg border border-border bg-card overflow-x-auto">
+          <TableFrame>
             <div className="border-b border-border px-4 py-3 flex items-baseline justify-between">
               <h3 className="font-display text-lg">Consignaciones</h3>
               <span className="text-xs text-muted font-mono">
@@ -262,45 +261,43 @@ export default async function ProveedorPerfilPage(props: {
                 Sin consignaciones en el período seleccionado.
               </div>
             ) : (
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border text-left">
-                    <th className="px-4 py-3">Fecha</th>
-                    <th className="px-4 py-3">Estado</th>
-                    <th className="px-4 py-3 text-right">Ítems</th>
-                    <th className="px-4 py-3 text-right">Pendientes</th>
-                    <th className="px-4 py-3 text-right">Devueltos</th>
-                    <th className="px-4 py-3" />
-                  </tr>
-                </thead>
-                <tbody>
+              <DataTable>
+                <THead>
+                  <Th>Fecha</Th>
+                  <Th>Estado</Th>
+                  <Th align="right">Ítems</Th>
+                  <Th align="right">Pendientes</Th>
+                  <Th align="right">Devueltos</Th>
+                  <Th />
+                </THead>
+                <TBody>
                   {consignaciones.map((c) => (
-                    <tr key={c.id_consignacion} className="border-b border-border-2">
-                      <td className="px-4 py-3 text-xs text-muted">
+                    <Tr key={c.id_consignacion}>
+                      <Td className="text-xs text-muted">
                         {new Date(c.fecha).toLocaleDateString('es-AR')}
-                      </td>
-                      <td className="px-4 py-3">
+                      </Td>
+                      <Td>
                         <Badge variant={c.estado === 'activa' ? 'warning' : 'neutral'}>
                           {ESTADO_CONSIGNACION_LABEL[c.estado]}
                         </Badge>
-                      </td>
-                      <td className="px-4 py-3 text-right font-mono">{c.total_items}</td>
-                      <td className="px-4 py-3 text-right font-mono">{c.pendientes}</td>
-                      <td className="px-4 py-3 text-right font-mono">{c.devueltos}</td>
-                      <td className="px-4 py-3 text-right">
+                      </Td>
+                      <Td align="right" className="font-mono">{c.total_items}</Td>
+                      <Td align="right" className="font-mono">{c.pendientes}</Td>
+                      <Td align="right" className="font-mono">{c.devueltos}</Td>
+                      <Td align="right">
                         <Link
                           href={`/consignaciones/${c.id_consignacion}?from=${encodeURIComponent(volverAqui('cons_page', consPage))}`}
                           className="-mx-2 rounded-[4px] px-2 py-1 text-xs font-medium text-muted transition-colors hover:bg-hover hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
                         >
                           Ver
                         </Link>
-                      </td>
-                    </tr>
+                      </Td>
+                    </Tr>
                   ))}
-                </tbody>
-              </table>
+                </TBody>
+              </DataTable>
             )}
-          </div>
+          </TableFrame>
           <PerfilPaginacion
             id={id}
             paramKey="cons_page"
@@ -312,7 +309,7 @@ export default async function ProveedorPerfilPage(props: {
 
         {/* ─── Rendiciones ────────────────────────────── */}
         <section className="space-y-2">
-          <div className="rounded-lg border border-border bg-card overflow-x-auto">
+          <TableFrame>
             <div className="border-b border-border px-4 py-3 flex items-baseline justify-between">
               <h3 className="font-display text-lg">Rendiciones</h3>
               <span className="text-xs text-muted font-mono">
@@ -324,49 +321,47 @@ export default async function ProveedorPerfilPage(props: {
                 Sin rendiciones en el período seleccionado.
               </div>
             ) : (
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border text-left">
-                    <th className="px-4 py-3">Fecha</th>
-                    <th className="px-4 py-3">Período</th>
-                    <th className="px-4 py-3">Estado</th>
-                    <th className="px-4 py-3 text-right">Líneas</th>
-                    <th className="px-4 py-3 text-right">Monto</th>
-                    <th className="px-4 py-3" />
-                  </tr>
-                </thead>
-                <tbody>
+              <DataTable>
+                <THead>
+                  <Th>Fecha</Th>
+                  <Th>Período</Th>
+                  <Th>Estado</Th>
+                  <Th align="right">Líneas</Th>
+                  <Th align="right">Monto</Th>
+                  <Th />
+                </THead>
+                <TBody>
                   {rendiciones.map((r) => (
-                    <tr key={r.id_rendicion} className="border-b border-border-2">
-                      <td className="px-4 py-3 text-xs text-muted">
+                    <Tr key={r.id_rendicion}>
+                      <Td className="text-xs text-muted">
                         {new Date(r.fecha_generacion).toLocaleDateString('es-AR')}
-                      </td>
-                      <td className="px-4 py-3 text-xs text-muted">
+                      </Td>
+                      <Td className="text-xs text-muted">
                         {r.periodo_desde && r.periodo_hasta
                           ? `${new Date(r.periodo_desde).toLocaleDateString('es-AR')} → ${new Date(r.periodo_hasta).toLocaleDateString('es-AR')}`
                           : <span className="text-muted">—</span>}
-                      </td>
-                      <td className="px-4 py-3">
+                      </Td>
+                      <Td>
                         <Badge variant={r.estado === 'pendiente' ? 'warning' : 'success'}>
                           {ESTADO_RENDICION_LABEL[r.estado]}
                         </Badge>
-                      </td>
-                      <td className="px-4 py-3 text-right font-mono">{r.cantidad_lineas}</td>
-                      <td className="px-4 py-3 text-right font-mono">{fmtMoney(r.monto_total)}</td>
-                      <td className="px-4 py-3 text-right">
+                      </Td>
+                      <Td align="right" className="font-mono">{r.cantidad_lineas}</Td>
+                      <Td align="right" className="font-mono">{fmtMoney(r.monto_total)}</Td>
+                      <Td align="right">
                         <Link
                           href={`/rendiciones/${r.id_rendicion}?from=${encodeURIComponent(volverAqui('rend_page', rendPage))}`}
                           className="-mx-2 rounded-[4px] px-2 py-1 text-xs font-medium text-muted transition-colors hover:bg-hover hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
                         >
                           Ver
                         </Link>
-                      </td>
-                    </tr>
+                      </Td>
+                    </Tr>
                   ))}
-                </tbody>
-              </table>
+                </TBody>
+              </DataTable>
             )}
-          </div>
+          </TableFrame>
           <PerfilPaginacion
             id={id}
             paramKey="rend_page"

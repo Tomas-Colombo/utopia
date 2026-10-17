@@ -34,6 +34,7 @@ import {
   emitirComprobanteAction,
 } from '../actions'
 import { mensajeDeError } from '@/lib/errores/mensajes'
+import { TableFrame, DataTable, THead, TBody, TFoot, Tr, Th, Td } from '@/components/ui/TableParts'
 
 const CUOTA_VARIANT: Record<EstadoCuota, 'success' | 'info' | 'warning' | 'danger' | 'neutral'> = {
   pendiente: 'info',
@@ -272,30 +273,28 @@ export function VentaDetalleView({
       )}
 
       {/* Líneas */}
-      <div className="rounded-lg border border-border bg-card overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border text-left">
-              <th className="px-4 py-3">Producto</th>
-              <th className="px-4 py-3">QR</th>
-              <th className="px-4 py-3 text-right">Precio</th>
-              {!readonly && <th className="px-4 py-3"></th>}
-            </tr>
-          </thead>
-          <tbody>
+      <TableFrame>
+        <DataTable>
+          <THead>
+            <Th>Producto</Th>
+            <Th>QR</Th>
+            <Th align="right">Precio</Th>
+            {!readonly && <Th></Th>}
+          </THead>
+          <TBody>
             {venta.lineas.map((l) => (
-              <tr key={l.id_detalle_venta} className="border-b border-border-2">
-                <td className="px-4 py-3">
+              <Tr key={l.id_detalle_venta}>
+                <Td>
                   <div className="font-medium">{l.producto?.nombre ?? '—'}</div>
                   {l.producto?.sku && (
                     <div className="text-xs font-mono text-muted">{l.producto.sku}</div>
                   )}
-                </td>
-                <td className="px-4 py-3 font-mono text-xs">{l.item?.qr_code ?? '—'}</td>
-                <td className="px-4 py-3 text-right font-mono">
+                </Td>
+                <Td className="font-mono text-xs">{l.item?.qr_code ?? '—'}</Td>
+                <Td align="right" className="font-mono">
                   $ {Number(l.precio_venta).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
-                </td>
-                <td className="px-4 py-3 text-right">
+                </Td>
+                <Td align="right">
                   {l.devolucion ? (
                     <Badge variant="neutral">Devuelto</Badge>
                   ) : l.cambio ? (
@@ -325,12 +324,12 @@ export function VentaDetalleView({
                       </Button>
                     </div>
                   ) : null}
-                </td>
-              </tr>
+                </Td>
+              </Tr>
             ))}
-          </tbody>
-        </table>
-      </div>
+          </TBody>
+        </DataTable>
+      </TableFrame>
 
       {/* Cobranza: dónde entró la plata. Separada de "Forma de pago", que es
           cómo se precio la venta. */}
@@ -396,53 +395,51 @@ export function VentaDetalleView({
         <div className="rounded-lg border border-border bg-card p-4">
           <h3 className="mb-3 font-display text-lg">Cuotas financiadas</h3>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border text-left">
-                  <th className="px-2 py-2">Cuota</th>
-                  <th className="px-2 py-2">Vence</th>
-                  <th className="px-2 py-2 text-right">Monto</th>
-                  <th className="px-2 py-2 text-right">Pagado</th>
-                  <th className="px-2 py-2">Estado</th>
-                </tr>
-              </thead>
-              <tbody>
+            <DataTable>
+              <THead>
+                <Th className="px-2 py-2">Cuota</Th>
+                <Th className="px-2 py-2">Vence</Th>
+                <Th align="right" className="px-2 py-2">Monto</Th>
+                <Th align="right" className="px-2 py-2">Pagado</Th>
+                <Th className="px-2 py-2">Estado</Th>
+              </THead>
+              <TBody>
                 {cuotas.map((c) => (
-                  <tr key={c.id_cuota_financiada} className="border-b border-border-2 last:border-0">
-                    <td className="px-2 py-2 font-mono text-xs">#{c.numero}</td>
-                    <td className="px-2 py-2">
+                  <Tr key={c.id_cuota_financiada}>
+                    <Td className="px-2 py-2 font-mono text-xs">#{c.numero}</Td>
+                    <Td className="px-2 py-2">
                       {new Date(`${c.fecha_vencimiento}T00:00:00`).toLocaleDateString('es-AR')}
-                    </td>
-                    <td className="px-2 py-2 text-right font-mono">{money(Number(c.monto))}</td>
-                    <td className="px-2 py-2 text-right font-mono text-muted">
+                    </Td>
+                    <Td align="right" className="px-2 py-2 font-mono">{money(Number(c.monto))}</Td>
+                    <Td align="right" className="px-2 py-2 font-mono text-muted">
                       {Number(c.monto_pagado) > 0 ? money(Number(c.monto_pagado)) : '—'}
-                    </td>
-                    <td className="px-2 py-2">
+                    </Td>
+                    <Td className="px-2 py-2">
                       <Badge variant={CUOTA_VARIANT[c.estado]}>
                         {ESTADO_CUOTA_LABEL[c.estado]}
                       </Badge>
                       {c.estado === 'incobrable' && c.motivo_incobrable && (
                         <div className="mt-1 text-xs text-muted">{c.motivo_incobrable}</div>
                       )}
-                    </td>
-                  </tr>
+                    </Td>
+                  </Tr>
                 ))}
-              </tbody>
-              <tfoot>
-                <tr className="border-t border-border bg-card-2">
-                  <td colSpan={2} className="px-2 py-2 font-semibold">
+              </TBody>
+              <TFoot>
+                <Tr className="border-t bg-card-2">
+                  <Td colSpan={2} className="px-2 py-2 font-semibold">
                     Pendiente de cobro
-                  </td>
-                  <td colSpan={3} className="px-2 py-2 text-right font-mono font-semibold">
+                  </Td>
+                  <Td align="right" colSpan={3} className="px-2 py-2 font-mono font-semibold">
                     {money(
                       cuotas
                         .filter((c) => c.estado === 'pendiente' || c.estado === 'parcial')
                         .reduce((a, c) => a + saldoCuota(c), 0),
                     )}
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
+                  </Td>
+                </Tr>
+              </TFoot>
+            </DataTable>
           </div>
         </div>
       )}

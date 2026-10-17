@@ -8,6 +8,7 @@ import {
   type EstadoRendicion,
 } from '@/lib/types/rendiciones'
 import { RendicionActions } from './RendicionActions'
+import { TableFrame, DataTable, THead, TBody, TFoot, Tr, Th, Td } from '@/components/ui/TableParts'
 
 const VARIANT: Record<EstadoRendicion, 'success' | 'warning'> = {
   pendiente: 'warning',
@@ -81,56 +82,54 @@ export default async function RendicionDetallePage(props: {
           </div>
         </div>
 
-        <div className="rounded-lg border border-border bg-card overflow-x-auto">
+        <TableFrame>
           <div className="border-b border-border px-4 py-3">
             <h3 className="font-display text-lg">Líneas rendidas</h3>
           </div>
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-left">
-                <th className="px-4 py-3">Fecha venta</th>
-                <th className="px-4 py-3">Producto</th>
-                <th className="px-4 py-3">QR</th>
-                <th className="px-4 py-3">Cliente</th>
-                <th className="px-4 py-3 text-right">Precio venta</th>
-                <th className="px-4 py-3 text-right">Monto proveedor</th>
-              </tr>
-            </thead>
-            <tbody>
+          <DataTable>
+            <THead>
+              <Th>Fecha venta</Th>
+              <Th>Producto</Th>
+              <Th>QR</Th>
+              <Th>Cliente</Th>
+              <Th align="right">Precio venta</Th>
+              <Th align="right">Monto proveedor</Th>
+            </THead>
+            <TBody>
               {rendicion.lineas.map((l) => (
-                <tr key={l.id_detalle_venta} className="border-b border-border-2">
-                  <td className="px-4 py-3">
+                <Tr key={l.id_detalle_venta}>
+                  <Td>
                     {new Date(l.fecha).toLocaleDateString('es-AR')}
-                  </td>
-                  <td className="px-4 py-3">
+                  </Td>
+                  <Td>
                     <div className="font-medium">{l.producto_nombre}</div>
                     {l.producto_sku && (
                       <div className="text-xs font-mono text-muted">{l.producto_sku}</div>
                     )}
-                  </td>
-                  <td className="px-4 py-3 font-mono text-xs">{l.qr_code}</td>
-                  <td className="px-4 py-3 text-xs">
+                  </Td>
+                  <Td className="font-mono text-xs">{l.qr_code}</Td>
+                  <Td className="text-xs">
                     {l.cliente_nombre ?? <span className="text-muted">Mostrador</span>}
-                  </td>
-                  <td className="px-4 py-3 text-right font-mono text-muted">
+                  </Td>
+                  <Td align="right" className="font-mono text-muted">
                     $ {Number(l.precio_venta).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
-                  </td>
-                  <td className="px-4 py-3 text-right font-mono">
+                  </Td>
+                  <Td align="right" className="font-mono">
                     $ {Number(l.monto_proveedor).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
-                  </td>
-                </tr>
+                  </Td>
+                </Tr>
               ))}
-            </tbody>
-            <tfoot>
-              <tr className="border-t border-border bg-card-2">
-                <td colSpan={5} className="px-4 py-3 font-semibold">Total</td>
-                <td className="px-4 py-3 text-right font-mono font-semibold">
+            </TBody>
+            <TFoot>
+              <Tr className="border-t bg-card-2">
+                <Td colSpan={5} className="font-semibold">Total</Td>
+                <Td align="right" className="font-mono font-semibold">
                   $ {total.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
-                </td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
+                </Td>
+              </Tr>
+            </TFoot>
+          </DataTable>
+        </TableFrame>
 
         {rendicion.observaciones && (
           <div className="rounded-lg border border-border bg-card-2 p-4 text-sm">

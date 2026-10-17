@@ -8,6 +8,7 @@ import {
   ESTADO_RENDICION_LABEL,
   type EstadoRendicion,
 } from '@/lib/types/rendiciones'
+import { TableFrame, DataTable, THead, TBody, Tr, Th, Td } from '@/components/ui/TableParts'
 
 const VARIANT: Record<EstadoRendicion, 'success' | 'warning'> = {
   pendiente: 'warning',
@@ -56,27 +57,25 @@ export default async function RendicionesPage() {
             </Link>
           </div>
         ) : (
-          <div className="rounded-lg border border-border bg-card overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border text-left">
-                  <th className="px-4 py-3">Fecha</th>
-                  <th className="px-4 py-3">Proveedor</th>
-                  <th className="px-4 py-3">Período</th>
-                  <th className="px-4 py-3 text-right">Líneas</th>
-                  <th className="px-4 py-3 text-right">Total</th>
-                  <th className="px-4 py-3">Estado</th>
-                  <th className="px-4 py-3"></th>
-                </tr>
-              </thead>
-              <tbody>
+          <TableFrame>
+            <DataTable>
+              <THead>
+                <Th>Fecha</Th>
+                <Th>Proveedor</Th>
+                <Th>Período</Th>
+                <Th align="right">Líneas</Th>
+                <Th align="right">Total</Th>
+                <Th>Estado</Th>
+                <Th></Th>
+              </THead>
+              <TBody>
                 {rows.map((r) => (
-                  <tr key={r.id_rendicion} className="border-b border-border-2">
-                    <td className="px-4 py-3">
+                  <Tr key={r.id_rendicion}>
+                    <Td>
                       {new Date(r.fecha_generacion).toLocaleDateString('es-AR')}
-                    </td>
-                    <td className="px-4 py-3">{r.proveedor?.nombre ?? '—'}</td>
-                    <td className="px-4 py-3 text-xs text-muted">
+                    </Td>
+                    <Td>{r.proveedor?.nombre ?? '—'}</Td>
+                    <Td className="text-xs text-muted">
                       {r.periodo_desde
                         ? new Date(r.periodo_desde).toLocaleDateString('es-AR')
                         : '—'}{' '}
@@ -84,32 +83,32 @@ export default async function RendicionesPage() {
                       {r.periodo_hasta
                         ? new Date(r.periodo_hasta).toLocaleDateString('es-AR')
                         : '—'}
-                    </td>
-                    <td className="px-4 py-3 text-right font-mono">{r.cantidad_lineas}</td>
-                    <td className="px-4 py-3 text-right font-mono font-semibold">
+                    </Td>
+                    <Td align="right" className="font-mono">{r.cantidad_lineas}</Td>
+                    <Td align="right" className="font-mono font-semibold">
                       $ {Number(r.monto_total).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
-                    </td>
-                    <td className="px-4 py-3">
+                    </Td>
+                    <Td>
                       <Badge variant={VARIANT[r.estado]}>{ESTADO_RENDICION_LABEL[r.estado]}</Badge>
                       {r.fecha_pago && (
                         <div className="text-xs text-muted mt-1">
                           {new Date(r.fecha_pago).toLocaleDateString('es-AR')}
                         </div>
                       )}
-                    </td>
-                    <td className="px-4 py-3 text-right">
+                    </Td>
+                    <Td align="right">
                       <Link
                         href={`/rendiciones/${r.id_rendicion}`}
                         className="-mx-2 rounded-[4px] px-2 py-1 text-xs font-medium text-muted transition-colors hover:bg-hover hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
                       >
                         Ver
                       </Link>
-                    </td>
-                  </tr>
+                    </Td>
+                  </Tr>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </TBody>
+            </DataTable>
+          </TableFrame>
         )}
       </main>
     </>

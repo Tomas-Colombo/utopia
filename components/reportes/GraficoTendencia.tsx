@@ -4,6 +4,7 @@ import React, { useState } from 'react'
 import type { FinanzasSerieMensualRow } from '@/lib/types/reportes'
 import { Button } from '@/components/ui/Button'
 import { formatearMesCorto } from '@/lib/reportes/mes'
+import { DataTable, THead, TBody, Tr, Th, Td } from '@/components/ui/TableParts'
 
 function formatMoneyCompact(value: number) {
   if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`
@@ -61,26 +62,24 @@ export function GraficoTendencia({ serie, tieneGastos }: GraficoTendenciaProps) 
       <div className="p-4">
         {verTabla ? (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm text-right">
-              <thead className="bg-panel text-muted">
-                <tr>
-                  <th className="p-2 text-left">Mes</th>
-                  <th className="p-2">Ventas netas</th>
-                  <th className="p-2">Cobrado neto</th>
-                  <th className="p-2">Ganancia {tieneGastos ? 'final' : ''}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
+            <DataTable className="text-right">
+              <THead>
+                <Th className="p-2">Mes</Th>
+                <Th align="right" className="p-2">Ventas netas</Th>
+                <Th align="right" className="p-2">Cobrado neto</Th>
+                <Th align="right" className="p-2">Ganancia {tieneGastos ? 'final' : ''}</Th>
+              </THead>
+              <TBody>
                 {serie.map(s => (
-                  <tr key={s.mes}>
-                    <td className="p-2 text-left font-medium text-ink">{formatearMesCorto(s.mes)}</td>
-                    <td className="p-2 tabular-nums">{formatMoneyFull(s.ventas_netas)}</td>
-                    <td className="p-2 tabular-nums">{formatMoneyFull(s.cobrado_neto)}</td>
-                    <td className="p-2 tabular-nums">{formatMoneyFull(tieneGastos ? s.ganancia_final : s.ganancia_sobre_ventas)}</td>
-                  </tr>
+                  <Tr key={s.mes}>
+                    <Td align="left" className="p-2 font-medium text-ink">{formatearMesCorto(s.mes)}</Td>
+                    <Td className="p-2">{formatMoneyFull(s.ventas_netas)}</Td>
+                    <Td className="p-2">{formatMoneyFull(s.cobrado_neto)}</Td>
+                    <Td className="p-2">{formatMoneyFull(tieneGastos ? s.ganancia_final : s.ganancia_sobre_ventas)}</Td>
+                  </Tr>
                 ))}
-              </tbody>
-            </table>
+              </TBody>
+            </DataTable>
           </div>
         ) : (
           <figure className="relative w-full aspect-[21/9] min-h-[250px]" role="img" aria-label="Gráfico de barras mostrando tendencia de ventas, cobros y ganancias de los últimos 12 meses">

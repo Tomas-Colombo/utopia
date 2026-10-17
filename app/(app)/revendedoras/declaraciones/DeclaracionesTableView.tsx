@@ -8,6 +8,7 @@ import { Modal } from '@/components/ui/Modal'
 import { useToast } from '@/components/ui/Toast'
 import { mensajeDeError } from '@/lib/errores/mensajes'
 import { confirmarDeclaracionAction, rechazarDeclaracionAction } from './actions'
+import { TableFrame, DataTable, THead, TBody, Tr, Th, Td } from '@/components/ui/TableParts'
 
 interface Props {
   declaraciones: DeclaracionVentaLocalRow[]
@@ -71,42 +72,40 @@ export function DeclaracionesTableView({ declaraciones, puedeGestionar }: Props)
           <p className="text-muted text-sm">No se encontraron declaraciones para los filtros seleccionados.</p>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-sm">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-card-hover border-b border-border text-xs text-muted font-semibold uppercase tracking-wider">
-              <tr>
-                <th className="px-4 py-3">Fecha</th>
-                <th className="px-4 py-3">Revendedora</th>
-                <th className="px-4 py-3">Producto / SKU</th>
-                <th className="px-4 py-3">Precio</th>
-                <th className="px-4 py-3">Nota</th>
-                <th className="px-4 py-3">Estado</th>
-                {puedeGestionar && <th className="px-4 py-3 text-right">Acciones</th>}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
+        <TableFrame>
+          <DataTable>
+            <THead>
+              <Th>Fecha</Th>
+              <Th>Revendedora</Th>
+              <Th>Producto / SKU</Th>
+              <Th>Precio</Th>
+              <Th>Nota</Th>
+              <Th>Estado</Th>
+              {puedeGestionar && <Th align="right">Acciones</Th>}
+            </THead>
+            <TBody>
               {declaraciones.map((d) => (
-                <tr key={d.id_declaracion} className="hover:bg-card-hover/50 transition-colors">
-                  <td className="px-4 py-3 whitespace-nowrap text-xs text-muted">
+                <Tr key={d.id_declaracion}>
+                  <Td className="whitespace-nowrap text-xs text-muted">
                     {new Date(d.fecha).toLocaleDateString('es-AR')}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap font-medium">
+                  </Td>
+                  <Td className="whitespace-nowrap font-medium">
                     {d.revendedora_nombre} {d.revendedora_apellido}
-                  </td>
-                  <td className="px-4 py-3">
+                  </Td>
+                  <Td>
                     <div className="font-medium text-text">{d.nombre_producto}</div>
                     <div className="text-xs text-muted font-mono">
                       {d.sku}
                       {d.talle && ` · Talle ${d.talle}`}
                     </div>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap font-semibold text-accent">
+                  </Td>
+                  <Td className="whitespace-nowrap font-semibold text-accent">
                     {formatearMoneda(d.precio_venta)}
-                  </td>
-                  <td className="px-4 py-3 max-w-xs truncate text-xs text-muted">
+                  </Td>
+                  <Td className="max-w-xs truncate text-xs text-muted">
                     {d.nota || '—'}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
+                  </Td>
+                  <Td className="whitespace-nowrap">
                     {d.estado === 'pendiente' && (
                       <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400">
                         <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
@@ -135,9 +134,9 @@ export function DeclaracionesTableView({ declaraciones, puedeGestionar }: Props)
                         Retirada
                       </span>
                     )}
-                  </td>
+                  </Td>
                   {puedeGestionar && (
-                    <td className="px-4 py-3 whitespace-nowrap text-right">
+                    <Td align="right" className="whitespace-nowrap">
                       {d.estado === 'pendiente' ? (
                         <div className="flex items-center justify-end gap-2">
                           <Button
@@ -165,13 +164,13 @@ export function DeclaracionesTableView({ declaraciones, puedeGestionar }: Props)
                       ) : (
                         <span className="text-xs text-muted">—</span>
                       )}
-                    </td>
+                    </Td>
                   )}
-                </tr>
+                </Tr>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </TBody>
+          </DataTable>
+        </TableFrame>
       )}
 
       {/* Modal Confirmar Declaración */}

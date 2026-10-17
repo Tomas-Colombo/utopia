@@ -11,6 +11,7 @@ import {
   type EstadoReserva,
 } from '@/lib/types/ventas'
 import { ReservaDetalleActions } from './ReservaDetalleActions'
+import { TableFrame, DataTable, THead, TBody, Tr, Th, Td } from '@/components/ui/TableParts'
 
 const VARIANT: Record<EstadoReserva, 'success' | 'info' | 'warning' | 'danger' | 'neutral'> = {
   activa: 'success',
@@ -65,39 +66,37 @@ export default async function ReservaDetallePage(props: {
           </div>
         </div>
 
-        <div className="rounded-lg border border-border bg-card overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-left">
-                <th className="px-4 py-3">Producto</th>
-                <th className="px-4 py-3">QR</th>
-                <th className="px-4 py-3 text-right">Precio snapshot</th>
-                <th className="px-4 py-3">Estado ítem</th>
-                <th className="px-4 py-3">Estado línea</th>
-              </tr>
-            </thead>
-            <tbody>
+        <TableFrame>
+          <DataTable>
+            <THead>
+              <Th>Producto</Th>
+              <Th>QR</Th>
+              <Th align="right">Precio snapshot</Th>
+              <Th>Estado ítem</Th>
+              <Th>Estado línea</Th>
+            </THead>
+            <TBody>
               {reserva.lineas.map((l) => (
-                <tr key={l.id_detalle_reserva} className="border-b border-border-2">
-                  <td className="px-4 py-3">
+                <Tr key={l.id_detalle_reserva}>
+                  <Td>
                     <div className="font-medium">{l.producto?.nombre ?? '—'}</div>
                     {l.producto?.sku && (
                       <div className="text-xs font-mono text-muted">{l.producto.sku}</div>
                     )}
-                  </td>
-                  <td className="px-4 py-3 font-mono text-xs">{l.item?.qr_code ?? '—'}</td>
-                  <td className="px-4 py-3 text-right font-mono">
+                  </Td>
+                  <Td className="font-mono text-xs">{l.item?.qr_code ?? '—'}</Td>
+                  <Td align="right" className="font-mono">
                     $ {Number(l.precio_snapshot).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
-                  </td>
-                  <td className="px-4 py-3 capitalize text-xs">{l.item?.estado_item ?? '—'}</td>
-                  <td className="px-4 py-3">
+                  </Td>
+                  <Td className="capitalize text-xs">{l.item?.estado_item ?? '—'}</Td>
+                  <Td>
                     <Badge variant={VARIANT[l.estado]}>{ESTADO_RESERVA_LABEL[l.estado]}</Badge>
-                  </td>
-                </tr>
+                  </Td>
+                </Tr>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </TBody>
+          </DataTable>
+        </TableFrame>
 
         {reserva.observaciones && (
           <div className="rounded-lg border border-border bg-card-2 p-4 text-sm">

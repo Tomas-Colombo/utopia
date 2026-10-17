@@ -12,6 +12,7 @@ import {
 } from '@/lib/types/administracion'
 import { asignarRolAction, toggleUsuarioEstadoAction } from '../actions'
 import { mensajeDeError } from '@/lib/errores/mensajes'
+import { TableFrame, DataTable, THead, TBody, Tr, Th, Td } from '@/components/ui/TableParts'
 
 const ESTADO_VARIANT: Record<UsuarioEstado, 'success' | 'neutral' | 'warning'> = {
   activo: 'success',
@@ -88,33 +89,31 @@ export function UsuariosView({
         Esta pantalla permite gestionar rol y estado de los existentes.
       </div>
 
-      <div className="rounded-lg border border-border bg-card overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border text-left">
-              <th className="px-4 py-3">Usuario</th>
-              <th className="px-4 py-3">Rol</th>
-              <th className="px-4 py-3">Estado</th>
-              <th className="px-4 py-3"></th>
-            </tr>
-          </thead>
-          <tbody>
+      <TableFrame>
+        <DataTable>
+          <THead>
+            <Th>Usuario</Th>
+            <Th>Rol</Th>
+            <Th>Estado</Th>
+            <Th></Th>
+          </THead>
+          <TBody>
             {rows.length === 0 ? (
-              <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-muted">
+              <Tr>
+                <Td align="center" colSpan={4} className="px-4 py-6 text-muted">
                   Sin usuarios en este tenant.
-                </td>
-              </tr>
+                </Td>
+              </Tr>
             ) : (
               rows.map((u) => (
-                <tr key={u.id_usuario} className="border-b border-border-2">
-                  <td className="px-4 py-3">
+                <Tr key={u.id_usuario}>
+                  <Td>
                     <div className="font-medium">{u.nombre_completo || u.email}</div>
                     {u.nombre_completo && (
                       <div className="text-xs text-muted">{u.email}</div>
                     )}
-                  </td>
-                  <td className="px-4 py-3">
+                  </Td>
+                  <Td>
                     <select
                       value={u.id_rol ?? ''}
                       onChange={(e) => cambiarRol(u, e.target.value)}
@@ -127,13 +126,13 @@ export function UsuariosView({
                         <option key={r.id} value={r.id}>{r.nombre}</option>
                       ))}
                     </select>
-                  </td>
-                  <td className="px-4 py-3">
+                  </Td>
+                  <Td>
                     <Badge variant={ESTADO_VARIANT[u.estado_usuario]}>
                       {USUARIO_ESTADO_LABEL[u.estado_usuario]}
                     </Badge>
-                  </td>
-                  <td className="px-4 py-3 text-right">
+                  </Td>
+                  <Td align="right">
                     {u.estado_usuario === 'activo' ? (
                       <Button size="sm" variant="ghost" onClick={() => cambiarEstado(u, 'inactivo')} disabled={pending}>
                         Desactivar
@@ -143,13 +142,13 @@ export function UsuariosView({
                         Activar
                       </Button>
                     )}
-                  </td>
-                </tr>
+                  </Td>
+                </Tr>
               ))
             )}
-          </tbody>
-        </table>
-      </div>
+          </TBody>
+        </DataTable>
+      </TableFrame>
     </div>
   )
 }

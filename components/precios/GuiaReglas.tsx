@@ -1,4 +1,5 @@
 import { Badge } from '@/components/ui/Badge'
+import { TableFrame, DataTable, THead, TBody, Tr, Th, Td } from '@/components/ui/TableParts'
 
 const EJEMPLO_REGLAS = [
   { nombre: 'Margen general', tipo: 'Margen', alcance: 'Global', valor: '40%' },
@@ -21,46 +22,44 @@ export function GuiaReglas() {
           Cada tipo de regla cumple una función distinta y actúa en un momento distinto
           del proceso.
         </p>
-        <div className="overflow-x-auto rounded-lg border border-border bg-card">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-left">
-                <th className="px-4 py-3">Tipo</th>
-                <th className="px-4 py-3">Qué hace</th>
-                <th className="px-4 py-3">Cuándo se aplica</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr className="border-b border-border-2">
-                <td className="px-4 py-3">
+        <TableFrame>
+          <DataTable>
+            <THead>
+              <Th>Tipo</Th>
+              <Th>Qué hace</Th>
+              <Th>Cuándo se aplica</Th>
+            </THead>
+            <TBody>
+              <Tr>
+                <Td>
                   <Badge variant="info">Margen</Badge>
-                </td>
-                <td className="px-4 py-3">
+                </Td>
+                <Td>
                   Fija el <strong>precio de lista</strong>: costo × (1 + margen).
-                </td>
-                <td className="px-4 py-3 text-muted">
+                </Td>
+                <Td className="text-muted">
                   Al recalcular. Queda guardado en el producto.
-                </td>
-              </tr>
-              <tr className="border-b border-border-2">
-                <td className="px-4 py-3">
+                </Td>
+              </Tr>
+              <Tr>
+                <Td>
                   <Badge variant="success">Descuento</Badge>
-                </td>
-                <td className="px-4 py-3">Baja el precio de lista.</td>
-                <td className="px-4 py-3 text-muted">En el momento de la venta.</td>
-              </tr>
-              <tr>
-                <td className="px-4 py-3">
+                </Td>
+                <Td>Baja el precio de lista.</Td>
+                <Td className="text-muted">En el momento de la venta.</Td>
+              </Tr>
+              <Tr>
+                <Td>
                   <Badge variant="warning">Recargo</Badge>
-                </td>
-                <td className="px-4 py-3">
+                </Td>
+                <Td>
                   Sube el precio según la forma de pago (cuotas).
-                </td>
-                <td className="px-4 py-3 text-muted">En el momento de la venta.</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+                </Td>
+                <Td className="text-muted">En el momento de la venta.</Td>
+              </Tr>
+            </TBody>
+          </DataTable>
+        </TableFrame>
         <p className="mt-4 text-sm text-muted">
           Punto clave: el <strong>margen</strong> se calcula una vez y se guarda; el{' '}
           <strong>descuento</strong> y el <strong>recargo</strong> se calculan en vivo al
@@ -139,28 +138,26 @@ export function GuiaReglas() {
           Producto <strong>Shampoo X</strong>, categoría <em>Perfumería</em>, costo{' '}
           <strong>$1.000</strong>. Reglas cargadas:
         </p>
-        <div className="mb-4 overflow-x-auto rounded-lg border border-border bg-card">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-left">
-                <th className="px-4 py-3">Regla</th>
-                <th className="px-4 py-3">Tipo</th>
-                <th className="px-4 py-3">Alcance</th>
-                <th className="px-4 py-3 text-right">Valor</th>
-              </tr>
-            </thead>
-            <tbody>
+        <TableFrame className="mb-4">
+          <DataTable>
+            <THead>
+              <Th>Regla</Th>
+              <Th>Tipo</Th>
+              <Th>Alcance</Th>
+              <Th align="right">Valor</Th>
+            </THead>
+            <TBody>
               {EJEMPLO_REGLAS.map((r) => (
-                <tr key={r.nombre} className="border-b border-border-2">
-                  <td className="px-4 py-3">{r.nombre}</td>
-                  <td className="px-4 py-3">{r.tipo}</td>
-                  <td className="px-4 py-3">{r.alcance}</td>
-                  <td className="px-4 py-3 text-right font-mono">{r.valor}</td>
-                </tr>
+                <Tr key={r.nombre}>
+                  <Td>{r.nombre}</Td>
+                  <Td>{r.tipo}</Td>
+                  <Td>{r.alcance}</Td>
+                  <Td align="right" className="font-mono">{r.valor}</Td>
+                </Tr>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </TBody>
+          </DataTable>
+        </TableFrame>
 
         <div className="space-y-3">
           <Paso numero="1" titulo="Margen (al recalcular)">

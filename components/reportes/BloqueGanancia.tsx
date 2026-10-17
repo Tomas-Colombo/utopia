@@ -16,6 +16,7 @@ interface BloqueGananciaProps {
 }
 
 import { escapeCsvField, downloadCsv, csvNegative } from '@/lib/utils/csv'
+import { DataTable, THead, TBody, Tr, Th, Td } from '@/components/ui/TableParts'
 
 export function BloqueGanancia({ resultados, tieneGastos }: BloqueGananciaProps) {
   const exportarCSV = () => {
@@ -49,50 +50,48 @@ export function BloqueGanancia({ resultados, tieneGastos }: BloqueGananciaProps)
       </div>
       
       <div className="overflow-x-auto">
-        <table className="w-full text-sm text-left">
-          <thead className="sr-only">
-            <tr>
-              <th>Concepto</th>
-              <th>Explicación</th>
-              <th className="text-right">Monto</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            <tr>
-              <td className="p-4 font-medium text-ink">Vendiste (neto)</td>
-              <td className="p-4 text-muted hidden sm:table-cell">Ventas del período menos anulaciones</td>
-              <td className="p-4 text-right font-medium tabular-nums">{formatMoney(resultados.ventas_netas)}</td>
-            </tr>
-            <tr>
-              <td className="p-4 text-alerta-ink">Menos costo de mercadería</td>
-              <td className="p-4 text-muted hidden sm:table-cell">Lo que te costaron los productos que vendiste</td>
-              <td className="p-4 text-right text-alerta-ink tabular-nums">
+        <DataTable>
+          <THead className="sr-only">
+            <Th>Concepto</Th>
+            <Th>Explicación</Th>
+            <Th align="right">Monto</Th>
+          </THead>
+          <TBody>
+            <Tr>
+              <Td className="font-medium text-ink">Vendiste (neto)</Td>
+              <Td className="text-muted hidden sm:table-cell">Ventas del período menos anulaciones</Td>
+              <Td align="right" className="font-medium">{formatMoney(resultados.ventas_netas)}</Td>
+            </Tr>
+            <Tr>
+              <Td className="text-alerta-ink">Menos costo de mercadería</Td>
+              <Td className="text-muted hidden sm:table-cell">Lo que te costaron los productos que vendiste</Td>
+              <Td align="right" className="text-alerta-ink">
                 {resultados.costo_mercaderia > 0 ? '-' : ''}{formatMoney(resultados.costo_mercaderia)}
-              </td>
-            </tr>
-            <tr className={tieneGastos ? 'bg-panel/50' : 'bg-panel font-medium text-base'}>
-              <td className="p-4 text-ink">Ganancia antes de gastos</td>
-              <td className="p-4 text-muted hidden sm:table-cell"></td>
-              <td className="p-4 text-right tabular-nums">{formatMoney(resultados.ganancia_sobre_ventas)}</td>
-            </tr>
+              </Td>
+            </Tr>
+            <Tr className={tieneGastos ? 'bg-panel/50' : 'bg-panel font-medium text-base'}>
+              <Td className="text-ink">Ganancia antes de gastos</Td>
+              <Td className="text-muted hidden sm:table-cell"></Td>
+              <Td align="right">{formatMoney(resultados.ganancia_sobre_ventas)}</Td>
+            </Tr>
             {tieneGastos && (
               <>
-                <tr>
-                  <td className="p-4 text-alerta-ink">Menos gastos</td>
-                  <td className="p-4 text-muted hidden sm:table-cell">Egresos operativos cargados en el período</td>
-                  <td className="p-4 text-right text-alerta-ink tabular-nums">
+                <Tr>
+                  <Td className="text-alerta-ink">Menos gastos</Td>
+                  <Td className="text-muted hidden sm:table-cell">Egresos operativos cargados en el período</Td>
+                  <Td align="right" className="text-alerta-ink">
                     {resultados.gastos > 0 ? '-' : ''}{formatMoney(resultados.gastos)}
-                  </td>
-                </tr>
-                <tr className="bg-panel font-bold text-base">
-                  <td className="p-4 text-ink">Ganancia final</td>
-                  <td className="p-4 text-muted hidden sm:table-cell">Lo que te quedó limpio</td>
-                  <td className="p-4 text-right tabular-nums">{formatMoney(resultados.ganancia_final)}</td>
-                </tr>
+                  </Td>
+                </Tr>
+                <Tr className="bg-panel font-bold text-base">
+                  <Td className="text-ink">Ganancia final</Td>
+                  <Td className="text-muted hidden sm:table-cell">Lo que te quedó limpio</Td>
+                  <Td align="right">{formatMoney(resultados.ganancia_final)}</Td>
+                </Tr>
               </>
             )}
-          </tbody>
-        </table>
+          </TBody>
+        </DataTable>
       </div>
     </section>
   )

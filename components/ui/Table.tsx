@@ -2,6 +2,7 @@
 
 import type { KeyboardEvent, ReactNode } from 'react'
 import { Skeleton } from './Skeleton'
+import { DataTable, TBody, Td, Th, THead, Tr } from './TableParts'
 
 export interface Column<T> {
   key: string
@@ -17,12 +18,6 @@ export interface TableProps<T> {
   emptyState?: ReactNode
   onRowClick?: (item: T) => void
   getRowId?: (item: T) => string
-}
-
-const ALIGN_CLASS: Record<'left' | 'center' | 'right', string> = {
-  left: 'text-left',
-  center: 'text-center',
-  right: 'text-right',
 }
 
 /**
@@ -46,38 +41,29 @@ export function Table<T extends object>({
   }
 
   return (
-    <table className="w-full border-collapse text-[13.5px] text-text">
-      <thead>
-        <tr className="border-b border-line bg-panel-2">
-          {columns.map((column) => {
-            const align = column.align ?? 'left'
-            return (
-              <th
-                key={column.key}
-                data-align={align}
-                className={`whitespace-nowrap px-4 py-2.5 font-mono text-[10.5px] font-medium uppercase tracking-[0.12em] text-muted ${ALIGN_CLASS[align]}`}
-              >
-                {column.label}
-              </th>
-            )
-          })}
-        </tr>
-      </thead>
-      <tbody>
+    <DataTable>
+      <THead>
+        {columns.map((column) => (
+          <Th key={column.key} align={column.align ?? 'left'}>
+            {column.label}
+          </Th>
+        ))}
+      </THead>
+      <TBody>
         {loading ? (
           Array.from({ length: 3 }).map((_, rowIndex) => (
-            <tr key={`skeleton-row-${rowIndex}`} data-testid="table-loading-row">
-              <td colSpan={columns.length} className="px-4 py-3.5">
+            <Tr key={`skeleton-row-${rowIndex}`} data-testid="table-loading-row">
+              <Td colSpan={columns.length} className="px-4 py-3.5">
                 <Skeleton width="100%" height="1rem" />
-              </td>
-            </tr>
+              </Td>
+            </Tr>
           ))
         ) : data.length === 0 ? (
-          <tr>
-            <td colSpan={columns.length} className="px-4 py-12 text-center text-sm text-muted">
+          <Tr>
+            <Td colSpan={columns.length} className="px-4 py-12 text-center text-sm text-muted">
               {emptyState ?? 'No data'}
-            </td>
-          </tr>
+            </Td>
+          </Tr>
         ) : (
           data.map((item, index) => {
             const rowId = getRowId ? getRowId(item) : String(index)
@@ -92,32 +78,27 @@ export function Table<T extends object>({
               : {}
 
             return (
-              <tr
+              <Tr
                 key={rowId}
-                className={`border-b border-line transition-colors last:border-b-0 hover:bg-hover ${
-                  onRowClick ? 'cursor-pointer focus:outline-none focus-visible:bg-hover focus-visible:shadow-[inset_2px_0_0_var(--ink)]' : ''
-                }`}
+                className={
+                  onRowClick
+                    ? 'cursor-pointer focus:outline-none focus-visible:bg-hover focus-visible:shadow-[inset_2px_0_0_var(--ink)]'
+                    : ''
+                }
                 {...rowProps}
               >
-                {columns.map((column) => {
-                  const align = column.align ?? 'left'
-                  return (
-                    <td
-                      key={column.key}
-                      data-align={align}
-                      className={`px-4 py-3 align-middle tabular-nums ${ALIGN_CLASS[align]}`}
-                    >
-                      {column.render
-                        ? column.render(item)
-                        : String((item as Record<string, unknown>)[column.key] ?? '')}
-                    </td>
-                  )
-                })}
-              </tr>
+                {columns.map((column) => (
+                  <Td key={column.key} align={column.align ?? 'left'}>
+                    {column.render
+                      ? column.render(item)
+                      : String((item as Record<string, unknown>)[column.key] ?? '')}
+                  </Td>
+                ))}
+              </Tr>
             )
           })
         )}
-      </tbody>
-    </table>
+      </TBody>
+    </DataTable>
   )
 }

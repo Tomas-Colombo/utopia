@@ -12,6 +12,7 @@ import type { GastoConCategoria } from '@/lib/types/rendiciones'
 import type { GastosOrden } from '@/lib/dal/gastos/gasto'
 import { eliminarGastoAction } from '../rendiciones/actions'
 import { mensajeDeError } from '@/lib/errores/mensajes'
+import { TableFrame, DataTable, THead, TBody, Tr, Th, Td } from '@/components/ui/TableParts'
 
 interface CatOpt { id: string; nombre: string }
 
@@ -191,40 +192,38 @@ export function GastosTableClient({
         </div>
       </form>
 
-      <div className="rounded-lg border border-border bg-card overflow-x-auto">
+      <TableFrame>
         {rows.length === 0 ? (
           <div className="p-6 text-center text-sm text-muted">
             Sin gastos que coincidan con los filtros.
           </div>
         ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-left">
-                <th className="px-4 py-3">Fecha</th>
-                <th className="px-4 py-3">Categoría</th>
-                <th className="px-4 py-3">Descripción</th>
-                <th className="px-4 py-3">Comprobante</th>
-                <th className="px-4 py-3 text-right">Monto</th>
-                <th className="px-4 py-3 text-right">
-                  <span className="sr-only">Acciones</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
+          <DataTable>
+            <THead>
+              <Th>Fecha</Th>
+              <Th>Categoría</Th>
+              <Th>Descripción</Th>
+              <Th>Comprobante</Th>
+              <Th align="right">Monto</Th>
+              <Th align="right">
+                <span className="sr-only">Acciones</span>
+              </Th>
+            </THead>
+            <TBody>
               {rows.map((g) => (
-                <tr key={g.id_gasto} className="border-b border-border-2">
-                  <td className="px-4 py-3">
+                <Tr key={g.id_gasto}>
+                  <Td>
                     {new Date(g.fecha).toLocaleDateString('es-AR')}
-                  </td>
-                  <td className="px-4 py-3">{g.categoria?.nombre ?? '—'}</td>
-                  <td className="px-4 py-3">{g.descripcion || '—'}</td>
-                  <td className="px-4 py-3 font-mono text-xs text-muted">
+                  </Td>
+                  <Td>{g.categoria?.nombre ?? '—'}</Td>
+                  <Td>{g.descripcion || '—'}</Td>
+                  <Td className="font-mono text-xs text-muted">
                     {g.comprobante_ref ?? '—'}
-                  </td>
-                  <td className="px-4 py-3 text-right font-mono font-semibold">
+                  </Td>
+                  <Td align="right" className="font-mono font-semibold">
                     $ {Number(g.monto).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
-                  </td>
-                  <td className="px-4 py-3 text-right">
+                  </Td>
+                  <Td align="right">
                     <Button
                       variant="ghost"
                       size="sm"
@@ -234,13 +233,13 @@ export function GastosTableClient({
                     >
                       Eliminar
                     </Button>
-                  </td>
-                </tr>
+                  </Td>
+                </Tr>
               ))}
-            </tbody>
-          </table>
+            </TBody>
+          </DataTable>
         )}
-      </div>
+      </TableFrame>
 
       <Pagination
         page={page}

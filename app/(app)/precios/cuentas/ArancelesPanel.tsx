@@ -33,6 +33,7 @@ import {
   crearRecargoCuotasAction,
 } from '../actions'
 import { mensajeDeError } from '@/lib/errores/mensajes'
+import { TableFrame, DataTable, THead, TBody, Tr, Th, Td } from '@/components/ui/TableParts'
 
 /** Los medios que pueden tener costo. El efectivo no paga arancel. */
 const MEDIOS_CON_COSTO: MedioPago[] = ['transferencia', 'tarjeta_debito', 'tarjeta_credito']
@@ -399,41 +400,39 @@ export function ArancelesPanel({
             Sin aranceles cargados. Los cobros de esta cuenta se registran con costo cero.
           </p>
         ) : (
-          <div className="overflow-x-auto rounded-md border border-border bg-card">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border text-left">
-                  <th className="px-3 py-2">Medio</th>
-                  <th className="px-3 py-2">Plan</th>
-                  <th className="px-3 py-2 text-right">Arancel</th>
-                  <th className="px-3 py-2 text-right">IVA</th>
-                  <th className="px-3 py-2 text-right">Acredita</th>
-                  <th className="px-3 py-2"></th>
-                </tr>
-              </thead>
-              <tbody>
+          <TableFrame>
+            <DataTable>
+              <THead>
+                <Th className="px-3 py-2">Medio</Th>
+                <Th className="px-3 py-2">Plan</Th>
+                <Th align="right" className="px-3 py-2">Arancel</Th>
+                <Th align="right" className="px-3 py-2">IVA</Th>
+                <Th align="right" className="px-3 py-2">Acredita</Th>
+                <Th className="px-3 py-2"></Th>
+              </THead>
+              <TBody>
                 {propios.map((a) => {
                   const enEdicion = editando === a.id_arancel_cobro
                   return (
-                    <tr
+                    <Tr
                       key={a.id_arancel_cobro}
-                      className="border-b border-border-2 last:border-0"
+                     
                     >
-                      <td className="px-3 py-2">{MEDIO_PAGO_LABEL[a.medio]}</td>
-                      <td className="px-3 py-2 text-xs text-muted">
+                      <Td className="px-3 py-2">{MEDIO_PAGO_LABEL[a.medio]}</Td>
+                      <Td className="px-3 py-2 text-xs text-muted">
                         {a.cuotas === null
                           ? 'Todos'
                           : a.cuotas === 1
                             ? '1 pago'
                             : `${a.cuotas} cuotas`}
-                      </td>
+                      </Td>
                       {/* En edición los tres números se vuelven inputs en su
                           propia columna. Es la fila la que se edita, no un
                           formulario aparte que obligue a recordar de qué fila
                           venía cada valor. */}
                       {enEdicion ? (
                         <>
-                          <td className="px-2 py-1">
+                          <Td className="px-2 py-1">
                             <NumberInput
                               value={borrador.arancelPct}
                               onChange={(e) =>
@@ -445,8 +444,8 @@ export function ArancelesPanel({
                               disabled={pending}
                               className="text-right"
                             />
-                          </td>
-                          <td className="px-2 py-1">
+                          </Td>
+                          <Td className="px-2 py-1">
                             <NumberInput
                               value={borrador.ivaPct}
                               onChange={(e) =>
@@ -458,8 +457,8 @@ export function ArancelesPanel({
                               disabled={pending}
                               className="text-right"
                             />
-                          </td>
-                          <td className="px-2 py-1">
+                          </Td>
+                          <Td className="px-2 py-1">
                             <NumberInput
                               value={borrador.dias}
                               onChange={(e) =>
@@ -470,8 +469,8 @@ export function ArancelesPanel({
                               disabled={pending}
                               className="text-right"
                             />
-                          </td>
-                          <td className="px-3 py-2 text-right whitespace-nowrap">
+                          </Td>
+                          <Td align="right" className="px-3 py-2 whitespace-nowrap">
                             <Button
                               type="button"
                               size="sm"
@@ -489,26 +488,26 @@ export function ArancelesPanel({
                             >
                               Guardar
                             </Button>
-                          </td>
+                          </Td>
                         </>
                       ) : (
                         <>
-                          <td className="px-3 py-2 text-right font-mono">
+                          <Td align="right" className="px-3 py-2 font-mono">
                             {a.arancel_pct === 0 ? (
                               <Badge variant="warning">Sin cargar</Badge>
                             ) : (
                               `${a.arancel_pct}%`
                             )}
-                          </td>
-                          <td className="px-3 py-2 text-right font-mono text-xs text-muted">
+                          </Td>
+                          <Td align="right" className="px-3 py-2 font-mono text-xs text-muted">
                             {a.iva_arancel_pct}%
-                          </td>
-                          <td className="px-3 py-2 text-right font-mono text-xs">
+                          </Td>
+                          <Td align="right" className="px-3 py-2 font-mono text-xs">
                             {a.dias_acreditacion === 0
                               ? 'al instante'
                               : `${a.dias_acreditacion} días`}
-                          </td>
-                          <td className="px-3 py-2 text-right whitespace-nowrap">
+                          </Td>
+                          <Td align="right" className="px-3 py-2 whitespace-nowrap">
                             <Button
                               type="button"
                               size="sm"
@@ -527,15 +526,15 @@ export function ArancelesPanel({
                             >
                               Dar de baja
                             </Button>
-                          </td>
+                          </Td>
                         </>
                       )}
-                    </tr>
+                    </Tr>
                   )
                 })}
-              </tbody>
-            </table>
-          </div>
+              </TBody>
+            </DataTable>
+          </TableFrame>
         )}
       </div>
 
@@ -625,35 +624,33 @@ export function ArancelesPanel({
             que al contado y el arancel te lo comés entero.
           </p>
         ) : (
-          <div className="overflow-x-auto rounded-md border border-border bg-card">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border text-left">
-                  <th className="px-3 py-2">Plan</th>
-                  <th className="px-3 py-2">Medio</th>
-                  <th className="px-3 py-2 text-right">Te cobran</th>
-                  <th className="px-3 py-2 text-right">Cobrás</th>
-                  <th className="px-3 py-2 text-right">Te queda</th>
-                  <th className="px-3 py-2"></th>
-                </tr>
-              </thead>
-              <tbody>
+          <TableFrame>
+            <DataTable>
+              <THead>
+                <Th className="px-3 py-2">Plan</Th>
+                <Th className="px-3 py-2">Medio</Th>
+                <Th align="right" className="px-3 py-2">Te cobran</Th>
+                <Th align="right" className="px-3 py-2">Cobrás</Th>
+                <Th align="right" className="px-3 py-2">Te queda</Th>
+                <Th className="px-3 py-2"></Th>
+              </THead>
+              <TBody>
                 {recargosPropios.map(({ r, costoPct, margen }) => {
                   const enEdicion = editandoRec === r.id_recargo_cuotas
                   return (
-                    <tr
+                    <Tr
                       key={r.id_recargo_cuotas}
-                      className="border-b border-border-2 last:border-0"
+                     
                     >
-                      <td className="px-3 py-2 font-medium">{r.cuotas} cuotas</td>
-                      <td className="px-3 py-2 text-xs text-muted">
+                      <Td className="px-3 py-2 font-medium">{r.cuotas} cuotas</Td>
+                      <Td className="px-3 py-2 text-xs text-muted">
                         {r.medio ? MEDIO_PAGO_LABEL[r.medio as MedioPago] : 'Cualquiera'}
-                      </td>
-                      <td className="px-3 py-2 text-right font-mono text-muted">
+                      </Td>
+                      <Td align="right" className="px-3 py-2 font-mono text-muted">
                         {costoPct === null ? '—' : `${redondear(costoPct)}%`}
-                      </td>
+                      </Td>
                       {enEdicion ? (
-                        <td className="px-2 py-1" colSpan={2}>
+                        <Td className="px-2 py-1" colSpan={2}>
                           <NumberInput
                             value={recBorrador}
                             onChange={(e) => setRecBorrador(e.target.value)}
@@ -663,28 +660,28 @@ export function ArancelesPanel({
                             disabled={pending}
                             className="text-right"
                           />
-                        </td>
+                        </Td>
                       ) : (
                         <>
-                          <td className="px-3 py-2 text-right font-mono">
+                          <Td align="right" className="px-3 py-2 font-mono">
                             {r.tipo_valor === 'porcentaje'
                               ? `+${redondear(r.valor)}%`
                               : `+$ ${r.valor.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`}
-                          </td>
+                          </Td>
                           {/* En rojo significa que ese plan da pérdida: el
                               recargo no llega a cubrir la comisión. */}
-                          <td
-                            className={`px-3 py-2 text-right font-mono ${
+                          <Td align="right"
+                            className={`px-3 py-2 font-mono ${
                               margen !== null && margen < 0 ? 'text-warn-ink' : ''
                             }`}
                           >
                             {margen === null
                               ? '—'
                               : `${margen >= 0 ? '+' : ''}${redondear(margen)}%`}
-                          </td>
+                          </Td>
                         </>
                       )}
-                      <td className="px-3 py-2 text-right whitespace-nowrap">
+                      <Td align="right" className="px-3 py-2 whitespace-nowrap">
                         {enEdicion ? (
                           <>
                             <Button
@@ -730,13 +727,13 @@ export function ArancelesPanel({
                             </Button>
                           </>
                         )}
-                      </td>
-                    </tr>
+                      </Td>
+                    </Tr>
                   )
                 })}
-              </tbody>
-            </table>
-          </div>
+              </TBody>
+            </DataTable>
+          </TableFrame>
         )}
 
         {recargosPropios.some((f) => f.margen !== null && f.margen < 0) && (

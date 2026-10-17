@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Badge } from '@/components/ui/Badge'
 import { Pagination } from '@/components/ui/Pagination'
 import type { CategoriaGastoStatus } from '@/lib/types/rendiciones'
+import { DataTable, THead, TBody, Tr, Th, Td } from '@/components/ui/TableParts'
 
 const ALERTA_VARIANT: Record<CategoriaGastoStatus['alerta'], 'success' | 'warning' | 'danger' | 'neutral'> = {
   ok: 'success',
@@ -37,39 +38,37 @@ export function PresupuestosMesTable({ rows }: { rows: CategoriaGastoStatus[] })
 
   return (
     <div>
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-border text-left">
-            <th className="px-4 py-3">Categoría</th>
-            <th className="px-4 py-3 text-right">Presupuesto</th>
-            <th className="px-4 py-3 text-right">Gastado</th>
-            <th className="px-4 py-3 text-right">Restante</th>
-            <th className="px-4 py-3">%</th>
-            <th className="px-4 py-3">Estado</th>
-          </tr>
-        </thead>
-        <tbody>
+      <DataTable>
+        <THead>
+          <Th>Categoría</Th>
+          <Th align="right">Presupuesto</Th>
+          <Th align="right">Gastado</Th>
+          <Th align="right">Restante</Th>
+          <Th>%</Th>
+          <Th>Estado</Th>
+        </THead>
+        <TBody>
           {slice.map((p) => {
             const pctClamp = Math.min(p.gastado_pct ?? 0, 100)
             return (
-              <tr key={p.id_categoria_gasto} className="border-b border-border-2">
-                <td className="px-4 py-3 font-medium">{p.nombre}</td>
-                <td className="px-4 py-3 text-right font-mono">
+              <Tr key={p.id_categoria_gasto}>
+                <Td className="font-medium">{p.nombre}</Td>
+                <Td align="right" className="font-mono">
                   {p.presupuesto_mensual != null
                     ? `$ ${p.presupuesto_mensual.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`
                     : <span className="text-muted">—</span>}
-                </td>
-                <td className="px-4 py-3 text-right font-mono">
+                </Td>
+                <Td align="right" className="font-mono">
                   $ {p.gastado_mes.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
-                </td>
-                <td className="px-4 py-3 text-right font-mono">
+                </Td>
+                <Td align="right" className="font-mono">
                   {p.restante != null
                     ? (p.restante < 0
                         ? <span className="text-alerta-ink">-$ {Math.abs(p.restante).toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
                         : `$ ${p.restante.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`)
                     : <span className="text-muted">—</span>}
-                </td>
-                <td className="px-4 py-3 w-40">
+                </Td>
+                <Td className="w-40">
                   {p.gastado_pct != null ? (
                     <div className="flex items-center gap-2">
                       <div className="flex-1 h-2 rounded bg-card-3 overflow-hidden">
@@ -87,17 +86,17 @@ export function PresupuestosMesTable({ rows }: { rows: CategoriaGastoStatus[] })
                   ) : (
                     <span className="text-muted text-xs">Sin control</span>
                   )}
-                </td>
-                <td className="px-4 py-3">
+                </Td>
+                <Td>
                   <Badge variant={ALERTA_VARIANT[p.alerta]}>
                     {ALERTA_LABEL[p.alerta]}
                   </Badge>
-                </td>
-              </tr>
+                </Td>
+              </Tr>
             )
           })}
-        </tbody>
-      </table>
+        </TBody>
+      </DataTable>
       <div className="border-t border-border px-2">
         <Pagination
           page={pagina}

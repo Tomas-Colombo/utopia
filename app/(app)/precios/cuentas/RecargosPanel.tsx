@@ -25,6 +25,7 @@ import {
   crearRecargoCuotasAction,
 } from '../actions'
 import { mensajeDeError } from '@/lib/errores/mensajes'
+import { DataTable, THead, TBody, Tr, Th, Td } from '@/components/ui/TableParts'
 
 /** Los medios que pueden financiar. El débito no tiene planes de cuotas. */
 const MEDIOS_FINANCIABLES: MedioPagoRecargo[] = ['tarjeta_credito', 'transferencia']
@@ -263,45 +264,43 @@ export function RecargosPanel({
         </p>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-left text-muted">
-                <th className="px-3 py-2">Plan</th>
-                <th className="px-3 py-2">Quién financia</th>
-                <th className="px-3 py-2 text-right">Te cobran</th>
-                <th className="px-3 py-2 text-right">Cobrás</th>
-                <th className="px-3 py-2 text-right">Te queda</th>
-                <th className="px-3 py-2"></th>
-              </tr>
-            </thead>
-            <tbody>
+          <DataTable>
+            <THead>
+              <Th className="px-3 py-2">Plan</Th>
+              <Th className="px-3 py-2">Quién financia</Th>
+              <Th align="right" className="px-3 py-2">Te cobran</Th>
+              <Th align="right" className="px-3 py-2">Cobrás</Th>
+              <Th align="right" className="px-3 py-2">Te queda</Th>
+              <Th className="px-3 py-2"></Th>
+            </THead>
+            <TBody>
               {filas.map(({ r, costoPct, margen }) => (
-                <tr key={r.id_recargo_cuotas} className="border-b border-border-2">
-                  <td className="px-3 py-2 font-medium">{r.cuotas} cuotas</td>
-                  <td className="px-3 py-2">
+                <Tr key={r.id_recargo_cuotas}>
+                  <Td className="px-3 py-2 font-medium">{r.cuotas} cuotas</Td>
+                  <Td className="px-3 py-2">
                     {etiqueta(r, cuentas)}
                     {r.propia && (
                       <Badge variant="warning">
                         <span className="ml-1">propia</span>
                       </Badge>
                     )}
-                  </td>
-                  <td className="px-3 py-2 text-right font-mono text-muted">
+                  </Td>
+                  <Td align="right" className="px-3 py-2 font-mono text-muted">
                     {costoPct === null ? '—' : `${pct(costoPct)}%`}
-                  </td>
-                  <td className="px-3 py-2 text-right font-mono">
+                  </Td>
+                  <Td align="right" className="px-3 py-2 font-mono">
                     {r.tipo_valor === 'porcentaje'
                       ? `+${pct(r.valor)}%`
                       : `+$ ${r.valor.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`}
-                  </td>
-                  <td
-                    className={`px-3 py-2 text-right font-mono ${
+                  </Td>
+                  <Td align="right"
+                    className={`px-3 py-2 font-mono ${
                       margen !== null && margen < 0 ? 'text-warn-ink' : ''
                     }`}
                   >
                     {margen === null ? '—' : `${margen >= 0 ? '+' : ''}${pct(margen)}%`}
-                  </td>
-                  <td className="px-3 py-2 text-right">
+                  </Td>
+                  <Td align="right" className="px-3 py-2">
                     <button
                       type="button"
                       onClick={() => cerrar(r.id_recargo_cuotas)}
@@ -311,11 +310,11 @@ export function RecargosPanel({
                     >
                       Dar de baja
                     </button>
-                  </td>
-                </tr>
+                  </Td>
+                </Tr>
               ))}
-            </tbody>
-          </table>
+            </TBody>
+          </DataTable>
         </div>
       )}
 

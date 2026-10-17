@@ -15,6 +15,7 @@ import type {
 } from '@/lib/types/inventario'
 import { AsignarTallesModal } from '../../AsignarTallesModal'
 import { EditarProductoModal } from '@/components/inventario/EditarProductoModal'
+import { DataTable, THead, TBody, Tr, Th, Td } from '@/components/ui/TableParts'
 
 type Proveedor = { id_proveedor: string; nombre: string } | null
 
@@ -291,42 +292,40 @@ export function FichaProductoView({
           </p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border text-left text-xs uppercase text-muted">
-                  <th className="py-2 pr-3 font-medium">Talle</th>
-                  <th className="py-2 pr-3 text-right font-medium">Disponible</th>
-                  <th className="py-2 pr-3 text-right font-medium">Reservado</th>
-                  <th className="py-2 pr-3 text-right font-medium">Vendido</th>
-                  <th className="py-2 pr-3 text-right font-medium">Otros</th>
-                  <th className="py-2 pr-3 text-right font-medium">Total</th>
-                </tr>
-              </thead>
-              <tbody>
+            <DataTable>
+              <THead>
+                <Th className="py-2 pr-3">Talle</Th>
+                <Th align="right" className="py-2 pr-3">Disponible</Th>
+                <Th align="right" className="py-2 pr-3">Reservado</Th>
+                <Th align="right" className="py-2 pr-3">Vendido</Th>
+                <Th align="right" className="py-2 pr-3">Otros</Th>
+                <Th align="right" className="py-2 pr-3">Total</Th>
+              </THead>
+              <TBody>
                 {filasBreakdown.map((f) => {
                   const otros =
                     f.counts.devuelto + f.counts.devuelto_cliente + f.counts.baja + f.counts.en_revendedora
                   const total =
                     f.counts.disponible + f.counts.reservado + f.counts.vendido + otros
                   return (
-                    <tr key={f.talle} className="border-b border-border/60 last:border-none">
-                      <td className="py-2 pr-3 font-medium">{f.label}</td>
-                      <td className="py-2 pr-3 text-right font-mono tabular-nums">{f.counts.disponible}</td>
-                      <td className="py-2 pr-3 text-right font-mono tabular-nums text-muted">
+                    <Tr key={f.talle}>
+                      <Td className="py-2 pr-3 font-medium">{f.label}</Td>
+                      <Td align="right" className="py-2 pr-3 font-mono">{f.counts.disponible}</Td>
+                      <Td align="right" className="py-2 pr-3 font-mono text-muted">
                         {f.counts.reservado}
-                      </td>
-                      <td className="py-2 pr-3 text-right font-mono tabular-nums text-muted">
+                      </Td>
+                      <Td align="right" className="py-2 pr-3 font-mono text-muted">
                         {f.counts.vendido}
-                      </td>
-                      <td className="py-2 pr-3 text-right font-mono tabular-nums text-muted">
+                      </Td>
+                      <Td align="right" className="py-2 pr-3 font-mono text-muted">
                         {otros > 0 ? otros : '—'}
-                      </td>
-                      <td className="py-2 pr-3 text-right font-mono tabular-nums">{total}</td>
-                    </tr>
+                      </Td>
+                      <Td align="right" className="py-2 pr-3 font-mono">{total}</Td>
+                    </Tr>
                   )
                 })}
-              </tbody>
-            </table>
+              </TBody>
+            </DataTable>
             <p className="mt-2 text-xs text-muted">
               {filtroActivo
                 ? 'Se cuentan los ítems cuyo último movimiento relevante (ingreso, venta o devolución) cae en el período.'

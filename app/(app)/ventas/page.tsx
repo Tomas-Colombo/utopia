@@ -20,6 +20,7 @@ import {
 import { FiltroPeriodo } from '@/components/shell/FiltroPeriodo'
 import { VentasPaginacion } from './VentasPaginacion'
 import { hoyISO } from '@/lib/utils/hoy'
+import { DataTable, THead, TBody, Tr, Th, Td } from '@/components/ui/TableParts'
 
 const PAGE_SIZE = 50
 
@@ -258,27 +259,25 @@ export default async function VentasHome(props: {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border text-left">
-                    <th className="eyebrow px-4 py-3 font-medium text-muted">Fecha</th>
-                    {tieneModuloRevendedoras && <th className="eyebrow px-4 py-3 font-medium text-muted">Canal</th>}
-                    <th className="eyebrow px-4 py-3 font-medium text-muted">Cliente</th>
-                    <th className="eyebrow px-4 py-3 font-medium text-muted">Forma pago</th>
-                    <th className="eyebrow px-4 py-3 font-medium text-muted text-right">Líneas</th>
-                    <th className="eyebrow px-4 py-3 font-medium text-muted text-right">Total</th>
-                    <th className="eyebrow px-4 py-3 font-medium text-muted">Estado</th>
-                    <th className="eyebrow px-4 py-3 font-medium text-muted text-right">
-                      <span className="sr-only">Acciones</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
+              <DataTable>
+                <THead>
+                  <Th>Fecha</Th>
+                  {tieneModuloRevendedoras && <Th>Canal</Th>}
+                  <Th>Cliente</Th>
+                  <Th>Forma pago</Th>
+                  <Th align="right">Líneas</Th>
+                  <Th align="right">Total</Th>
+                  <Th>Estado</Th>
+                  <Th align="right">
+                    <span className="sr-only">Acciones</span>
+                  </Th>
+                </THead>
+                <TBody>
                   {ventas.map((v) => (
-                    <tr key={v.id_venta} className="border-b border-border-2">
-                      <td className="px-4 py-3">{new Date(v.fecha).toLocaleString('es-AR')}</td>
+                    <Tr key={v.id_venta}>
+                      <Td>{new Date(v.fecha).toLocaleString('es-AR')}</Td>
                       {tieneModuloRevendedoras && (
-                        <td className="px-4 py-3">
+                        <Td>
                           <span
                             className={`text-xs font-mono uppercase ${
                               v.canal === 'revendedora' ? 'text-ink' : 'text-muted'
@@ -286,15 +285,15 @@ export default async function VentasHome(props: {
                           >
                             {v.canal === 'revendedora' ? 'Revendedora' : 'Local'}
                           </span>
-                        </td>
+                        </Td>
                       )}
-                      <td className="px-4 py-3">{nombreCliente(v.cliente)}</td>
-                      <td className="px-4 py-3 capitalize">{v.forma_pago.replace('_', ' ')}</td>
-                      <td className="px-4 py-3 text-right font-mono">{v.lineas_count}</td>
-                      <td className="px-4 py-3 text-right font-mono">
+                      <Td>{nombreCliente(v.cliente)}</Td>
+                      <Td className="capitalize">{v.forma_pago.replace('_', ' ')}</Td>
+                      <Td align="right" className="font-mono">{v.lineas_count}</Td>
+                      <Td align="right" className="font-mono">
                         $ {Number(v.total).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
-                      </td>
-                      <td className="px-4 py-3">
+                      </Td>
+                      <Td>
                         {/* La fila no trae estado de cobro: sólo registrada o
                             anulada. Punto en tinta / punto de alerta, siempre
                             con la palabra al lado. */}
@@ -303,19 +302,19 @@ export default async function VentasHome(props: {
                         ) : (
                           <StatusDot tone="ok">Registrada</StatusDot>
                         )}
-                      </td>
-                      <td className="px-4 py-3 text-right">
+                      </Td>
+                      <Td align="right">
                         <Link
                           href={`/ventas/${v.id_venta}`}
                           className="-mx-2 rounded-[4px] px-2 py-1 text-xs font-medium text-muted transition-colors hover:bg-hover hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
                         >
                           Ver
                         </Link>
-                      </td>
-                    </tr>
+                      </Td>
+                    </Tr>
                   ))}
-                </tbody>
-              </table>
+                </TBody>
+              </DataTable>
             </div>
           )}
           {total > PAGE_SIZE && (

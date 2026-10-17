@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { useToast } from '@/components/ui/Toast'
 import { toggleTenantModuloAction } from '../actions'
 import { mensajeDeError } from '@/lib/errores/mensajes'
+import { TableFrame, DataTable, THead, TBody, Tr, Th, Td } from '@/components/ui/TableParts'
 
 interface Mod {
   id: string
@@ -45,27 +46,25 @@ export function ModulosView({ initial }: { initial: Mod[] }) {
         acceder — el guard falla con <code>module-disabled</code>.
       </div>
 
-      <div className="rounded-lg border border-border bg-card overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border text-left">
-              <th className="px-4 py-3">Módulo</th>
-              <th className="px-4 py-3">Código</th>
-              <th className="px-4 py-3">Estado</th>
-              <th className="px-4 py-3"></th>
-            </tr>
-          </thead>
-          <tbody>
+      <TableFrame>
+        <DataTable>
+          <THead>
+            <Th>Módulo</Th>
+            <Th>Código</Th>
+            <Th>Estado</Th>
+            <Th></Th>
+          </THead>
+          <TBody>
             {rows.map((m) => (
-              <tr key={m.id} className="border-b border-border-2">
-                <td className="px-4 py-3 font-medium">{m.nombre}</td>
-                <td className="px-4 py-3 font-mono text-xs text-muted">{m.codigo}</td>
-                <td className="px-4 py-3">
+              <Tr key={m.id}>
+                <Td className="font-medium">{m.nombre}</Td>
+                <Td className="font-mono text-xs text-muted">{m.codigo}</Td>
+                <Td>
                   <Badge variant={m.habilitado ? 'success' : 'neutral'}>
                     {m.habilitado ? 'Habilitado' : 'Deshabilitado'}
                   </Badge>
-                </td>
-                <td className="px-4 py-3 text-right">
+                </Td>
+                <Td align="right">
                   <Button
                     size="sm"
                     variant={m.habilitado ? 'ghost' : 'primary'}
@@ -74,12 +73,12 @@ export function ModulosView({ initial }: { initial: Mod[] }) {
                   >
                     {m.habilitado ? 'Deshabilitar' : 'Habilitar'}
                   </Button>
-                </td>
-              </tr>
+                </Td>
+              </Tr>
             ))}
-          </tbody>
-        </table>
-      </div>
+          </TBody>
+        </DataTable>
+      </TableFrame>
     </div>
   )
 }

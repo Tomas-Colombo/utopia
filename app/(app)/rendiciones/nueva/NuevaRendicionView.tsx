@@ -14,6 +14,7 @@ import {
   reincluirDetalleAction,
 } from '../actions'
 import { mensajeDeError } from '@/lib/errores/mensajes'
+import { TableFrame, DataTable, THead, TBody, TFoot, Tr, Th, Td } from '@/components/ui/TableParts'
 
 interface Prov { id: string; nombre: string; tipo: string }
 
@@ -131,55 +132,51 @@ export function NuevaRendicionView({
         </div>
       ) : (
         <>
-          <div className="rounded-lg border border-border bg-card overflow-x-auto">
+          <TableFrame>
             <div className="border-b border-border px-4 py-3 flex items-center justify-between">
               <h3 className="font-display text-lg">Ventas pendientes de rendir</h3>
               <span className="text-sm text-muted">
                 {visibles.length} de {lineas.length} líneas seleccionadas
               </span>
             </div>
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border text-left">
-                  <th className="px-4 py-3">Fecha</th>
-                  <th className="px-4 py-3">Producto</th>
-                  <th className="px-4 py-3">QR</th>
-                  <th className="px-4 py-3">Cliente</th>
-                  <th className="px-4 py-3 text-right">Precio venta</th>
-                  <th className="px-4 py-3 text-right">Monto proveedor</th>
-                  <th className="px-4 py-3"></th>
-                </tr>
-              </thead>
-              <tbody>
+            <DataTable>
+              <THead>
+                <Th>Fecha</Th>
+                <Th>Producto</Th>
+                <Th>QR</Th>
+                <Th>Cliente</Th>
+                <Th align="right">Precio venta</Th>
+                <Th align="right">Monto proveedor</Th>
+                <Th></Th>
+              </THead>
+              <TBody>
                 {lineas.map((l) => {
                   const excluida = excluidos.has(l.id_detalle_venta)
                   return (
-                    <tr
+                    <Tr
                       key={l.id_detalle_venta}
-                      className={`border-b border-border-2 ${
-                        excluida ? 'opacity-40' : ''
-                      }`}
+                      className={excluida ? 'opacity-40' : ''}
                     >
-                      <td className="px-4 py-3">
+                      <Td>
                         {new Date(l.fecha).toLocaleDateString('es-AR')}
-                      </td>
-                      <td className="px-4 py-3">
+                      </Td>
+                      <Td>
                         <div className="font-medium">{l.producto_nombre}</div>
                         {l.producto_sku && (
                           <div className="text-xs font-mono text-muted">{l.producto_sku}</div>
                         )}
-                      </td>
-                      <td className="px-4 py-3 font-mono text-xs">{l.qr_code}</td>
-                      <td className="px-4 py-3 text-xs">
+                      </Td>
+                      <Td className="font-mono text-xs">{l.qr_code}</Td>
+                      <Td className="text-xs">
                         {l.cliente_nombre ?? <span className="text-muted">Mostrador</span>}
-                      </td>
-                      <td className="px-4 py-3 text-right font-mono text-muted">
+                      </Td>
+                      <Td align="right" className="font-mono text-muted">
                         $ {Number(l.precio_venta).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
-                      </td>
-                      <td className="px-4 py-3 text-right font-mono font-semibold">
+                      </Td>
+                      <Td align="right" className="font-mono font-semibold">
                         $ {Number(l.monto_proveedor).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
-                      </td>
-                      <td className="px-4 py-3 text-right">
+                      </Td>
+                      <Td align="right">
                         {excluida ? (
                           <Button
                             size="sm"
@@ -199,24 +196,24 @@ export function NuevaRendicionView({
                             Excluir
                           </Button>
                         )}
-                      </td>
-                    </tr>
+                      </Td>
+                    </Tr>
                   )
                 })}
-              </tbody>
-              <tfoot>
-                <tr className="border-t border-border bg-card-2">
-                  <td colSpan={5} className="px-4 py-3 font-semibold">
+              </TBody>
+              <TFoot>
+                <Tr className="border-t bg-card-2">
+                  <Td colSpan={5} className="font-semibold">
                     Total a rendir ({visibles.length} líneas)
-                  </td>
-                  <td className="px-4 py-3 text-right font-mono font-semibold">
+                  </Td>
+                  <Td align="right" className="font-mono font-semibold">
                     $ {total.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
-                  </td>
-                  <td></td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
+                  </Td>
+                  <Td></Td>
+                </Tr>
+              </TFoot>
+            </DataTable>
+          </TableFrame>
 
           <div className="rounded-md border border-border bg-card-2 p-3 text-xs text-muted">
             <b>Excluir</b> marca la línea con <code>excluida_rendicion=true</code>{' '}

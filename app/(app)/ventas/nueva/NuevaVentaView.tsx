@@ -51,6 +51,7 @@ import { mensajeDeError } from '@/lib/errores/mensajes'
 import type { ReglaComisionConEscalas } from '@/lib/types/comisiones'
 import { estimarComision, resolverComision } from '@/lib/comisiones/resolver-comision'
 import { hoyISO } from '@/lib/utils/hoy'
+import { TableFrame, DataTable, THead, TBody, TFoot, Tr, Th, Td } from '@/components/ui/TableParts'
 
 interface ClienteOption { id: string; nombre: string; telefono: string | null }
 export interface RevendedoraOption { id: string; nombre: string }
@@ -1498,28 +1499,26 @@ export function NuevaVentaView({
           )}
         </div>
 
-        <div className="rounded-lg border border-border bg-card overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-left">
-                <th className="px-4 py-3">Producto</th>
-                <th className="px-4 py-3 text-right">Precio</th>
-                <th className="px-4 py-3 text-right">Cant.</th>
-                <th className="px-4 py-3 text-right">Subtotal</th>
-                <th className="px-4 py-3"></th>
-              </tr>
-            </thead>
-            <tbody>
+        <TableFrame>
+          <DataTable>
+            <THead>
+              <Th>Producto</Th>
+              <Th align="right">Precio</Th>
+              <Th align="right">Cant.</Th>
+              <Th align="right">Subtotal</Th>
+              <Th></Th>
+            </THead>
+            <TBody>
               {grupos.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-muted">
+                <Tr>
+                  <Td align="center" colSpan={5} className="px-4 py-8 text-muted">
                     Escaneá el primer ítem para empezar la venta.
-                  </td>
-                </tr>
+                  </Td>
+                </Tr>
               ) : (
                 grupos.map((g) => (
-                  <tr key={g.key} data-testid="linea-carrito" className="border-b border-border-2">
-                    <td className="px-4 py-3">
+                  <Tr key={g.key} data-testid="linea-carrito">
+                    <Td>
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="font-medium">{g.producto_nombre}</span>
                         <span className="rounded-full border border-border bg-card-2 px-2 py-0.5 text-xs font-medium">
@@ -1550,8 +1549,8 @@ export function NuevaVentaView({
                         onToggle={(idRegla) => toggleProducto(g.id_producto, idRegla)}
                         disabled={buscando}
                       />
-                    </td>
-                    <td className="px-4 py-3 text-right font-mono">
+                    </Td>
+                    <Td align="right" className="font-mono">
                       {g.precio_final != null ? (
                         <div className="flex flex-col items-end leading-tight">
                           {g.desglose.descuentos.length > 0 && g.precio_lista != null && (
@@ -1564,19 +1563,19 @@ export function NuevaVentaView({
                       ) : (
                         '—'
                       )}
-                    </td>
-                    <td className="px-4 py-3 text-right">
+                    </Td>
+                    <Td align="right">
                       <CantidadGrupo
                         grupo={g}
                         max={stockPorGrupo[g.key]}
                         onCommit={(n) => void setCantidadGrupo(g, n)}
                         disabled={buscando}
                       />
-                    </td>
-                    <td className="px-4 py-3 text-right font-mono font-semibold">
+                    </Td>
+                    <Td align="right" className="font-mono font-semibold">
                       $ {g.subtotal.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
-                    </td>
-                    <td className="px-4 py-3 text-right">
+                    </Td>
+                    <Td align="right">
                       <Button
                         variant="ghost"
                         size="sm"
@@ -1584,73 +1583,73 @@ export function NuevaVentaView({
                       >
                         Quitar
                       </Button>
-                    </td>
-                  </tr>
+                    </Td>
+                  </Tr>
                 ))
               )}
-            </tbody>
-            <tfoot>
+            </TBody>
+            <TFoot>
               {(totalDescuentos > 0 || totalRecargo > 0) && (
                 <>
-                  <tr className="border-t border-border">
-                    <td colSpan={3} className="px-4 pt-3 pb-1 text-right text-sm text-muted">
+                  <Tr className="border-t">
+                    <Td align="right" colSpan={3} className="px-4 pt-3 pb-1 text-sm text-muted">
                       Subtotal (precio de lista)
-                    </td>
-                    <td className="px-4 pt-3 pb-1 text-right font-mono text-sm text-muted">
+                    </Td>
+                    <Td align="right" className="px-4 pt-3 pb-1 font-mono text-sm text-muted">
                       {money(subtotalLista)}
-                    </td>
-                    <td></td>
-                  </tr>
+                    </Td>
+                    <Td></Td>
+                  </Tr>
                   {resumenDescuentos.map((r) => (
-                    <tr key={r.nombre + r.alcance}>
-                      <td colSpan={3} className="px-4 py-0.5 text-right text-sm text-muted">
+                    <Tr key={r.nombre + r.alcance}>
+                      <Td align="right" colSpan={3} className="px-4 py-0.5 text-sm text-muted">
                         <span className="rounded bg-card-2 px-1 py-0.5 text-[10px] uppercase tracking-wide">
                           {ALCANCE_CORTO[r.alcance]}
                         </span>{' '}
                         {r.nombre}
-                      </td>
-                      <td className="px-4 py-0.5 text-right font-mono text-sm text-ink">
+                      </Td>
+                      <Td align="right" className="px-4 py-0.5 font-mono text-sm text-ink">
                         −{money(r.total)}
-                      </td>
-                      <td></td>
-                    </tr>
+                      </Td>
+                      <Td></Td>
+                    </Tr>
                   ))}
                   {totalDescuentos > 0 && (
-                    <tr>
-                      <td colSpan={3} className="px-4 py-0.5 text-right text-sm font-medium text-ink">
+                    <Tr>
+                      <Td align="right" colSpan={3} className="px-4 py-0.5 text-sm font-medium text-ink">
                         Total descuentos
-                      </td>
-                      <td className="px-4 py-0.5 text-right font-mono text-sm font-semibold text-ink">
+                      </Td>
+                      <Td align="right" className="px-4 py-0.5 font-mono text-sm font-semibold text-ink">
                         −{money(totalDescuentos)}
-                      </td>
-                      <td></td>
-                    </tr>
+                      </Td>
+                      <Td></Td>
+                    </Tr>
                   )}
                   {totalRecargo > 0 && (
-                    <tr>
-                      <td colSpan={3} className="px-4 py-0.5 pb-2 text-right text-sm font-medium text-warn-ink">
+                    <Tr>
+                      <Td align="right" colSpan={3} className="px-4 py-0.5 pb-2 text-sm font-medium text-warn-ink">
                         Recargo · {finCuotas} cuotas
-                      </td>
-                      <td className="px-4 py-0.5 pb-2 text-right font-mono text-sm font-semibold text-warn-ink">
+                      </Td>
+                      <Td align="right" className="px-4 py-0.5 pb-2 font-mono text-sm font-semibold text-warn-ink">
                         +{money(totalRecargo)}
-                      </td>
-                      <td></td>
-                    </tr>
+                      </Td>
+                      <Td></Td>
+                    </Tr>
                   )}
                 </>
               )}
-              <tr className="border-t border-border bg-card-2">
-                <td colSpan={3} className="px-4 py-3 font-semibold">
+              <Tr className="border-t bg-card-2">
+                <Td colSpan={3} className="font-semibold">
                   Total ({lineas.length} ítem{lineas.length === 1 ? '' : 's'})
-                </td>
-                <td className="px-4 py-3 text-right font-mono font-semibold">
+                </Td>
+                <Td align="right" className="font-mono font-semibold">
                   {money(total)}
-                </td>
-                <td></td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
+                </Td>
+                <Td></Td>
+              </Tr>
+            </TFoot>
+          </DataTable>
+        </TableFrame>
       </section>
 
       {/* Paso 1 (cont.) — lo que aplica a la venta completa y NO decide cómo

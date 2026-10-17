@@ -8,6 +8,7 @@ import { Field } from '@/components/ui/Field'
 import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import type { AuditoriaConActor } from '@/lib/types/administracion'
+import { TableFrame, DataTable, THead, TBody, Tr, Th, Td } from '@/components/ui/TableParts'
 
 /**
  * Visor de auditoría (Etapa 9 §L140). Read-only.
@@ -85,50 +86,48 @@ export function AuditoriaView({
         </div>
       </form>
 
-      <div className="rounded-lg border border-border bg-card overflow-x-auto">
+      <TableFrame>
         {rows.length === 0 ? (
           <div className="p-6 text-center text-sm text-muted">
             Sin registros para estos filtros.
           </div>
         ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-left">
-                <th className="px-4 py-3">Fecha</th>
-                <th className="px-4 py-3">Actor</th>
-                <th className="px-4 py-3">Entidad</th>
-                <th className="px-4 py-3">Acción</th>
-                <th className="px-4 py-3">ID</th>
-                <th className="px-4 py-3"></th>
-              </tr>
-            </thead>
-            <tbody>
+          <DataTable>
+            <THead>
+              <Th>Fecha</Th>
+              <Th>Actor</Th>
+              <Th>Entidad</Th>
+              <Th>Acción</Th>
+              <Th>ID</Th>
+              <Th></Th>
+            </THead>
+            <TBody>
               {rows.map((r) => (
-                <tr key={r.id_auditoria} className="border-b border-border-2">
-                  <td className="px-4 py-3 whitespace-nowrap text-xs">
+                <Tr key={r.id_auditoria}>
+                  <Td className="whitespace-nowrap text-xs">
                     {new Date(r.ts).toLocaleString('es-AR')}
-                  </td>
-                  <td className="px-4 py-3">
+                  </Td>
+                  <Td>
                     {r.actor_nombre || r.actor_email || <span className="text-muted">(sistema)</span>}
-                  </td>
-                  <td className="px-4 py-3">
+                  </Td>
+                  <Td>
                     <Badge variant="neutral">{r.entidad}</Badge>
-                  </td>
-                  <td className="px-4 py-3 font-mono text-xs uppercase">{r.accion}</td>
-                  <td className="px-4 py-3 font-mono text-xs text-muted">
+                  </Td>
+                  <Td className="font-mono text-xs uppercase">{r.accion}</Td>
+                  <Td className="font-mono text-xs text-muted">
                     {r.entidad_id ? r.entidad_id.slice(0, 8) : '—'}
-                  </td>
-                  <td className="px-4 py-3 text-right">
+                  </Td>
+                  <Td align="right">
                     <Button size="sm" variant="ghost" onClick={() => setDetalle(r)}>
                       Ver detalle
                     </Button>
-                  </td>
-                </tr>
+                  </Td>
+                </Tr>
               ))}
-            </tbody>
-          </table>
+            </TBody>
+          </DataTable>
         )}
-      </div>
+      </TableFrame>
 
       <Modal
         open={!!detalle}

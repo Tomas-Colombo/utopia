@@ -27,6 +27,7 @@ import {
 } from '@/components/inventario/ProductoNombreCombobox'
 import { buscarMatchNombre, indexarPorNombre } from '@/lib/inventario/producto-match'
 import { mensajeDeError } from '@/lib/errores/mensajes'
+import { TableFrame, DataTable, THead, TBody, TFoot, Tr, Th, Td } from '@/components/ui/TableParts'
 
 type Ingreso = IngresoMercaderiaRow & {
   proveedor: Pick<ProveedorRow, 'id_proveedor' | 'nombre' | 'telefono'> | null
@@ -193,61 +194,59 @@ export function IngresoDetalleView({
       </div>
 
       {/* Líneas */}
-      <div className="rounded-lg border border-border bg-card overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border text-left">
-              <th className="px-4 py-3">Producto</th>
-              <th className="px-4 py-3">Talle</th>
-              <th className="px-4 py-3 text-right">Cantidad</th>
-              <th className="px-4 py-3 text-right">Costo unit.</th>
-              <th className="px-4 py-3 text-right">Subtotal</th>
-              {!readonly && <th className="px-4 py-3"></th>}
-            </tr>
-          </thead>
-          <tbody>
+      <TableFrame>
+        <DataTable>
+          <THead>
+            <Th>Producto</Th>
+            <Th>Talle</Th>
+            <Th align="right">Cantidad</Th>
+            <Th align="right">Costo unit.</Th>
+            <Th align="right">Subtotal</Th>
+            {!readonly && <Th></Th>}
+          </THead>
+          <TBody>
             {detalles.length === 0 ? (
-              <tr>
-                <td colSpan={readonly ? 5 : 6} className="px-4 py-6 text-center text-muted">
+              <Tr>
+                <Td align="center" colSpan={readonly ? 5 : 6} className="px-4 py-6 text-muted">
                   Sin líneas. Agregá al menos una antes de confirmar.
-                </td>
-              </tr>
+                </Td>
+              </Tr>
             ) : (
               detalles.map((d) => (
-                <tr key={d.id_detalle} className="border-b border-border-2">
-                  <td className="px-4 py-3">{productoNombre(d.id_producto)}</td>
-                  <td className="px-4 py-3">{d.talle ?? <span className="text-muted">—</span>}</td>
-                  <td className="px-4 py-3 text-right font-mono">{d.cantidad}</td>
-                  <td className="px-4 py-3 text-right font-mono">
+                <Tr key={d.id_detalle}>
+                  <Td>{productoNombre(d.id_producto)}</Td>
+                  <Td>{d.talle ?? <span className="text-muted">—</span>}</Td>
+                  <Td align="right" className="font-mono">{d.cantidad}</Td>
+                  <Td align="right" className="font-mono">
                     $ {Number(d.costo_unitario).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
-                  </td>
-                  <td className="px-4 py-3 text-right font-mono">
+                  </Td>
+                  <Td align="right" className="font-mono">
                     $ {(d.cantidad * d.costo_unitario).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
-                  </td>
+                  </Td>
                   {!readonly && (
-                    <td className="px-4 py-3 text-right">
+                    <Td align="right">
                       <Button size="sm" variant="ghost" onClick={() => removeLinea(d.id_detalle)} disabled={pending}>
                         Quitar
                       </Button>
-                    </td>
+                    </Td>
                   )}
-                </tr>
+                </Tr>
               ))
             )}
-          </tbody>
-          <tfoot>
-            <tr className="border-t border-border bg-card-2">
-              <td className="px-4 py-3 font-semibold" colSpan={2}>Total</td>
-              <td className="px-4 py-3 text-right font-mono font-semibold">{totalCantidad}</td>
-              <td className="px-4 py-3"></td>
-              <td className="px-4 py-3 text-right font-mono font-semibold">
+          </TBody>
+          <TFoot>
+            <Tr className="border-t bg-card-2">
+              <Td className="font-semibold" colSpan={2}>Total</Td>
+              <Td align="right" className="font-mono font-semibold">{totalCantidad}</Td>
+              <Td></Td>
+              <Td align="right" className="font-mono font-semibold">
                 $ {totalCosto.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
-              </td>
-              {!readonly && <td></td>}
-            </tr>
-          </tfoot>
-        </table>
-      </div>
+              </Td>
+              {!readonly && <Td></Td>}
+            </Tr>
+          </TFoot>
+        </DataTable>
+      </TableFrame>
 
       {/* Import desde PDF (planilla de precarga) */}
       {!readonly && (

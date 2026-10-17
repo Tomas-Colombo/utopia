@@ -16,6 +16,7 @@ import {
   setPresupuestoAction,
 } from '../../rendiciones/actions'
 import { mensajeDeError } from '@/lib/errores/mensajes'
+import { TableFrame, DataTable, THead, TBody, Tr, Th, Td } from '@/components/ui/TableParts'
 
 interface Cat {
   id: string
@@ -169,27 +170,25 @@ export function PresupuestosView({ initial }: { initial: Cat[] }) {
         <span className="text-xs text-muted">{visibles.length} categoría(s)</span>
       </div>
 
-      <div className="rounded-lg border border-border bg-card overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border text-left">
-              <th className="px-4 py-3">Categoría</th>
-              <th className="px-4 py-3">Presupuesto mensual (ARS)</th>
-              <th className="px-4 py-3">Estado</th>
-              <th className="px-4 py-3 text-right">Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
+      <TableFrame>
+        <DataTable>
+          <THead>
+            <Th>Categoría</Th>
+            <Th>Presupuesto mensual (ARS)</Th>
+            <Th>Estado</Th>
+            <Th align="right">Acciones</Th>
+          </THead>
+          <TBody>
             {rows.length === 0 ? (
-              <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-muted">
+              <Tr>
+                <Td align="center" colSpan={4} className="px-4 py-6 text-muted">
                   Sin categorías.
-                </td>
-              </tr>
+                </Td>
+              </Tr>
             ) : (
               rows.map((c) => (
-                <tr key={c.id} className="border-b border-border-2">
-                  <td className="px-4 py-3">
+                <Tr key={c.id}>
+                  <Td>
                     <Input
                       aria-label={`Nombre ${c.nombre}`}
                       value={nombres[c.id] ?? ''}
@@ -198,8 +197,8 @@ export function PresupuestosView({ initial }: { initial: Cat[] }) {
                       disabled={pending || !c.activa}
                       className="max-w-xs"
                     />
-                  </td>
-                  <td className="px-4 py-3">
+                  </Td>
+                  <Td>
                     <NumberInput
                       aria-label={`Presupuesto ${c.nombre}`}
                       thousands
@@ -212,8 +211,8 @@ export function PresupuestosView({ initial }: { initial: Cat[] }) {
                       className="max-w-xs"
                       disabled={pending || !c.activa}
                     />
-                  </td>
-                  <td className="px-4 py-3">
+                  </Td>
+                  <Td>
                     {c.activa ? (
                       <span className="text-xs text-muted">Activa</span>
                     ) : (
@@ -227,8 +226,8 @@ export function PresupuestosView({ initial }: { initial: Cat[] }) {
                         )}
                       </span>
                     )}
-                  </td>
-                  <td className="px-4 py-3 text-right">
+                  </Td>
+                  <Td align="right">
                     {c.activa ? (
                       <Button
                         size="sm"
@@ -248,13 +247,13 @@ export function PresupuestosView({ initial }: { initial: Cat[] }) {
                         Reactivar
                       </Button>
                     )}
-                  </td>
-                </tr>
+                  </Td>
+                </Tr>
               ))
             )}
-          </tbody>
-        </table>
-      </div>
+          </TBody>
+        </DataTable>
+      </TableFrame>
 
       <Pagination
         page={pagina}

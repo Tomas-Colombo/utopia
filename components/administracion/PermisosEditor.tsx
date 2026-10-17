@@ -1,6 +1,7 @@
 'use client'
 
 import { CATALOGO_PERMISOS, MODULO_NOMBRE } from '@/lib/types/administracion'
+import { TableFrame, DataTable, THead, TBody, Tr, Th, Td } from '@/components/ui/TableParts'
 
 /**
  * Matriz módulo × acción. Controlado. Cada checkbox agrega/quita del
@@ -26,30 +27,28 @@ export function PermisosEditor({
   }
 
   return (
-    <div className="rounded-lg border border-border bg-card overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-border">
-            <th className="px-4 py-3 text-left">Módulo</th>
-            <th className="px-4 py-3 text-center">Ver</th>
-            <th className="px-4 py-3 text-center">Crear</th>
-            <th className="px-4 py-3 text-center">Editar</th>
-            <th className="px-4 py-3 text-center">Eliminar</th>
-          </tr>
-        </thead>
-        <tbody>
+    <TableFrame>
+      <DataTable>
+        <THead>
+          <Th>Módulo</Th>
+          <Th align="center">Ver</Th>
+          <Th align="center">Crear</Th>
+          <Th align="center">Editar</Th>
+          <Th align="center">Eliminar</Th>
+        </THead>
+        <TBody>
           {Object.entries(CATALOGO_PERMISOS).map(([mod, acciones]) => {
             const activas = value[mod] ?? []
             return (
-              <tr key={mod} className="border-b border-border-2">
-                <td className="px-4 py-3 font-medium">
+              <Tr key={mod}>
+                <Td className="font-medium">
                   {MODULO_NOMBRE[mod] ?? mod}
-                </td>
+                </Td>
                 {(['ver', 'crear', 'editar', 'eliminar'] as const).map((accion) => {
                   const disponible = acciones.includes(accion)
                   const marcada = activas.includes(accion)
                   return (
-                    <td key={accion} className="px-4 py-3 text-center">
+                    <Td align="center" key={accion}>
                       {disponible ? (
                         <input
                           type="checkbox"
@@ -61,14 +60,14 @@ export function PermisosEditor({
                       ) : (
                         <span className="text-muted">—</span>
                       )}
-                    </td>
+                    </Td>
                   )
                 })}
-              </tr>
+              </Tr>
             )
           })}
-        </tbody>
-      </table>
-    </div>
+        </TBody>
+      </DataTable>
+    </TableFrame>
   )
 }

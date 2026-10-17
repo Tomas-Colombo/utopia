@@ -10,6 +10,7 @@ import { useToast } from '@/components/ui/Toast'
 import type { IngresoConResumen } from '@/lib/types/inventario'
 import { cancelarIngresoAction } from '../actions'
 import { mensajeDeError } from '@/lib/errores/mensajes'
+import { TableFrame, DataTable, THead, TBody, Tr, Th, Td } from '@/components/ui/TableParts'
 
 export function IngresosTable({
   initial,
@@ -81,38 +82,36 @@ export function IngresosTable({
 
   return (
     <div className="space-y-3">
-      <div className="rounded-lg border border-border bg-card overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-border text-left">
-            <th className="px-4 py-3">Fecha</th>
-            <th className="px-4 py-3">Proveedor</th>
-            <th className="px-4 py-3">Tipo</th>
-            <th className="px-4 py-3">Remito</th>
-            <th className="px-4 py-3 text-right">Líneas</th>
-            <th className="px-4 py-3 text-right">Unidades</th>
-            <th className="px-4 py-3 text-right">Costo total</th>
-            <th className="px-4 py-3">Estado</th>
-            <th className="px-4 py-3"></th>
-          </tr>
-        </thead>
-        <tbody>
+      <TableFrame>
+      <DataTable>
+        <THead>
+          <Th>Fecha</Th>
+          <Th>Proveedor</Th>
+          <Th>Tipo</Th>
+          <Th>Remito</Th>
+          <Th align="right">Líneas</Th>
+          <Th align="right">Unidades</Th>
+          <Th align="right">Costo total</Th>
+          <Th>Estado</Th>
+          <Th></Th>
+        </THead>
+        <TBody>
           {rows.map((r) => {
             const cancelado = !!r.cancelado_at
             return (
-              <tr key={r.id_ingreso} className="border-b border-border-2">
-                <td className="px-4 py-3">{new Date(r.fecha).toLocaleDateString('es-AR')}</td>
-                <td className="px-4 py-3">{r.proveedor?.nombre ?? '—'}</td>
-                <td className="px-4 py-3">
+              <Tr key={r.id_ingreso}>
+                <Td>{new Date(r.fecha).toLocaleDateString('es-AR')}</Td>
+                <Td>{r.proveedor?.nombre ?? '—'}</Td>
+                <Td>
                   <Badge variant={r.tipo_ingreso === 'compra' ? 'info' : 'warning'}>{r.tipo_ingreso}</Badge>
-                </td>
-                <td className="px-4 py-3 font-mono text-xs">{r.numero_remito ?? '—'}</td>
-                <td className="px-4 py-3 text-right font-mono">{r.total_lineas}</td>
-                <td className="px-4 py-3 text-right font-mono">{r.total_cantidad}</td>
-                <td className="px-4 py-3 text-right font-mono">
+                </Td>
+                <Td className="font-mono text-xs">{r.numero_remito ?? '—'}</Td>
+                <Td align="right" className="font-mono">{r.total_lineas}</Td>
+                <Td align="right" className="font-mono">{r.total_cantidad}</Td>
+                <Td align="right" className="font-mono">
                   $ {r.total_costo.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
-                </td>
-                <td className="px-4 py-3">
+                </Td>
+                <Td>
                   {cancelado ? (
                     <Badge variant="neutral">Cancelado</Badge>
                   ) : (
@@ -120,8 +119,8 @@ export function IngresosTable({
                       {r.confirmado ? 'Confirmado' : 'Borrador'}
                     </Badge>
                   )}
-                </td>
-                <td className="px-4 py-3 text-right">
+                </Td>
+                <Td align="right">
                   <div className="flex justify-end gap-3">
                     <Link
                       href={`/inventario/ingresos/${r.id_ingreso}`}
@@ -140,13 +139,13 @@ export function IngresosTable({
                       </button>
                     )}
                   </div>
-                </td>
-              </tr>
+                </Td>
+              </Tr>
             )
           })}
-        </tbody>
-      </table>
-      </div>
+        </TBody>
+      </DataTable>
+      </TableFrame>
 
       <Pagination
         page={page}

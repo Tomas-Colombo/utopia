@@ -18,6 +18,7 @@ import {
   eliminarConsignacionAction,
 } from './actions'
 import { mensajeDeError } from '@/lib/errores/mensajes'
+import { TableFrame, DataTable, THead, TBody, Tr, Th, Td } from '@/components/ui/TableParts'
 
 const VARIANT: Record<EstadoConsignacion, 'success' | 'neutral'> = {
   activa: 'success',
@@ -97,37 +98,35 @@ export function ConsignacionesTableClient({
 
   return (
     <>
-      <div className="rounded-lg border border-border bg-card overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border text-left">
-              <th className="px-4 py-3">Fecha</th>
-              <th className="px-4 py-3">Proveedor</th>
-              <th className="px-4 py-3 text-right">Pendientes</th>
-              <th className="px-4 py-3">Estado</th>
-              <th className="px-4 py-3 text-right">
-                <span className="sr-only">Acciones</span>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
+      <TableFrame>
+        <DataTable>
+          <THead>
+            <Th>Fecha</Th>
+            <Th>Proveedor</Th>
+            <Th align="right">Pendientes</Th>
+            <Th>Estado</Th>
+            <Th align="right">
+              <span className="sr-only">Acciones</span>
+            </Th>
+          </THead>
+          <TBody>
             {rows.map((r) => {
               const activa = r.estado === 'activa'
               return (
-                <tr key={r.id_consignacion} className="border-b border-border-2">
-                  <td className="px-4 py-3">{new Date(r.fecha).toLocaleDateString('es-AR')}</td>
-                  <td className="px-4 py-3">{r.proveedor?.nombre ?? '—'}</td>
-                  <td className="px-4 py-3 text-right font-mono">
+                <Tr key={r.id_consignacion}>
+                  <Td>{new Date(r.fecha).toLocaleDateString('es-AR')}</Td>
+                  <Td>{r.proveedor?.nombre ?? '—'}</Td>
+                  <Td align="right" className="font-mono">
                     {r.pendientes > 0 ? (
                       <span className="text-warn-ink">{r.pendientes}</span>
                     ) : (
                       r.pendientes
                     )}
-                  </td>
-                  <td className="px-4 py-3">
+                  </Td>
+                  <Td>
                     <Badge variant={VARIANT[r.estado]}>{ESTADO_CONSIGNACION_LABEL[r.estado]}</Badge>
-                  </td>
-                  <td className="px-4 py-3">
+                  </Td>
+                  <Td>
                     <div className="flex flex-wrap items-center justify-end gap-1">
                       <Link href={`/consignaciones/${r.id_consignacion}?from=${from}`}>
                         <Button size="sm" variant="secondary" disabled={pending}>
@@ -176,13 +175,13 @@ export function ConsignacionesTableClient({
                         </Button>
                       )}
                     </div>
-                  </td>
-                </tr>
+                  </Td>
+                </Tr>
               )
             })}
-          </tbody>
-        </table>
-      </div>
+          </TBody>
+        </DataTable>
+      </TableFrame>
 
       <ConfirmDialog
         open={!!confirmar}

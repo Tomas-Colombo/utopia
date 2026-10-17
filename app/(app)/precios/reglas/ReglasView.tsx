@@ -17,6 +17,7 @@ import {
 import { bajaReglaAction } from '../actions'
 import { PlanesCuotasModal } from '../PlanesCuotasModal'
 import { mensajeDeError } from '@/lib/errores/mensajes'
+import { TableFrame, DataTable, THead, TBody, Tr, Th, Td } from '@/components/ui/TableParts'
 
 const TIPO_VARIANT: Record<TipoRegla, 'success' | 'info' | 'warning'> = {
   margen: 'info',
@@ -150,8 +151,8 @@ export function ReglasView({
                 {grupo.length} regla{grupo.length === 1 ? '' : 's'}
               </span>
             </div>
-            <div className="rounded-lg border border-border bg-card overflow-x-auto">
-              <table className="w-full min-w-[900px] table-fixed text-sm">
+            <TableFrame>
+              <DataTable className="min-w-[900px] table-fixed">
                 <colgroup>
                   <col className="w-[24%]" />
                   <col className="w-[13%]" />
@@ -161,33 +162,31 @@ export function ReglasView({
                   <col className="w-[16%]" />
                   <col className="w-[11%]" />
                 </colgroup>
-                <thead>
-                  <tr className="border-b border-border text-left">
-                    <th className="px-4 py-3">Nombre</th>
-                    <th className="px-4 py-3">Alcance</th>
-                    <th className="px-4 py-3">Forma pago</th>
-                    <th className="px-4 py-3 text-right">Valor</th>
-                    <th className="px-4 py-3 text-right">Prioridad</th>
-                    <th className="px-4 py-3">Vigencia</th>
-                    <th className="px-4 py-3"></th>
-                  </tr>
-                </thead>
-                <tbody>
+                <THead>
+                  <Th>Nombre</Th>
+                  <Th>Alcance</Th>
+                  <Th>Forma pago</Th>
+                  <Th align="right">Valor</Th>
+                  <Th align="right">Prioridad</Th>
+                  <Th>Vigencia</Th>
+                  <Th></Th>
+                </THead>
+                <TBody>
                   {ordenado.map((r) => (
-                    <tr key={r.id_regla} className="border-b border-border-2">
-                      <td className="px-4 py-3">
+                    <Tr key={r.id_regla}>
+                      <Td>
                         <div className="truncate" title={r.nombre}>
                           {r.nombre}
                         </div>
-                      </td>
-                      <td className="px-4 py-3">{ALCANCE_LABEL[r.alcance]}</td>
-                      <td className="px-4 py-3">
+                      </Td>
+                      <Td>{ALCANCE_LABEL[r.alcance]}</Td>
+                      <Td>
                         {r.forma_pago ? formaPagoLabel(r.forma_pago) : <span className="text-muted">—</span>}
-                      </td>
-                      <td className="px-4 py-3 text-right font-mono">{fmtValor(r)}</td>
-                      <td className="px-4 py-3 text-right font-mono">{r.prioridad}</td>
-                      <td className="px-4 py-3 text-xs text-muted">{fmtVigencia(r)}</td>
-                      <td className="px-4 py-3 text-right">
+                      </Td>
+                      <Td align="right" className="font-mono">{fmtValor(r)}</Td>
+                      <Td align="right" className="font-mono">{r.prioridad}</Td>
+                      <Td className="text-xs text-muted">{fmtVigencia(r)}</Td>
+                      <Td align="right">
                         <Button
                           variant="ghost"
                           size="sm"
@@ -196,12 +195,12 @@ export function ReglasView({
                         >
                           Dar de baja
                         </Button>
-                      </td>
-                    </tr>
+                      </Td>
+                    </Tr>
                   ))}
-                </tbody>
-              </table>
-            </div>
+                </TBody>
+              </DataTable>
+            </TableFrame>
           </section>
         )
       })}

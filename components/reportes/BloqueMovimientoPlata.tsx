@@ -1,5 +1,6 @@
 import React from 'react'
 import type { FinanzasFlujoRow } from '@/lib/types/reportes'
+import { DataTable, THead, TBody, Tr, Th, Td } from '@/components/ui/TableParts'
 
 function formatMoney(value: number | null | undefined) {
   if (value == null) return '—'
@@ -25,68 +26,66 @@ export function BloqueMovimientoPlata({ flujo, tieneGastos }: BloqueMovimientoPl
       </div>
       
       <div className="overflow-x-auto">
-        <table className="w-full text-sm text-left">
-          <thead className="sr-only">
-            <tr>
-              <th>Concepto</th>
-              <th>Detalle</th>
-              <th className="text-right">Monto</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            <tr>
-              <td className="p-4 font-medium text-ink">Cobrado</td>
-              <td className="p-4 text-muted hidden sm:table-cell">Plata que entró (ventas y saldos)</td>
-              <td className="p-4 text-right font-medium tabular-nums">{formatMoney(flujo.cobrado)}</td>
-            </tr>
+        <DataTable>
+          <THead className="sr-only">
+            <Th>Concepto</Th>
+            <Th>Detalle</Th>
+            <Th align="right">Monto</Th>
+          </THead>
+          <TBody>
+            <Tr>
+              <Td className="font-medium text-ink">Cobrado</Td>
+              <Td className="text-muted hidden sm:table-cell">Plata que entró (ventas y saldos)</Td>
+              <Td align="right" className="font-medium">{formatMoney(flujo.cobrado)}</Td>
+            </Tr>
             {flujo.devuelto_clientes > 0 && (
-              <tr>
-                <td className="p-4 text-alerta-ink">Devuelto a clientes</td>
-                <td className="p-4 text-muted hidden sm:table-cell">Reintegros por devoluciones o anulaciones</td>
-                <td className="p-4 text-right text-alerta-ink tabular-nums">
+              <Tr>
+                <Td className="text-alerta-ink">Devuelto a clientes</Td>
+                <Td className="text-muted hidden sm:table-cell">Reintegros por devoluciones o anulaciones</Td>
+                <Td align="right" className="text-alerta-ink">
                   -{formatMoney(flujo.devuelto_clientes)}
-                </td>
-              </tr>
+                </Td>
+              </Tr>
             )}
             {flujo.costo_procesamiento > 0 && (
-              <tr>
-                <td className="p-4 text-alerta-ink">Comisiones y retenciones</td>
-                <td className="p-4 text-muted hidden sm:table-cell">Costo de procesadores de pago</td>
-                <td className="p-4 text-right text-alerta-ink tabular-nums">
+              <Tr>
+                <Td className="text-alerta-ink">Comisiones y retenciones</Td>
+                <Td className="text-muted hidden sm:table-cell">Costo de procesadores de pago</Td>
+                <Td align="right" className="text-alerta-ink">
                   -{formatMoney(flujo.costo_procesamiento)}
-                </td>
-              </tr>
+                </Td>
+              </Tr>
             )}
-            <tr className="bg-panel/30">
-              <td className="p-4 text-ink">Compras de mercadería</td>
-              <td className="p-4 text-muted hidden sm:table-cell">Se asumen pagadas al recibirlas</td>
-              <td className="p-4 text-right tabular-nums">
+            <Tr className="bg-panel/30">
+              <Td className="text-ink">Compras de mercadería</Td>
+              <Td className="text-muted hidden sm:table-cell">Se asumen pagadas al recibirlas</Td>
+              <Td align="right">
                 {flujo.compras_mercaderia > 0 ? '-' : ''}{formatMoney(flujo.compras_mercaderia)}
-              </td>
-            </tr>
-            <tr>
-              <td className="p-4 text-ink">Pagos a proveedores</td>
-              <td className="p-4 text-muted hidden sm:table-cell">Rendiciones pagadas</td>
-              <td className="p-4 text-right tabular-nums">
+              </Td>
+            </Tr>
+            <Tr>
+              <Td className="text-ink">Pagos a proveedores</Td>
+              <Td className="text-muted hidden sm:table-cell">Rendiciones pagadas</Td>
+              <Td align="right">
                 {flujo.pagos_proveedores > 0 ? '-' : ''}{formatMoney(flujo.pagos_proveedores)}
-              </td>
-            </tr>
+              </Td>
+            </Tr>
             {tieneGastos && (
-              <tr>
-                <td className="p-4 text-ink">Gastos operativos</td>
-                <td className="p-4 text-muted hidden sm:table-cell">Pagos por gastos del negocio</td>
-                <td className="p-4 text-right tabular-nums">
+              <Tr>
+                <Td className="text-ink">Gastos operativos</Td>
+                <Td className="text-muted hidden sm:table-cell">Pagos por gastos del negocio</Td>
+                <Td align="right">
                   {flujo.gastos > 0 ? '-' : ''}{formatMoney(flujo.gastos)}
-                </td>
-              </tr>
+                </Td>
+              </Tr>
             )}
-            <tr className="bg-panel font-bold text-base border-b border-border">
-              <td className="p-4 text-ink">Flujo neto del período</td>
-              <td className="p-4 text-muted hidden sm:table-cell">Diferencia entre entradas y salidas</td>
-              <td className="p-4 text-right tabular-nums">{formatMoney(flujo.flujo_neto)}</td>
-            </tr>
-          </tbody>
-        </table>
+            <Tr className="bg-panel font-bold text-base">
+              <Td className="text-ink">Flujo neto del período</Td>
+              <Td className="text-muted hidden sm:table-cell">Diferencia entre entradas y salidas</Td>
+              <Td align="right">{formatMoney(flujo.flujo_neto)}</Td>
+            </Tr>
+          </TBody>
+        </DataTable>
       </div>
 
       {porAcreditarList.length > 0 && (

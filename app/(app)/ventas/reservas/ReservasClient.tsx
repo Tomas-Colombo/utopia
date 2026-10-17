@@ -15,6 +15,7 @@ import {
 } from '@/lib/types/ventas'
 import { vencerReservasAction } from '../actions'
 import { mensajeDeError } from '@/lib/errores/mensajes'
+import { TableFrame, DataTable, THead, TBody, Tr, Th, Td } from '@/components/ui/TableParts'
 
 type Row = ReservaRow & {
   cliente: { id_cliente: string; nombre: string } | null
@@ -68,28 +69,26 @@ export function ReservasClient({ rows }: { rows: Row[] }) {
           </Link>
         </div>
       ) : (
-        <div className="rounded-lg border border-border bg-card overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-left">
-                <th className="px-4 py-3">Cliente</th>
-                <th className="px-4 py-3">Fecha</th>
-                <th className="px-4 py-3">Vence</th>
-                <th className="px-4 py-3 text-right">Ítems</th>
-                <th className="px-4 py-3">Estado</th>
-                <th className="px-4 py-3"></th>
-              </tr>
-            </thead>
-            <tbody>
+        <TableFrame>
+          <DataTable>
+            <THead>
+              <Th>Cliente</Th>
+              <Th>Fecha</Th>
+              <Th>Vence</Th>
+              <Th align="right">Ítems</Th>
+              <Th>Estado</Th>
+              <Th></Th>
+            </THead>
+            <TBody>
               {rows.map((r) => (
-                <tr key={r.id_reserva} className="border-b border-border-2">
-                  <td className="px-4 py-3">{nombreCliente(r.cliente)}</td>
-                  <td className="px-4 py-3">{new Date(r.fecha).toLocaleDateString('es-AR')}</td>
-                  <td className="px-4 py-3">
+                <Tr key={r.id_reserva}>
+                  <Td>{nombreCliente(r.cliente)}</Td>
+                  <Td>{new Date(r.fecha).toLocaleDateString('es-AR')}</Td>
+                  <Td>
                     {new Date(r.fecha_vencimiento).toLocaleDateString('es-AR')}
-                  </td>
-                  <td className="px-4 py-3 text-right font-mono">{r.items_count}</td>
-                  <td className="px-4 py-3">
+                  </Td>
+                  <Td align="right" className="font-mono">{r.items_count}</Td>
+                  <Td>
                     {r.estado_reserva === 'activa' ? (
                       <ReservaMark
                         label={ESTADO_RESERVA_LABEL.activa}
@@ -100,8 +99,8 @@ export function ReservasClient({ rows }: { rows: Row[] }) {
                         {ESTADO_RESERVA_LABEL[r.estado_reserva]}
                       </Badge>
                     )}
-                  </td>
-                  <td className="px-4 py-3">
+                  </Td>
+                  <Td>
                     <div className="flex items-center justify-end gap-3">
                       {/* Acceso directo al mostrador: abre la venta con los
                           ítems, el cliente y las observaciones de la reserva
@@ -118,12 +117,12 @@ export function ReservasClient({ rows }: { rows: Row[] }) {
                         Abrir
                       </Link>
                     </div>
-                  </td>
-                </tr>
+                  </Td>
+                </Tr>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </TBody>
+          </DataTable>
+        </TableFrame>
       )}
     </>
   )

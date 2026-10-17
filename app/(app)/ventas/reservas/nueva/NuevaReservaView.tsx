@@ -23,6 +23,7 @@ import type { ProductoConDetalle } from '@/lib/types/inventario'
 import type { LineaCarrito } from '@/lib/types/ventas'
 import { crearReservaAction, crearClienteAction } from '../../actions'
 import { mensajeDeError } from '@/lib/errores/mensajes'
+import { TableFrame, DataTable, THead, TBody, Tr, Th, Td } from '@/components/ui/TableParts'
 
 interface Cliente { id: string; nombre: string; telefono: string | null }
 
@@ -413,27 +414,25 @@ export function NuevaReservaView({
           )}
         </div>
 
-        <div className="rounded-lg border border-border bg-card overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-left">
-                <th className="px-4 py-3">Producto</th>
-                <th className="px-4 py-3">QR</th>
-                <th className="px-4 py-3 text-right">Precio referencia</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
+        <TableFrame>
+          <DataTable>
+            <THead>
+              <Th>Producto</Th>
+              <Th>QR</Th>
+              <Th align="right">Precio referencia</Th>
+              <Th></Th>
+            </THead>
+            <TBody>
               {items.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-muted">
+                <Tr>
+                  <Td align="center" colSpan={4} className="px-4 py-8 text-muted">
                     Buscá o escaneá los ítems a reservar.
-                  </td>
-                </tr>
+                  </Td>
+                </Tr>
               ) : (
                 items.map((l) => (
-                  <tr key={l.qr_code} className="border-b border-border-2">
-                    <td className="px-4 py-3">
+                  <Tr key={l.qr_code}>
+                    <Td>
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="font-medium">{l.producto_nombre}</span>
                         <span className="rounded-full border border-border bg-card-2 px-2 py-0.5 text-xs font-medium">
@@ -441,24 +440,24 @@ export function NuevaReservaView({
                         </span>
                       </div>
                       <div className="text-xs text-muted">{l.sku ?? '—'}</div>
-                    </td>
-                    <td className="px-4 py-3 font-mono text-xs">{l.qr_code}</td>
-                    <td className="px-4 py-3 text-right font-mono">
+                    </Td>
+                    <Td className="font-mono text-xs">{l.qr_code}</Td>
+                    <Td align="right" className="font-mono">
                       {l.precio_final != null
                         ? `$ ${l.precio_final.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`
                         : '—'}
-                    </td>
-                    <td className="px-4 py-3 text-right">
+                    </Td>
+                    <Td align="right">
                       <Button variant="ghost" size="sm" onClick={() => quitar(l.qr_code)}>
                         Quitar
                       </Button>
-                    </td>
-                  </tr>
+                    </Td>
+                  </Tr>
                 ))
               )}
-            </tbody>
-          </table>
-        </div>
+            </TBody>
+          </DataTable>
+        </TableFrame>
 
         <div className="rounded-md border border-border bg-card-2 p-3 text-xs text-muted">
           El precio final se recalcula al momento de vender. Este listado es

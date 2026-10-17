@@ -27,6 +27,7 @@ import {
   eliminarConsignacionAction,
 } from '../actions'
 import { mensajeDeError } from '@/lib/errores/mensajes'
+import { TableFrame, DataTable, THead, TBody, TFoot, Tr, Th, Td } from '@/components/ui/TableParts'
 
 const DETALLE_VARIANT: Record<EstadoConsignacionDetalle, 'success' | 'warning' | 'neutral'> = {
   pendiente: 'warning',
@@ -316,55 +317,53 @@ export function ConsignacionDetalleView({
       )}
 
       {/* Tabla de items */}
-      <div className="rounded-lg border border-border bg-card overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border text-left">
-              <th className="px-4 py-3">Producto</th>
-              <th className="px-4 py-3">QR</th>
-              <th className="px-4 py-3 text-right">Costo</th>
-              <th className="px-4 py-3">Motivo</th>
-              <th className="px-4 py-3">Estado</th>
-              <th className="px-4 py-3">Fechas</th>
-              {!readonly && <th className="px-4 py-3"></th>}
-            </tr>
-          </thead>
-          <tbody>
+      <TableFrame>
+        <DataTable>
+          <THead>
+            <Th>Producto</Th>
+            <Th>QR</Th>
+            <Th align="right">Costo</Th>
+            <Th>Motivo</Th>
+            <Th>Estado</Th>
+            <Th>Fechas</Th>
+            {!readonly && <Th></Th>}
+          </THead>
+          <TBody>
             {cons.detalles.length === 0 ? (
-              <tr>
-                <td colSpan={readonly ? 6 : 7} className="px-4 py-8 text-center text-muted">
+              <Tr>
+                <Td align="center" colSpan={readonly ? 6 : 7} className="px-4 py-8 text-muted">
                   Sin ítems apartados todavía.
-                </td>
-              </tr>
+                </Td>
+              </Tr>
             ) : (
               cons.detalles.map((d) => (
-                <tr key={d.id_consignacion_detalle} className="border-b border-border-2">
-                  <td className="px-4 py-3">
+                <Tr key={d.id_consignacion_detalle}>
+                  <Td>
                     <div className="font-medium">{d.producto?.nombre ?? '—'}</div>
                     {d.producto?.sku && (
                       <div className="text-xs font-mono text-muted">{d.producto.sku}</div>
                     )}
-                  </td>
-                  <td className="px-4 py-3 font-mono text-xs">{d.item?.qr_code ?? '—'}</td>
-                  <td className="px-4 py-3 text-right font-mono">
+                  </Td>
+                  <Td className="font-mono text-xs">{d.item?.qr_code ?? '—'}</Td>
+                  <Td align="right" className="font-mono">
                     {d.item?.costo_ingreso != null
                       ? `$ ${Number(d.item.costo_ingreso).toLocaleString('es-AR', { maximumFractionDigits: 0 })}`
                       : '—'}
-                  </td>
-                  <td className="px-4 py-3 text-xs">{d.motivo ?? <span className="text-muted">—</span>}</td>
-                  <td className="px-4 py-3">
+                  </Td>
+                  <Td className="text-xs">{d.motivo ?? <span className="text-muted">—</span>}</Td>
+                  <Td>
                     <Badge variant={DETALLE_VARIANT[d.estado]}>
                       {ESTADO_DETALLE_LABEL[d.estado]}
                     </Badge>
-                  </td>
-                  <td className="px-4 py-3 text-xs text-muted">
+                  </Td>
+                  <Td className="text-xs text-muted">
                     <div>Apart: {new Date(d.fecha_apartado).toLocaleDateString('es-AR')}</div>
                     {d.fecha_devolucion && (
                       <div>Sal: {new Date(d.fecha_devolucion).toLocaleDateString('es-AR')}</div>
                     )}
-                  </td>
+                  </Td>
                   {!readonly && (
-                    <td className="px-4 py-3 text-right whitespace-nowrap">
+                    <Td align="right" className="whitespace-nowrap">
                       {d.estado === 'pendiente' && (
                         <>
                           <Button
@@ -386,26 +385,26 @@ export function ConsignacionDetalleView({
                           </Button>
                         </>
                       )}
-                    </td>
+                    </Td>
                   )}
-                </tr>
+                </Tr>
               ))
             )}
-          </tbody>
+          </TBody>
           {cons.detalles.length > 0 && (
-            <tfoot>
-              <tr className="border-t border-border bg-card-2">
-                <td colSpan={4} className="px-4 py-3 font-semibold">
+            <TFoot>
+              <Tr className="border-t bg-card-2">
+                <Td colSpan={4} className="font-semibold">
                   Total {cons.detalles.length} ítem(s)
-                </td>
-                <td colSpan={readonly ? 2 : 3} className="px-4 py-3 text-xs text-muted">
+                </Td>
+                <Td colSpan={readonly ? 2 : 3} className="text-xs text-muted">
                   {pendientes} pendientes · {devueltos} devueltos
-                </td>
-              </tr>
-            </tfoot>
+                </Td>
+              </Tr>
+            </TFoot>
           )}
-        </table>
-      </div>
+        </DataTable>
+      </TableFrame>
 
       {/* Observaciones — editables mientras el lote esté activo. */}
       <div className="rounded-lg border border-border bg-card-2 p-4 text-sm space-y-2">
