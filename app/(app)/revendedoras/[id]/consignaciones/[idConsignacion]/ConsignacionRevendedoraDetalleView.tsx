@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Field } from '@/components/ui/Field'
 import { Input } from '@/components/ui/Input'
+import { Modal } from '@/components/ui/Modal'
 import { Select } from '@/components/ui/Select'
 import { Table, type Column } from '@/components/ui/Table'
 import { useToast } from '@/components/ui/Toast'
@@ -391,66 +392,72 @@ export function ConsignacionRevendedoraDetalleView({
         onConfirm={handleCerrarConsignacion}
       />
 
-      {/* Registrar devolución Modal / Dialog */}
-      {devolucionOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <Card padding="none" className="w-full max-w-lg p-6 space-y-4 shadow-lg">
-            <h3 className="font-display text-lg">Registrar devolución de ítems</h3>
-            <p className="text-sm text-muted">
-              {selectedItems.length > 0
-                ? `Devolviendo ${selectedItems.length} ítem(s) seleccionado(s).`
-                : 'Seleccioná los ítems a devolver de la lista antes de continuar.'}
-            </p>
+      {/* Esc, clic afuera y la × no cierran mientras se registra: cerrar a mitad
+          del envío escondería el resultado de la devolución. */}
+      <Modal
+        open={devolucionOpen}
+        onClose={() => {
+          if (!pending) setDevolucionOpen(false)
+        }}
+        title="Registrar devolución de ítems"
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setDevolucionOpen(false)}
+              disabled={pending}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              onClick={handleRegistrarDevolucion}
+              disabled={pending || selectedItems.length === 0}
+            >
+              {pending ? 'Registrando...' : 'Confirmar devolución'}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-muted">
+            {selectedItems.length > 0
+              ? `Devolviendo ${selectedItems.length} ítem(s) seleccionado(s).`
+              : 'Seleccioná los ítems a devolver de la lista antes de continuar.'}
+          </p>
 
-            <Field htmlFor="estado-destino" label="Estado de destino de la mercadería">
-              <Select
-                id="estado-destino"
-                value={estadoDestino}
-                onChange={(e) =>
-                  setEstadoDestino(e.target.value as 'disponible' | 'devuelto' | 'baja')
-                }
-              >
-                <option value="disponible">
-                  Mercadería en perfecto estado (vuelve a stock disponible central)
-                </option>
-                <option value="devuelto">
-                  Devuelto al proveedor (mercadería apartada / defectuosa)
-                </option>
-                <option value="baja">
-                  Baja definitiva (mercadería rota, manchada o inutilizable)
-                </option>
-              </Select>
-            </Field>
+          <Field htmlFor="estado-destino" label="Estado de destino de la mercadería">
+            <Select
+              id="estado-destino"
+              value={estadoDestino}
+              onChange={(e) =>
+                setEstadoDestino(e.target.value as 'disponible' | 'devuelto' | 'baja')
+              }
+            >
+              <option value="disponible">
+                Mercadería en perfecto estado (vuelve a stock disponible central)
+              </option>
+              <option value="devuelto">
+                Devuelto al proveedor (mercadería apartada / defectuosa)
+              </option>
+              <option value="baja">
+                Baja definitiva (mercadería rota, manchada o inutilizable)
+              </option>
+            </Select>
+          </Field>
 
-            <Field htmlFor="motivo-devolucion" label="Motivo o detalle (opcional)">
-              <Input
-                id="motivo-devolucion"
-                value={motivoDevolucion}
-                onChange={(e) => setMotivoDevolucion(e.target.value)}
-                placeholder="Ej: Cambio de temporada, rotura de costura..."
-              />
-            </Field>
+          <Field htmlFor="motivo-devolucion" label="Motivo o detalle (opcional)">
+            <Input
+              id="motivo-devolucion"
+              value={motivoDevolucion}
+              onChange={(e) => setMotivoDevolucion(e.target.value)}
+              placeholder="Ej: Cambio de temporada, rotura de costura..."
+            />
+          </Field>
 
-            <div className="flex items-center justify-end gap-3 pt-2">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => setDevolucionOpen(false)}
-                disabled={pending}
-              >
-                Cancelar
-              </Button>
-              <Button
-                type="button"
-                onClick={handleRegistrarDevolucion}
-                disabled={pending || selectedItems.length === 0}
-              >
-                {pending ? 'Registrando...' : 'Confirmar devolución'}
-              </Button>
-            </div>
-          </Card>
         </div>
-      )}
+      </Modal>
     </div>
   )
 }
