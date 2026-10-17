@@ -1,6 +1,7 @@
 import React from 'react'
 import Link from 'next/link'
 import type { FinanzasPosicion } from '@/lib/types/reportes'
+import { Card } from '@/components/ui/Card'
 
 function formatMoney(value: number | null | undefined) {
   if (value == null) return '—'
@@ -15,7 +16,7 @@ export function BloqueProveedores({ posicion }: BloqueProveedoresProps) {
   const deuda = posicion.deuda_proveedores ?? 0
 
   return (
-    <section aria-labelledby="h2-proveedores" className="rounded-lg border border-border bg-card overflow-hidden h-full flex flex-col">
+    <Card as="section" padding="none" aria-labelledby="h2-proveedores" className="overflow-hidden h-full flex flex-col">
       <div className="p-4 border-b border-border bg-panel flex justify-between items-center">
         <h2 id="h2-proveedores" className="font-display text-lg">Lo que debés</h2>
       </div>
@@ -40,6 +41,6 @@ export function BloqueProveedores({ posicion }: BloqueProveedoresProps) {
           </div>
         )}
       </div>
-    </section>
+    </Card>
   )
 }

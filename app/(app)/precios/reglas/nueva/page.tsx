@@ -5,6 +5,7 @@ import { listCategoriasActivas } from '@/lib/dal/inventario/categoria'
 import { listProveedoresActivos } from '@/lib/dal/inventario/proveedor'
 import { listProductosConDetalle } from '@/lib/dal/inventario/producto'
 import { NuevaReglaForm } from '@/components/precios/NuevaReglaForm'
+import { Card } from '@/components/ui/Card'
 
 export default async function NuevaReglaPage() {
   const session = await verifySession()
@@ -29,7 +30,7 @@ export default async function NuevaReglaPage() {
           </div>
         </details>
 
-        <div className="max-w-2xl rounded-lg border border-border bg-card p-6">
+        <Card padding="none" className="max-w-2xl p-6">
           <NuevaReglaForm
             categorias={categorias.map((c) => ({ id: c.id_categoria, nombre: c.nombre }))}
             proveedores={proveedores.map((p) => ({ id: p.id_proveedor, nombre: p.nombre }))}
@@ -39,7 +40,7 @@ export default async function NuevaReglaPage() {
               sku: p.sku,
             }))}
           />
-        </div>
+        </Card>
       </main>
     </>
   )

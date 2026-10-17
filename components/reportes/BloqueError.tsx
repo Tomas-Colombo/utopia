@@ -2,6 +2,7 @@
 
 import React from 'react'
 import { Button } from '@/components/ui/Button'
+import { Card } from '@/components/ui/Card'
 
 interface BloqueErrorProps {
   onRetry?: () => void
@@ -9,7 +10,7 @@ interface BloqueErrorProps {
 
 export function BloqueError({ onRetry }: BloqueErrorProps) {
   return (
-    <div className="flex flex-col items-center justify-center p-8 bg-card border border-border rounded-lg shadow-sm text-center">
+    <Card padding="none" className="flex flex-col items-center justify-center p-8 shadow-sm text-center">
       <div className="w-10 h-10 bg-destructive/10 text-destructive rounded-full flex items-center justify-center mb-3">
         <span className="font-bold text-lg">!</span>
       </div>
@@ -21,6 +22,6 @@ export function BloqueError({ onRetry }: BloqueErrorProps) {
           Reintentar
         </Button>
       )}
-    </div>
+    </Card>
   )
 }

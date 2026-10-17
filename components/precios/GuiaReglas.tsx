@@ -1,5 +1,6 @@
 import { Badge } from '@/components/ui/Badge'
 import { TableFrame, DataTable, THead, TBody, Tr, Th, Td } from '@/components/ui/TableParts'
+import { Card } from '@/components/ui/Card'
 
 const EJEMPLO_REGLAS = [
   { nombre: 'Margen general', tipo: 'Margen', alcance: 'Global', valor: '40%' },
@@ -74,7 +75,7 @@ export function GuiaReglas() {
           aplicar al mismo producto, gana <strong>la más específica</strong>, en este
           orden:
         </p>
-        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-card p-4 text-sm font-mono">
+        <Card className="flex flex-wrap items-center gap-2 text-sm font-mono">
           <span className="rounded bg-card-2 px-2 py-1">Producto</span>
           <span className="text-muted">&gt;</span>
           <span className="rounded bg-card-2 px-2 py-1">Categoría</span>
@@ -82,7 +83,7 @@ export function GuiaReglas() {
           <span className="rounded bg-card-2 px-2 py-1">Proveedor</span>
           <span className="text-muted">&gt;</span>
           <span className="rounded bg-card-2 px-2 py-1">Global</span>
-        </div>
+        </Card>
         <p className="mt-4 text-sm text-muted">
           Una regla de producto le gana a una de categoría, que le gana a una de
           proveedor, que le gana a una global. En <strong>margen</strong> y{' '}
@@ -239,7 +240,7 @@ function Paso({
   children: React.ReactNode
 }) {
   return (
-    <div className="rounded-lg border border-border bg-card p-4">
+    <Card>
       <div className="mb-1 flex items-center gap-2">
         <span className="flex h-6 w-6 items-center justify-center rounded-full bg-block text-xs font-mono text-white">
           {numero}
@@ -247,6 +248,6 @@ function Paso({
         <span className="font-medium text-text">{titulo}</span>
       </div>
       <p className="text-sm text-muted">{children}</p>
-    </div>
+    </Card>
   )
 }

@@ -2,6 +2,7 @@
 
 import { Table, type Column } from '@/components/ui/Table'
 import type { ItemEnPoderRevendedoraRow } from '@/lib/dal/revendedoras/panel'
+import { Card } from '@/components/ui/Card'
 
 export function ItemsEnPoderTable({ items }: { items: ItemEnPoderRevendedoraRow[] }) {
   const columns: Column<ItemEnPoderRevendedoraRow>[] = [
@@ -36,8 +37,8 @@ export function ItemsEnPoderTable({ items }: { items: ItemEnPoderRevendedoraRow[
   ]
 
   return (
-    <div className="rounded-lg border border-border bg-card overflow-hidden">
+    <Card padding="none" className="overflow-hidden">
       <Table columns={columns} data={items} getRowId={(r) => r.id_item} />
-    </div>
+    </Card>
   )
 }

@@ -12,6 +12,7 @@ import { cancelarIngresoAction } from '../actions'
 import { mensajeDeError } from '@/lib/errores/mensajes'
 import { TableFrame, DataTable, THead, TBody, Tr, Th, Td } from '@/components/ui/TableParts'
 import { Button } from '@/components/ui/Button'
+import { Card } from '@/components/ui/Card'
 
 export function IngresosTable({
   initial,
@@ -66,7 +67,7 @@ export function IngresosTable({
 
   if (rows.length === 0) {
     return (
-      <div className="rounded-lg border border-dashed border-border bg-card p-10 text-center">
+      <Card padding="none" className="border-dashed p-10 text-center">
         <p className="font-display text-lg mb-2">Sin ingresos registrados</p>
         <p className="text-sm text-muted mb-4">
           Registrá el primer ingreso de mercadería (compra o consignación).
@@ -77,7 +78,7 @@ export function IngresosTable({
         >
           Nuevo ingreso
         </Link>
-      </div>
+      </Card>
     )
   }
 

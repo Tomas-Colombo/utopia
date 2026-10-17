@@ -36,6 +36,7 @@ import {
 import { mensajeDeError } from '@/lib/errores/mensajes'
 import { TableFrame, DataTable, THead, TBody, TFoot, Tr, Th, Td } from '@/components/ui/TableParts'
 import { Select } from '@/components/ui/Select'
+import { Card } from '@/components/ui/Card'
 
 const CUOTA_VARIANT: Record<EstadoCuota, 'success' | 'info' | 'warning' | 'danger' | 'neutral'> = {
   pendiente: 'info',
@@ -233,7 +234,7 @@ export function VentaDetalleView({
   return (
     <div className="space-y-6">
       {/* Metadata + acciones */}
-      <div className="rounded-lg border border-border bg-card p-4 grid grid-cols-2 gap-4 text-sm md:grid-cols-4">
+      <Card className="grid grid-cols-2 gap-4 text-sm md:grid-cols-4">
         <div>
           <div className="text-xs uppercase font-mono text-muted">Cliente</div>
           <div className="mt-1">{nombreCliente(venta.cliente)}</div>
@@ -263,7 +264,7 @@ export function VentaDetalleView({
             </Button>
           )}
         </div>
-      </div>
+      </Card>
 
       {venta.motivo_anulacion && (
         <div className="rounded-md border border-alerta-ink bg-alerta-bg px-3 py-2 text-sm text-alerta-ink">
@@ -333,7 +334,7 @@ export function VentaDetalleView({
       {/* Cobranza: dónde entró la plata. Separada de "Forma de pago", que es
           cómo se precio la venta. */}
       {venta.pagos.length > 0 && (
-        <div className="rounded-lg border border-border bg-card p-4">
+        <Card>
           <h3 className="font-display text-lg mb-3">Cobranza</h3>
           <ul className="space-y-2 text-sm">
             {venta.pagos.map((p) => (
@@ -386,12 +387,12 @@ export function VentaDetalleView({
               </span>
             </div>
           )}
-        </div>
+        </Card>
       )}
 
       {/* Plan de cuotas financiado por la casa. */}
       {cuotas.length > 0 && (
-        <div className="rounded-lg border border-border bg-card p-4">
+        <Card>
           <h3 className="mb-3 font-display text-lg">Cuotas financiadas</h3>
           <div className="overflow-x-auto">
             <DataTable>
@@ -440,12 +441,12 @@ export function VentaDetalleView({
               </TFoot>
             </DataTable>
           </div>
-        </div>
+        </Card>
       )}
 
       {/* Comprobantes */}
       {venta.comprobantes.length > 0 && (
-        <div className="rounded-lg border border-border bg-card p-4">
+        <Card>
           <h3 className="font-display text-lg mb-3">Comprobantes</h3>
           <ul className="space-y-2 text-sm">
             {venta.comprobantes.map((c) => (
@@ -459,7 +460,7 @@ export function VentaDetalleView({
               </li>
             ))}
           </ul>
-        </div>
+        </Card>
       )}
 
       {venta.observaciones && (

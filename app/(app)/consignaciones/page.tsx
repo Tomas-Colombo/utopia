@@ -14,6 +14,7 @@ import {
 import { type EstadoConsignacion } from '@/lib/types/consignaciones'
 import { FiltroPeriodo } from '@/components/shell/FiltroPeriodo'
 import { ConsignacionesTableClient } from './ConsignacionesTableClient'
+import { Card } from '@/components/ui/Card'
 
 function esEstado(v: string | undefined): v is EstadoConsignacion {
   return v === 'activa' || v === 'cerrada'
@@ -127,7 +128,7 @@ export default async function ConsignacionesPage(props: {
       <main className="flex-1 p-6 space-y-6">
 
         {rows.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-border bg-card p-10 text-center">
+          <Card padding="none" className="border-dashed p-10 text-center">
             <p className="font-display text-lg mb-2">
               {hayFiltroExtra || sp.desde || sp.hasta
                 ? 'Sin devoluciones con estos filtros'
@@ -144,7 +145,7 @@ export default async function ConsignacionesPage(props: {
             >
               Nueva devolución
             </Link>
-          </div>
+          </Card>
         ) : (
           <ConsignacionesTableClient
             rows={rows}

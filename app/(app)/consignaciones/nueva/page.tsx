@@ -2,6 +2,7 @@ import { Topbar } from '@/components/shell/Topbar'
 import { verifySession } from '@/lib/dal/session'
 import { listProveedoresActivos } from '@/lib/dal/inventario/proveedor'
 import { NuevaConsignacionForm } from './NuevaConsignacionForm'
+import { Card } from '@/components/ui/Card'
 
 export default async function NuevaConsignacionPage() {
   const session = await verifySession()
@@ -15,7 +16,7 @@ export default async function NuevaConsignacionPage() {
           incluye el carrito de ítems, así que la tarjeta ocupa el ancho
           disponible del área de contenido en vez de quedar fija. */}
       <main className="flex-1 p-4 sm:p-6">
-        <div className="w-full rounded-lg border border-border bg-card p-4 sm:p-6">
+        <Card className="w-full sm:p-6">
           <NuevaConsignacionForm
             proveedores={(consignatarios.length > 0 ? consignatarios : proveedores).map((p) => ({
               id: p.id_proveedor,
@@ -24,7 +25,7 @@ export default async function NuevaConsignacionPage() {
             }))}
             soloConsignatarios={consignatarios.length > 0}
           />
-        </div>
+        </Card>
       </main>
     </>
   )

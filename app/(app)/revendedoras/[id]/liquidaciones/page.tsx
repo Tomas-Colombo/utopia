@@ -7,6 +7,7 @@ import { verifySession } from '@/lib/dal/session'
 import { obtenerRevendedora, listarLiquidacionesRevendedora } from '@/lib/dal/revendedoras'
 import { RevendedoraTabs } from '../RevendedoraTabs'
 import { LiquidacionesRevendedoraTable } from './LiquidacionesRevendedoraTable'
+import { Card } from '@/components/ui/Card'
 
 export default async function RevendedoraLiquidacionesPage(props: {
   params: Promise<{ id: string }>
@@ -39,7 +40,7 @@ export default async function RevendedoraLiquidacionesPage(props: {
       <main className="flex-1 p-6 space-y-6">
         <RevendedoraTabs idRevendedora={id} activeTab="liquidaciones" />
 
-        <div className="rounded-lg border border-border bg-card p-6 space-y-4">
+        <Card padding="none" className="p-6 space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="font-display text-lg">Historial de liquidaciones</h2>
             <span className="text-sm text-muted">
@@ -51,7 +52,7 @@ export default async function RevendedoraLiquidacionesPage(props: {
             idRevendedora={id}
             liquidaciones={liquidaciones}
           />
-        </div>
+        </Card>
       </main>
     </>
   )

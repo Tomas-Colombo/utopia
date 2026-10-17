@@ -14,6 +14,7 @@ import {
 import type { PlanCuotasRow, RecargoCuotasRow } from '@/lib/types/precios'
 import { calcularCostoCobro, resolverArancel } from '@/lib/cobros/calcular-costo'
 import { Select } from '@/components/ui/Select'
+import { Card } from '@/components/ui/Card'
 
 /** Un pago mientras se edita. `recibido` es texto porque puede quedar vacío. */
 export interface PagoBorrador {
@@ -276,7 +277,7 @@ export function CobranzaPanel({
   if (canal === 'revendedora') {
     return (
       <div className="space-y-4">
-        <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+        <Card className="space-y-3">
           <div className="flex items-center justify-between">
             <h4 className="text-sm font-medium">Cobranza</h4>
             <Badge variant="info">Pago automático</Badge>
@@ -298,7 +299,7 @@ export function CobranzaPanel({
               </p>
             </div>
           )}
-        </div>
+        </Card>
       </div>
     )
   }

@@ -10,6 +10,7 @@ import {
 } from '@/lib/dal/gastos/gasto'
 import { PresupuestosMesTable } from './PresupuestosMesTable'
 import { GastosTableClient } from './GastosTableClient'
+import { Card } from '@/components/ui/Card'
 
 const PAGE_SIZE = 20
 const ORDENES: readonly GastosOrden[] = ['fecha_desc', 'fecha_asc', 'monto_desc', 'monto_asc'] as const
@@ -69,7 +70,7 @@ export default async function GastosPage({
       <main className="flex-1 p-6 space-y-6">
 
         {/* Presupuestos por categoría */}
-        <section className="rounded-lg border border-border bg-card overflow-x-auto">
+        <Card as="section" padding="none" className="overflow-x-auto">
           <div className="border-b border-border px-4 py-3 flex items-center justify-between">
             <h3 className="font-display text-lg">Presupuestos del mes</h3>
             <Link href="/gastos/presupuestos" className="-mx-2 rounded-[4px] px-2 py-1 text-xs font-medium text-muted transition-colors hover:bg-hover hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ink">
@@ -77,7 +78,7 @@ export default async function GastosPage({
             </Link>
           </div>
           <PresupuestosMesTable rows={presupuestos} />
-        </section>
+        </Card>
 
         {/* Últimos gastos */}
         <section className="space-y-3">

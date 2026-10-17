@@ -9,6 +9,7 @@ import {
 } from '@/lib/types/rendiciones'
 import { RendicionActions } from './RendicionActions'
 import { TableFrame, DataTable, THead, TBody, TFoot, Tr, Th, Td } from '@/components/ui/TableParts'
+import { Card } from '@/components/ui/Card'
 
 const VARIANT: Record<EstadoRendicion, 'success' | 'warning'> = {
   pendiente: 'warning',
@@ -47,7 +48,7 @@ export default async function RendicionDetallePage(props: {
         }
       />
       <main className="flex-1 p-6 space-y-6">
-        <div className="rounded-lg border border-border bg-card p-4 grid grid-cols-2 gap-4 text-sm md:grid-cols-4">
+        <Card className="grid grid-cols-2 gap-4 text-sm md:grid-cols-4">
           <div>
             <div className="text-xs uppercase font-mono text-muted">Proveedor</div>
             <div className="mt-1">{rendicion.proveedor?.nombre ?? '—'}</div>
@@ -80,7 +81,7 @@ export default async function RendicionDetallePage(props: {
               </div>
             )}
           </div>
-        </div>
+        </Card>
 
         <TableFrame>
           <div className="border-b border-border px-4 py-3">

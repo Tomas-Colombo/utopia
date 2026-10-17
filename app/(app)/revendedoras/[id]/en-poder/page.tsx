@@ -6,6 +6,7 @@ import { requireModuleRole } from '@/lib/dal/guard'
 import { obtenerRevendedora, listarItemsEnPoderRevendedora } from '@/lib/dal/revendedoras'
 import { RevendedoraTabs } from '../RevendedoraTabs'
 import { ItemsEnPoderTable } from './ItemsEnPoderTable'
+import { Card } from '@/components/ui/Card'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -40,15 +41,15 @@ export default async function ItemsEnPoderPage(props: PageProps) {
         <RevendedoraTabs idRevendedora={revendedora.id_revendedora} activeTab="en_poder" />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="rounded-lg border border-border bg-card p-4">
+          <Card>
             <div className="text-xs font-medium text-muted uppercase tracking-wider">
               Piezas en su poder
             </div>
             <div className="mt-2 text-2xl font-bold font-mono">{totalCantidad}</div>
             <div className="mt-1 text-xs text-muted">prendas activamente en consignación</div>
-          </div>
+          </Card>
 
-          <div className="rounded-lg border border-border bg-card p-4">
+          <Card>
             <div className="text-xs font-medium text-muted uppercase tracking-wider">
               Valor estimado en poder
             </div>
@@ -56,11 +57,11 @@ export default async function ItemsEnPoderPage(props: PageProps) {
               $ {Number(totalMonto).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
             </div>
             <div className="mt-1 text-xs text-muted">a precio de venta al público</div>
-          </div>
+          </Card>
         </div>
 
         {items.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-border bg-card p-10 text-center">
+          <Card padding="none" className="border-dashed p-10 text-center">
             <p className="font-display text-lg mb-2">Sin prendas en su poder</p>
             <p className="text-sm text-muted mb-4">
               La revendedora no tiene actualmente prendas en consignación.
@@ -71,7 +72,7 @@ export default async function ItemsEnPoderPage(props: PageProps) {
             >
               Nueva consignación
             </Link>
-          </div>
+          </Card>
         ) : (
           <ItemsEnPoderTable items={items} />
         )}

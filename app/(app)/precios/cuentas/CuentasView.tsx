@@ -29,6 +29,8 @@ import { ArancelesPanel } from './ArancelesPanel'
 import { RecargosPanel } from './RecargosPanel'
 import { mensajeDeError } from '@/lib/errores/mensajes'
 import { Checkbox } from '@/components/ui/Checkbox'
+import { Card } from '@/components/ui/Card'
+import { TableFrame } from '@/components/ui/TableParts'
 
 const TIPOS: TipoCuentaDestino[] = ['efectivo', 'banco', 'billetera_virtual']
 
@@ -303,7 +305,7 @@ export function CuentasView({
       </div>
 
       {creando && (
-        <div className="space-y-4 rounded-lg border border-border bg-card p-4">
+        <Card className="space-y-4">
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <Field htmlFor="c-nombre" label="Nombre" required error={error ?? undefined}>
               <Input
@@ -493,10 +495,10 @@ export function CuentasView({
           <Button type="button" onClick={crear} disabled={pending || nombre.trim().length < 2}>
             {pending ? 'Creando…' : 'Crear cuenta'}
           </Button>
-        </div>
+        </Card>
       )}
 
-      <div className="rounded-lg border border-border bg-card overflow-x-auto">
+      <TableFrame>
         <Table
           columns={columns}
           data={cuentas}
@@ -504,7 +506,7 @@ export function CuentasView({
           getRowId={(c) => c.id_cuenta_destino}
           emptyState="No hay cuentas cargadas."
         />
-      </div>
+      </TableFrame>
 
       <Pagination
         page={page}

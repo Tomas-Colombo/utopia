@@ -1,5 +1,6 @@
 import { Skeleton } from '@/components/ui/Skeleton'
 import { PageBand } from './PageBand'
+import { Card } from '@/components/ui/Card'
 
 /**
  * Primitivas para los `loading.tsx` de cada módulo.
@@ -23,12 +24,12 @@ export function SkeletonKpis({ count = 4 }: { count?: number }) {
   return (
     <section className="grid grid-cols-2 gap-4 md:grid-cols-4">
       {Array.from({ length: count }).map((_, i) => (
-        <div key={i} className="rounded-lg border border-border bg-card p-4">
+        <Card key={i}>
           <Skeleton width="60%" height="0.75rem" />
           <div className="mt-2">
             <Skeleton width="45%" height="1.75rem" />
           </div>
-        </div>
+        </Card>
       ))}
     </section>
   )
@@ -46,7 +47,7 @@ export function SkeletonCards({
   return (
     <section className={`grid grid-cols-1 gap-3 ${cols}`}>
       {Array.from({ length: count }).map((_, i) => (
-        <div key={i} className="rounded-lg border border-border bg-card p-5">
+        <Card padding="lg" key={i}>
           <Skeleton width="35%" height="0.875rem" />
           <div className="mt-2">
             <Skeleton width="55%" height="1.5rem" />
@@ -54,7 +55,7 @@ export function SkeletonCards({
           <div className="mt-3">
             <Skeleton width="85%" height="0.875rem" />
           </div>
-        </div>
+        </Card>
       ))}
     </section>
   )
@@ -72,7 +73,7 @@ export function SkeletonTable({
   rows?: number
 }) {
   return (
-    <section className="rounded-lg border border-border bg-card overflow-hidden">
+    <Card as="section" padding="none" className="overflow-hidden">
       {title && (
         <div className="border-b border-border px-4 py-3">
           <h3 className="font-display text-lg">{title}</h3>
@@ -83,6 +84,6 @@ export function SkeletonTable({
           <Skeleton key={i} width="100%" height="1.25rem" />
         ))}
       </div>
-    </section>
+    </Card>
   )
 }

@@ -8,6 +8,7 @@ import { useToast } from '@/components/ui/Toast'
 import type { EstadoItem } from '@/lib/types/inventario'
 import { transicionItemAction } from '../../actions'
 import { mensajeDeError } from '@/lib/errores/mensajes'
+import { Card } from '@/components/ui/Card'
 
 /**
  * Acciones disponibles según estado actual del ítem. Sincronizado con
@@ -125,7 +126,7 @@ export function FichaActions({
   }
 
   return (
-    <div className="rounded-lg border border-border bg-card p-4">
+    <Card>
       <h3 className="font-display text-lg mb-3">Acciones</h3>
       <div className="flex flex-wrap gap-2">
         {acciones.map((a) => (
@@ -150,6 +151,6 @@ export function FichaActions({
         onConfirm={() => confirm && ejecutar(confirm)}
         onCancel={() => setConfirm(null)}
       />
-    </div>
+    </Card>
   )
 }

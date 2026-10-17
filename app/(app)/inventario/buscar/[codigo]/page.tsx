@@ -7,6 +7,7 @@ import { resolverCodigo } from '@/lib/dal/inventario/codigo'
 import { listItemsByProducto } from '@/lib/dal/inventario/item'
 import { parsearSku } from '@/lib/inventario/codigo'
 import type { EstadoItem } from '@/lib/types/inventario'
+import { Card } from '@/components/ui/Card'
 
 const ESTADO_LABEL: Record<EstadoItem, string> = {
   disponible: 'Disponible',
@@ -55,7 +56,7 @@ export default async function BuscarCodigoPage(props: {
       <>
         <Topbar title="Código no encontrado" session={session} backHref="/inventario/ficha" />
         <main className="flex-1 p-6">
-          <div className="mx-auto max-w-md rounded-lg border border-border bg-card p-6 text-center">
+          <Card padding="none" className="mx-auto max-w-md p-6 text-center">
             <p className="font-display text-lg mb-2">Nada coincide</p>
             <p className="text-sm text-muted mb-4">
               No hay un ítem con ese QR ni un producto con SKU{' '}
@@ -67,7 +68,7 @@ export default async function BuscarCodigoPage(props: {
             >
               Volver a buscar
             </Link>
-          </div>
+          </Card>
         </main>
       </>
     )
@@ -86,7 +87,7 @@ export default async function BuscarCodigoPage(props: {
       <main className="flex-1 p-6">
         <div className="mx-auto max-w-3xl space-y-4">
           {/* Cabecera del producto */}
-          <div className="rounded-lg border border-border bg-card p-4">
+          <Card>
             <h2 className="font-display text-xl">{producto.nombre}</h2>
             <div className="mt-1 flex flex-wrap items-center gap-2 text-xs font-mono text-muted">
               <span>SKU: {producto.sku ?? '—'}</span>
@@ -108,10 +109,10 @@ export default async function BuscarCodigoPage(props: {
                 <div className="font-mono">{items.length}</div>
               </div>
             </div>
-          </div>
+          </Card>
 
           {/* Unidades físicas */}
-          <div className="rounded-lg border border-border bg-card p-4">
+          <Card>
             <h3 className="font-display text-lg mb-3">
               Unidades{talle ? ` · talle ${talle}` : ''}
             </h3>
@@ -146,7 +147,7 @@ export default async function BuscarCodigoPage(props: {
                 ))}
               </ul>
             )}
-          </div>
+          </Card>
         </div>
       </main>
     </>

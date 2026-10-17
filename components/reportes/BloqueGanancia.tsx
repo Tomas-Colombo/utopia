@@ -18,6 +18,7 @@ interface BloqueGananciaProps {
 import { escapeCsvField, downloadCsv, csvNegative } from '@/lib/utils/csv'
 import { DataTable, THead, TBody, Tr, Th, Td } from '@/components/ui/TableParts'
 import { Button } from '@/components/ui/Button'
+import { Card } from '@/components/ui/Card'
 
 export function BloqueGanancia({ resultados, tieneGastos }: BloqueGananciaProps) {
   const exportarCSV = () => {
@@ -38,7 +39,7 @@ export function BloqueGanancia({ resultados, tieneGastos }: BloqueGananciaProps)
   }
 
   return (
-    <section aria-labelledby="h2-ganancia" className="rounded-lg border border-border bg-card overflow-hidden">
+    <Card as="section" padding="none" aria-labelledby="h2-ganancia" className="overflow-hidden">
       <div className="p-4 border-b border-border bg-panel flex justify-between items-center">
         <h2 id="h2-ganancia" className="font-display text-lg">Cómo se arma tu ganancia</h2>
         <Button
@@ -93,6 +94,6 @@ export function BloqueGanancia({ resultados, tieneGastos }: BloqueGananciaProps)
           </TBody>
         </DataTable>
       </div>
-    </section>
+    </Card>
   )
 }

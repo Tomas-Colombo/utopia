@@ -1,6 +1,7 @@
 import React from 'react'
 import type { FinanzasFlujoRow } from '@/lib/types/reportes'
 import { DataTable, THead, TBody, Tr, Th, Td } from '@/components/ui/TableParts'
+import { Card } from '@/components/ui/Card'
 
 function formatMoney(value: number | null | undefined) {
   if (value == null) return '—'
@@ -20,7 +21,7 @@ export function BloqueMovimientoPlata({ flujo, tieneGastos }: BloqueMovimientoPl
     .filter(x => x.monto > 0)
 
   return (
-    <section aria-labelledby="h2-flujo" className="rounded-lg border border-border bg-card overflow-hidden">
+    <Card as="section" padding="none" aria-labelledby="h2-flujo" className="overflow-hidden">
       <div className="p-4 border-b border-border bg-panel">
         <h2 id="h2-flujo" className="font-display text-lg">Movimiento de plata</h2>
       </div>
@@ -101,6 +102,6 @@ export function BloqueMovimientoPlata({ flujo, tieneGastos }: BloqueMovimientoPl
           </ul>
         </div>
       )}
-    </section>
+    </Card>
   )
 }

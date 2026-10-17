@@ -6,6 +6,7 @@ import { hasPermission } from '@/lib/dal/guard'
 import { EditarRevendedoraForm } from './EditarRevendedoraForm'
 import { ComisionPropiaCard } from './ComisionPropiaCard'
 import { RevendedoraTabs } from './RevendedoraTabs'
+import { Card } from '@/components/ui/Card'
 
 export default async function RevendedoraPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await verifySession()
@@ -26,9 +27,9 @@ export default async function RevendedoraPage({ params }: { params: Promise<{ id
       />
       <main className="flex-1 p-6 space-y-6 max-w-4xl">
         <RevendedoraTabs idRevendedora={revendedora.id_revendedora} activeTab="resumen" />
-        <div className="rounded-lg border border-border bg-card p-6">
+        <Card padding="none" className="p-6">
           <EditarRevendedoraForm revendedora={revendedora} />
-        </div>
+        </Card>
         <ComisionPropiaCard
           idRevendedora={revendedora.id_revendedora}
           resolucion={resolucion}

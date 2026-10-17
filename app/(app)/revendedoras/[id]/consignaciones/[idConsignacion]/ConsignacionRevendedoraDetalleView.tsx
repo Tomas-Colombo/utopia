@@ -23,6 +23,7 @@ import {
   eliminarConsignacionRevendedoraAction,
 } from '../actions'
 import { Checkbox } from '@/components/ui/Checkbox'
+import { Card } from '@/components/ui/Card'
 
 const DETALLE_VARIANT: Record<
   EstadoConsignacionRevendedoraDetalle,
@@ -248,7 +249,7 @@ export function ConsignacionRevendedoraDetalleView({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-lg border border-border bg-card p-6">
+      <Card padding="none" className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6">
         <div className="space-y-1">
           <div className="flex items-center gap-3">
             <h2 className="font-display text-xl">Lote de consignación</h2>
@@ -305,32 +306,32 @@ export function ConsignacionRevendedoraDetalleView({
             </>
           )}
         </div>
-      </div>
+      </Card>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="rounded-lg border border-border bg-card p-4">
+        <Card>
           <div className="text-xs uppercase font-mono text-muted">Total ítems</div>
           <div className="mt-1 font-display text-2xl">{cons.detalles.length}</div>
-        </div>
-        <div className="rounded-lg border border-border bg-card p-4">
+        </Card>
+        <Card>
           <div className="text-xs uppercase font-mono text-muted">En su poder</div>
           <div className="mt-1 font-display text-2xl text-ink">{itemsEnPoder.length}</div>
-        </div>
-        <div className="rounded-lg border border-border bg-card p-4">
+        </Card>
+        <Card>
           <div className="text-xs uppercase font-mono text-muted">Vendidos</div>
           <div className="mt-1 font-display text-2xl text-ink">
             {cons.detalles.filter((d) => d.estado_detalle === 'vendido').length}
           </div>
-        </div>
-        <div className="rounded-lg border border-border bg-card p-4">
+        </Card>
+        <Card>
           <div className="text-xs uppercase font-mono text-muted">Devueltos / Baja</div>
           <div className="mt-1 font-display text-2xl text-muted">
             {cons.detalles.filter((d) => d.estado_detalle === 'devuelto' || d.estado_detalle === 'baja').length}
           </div>
-        </div>
+        </Card>
       </div>
 
-      <div className="rounded-lg border border-border bg-card p-6 space-y-4">
+      <Card padding="none" className="p-6 space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="font-display text-lg">Ítems del lote</h3>
           {cons.confirmada && cons.estado === 'abierta' && puedeEditar && itemsEnPoder.length > 0 && (
@@ -357,7 +358,7 @@ export function ConsignacionRevendedoraDetalleView({
           columns={columns}
           getRowId={(r: ConsignacionRevendedoraItemDetalle) => r.id_consignacion_revendedora_detalle}
         />
-      </div>
+      </Card>
 
       {/* Confirmar entrega Dialog */}
       <ConfirmDialog
@@ -393,7 +394,7 @@ export function ConsignacionRevendedoraDetalleView({
       {/* Registrar devolución Modal / Dialog */}
       {devolucionOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-lg rounded-lg border border-border bg-card p-6 space-y-4 shadow-lg">
+          <Card padding="none" className="w-full max-w-lg p-6 space-y-4 shadow-lg">
             <h3 className="font-display text-lg">Registrar devolución de ítems</h3>
             <p className="text-sm text-muted">
               {selectedItems.length > 0
@@ -447,7 +448,7 @@ export function ConsignacionRevendedoraDetalleView({
                 {pending ? 'Registrando...' : 'Confirmar devolución'}
               </Button>
             </div>
-          </div>
+          </Card>
         </div>
       )}
     </div>

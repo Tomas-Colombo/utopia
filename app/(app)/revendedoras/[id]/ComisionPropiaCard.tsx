@@ -13,6 +13,7 @@ import {
   guardarComisionPropiaAction,
   terminarReglaAction,
 } from '@/app/(app)/revendedoras/comisiones/actions'
+import { Card } from '@/components/ui/Card'
 
 interface ComisionPropiaCardProps {
   idRevendedora: string
@@ -121,7 +122,7 @@ export function ComisionPropiaCard({
   }
 
   return (
-    <div className="rounded-lg border border-border bg-card p-6 space-y-4">
+    <Card padding="none" className="p-6 space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-lg font-semibold text-foreground">Comisión aplicable</h3>
@@ -336,6 +337,6 @@ export function ComisionPropiaCard({
           </form>
         </Modal>
       )}
-    </div>
+    </Card>
   )
 }

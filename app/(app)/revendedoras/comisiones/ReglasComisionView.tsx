@@ -12,6 +12,7 @@ import { mensajeDeError } from '@/lib/errores/mensajes'
 import { estimarComision } from '@/lib/comisiones/resolver-comision'
 import type { AmbitoComision, ReglaComisionConEscalas } from '@/lib/types/comisiones'
 import { crearReglaGeneralAction, terminarReglaAction } from './actions'
+import { Card } from '@/components/ui/Card'
 
 interface ReglasComisionViewProps {
   reglas: ReglaComisionConEscalas[]
@@ -211,9 +212,9 @@ export function ReglasComisionView({ reglas, canEdit }: ReglasComisionViewProps)
         )}
       </div>
 
-      <div className="rounded-lg border border-border bg-card overflow-hidden">
+      <Card padding="none" className="overflow-hidden">
         <Table columns={columns} data={reglas} />
-      </div>
+      </Card>
 
       {modalAbierto && (
         <Modal

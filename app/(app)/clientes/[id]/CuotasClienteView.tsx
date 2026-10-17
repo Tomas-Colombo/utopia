@@ -27,6 +27,8 @@ import {
 } from '@/lib/types/ventas'
 import { cobrarCuotaAction, marcarCuotaIncobrableAction } from '../../ventas/actions'
 import { mensajeDeError } from '@/lib/errores/mensajes'
+import { Card } from '@/components/ui/Card'
+import { TableFrame } from '@/components/ui/TableParts'
 
 const VARIANT: Record<EstadoCuota, 'success' | 'info' | 'warning' | 'danger' | 'neutral'> = {
   pendiente: 'info',
@@ -351,15 +353,16 @@ export function CuotasClienteView({
            que las dos vistas se desincronicen la primera vez que se toque una
            columna. */
         grupos.length === 0 ? (
-          <div className="rounded-lg border border-border bg-card p-6 text-center text-sm text-muted">
+          <Card padding="none" className="p-6 text-center text-sm text-muted">
             Sin cuotas que coincidan con el filtro.
-          </div>
+          </Card>
         ) : (
           <div className="space-y-4">
             {grupos.map((g) => (
-              <div
+              <Card
+                padding="none"
                 key={g.id_venta}
-                className="rounded-lg border border-border bg-card overflow-hidden"
+                className="overflow-hidden"
               >
                 <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-border px-4 py-3">
                   <div>
@@ -401,12 +404,12 @@ export function CuotasClienteView({
                     emptyState="Sin cuotas."
                   />
                 </div>
-              </div>
+              </Card>
             ))}
           </div>
         )
       ) : (
-        <div className="rounded-lg border border-border bg-card overflow-x-auto">
+        <TableFrame>
           <Table
             columns={columns}
             data={visibles}
@@ -414,7 +417,7 @@ export function CuotasClienteView({
             getRowId={(c) => c.id_cuota_financiada}
             emptyState="Sin cuotas que coincidan con el filtro."
           />
-        </div>
+        </TableFrame>
       )}
 
       {/* ─── Cobrar ─────────────────────────────────────────────────── */}

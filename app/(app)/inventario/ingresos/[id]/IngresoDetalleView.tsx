@@ -29,6 +29,7 @@ import { buscarMatchNombre, indexarPorNombre } from '@/lib/inventario/producto-m
 import { mensajeDeError } from '@/lib/errores/mensajes'
 import { TableFrame, DataTable, THead, TBody, TFoot, Tr, Th, Td } from '@/components/ui/TableParts'
 import { Select } from '@/components/ui/Select'
+import { Card } from '@/components/ui/Card'
 
 type Ingreso = IngresoMercaderiaRow & {
   proveedor: Pick<ProveedorRow, 'id_proveedor' | 'nombre' | 'telefono'> | null
@@ -175,7 +176,7 @@ export function IngresoDetalleView({
   return (
     <div className="space-y-6">
       {/* Metadata */}
-      <div className="rounded-lg border border-border bg-card p-4 grid grid-cols-2 gap-4 text-sm md:grid-cols-4">
+      <Card className="grid grid-cols-2 gap-4 text-sm md:grid-cols-4">
         <div>
           <div className="text-xs uppercase text-muted font-mono">Proveedor</div>
           <div className="mt-1">{ingreso.proveedor?.nombre ?? '—'}</div>
@@ -192,7 +193,7 @@ export function IngresoDetalleView({
           <div className="text-xs uppercase text-muted font-mono">Fecha</div>
           <div className="mt-1">{new Date(ingreso.fecha).toLocaleString('es-AR')}</div>
         </div>
-      </div>
+      </Card>
 
       {/* Líneas */}
       <TableFrame>
@@ -387,7 +388,7 @@ export function IngresoDetalleView({
 
       {/* Confirmar */}
       {!readonly && (
-        <div className="flex items-center justify-between rounded-lg border border-border bg-card p-4">
+        <Card className="flex items-center justify-between">
           <div className="text-sm text-muted">
             Al confirmar se generan {totalCantidad} ítem(s) con QR único y estado <b>disponible</b>.
           </div>
@@ -397,7 +398,7 @@ export function IngresoDetalleView({
           >
             Confirmar ingreso
           </Button>
-        </div>
+        </Card>
       )}
 
       <ConfirmDialog

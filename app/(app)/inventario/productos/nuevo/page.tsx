@@ -5,6 +5,7 @@ import { listCategoriasActivas } from '@/lib/dal/inventario/categoria'
 import { listProductosConDetalle } from '@/lib/dal/inventario/producto'
 import { listProveedoresActivos } from '@/lib/dal/inventario/proveedor'
 import { NuevoProductoForm } from './NuevoProductoForm'
+import { Card } from '@/components/ui/Card'
 
 export default async function NuevoProductoPage() {
   const session = await verifySession()
@@ -21,13 +22,13 @@ export default async function NuevoProductoPage() {
     <>
       <Topbar title="Nuevo producto" session={session} backHref="/inventario" />
       <main className="flex-1 p-6">
-        <div className="max-w-2xl rounded-lg border border-border bg-card p-6">
+        <Card padding="none" className="max-w-2xl p-6">
           <NuevoProductoForm
             categorias={categorias}
             productos={productos}
             proveedores={proveedores}
           />
-        </div>
+        </Card>
       </main>
     </>
   )

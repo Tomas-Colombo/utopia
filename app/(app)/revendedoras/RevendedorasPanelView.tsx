@@ -13,6 +13,7 @@ import type {
   PanelRevendedoraRow,
 } from '@/lib/types/revendedoras'
 import { RevendedorasFiltrosBar } from './RevendedorasFiltrosBar'
+import { TableFrame } from '@/components/ui/TableParts'
 
 interface RevendedorasPanelViewProps {
   data: PanelRevendedoraRow[]
@@ -290,14 +291,14 @@ export function RevendedorasPanelView({
         />
       ) : (
         <div className="flex flex-col gap-4">
-          <div className="rounded-lg border border-border bg-card overflow-x-auto">
+          <TableFrame>
             <Table
               columns={columns}
               data={data}
               getRowId={(r) => r.id_revendedora}
               loading={isPending}
             />
-          </div>
+          </TableFrame>
 
           <Pagination
             page={filtros.page}

@@ -16,6 +16,7 @@ import type {
 import { AsignarTallesModal } from '../../AsignarTallesModal'
 import { EditarProductoModal } from '@/components/inventario/EditarProductoModal'
 import { DataTable, THead, TBody, Tr, Th, Td } from '@/components/ui/TableParts'
+import { Card } from '@/components/ui/Card'
 
 type Proveedor = { id_proveedor: string; nombre: string } | null
 
@@ -204,7 +205,7 @@ export function FichaProductoView({
       </section>
 
       {/* Datos generales */}
-      <section className="rounded-lg border border-border bg-card p-6 space-y-4">
+      <Card as="section" padding="none" className="p-6 space-y-4">
         <h3 className="text-sm font-semibold">Datos del producto</h3>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Dato label="Categoría" value={categoria?.nombre ?? '—'} />
@@ -216,7 +217,7 @@ export function FichaProductoView({
           value={producto.descripcion?.trim() || '—'}
           block
         />
-      </section>
+      </Card>
 
       {/* Reasignar talles retroactivamente — solo cuando hay disponibles sin
           talle y la categoría tiene talles definidos. Es una acción destacada
@@ -239,7 +240,7 @@ export function FichaProductoView({
       )}
 
       {/* Stock por talle — solo talles usados por el producto */}
-      <section className="rounded-lg border border-border bg-card p-6 space-y-4">
+      <Card as="section" padding="none" className="p-6 space-y-4">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h3 className="text-sm font-semibold">Stock por talle</h3>
           {filtroActivo && (
@@ -333,7 +334,7 @@ export function FichaProductoView({
             </p>
           </div>
         )}
-      </section>
+      </Card>
 
       {/* Placeholder — QRs por ítem */}
       <section className="rounded-lg border border-dashed border-border bg-card-2 p-6">

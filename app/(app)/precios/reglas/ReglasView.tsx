@@ -19,6 +19,7 @@ import { PlanesCuotasModal } from '../PlanesCuotasModal'
 import { mensajeDeError } from '@/lib/errores/mensajes'
 import { TableFrame, DataTable, THead, TBody, Tr, Th, Td } from '@/components/ui/TableParts'
 import { Select } from '@/components/ui/Select'
+import { Card } from '@/components/ui/Card'
 
 const TIPO_VARIANT: Record<TipoRegla, 'success' | 'info' | 'warning'> = {
   margen: 'info',
@@ -92,7 +93,7 @@ export function ReglasView({
     <div className="space-y-6">
       {/* Los planes de cuotas son el paso previo a un recargo por cuotas, así
           que su configuración vive donde se administran las reglas. */}
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-card px-4 py-3">
+      <Card padding="none" className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
         <p className="text-sm text-muted">
           Planes de cuotas activos:{' '}
           {planes.some((p) => p.activo) ? (
@@ -109,15 +110,15 @@ export function ReglasView({
         <Button variant="secondary" size="sm" onClick={() => setCuotasOpen(true)}>
           Editar cuotas
         </Button>
-      </div>
+      </Card>
 
       {rows.length === 0 && (
-        <div className="rounded-lg border border-dashed border-border bg-card p-10 text-center">
+        <Card padding="none" className="border-dashed p-10 text-center">
           <p className="font-display text-lg mb-2">Sin reglas configuradas</p>
           <p className="text-sm text-muted mb-4">
             Creá al menos una regla de margen para poder calcular precios.
           </p>
-        </div>
+        </Card>
       )}
 
       {rows.length > 0 && (

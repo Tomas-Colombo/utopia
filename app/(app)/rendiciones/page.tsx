@@ -9,6 +9,7 @@ import {
   type EstadoRendicion,
 } from '@/lib/types/rendiciones'
 import { TableFrame, DataTable, THead, TBody, Tr, Th, Td } from '@/components/ui/TableParts'
+import { Card } from '@/components/ui/Card'
 
 const VARIANT: Record<EstadoRendicion, 'success' | 'warning'> = {
   pendiente: 'warning',
@@ -44,7 +45,7 @@ export default async function RendicionesPage() {
       <main className="flex-1 p-6 space-y-6">
 
         {rows.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-border bg-card p-10 text-center">
+          <Card padding="none" className="border-dashed p-10 text-center">
             <p className="font-display text-lg mb-2">Sin rendiciones generadas</p>
             <p className="text-sm text-muted mb-4">
               Elegí un proveedor y previsualizá las ventas pendientes antes de saldar.
@@ -55,7 +56,7 @@ export default async function RendicionesPage() {
             >
               Generar rendición
             </Link>
-          </div>
+          </Card>
         ) : (
           <TableFrame>
             <DataTable>

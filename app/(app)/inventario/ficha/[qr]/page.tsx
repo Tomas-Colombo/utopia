@@ -10,6 +10,7 @@ import { EscanearOtro } from './EscanearOtro'
 import { FichaActions } from './FichaActions'
 import { hasModuleAccess } from '@/lib/dal/guard'
 import { quienTieneItem } from '@/lib/dal/revendedoras'
+import { Card } from '@/components/ui/Card'
 
 const ESTADO_LABEL: Record<EstadoItem, string> = {
   disponible: 'Disponible',
@@ -45,7 +46,7 @@ export default async function FichaItemPage(props: {
       <>
         <Topbar title="Ítem no encontrado" session={session} backHref="/inventario/ficha" />
         <main className="flex-1 p-6">
-          <div className="mx-auto max-w-md rounded-lg border border-border bg-card p-6 text-center">
+          <Card padding="none" className="mx-auto max-w-md p-6 text-center">
             <p className="font-display text-lg mb-2">QR no reconocido</p>
             <p className="text-sm text-muted mb-4">
               No existe un ítem con el código <span className="font-mono">{decoded}</span> en
@@ -57,7 +58,7 @@ export default async function FichaItemPage(props: {
             >
               Volver a escanear
             </Link>
-          </div>
+          </Card>
         </main>
       </>
     )
@@ -95,7 +96,7 @@ export default async function FichaItemPage(props: {
 
           {/* Datos + acciones + historial */}
           <section className="space-y-4">
-            <div className="rounded-lg border border-border bg-card p-4">
+            <Card>
               <h2 className="font-display text-xl">{detalle.producto.nombre}</h2>
               {detalle.producto.sku && (
                 <div className="text-xs font-mono text-muted mt-1">
@@ -128,7 +129,7 @@ export default async function FichaItemPage(props: {
                   </div>
                 )}
               </div>
-            </div>
+            </Card>
 
             <FichaActions
               idItem={detalle.id_item}
@@ -137,7 +138,7 @@ export default async function FichaItemPage(props: {
             />
 
             {enPoderDe && (
-              <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+              <Card className="space-y-3">
                 <div className="flex items-center justify-between">
                   <h3 className="font-display text-lg">En poder de revendedora</h3>
                   <Link
@@ -175,10 +176,10 @@ export default async function FichaItemPage(props: {
                     </div>
                   )}
                 </div>
-              </div>
+              </Card>
             )}
 
-            <div className="rounded-lg border border-border bg-card p-4 flex items-center justify-between">
+            <Card className="flex items-center justify-between">
               <div>
                 <h3 className="font-display text-lg">Ajuste de inventario</h3>
                 <p className="text-sm text-muted">
@@ -189,10 +190,10 @@ export default async function FichaItemPage(props: {
                 idItem={detalle.id_item}
                 estadoItem={detalle.estado_item}
               />
-            </div>
+            </Card>
 
             {/* Historial de movimientos */}
-            <div className="rounded-lg border border-border bg-card p-4">
+            <Card>
               <h3 className="font-display text-lg mb-3">Historial</h3>
               {detalle.movimientos.length === 0 ? (
                 <p className="text-sm text-muted">Sin movimientos.</p>
@@ -218,7 +219,7 @@ export default async function FichaItemPage(props: {
                   ))}
                 </ul>
               )}
-            </div>
+            </Card>
           </section>
         </div>
       </main>

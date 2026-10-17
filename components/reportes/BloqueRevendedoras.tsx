@@ -9,6 +9,7 @@ import type {
 import { escapeCsvField, downloadCsv, csvNegative } from '@/lib/utils/csv'
 import { TableFrame, DataTable, THead, TBody, Tr, Th, Td } from '@/components/ui/TableParts'
 import { Button } from '@/components/ui/Button'
+import { Card } from '@/components/ui/Card'
 
 function formatMoney(value: number | null | undefined) {
   if (value == null) return '—'
@@ -78,7 +79,7 @@ export function BloqueRevendedoras({
   }
 
   return (
-    <section aria-labelledby="h2-revendedoras" className="rounded-lg border border-border bg-card overflow-hidden space-y-6 p-6">
+    <Card as="section" padding="none" aria-labelledby="h2-revendedoras" className="overflow-hidden space-y-6 p-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border pb-4">
         <div>
           <h2 id="h2-revendedoras" className="font-display text-xl font-bold text-ink">
@@ -211,6 +212,6 @@ export function BloqueRevendedoras({
           </TBody>
         </DataTable>
       </TableFrame>
-    </section>
+    </Card>
   )
 }

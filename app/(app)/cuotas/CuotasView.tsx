@@ -16,6 +16,7 @@ import {
   type FiltroEstadoCuotas,
 } from '@/lib/types/ventas'
 import type { DeudorRow } from '@/lib/dal/cuotas/cuota'
+import { TableFrame } from '@/components/ui/TableParts'
 
 /**
  * Listado de deudores. Cada fila es un cliente y todo lo que se puede hacer
@@ -207,7 +208,7 @@ export function CuotasView({
         </Button>
       </div>
 
-      <div className="rounded-lg border border-border bg-card overflow-x-auto">
+      <TableFrame>
         <Table
           columns={columns}
           data={rows}
@@ -219,7 +220,7 @@ export function CuotasView({
               : 'Ningún cliente coincide con el filtro.'
           }
         />
-      </div>
+      </TableFrame>
 
       <Pagination
         page={page}

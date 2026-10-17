@@ -18,6 +18,7 @@ import { importarRemitoAction, parseRemitoPdfAction } from '../../actions'
 import { mensajeDeError } from '@/lib/errores/mensajes'
 import { IconButton } from '@/components/ui/IconButton'
 import { Select } from '@/components/ui/Select'
+import { Card } from '@/components/ui/Card'
 
 export type DetalleImportado = {
   id_detalle: string
@@ -195,7 +196,7 @@ export function RemitoImportPanel({
   }
 
   return (
-    <div className="rounded-lg border border-border bg-card p-4 space-y-4">
+    <Card className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div>
           <h3 className="text-sm font-semibold">Importar desde PDF</h3>
@@ -414,6 +415,6 @@ export function RemitoImportPanel({
           </div>
         </>
       )}
-    </div>
+    </Card>
   )
 }

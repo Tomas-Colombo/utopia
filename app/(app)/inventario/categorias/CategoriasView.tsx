@@ -18,6 +18,7 @@ import {
   updateCategoriaAction,
 } from '../actions'
 import { mensajeDeError } from '@/lib/errores/mensajes'
+import { TableFrame } from '@/components/ui/TableParts'
 
 export function CategoriasView({ initial }: { initial: CategoriaRow[] }) {
   const [rows, setRows] = useState<CategoriaRow[]>(initial)
@@ -178,9 +179,9 @@ export function CategoriasView({ initial }: { initial: CategoriaRow[] }) {
           cta={{ label: 'Nueva categoría', onClick: abrirNueva }}
         />
       ) : (
-        <div className="rounded-lg border border-border bg-card overflow-x-auto">
+        <TableFrame>
           <Table columns={columns} data={rows} getRowId={(r) => r.id_categoria} />
-        </div>
+        </TableFrame>
       )}
 
       <Modal

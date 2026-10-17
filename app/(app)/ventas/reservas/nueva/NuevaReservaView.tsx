@@ -25,6 +25,7 @@ import { crearReservaAction, crearClienteAction } from '../../actions'
 import { mensajeDeError } from '@/lib/errores/mensajes'
 import { TableFrame, DataTable, THead, TBody, Tr, Th, Td } from '@/components/ui/TableParts'
 import { Select } from '@/components/ui/Select'
+import { Card } from '@/components/ui/Card'
 
 interface Cliente { id: string; nombre: string; telefono: string | null }
 
@@ -319,7 +320,7 @@ export function NuevaReservaView({
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px]">
       <section className="space-y-4">
-        <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+        <Card className="space-y-3">
           <form onSubmit={agregar}>
             <Field
               htmlFor="qr-r"
@@ -413,7 +414,7 @@ export function NuevaReservaView({
               />
             </div>
           )}
-        </div>
+        </Card>
 
         <TableFrame>
           <DataTable>
@@ -467,7 +468,7 @@ export function NuevaReservaView({
       </section>
 
       <aside className="space-y-4">
-        <div className="rounded-lg border border-border bg-card p-4 space-y-4">
+        <Card className="space-y-4">
           <Field htmlFor="r-cli" label="Cliente (opcional)">
             <div className="flex gap-2">
               <Select
@@ -579,7 +580,7 @@ export function NuevaReservaView({
               onChange={(e) => setObservaciones(e.target.value)}
             />
           </Field>
-        </div>
+        </Card>
         <Button
           className="w-full"
           size="lg"

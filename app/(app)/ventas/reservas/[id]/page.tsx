@@ -12,6 +12,7 @@ import {
 } from '@/lib/types/ventas'
 import { ReservaDetalleActions } from './ReservaDetalleActions'
 import { TableFrame, DataTable, THead, TBody, Tr, Th, Td } from '@/components/ui/TableParts'
+import { Card } from '@/components/ui/Card'
 
 const VARIANT: Record<EstadoReserva, 'success' | 'info' | 'warning' | 'danger' | 'neutral'> = {
   activa: 'success',
@@ -41,7 +42,7 @@ export default async function ReservaDetallePage(props: {
         }
       />
       <main className="flex-1 p-6 space-y-6">
-        <div className="rounded-lg border border-border bg-card p-4 grid grid-cols-2 gap-4 text-sm md:grid-cols-4">
+        <Card className="grid grid-cols-2 gap-4 text-sm md:grid-cols-4">
           <div>
             <div className="text-xs uppercase font-mono text-muted">Cliente</div>
             <div className="mt-1">{nombreCliente(reserva.cliente)}</div>
@@ -64,7 +65,7 @@ export default async function ReservaDetallePage(props: {
               </>
             )}
           </div>
-        </div>
+        </Card>
 
         <TableFrame>
           <DataTable>

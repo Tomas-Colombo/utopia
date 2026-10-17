@@ -30,6 +30,7 @@ import { NuevaCategoriaModal } from './NuevaCategoriaModal'
 import { mensajeDeError } from '@/lib/errores/mensajes'
 import { IconButton } from '@/components/ui/IconButton'
 import { Select } from '@/components/ui/Select'
+import { Card } from '@/components/ui/Card'
 
 const TIPOS: { value: TipoIngreso; label: string }[] = [
   { value: 'compra', label: 'Compra (paga al ingresar)' },
@@ -357,7 +358,7 @@ export function NuevoIngresoView({
   return (
     <div className="space-y-6">
       {/* ─── Cabecera ─────────────────────────────────────────────── */}
-      <div className="rounded-lg border border-border bg-card p-6 space-y-4">
+      <Card padding="none" className="p-6 space-y-4">
         <h2 className="text-sm font-semibold">Datos del ingreso</h2>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <Field
@@ -431,10 +432,10 @@ export function NuevoIngresoView({
             />
           </Field>
         </div>
-      </div>
+      </Card>
 
       {/* ─── Productos ────────────────────────────────────────────── */}
-      <div className="rounded-lg border border-border bg-card p-4 space-y-4">
+      <Card className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-sm font-semibold">Productos</h2>
@@ -654,10 +655,10 @@ export function NuevoIngresoView({
             </ul>
           </div>
         )}
-      </div>
+      </Card>
 
       {/* ─── Guardar ──────────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-card p-4">
+      <Card className="flex flex-wrap items-center justify-between gap-3">
         <div className="text-sm text-muted">
           {filas.length > 0 ? (
             <>
@@ -677,7 +678,7 @@ export function NuevoIngresoView({
             {pending ? 'Guardando…' : 'Guardar'}
           </Button>
         </div>
-      </div>
+      </Card>
 
       <NuevoProveedorModal
         open={modalOpen}

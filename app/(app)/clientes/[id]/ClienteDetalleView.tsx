@@ -14,6 +14,8 @@ import {
   type VentaRow,
 } from '@/lib/types/ventas'
 import { EditarClienteModal } from '../EditarClienteModal'
+import { Card } from '@/components/ui/Card'
+import { TableFrame } from '@/components/ui/TableParts'
 
 const RESERVA_VARIANT: Record<
   EstadoReserva,
@@ -104,7 +106,7 @@ export function ClienteDetalleView({
 
   return (
     <>
-      <section className="rounded-lg border border-border bg-card p-4">
+      <Card as="section">
         <div className="grid grid-cols-2 gap-4 text-sm md:grid-cols-4">
           <div>
             <div className="font-mono text-xs uppercase text-muted">Teléfono</div>
@@ -124,31 +126,31 @@ export function ClienteDetalleView({
             </Button>
           </div>
         </div>
-      </section>
+      </Card>
 
       <section className="space-y-3">
         <h2 className="font-display text-lg">Historial de compras</h2>
-        <div className="rounded-lg border border-border bg-card overflow-x-auto">
+        <TableFrame>
           <Table
             columns={columnasVentas}
             data={ventas}
             getRowId={(v) => v.id_venta}
             emptyState="Sin compras registradas."
           />
-        </div>
+        </TableFrame>
       </section>
 
       {reservas.length > 0 && (
         <section className="space-y-3">
           <h2 className="font-display text-lg">Reservas</h2>
-          <div className="rounded-lg border border-border bg-card overflow-x-auto">
+          <TableFrame>
             <Table
               columns={columnasReservas}
               data={reservas}
               getRowId={(r) => r.id_reserva}
               emptyState="Sin reservas."
             />
-          </div>
+          </TableFrame>
         </section>
       )}
 

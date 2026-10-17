@@ -19,6 +19,7 @@ import {
 import { toggleClienteActivoAction } from '../ventas/actions'
 import { EditarClienteModal } from './EditarClienteModal'
 import { mensajeDeError } from '@/lib/errores/mensajes'
+import { TableFrame } from '@/components/ui/TableParts'
 
 export function ClientesTable({
   rows,
@@ -180,7 +181,7 @@ export function ClientesTable({
         </Button>
       </div>
 
-      <div className="rounded-lg border border-border bg-card overflow-x-auto">
+      <TableFrame>
         <Table
           columns={columns}
           data={rows}
@@ -188,7 +189,7 @@ export function ClientesTable({
           getRowId={(c) => c.id_cliente}
           emptyState="Sin resultados."
         />
-      </div>
+      </TableFrame>
 
       <Pagination
         page={page}

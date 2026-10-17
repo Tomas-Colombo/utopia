@@ -21,6 +21,7 @@ import { FiltroPeriodo } from '@/components/shell/FiltroPeriodo'
 import { VentasPaginacion } from './VentasPaginacion'
 import { hoyISO } from '@/lib/utils/hoy'
 import { DataTable, THead, TBody, Tr, Th, Td } from '@/components/ui/TableParts'
+import { Card } from '@/components/ui/Card'
 
 const PAGE_SIZE = 50
 
@@ -232,7 +233,7 @@ export default async function VentasHome(props: {
           </section>
         )}
 
-        <section className="rounded-lg border border-border bg-card">
+        <Card as="section" padding="none">
           <div className="border-b border-border px-4 py-3 flex flex-wrap items-center justify-between gap-2">
             <h3 className="font-display text-lg">Ventas del período</h3>
             <div className="flex flex-wrap items-center gap-3">
@@ -322,7 +323,7 @@ export default async function VentasHome(props: {
               <VentasPaginacion page={pagina} pageSize={PAGE_SIZE} total={total} />
             </div>
           )}
-        </section>
+        </Card>
       </main>
     </>
   )

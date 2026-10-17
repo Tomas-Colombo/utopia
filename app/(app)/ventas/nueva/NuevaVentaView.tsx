@@ -53,6 +53,7 @@ import { estimarComision, resolverComision } from '@/lib/comisiones/resolver-com
 import { hoyISO } from '@/lib/utils/hoy'
 import { TableFrame, DataTable, THead, TBody, TFoot, Tr, Th, Td } from '@/components/ui/TableParts'
 import { IconButton } from '@/components/ui/IconButton'
+import { Card } from '@/components/ui/Card'
 
 interface ClienteOption { id: string; nombre: string; telefono: string | null }
 export interface RevendedoraOption { id: string; nombre: string }
@@ -1315,7 +1316,7 @@ export function NuevaVentaView({
       {/* Paso 1 — carrito: buscador + tabla de ítems */}
       <section className="space-y-4">
         {puedeRevendedoras && (
-          <div className="rounded-lg border border-border bg-card p-4">
+          <Card>
             <div className="flex flex-wrap items-center gap-4">
               <div className="w-48">
                 <label
@@ -1375,10 +1376,10 @@ export function NuevaVentaView({
                 </div>
               )}
             </div>
-          </div>
+          </Card>
         )}
 
-        <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+        <Card className="space-y-3">
           <form onSubmit={agregarLinea}>
             <Field
               htmlFor="qr-input"
@@ -1498,7 +1499,7 @@ export function NuevaVentaView({
               />
             </div>
           )}
-        </div>
+        </Card>
 
         <TableFrame>
           <DataTable>
@@ -2108,7 +2109,7 @@ export function NuevaVentaView({
           Con el cobro abierto pasa a ser el botón de confirmar: el panel es
           largo y obligar a scrollear hasta el final para cerrar la venta es
           exactamente lo que el modal hacía bien. */}
-      <div className="sticky bottom-4 z-10 flex flex-col gap-3 rounded-lg border border-border bg-card p-4 shadow-lg sm:flex-row sm:items-center sm:justify-between">
+      <Card className="sticky bottom-4 z-10 flex flex-col gap-3 shadow-lg sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="text-xs text-muted">
             Total · {lineas.length} ítem{lineas.length === 1 ? '' : 's'}
@@ -2143,7 +2144,7 @@ export function NuevaVentaView({
             Continuar al cobro
           </Button>
         )}
-      </div>
+      </Card>
     </div>
   )
 }

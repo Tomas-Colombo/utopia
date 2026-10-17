@@ -1,6 +1,7 @@
 import React from 'react'
 import Link from 'next/link'
 import type { CuentasPorCobrar } from '@/lib/types/reportes'
+import { Card } from '@/components/ui/Card'
 
 function formatMoney(value: number | null | undefined) {
   if (value == null) return '—'
@@ -20,7 +21,7 @@ export function BloqueCobrar({ porCobrar, puedeVerVentas }: BloqueCobrarProps) {
   const tieneVencido = porCobrar.vencido > 0
 
   return (
-    <section aria-labelledby="h2-cobrar" className="rounded-lg border border-border bg-card overflow-hidden h-full flex flex-col">
+    <Card as="section" padding="none" aria-labelledby="h2-cobrar" className="overflow-hidden h-full flex flex-col">
       <div className="p-4 border-b border-border bg-panel flex justify-between items-center">
         <h2 id="h2-cobrar" className="font-display text-lg">Lo que te deben</h2>
       </div>
@@ -58,6 +59,6 @@ export function BloqueCobrar({ porCobrar, puedeVerVentas }: BloqueCobrarProps) {
           </div>
         </div>
       </div>
-    </section>
+    </Card>
   )
 }

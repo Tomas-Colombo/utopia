@@ -6,6 +6,7 @@ import { verifySession } from '@/lib/dal/session'
 import { listProveedores } from '@/lib/dal/inventario/proveedor'
 import { waMeLink } from '@/lib/utils/waMeLink'
 import { ProveedoresTableClient } from './ProveedoresTableClient'
+import { Card } from '@/components/ui/Card'
 
 export default async function ProveedoresPage() {
   const session = await verifySession()
@@ -27,9 +28,9 @@ export default async function ProveedoresPage() {
         {rows.length === 0 ? (
           <EmptyStateWrapper />
         ) : (
-          <div className="rounded-lg border border-border bg-card overflow-x-auto">
+          <Card padding="none" className="overflow-x-auto">
             <ProveedoresTableClient rows={enriched} />
-          </div>
+          </Card>
         )}
       </main>
     </>
@@ -38,7 +39,7 @@ export default async function ProveedoresPage() {
 
 function EmptyStateWrapper() {
   return (
-    <div className="rounded-lg border border-dashed border-border bg-card p-10 text-center">
+    <Card padding="none" className="border-dashed p-10 text-center">
       <p className="font-display text-lg mb-2">Sin proveedores todavía</p>
       <p className="text-sm text-muted mb-4">
         Agregá el primer proveedor para poder registrar ingresos.
@@ -49,7 +50,7 @@ function EmptyStateWrapper() {
       >
         Nuevo proveedor
       </Link>
-    </div>
+    </Card>
   )
 }
 

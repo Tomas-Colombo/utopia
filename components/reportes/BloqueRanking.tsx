@@ -18,6 +18,7 @@ interface BloqueRankingProps {
 import { escapeCsvField, downloadCsv } from '@/lib/utils/csv'
 import { Button } from '@/components/ui/Button'
 import { Select } from '@/components/ui/Select'
+import { Card } from '@/components/ui/Card'
 
 export function BloqueRanking({ ranking, ordenActual }: BloqueRankingProps) {
   const router = useRouter()
@@ -71,7 +72,7 @@ export function BloqueRanking({ ranking, ordenActual }: BloqueRankingProps) {
   ]
 
   return (
-    <section aria-labelledby="h2-ranking" className="rounded-lg border border-border bg-card overflow-hidden">
+    <Card as="section" padding="none" aria-labelledby="h2-ranking" className="overflow-hidden">
       <div className="p-4 border-b border-border bg-panel flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <h2 id="h2-ranking" className="font-display text-lg">Los que más rinden</h2>
         <div className="flex gap-2 w-full sm:w-auto">
@@ -101,6 +102,6 @@ export function BloqueRanking({ ranking, ordenActual }: BloqueRankingProps) {
           emptyState="No hubo ventas de productos en este período."
         />
       </div>
-    </section>
+    </Card>
   )
 }

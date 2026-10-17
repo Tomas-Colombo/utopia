@@ -1,5 +1,6 @@
 import React from 'react'
 import type { FinanzasPresupuestoRow } from '@/lib/types/reportes'
+import { Card } from '@/components/ui/Card'
 
 function formatMoney(value: number | null | undefined) {
   if (value == null) return '—'
@@ -23,7 +24,7 @@ export function BloqueGastos({ presupuestos, mesHasta }: BloqueGastosProps) {
   
   if (!presupuestos || presupuestos.length === 0) {
     return (
-      <section aria-labelledby="h2-gastos" className="rounded-lg border border-border bg-card overflow-hidden">
+      <Card as="section" padding="none" aria-labelledby="h2-gastos" className="overflow-hidden">
         <div className="p-4 border-b border-border bg-panel">
           <h2 id="h2-gastos" className="font-display text-lg">Gastos vs. Presupuesto</h2>
           <p className="text-sm text-muted">Correspondiente a {nombreMes}</p>
@@ -31,7 +32,7 @@ export function BloqueGastos({ presupuestos, mesHasta }: BloqueGastosProps) {
         <div className="p-6 text-center text-muted">
           No hay gastos ni presupuestos cargados en este mes.
         </div>
-      </section>
+      </Card>
     )
   }
 
@@ -39,7 +40,7 @@ export function BloqueGastos({ presupuestos, mesHasta }: BloqueGastosProps) {
   const totalPresupuestado = presupuestos.reduce((sum, p) => sum + p.presupuesto_mensual, 0)
 
   return (
-    <section aria-labelledby="h2-gastos" className="rounded-lg border border-border bg-card overflow-hidden">
+    <Card as="section" padding="none" aria-labelledby="h2-gastos" className="overflow-hidden">
       <div className="p-4 border-b border-border bg-panel flex justify-between items-end">
         <div>
           <h2 id="h2-gastos" className="font-display text-lg">Gastos vs. Presupuesto</h2>
@@ -90,6 +91,6 @@ export function BloqueGastos({ presupuestos, mesHasta }: BloqueGastosProps) {
           })}
         </ul>
       </div>
-    </section>
+    </Card>
   )
 }

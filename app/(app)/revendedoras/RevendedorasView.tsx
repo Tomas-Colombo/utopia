@@ -7,6 +7,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import type { RevendedoraRow } from '@/lib/types/revendedoras'
+import { Card } from '@/components/ui/Card'
 
 export function RevendedorasView({ data, canCreate }: { data: RevendedoraRow[], canCreate: boolean }) {
   const router = useRouter()
@@ -59,9 +60,9 @@ export function RevendedorasView({ data, canCreate }: { data: RevendedoraRow[], 
           </Button>
         )}
       </div>
-      <div className="rounded-lg border border-border bg-card overflow-hidden">
+      <Card padding="none" className="overflow-hidden">
         <Table columns={columns} data={data} />
-      </div>
+      </Card>
     </div>
   )
 }

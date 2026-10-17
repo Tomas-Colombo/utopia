@@ -7,6 +7,7 @@ import { Field } from '@/components/ui/Field'
 import { Button } from '@/components/ui/Button'
 import type { OrdenPanelRevendedoras } from '@/lib/types/revendedoras'
 import { ORDEN_PANEL_REVENDEDORAS_LABEL } from '@/lib/types/revendedoras'
+import { Card } from '@/components/ui/Card'
 
 interface RevendedorasFiltrosBarProps {
   q: string
@@ -50,7 +51,7 @@ export function RevendedorasFiltrosBar({
   )
 
   return (
-    <div className="rounded-lg border border-border bg-card p-4 flex flex-col gap-4">
+    <Card className="flex flex-col gap-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
         <div className="lg:col-span-2">
           <Field htmlFor="filtro-q" label="Buscar">
@@ -168,6 +169,6 @@ export function RevendedorasFiltrosBar({
           )}
         </div>
       </div>
-    </div>
+    </Card>
   )
 }

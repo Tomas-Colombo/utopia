@@ -5,6 +5,7 @@ import type { FinanzasSerieMensualRow } from '@/lib/types/reportes'
 import { Button } from '@/components/ui/Button'
 import { formatearMesCorto } from '@/lib/reportes/mes'
 import { DataTable, THead, TBody, Tr, Th, Td } from '@/components/ui/TableParts'
+import { Card } from '@/components/ui/Card'
 
 function formatMoneyCompact(value: number) {
   if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`
@@ -51,7 +52,7 @@ export function GraficoTendencia({ serie, tieneGastos }: GraficoTendenciaProps) 
   const gap = (chartWidth - serie.length * barWidth) / (serie.length + 1)
 
   return (
-    <section className="rounded-lg border border-border bg-card overflow-hidden">
+    <Card as="section" padding="none" className="overflow-hidden">
       <div className="flex items-center justify-between p-4 border-b border-border bg-panel">
         <h2 id="h2-tendencia" className="font-display text-lg">Tendencia (12 meses)</h2>
         <Button onClick={() => setVerTabla(!verTabla)} variant="secondary" size="sm">
@@ -173,6 +174,6 @@ export function GraficoTendencia({ serie, tieneGastos }: GraficoTendenciaProps) 
           </figure>
         )}
       </div>
-    </section>
+    </Card>
   )
 }

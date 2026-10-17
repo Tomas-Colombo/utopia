@@ -18,6 +18,7 @@ import { BajaProveedorButton } from './BajaProveedorButton'
 import { PerfilPeriodoForm } from './PerfilPeriodoForm'
 import { PerfilPaginacion } from './PerfilPaginacion'
 import { TableFrame, DataTable, THead, TBody, Tr, Th, Td } from '@/components/ui/TableParts'
+import { Card } from '@/components/ui/Card'
 
 const PAGE_SIZE = 10
 
@@ -92,7 +93,7 @@ export default async function ProveedorPerfilPage(props: {
       <Topbar title={proveedor.nombre} session={session} backHref="/proveedores" />
       <main className="flex-1 p-6 space-y-6">
         {/* ─── Cabecera ─────────────────────────────────── */}
-        <section className="rounded-lg border border-border bg-card">
+        <Card as="section" padding="none">
           <header className="flex items-start justify-between gap-4 border-b border-border px-5 py-4">
             <div className="min-w-0 space-y-1.5">
               <h2 className="font-display text-2xl leading-tight">{proveedor.nombre}</h2>
@@ -146,7 +147,7 @@ export default async function ProveedorPerfilPage(props: {
               <p className="text-sm text-text whitespace-pre-wrap">{proveedor.notas}</p>
             </div>
           )}
-        </section>
+        </Card>
 
         {/* ─── Deuda y contadores ──────────────────────── */}
         <section className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">

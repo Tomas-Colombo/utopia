@@ -16,6 +16,7 @@ import {
 import { mensajeDeError } from '@/lib/errores/mensajes'
 import { TableFrame, DataTable, THead, TBody, TFoot, Tr, Th, Td } from '@/components/ui/TableParts'
 import { Select } from '@/components/ui/Select'
+import { Card } from '@/components/ui/Card'
 
 interface Prov { id: string; nombre: string; tipo: string }
 
@@ -99,7 +100,7 @@ export function NuevaRendicionView({
   return (
     <div className="space-y-6">
       {/* Paso 1: seleccionar proveedor */}
-      <div className="rounded-lg border border-border bg-card p-4">
+      <Card>
         <Field htmlFor="r-prov" label="Proveedor" required>
           <Select
             id="r-prov"
@@ -114,7 +115,7 @@ export function NuevaRendicionView({
             ))}
           </Select>
         </Field>
-      </div>
+      </Card>
 
       {/* Paso 2: preview de líneas */}
       {!idProvSeleccionado ? (
@@ -122,14 +123,14 @@ export function NuevaRendicionView({
           Elegí un proveedor para ver las ventas pendientes de rendirle.
         </div>
       ) : lineas.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-border bg-card p-10 text-center">
+        <Card padding="none" className="border-dashed p-10 text-center">
           <p className="font-display text-lg mb-2">No hay líneas pendientes</p>
           <p className="text-sm text-muted">
             Este proveedor no tiene ventas de consignación con saldo pendiente
             de rendir. Todas las ventas anteriores ya fueron rendidas o
             excluidas manualmente.
           </p>
-        </div>
+        </Card>
       ) : (
         <>
           <TableFrame>
@@ -222,7 +223,7 @@ export function NuevaRendicionView({
             al proveedor. Se puede reincluir mientras no confirmes esta rendición.
           </div>
 
-          <div className="rounded-lg border border-border bg-card p-4 flex flex-col gap-3 md:flex-row md:items-end">
+          <Card className="flex flex-col gap-3 md:flex-row md:items-end">
             <div className="flex-1">
               <Field htmlFor="r-obs" label="Observaciones">
                 <Textarea
@@ -241,7 +242,7 @@ export function NuevaRendicionView({
             >
               {pending ? 'Generando…' : `Confirmar rendición · $ ${total.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`}
             </Button>
-          </div>
+          </Card>
         </>
       )}
 

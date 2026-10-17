@@ -8,6 +8,7 @@ import {
   listUsuarios,
 } from '@/lib/dal/administracion/administracion'
 import { RolesModal } from './RolesModal'
+import { Card } from '@/components/ui/Card'
 
 function cardLink(c: { href: string; label: string; value: string }) {
   return (
@@ -49,7 +50,7 @@ export default async function AdministracionHome() {
           {cards.slice(1).map(cardLink)}
         </section>
 
-        <section className="rounded-lg border border-border bg-card overflow-x-auto">
+        <Card as="section" padding="none" className="overflow-x-auto">
           <div className="border-b border-border px-4 py-3 flex items-center justify-between">
             <h3 className="font-display text-lg">Últimas acciones auditadas</h3>
             <Link href="/administracion/auditoria" className="-mx-2 rounded-[4px] px-2 py-1 text-xs font-medium text-muted transition-colors hover:bg-hover hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ink">
@@ -77,7 +78,7 @@ export default async function AdministracionHome() {
               ))}
             </ul>
           )}
-        </section>
+        </Card>
       </main>
     </>
   )

@@ -26,6 +26,7 @@ import {
 } from '../actions'
 import { mensajeDeError } from '@/lib/errores/mensajes'
 import { DataTable, THead, TBody, Tr, Th, Td } from '@/components/ui/TableParts'
+import { Card } from '@/components/ui/Card'
 
 /** Los medios que pueden financiar. El débito no tiene planes de cuotas. */
 const MEDIOS_FINANCIABLES: MedioPagoRecargo[] = ['tarjeta_credito', 'transferencia']
@@ -135,19 +136,19 @@ export function RecargosPanel({
 
   if (planes.length === 0) {
     return (
-      <section className="rounded-lg border border-border bg-card p-4">
+      <Card as="section">
         <h2 className="font-display text-lg text-text">Recargo por cuotas</h2>
         <p className="mt-2 text-sm text-muted">
           Todavía no hay planes de cuotas configurados. Cargá al menos uno en
           Precios antes de definir cuánto se cobra de más por cada plan: el
           recargo cuelga del plan, no al revés.
         </p>
-      </section>
+      </Card>
     )
   }
 
   return (
-    <section className="space-y-3 rounded-lg border border-border bg-card p-4">
+    <Card as="section" className="space-y-3">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <div>
           <h2 className="font-display text-lg text-text">Recargo por cuotas</h2>
@@ -332,7 +333,7 @@ export function RecargosPanel({
         comparación: aplican a varios procesadores con aranceles distintos, y
         promediarlos sería inventar un número.
       </p>
-    </section>
+    </Card>
   )
 }
 

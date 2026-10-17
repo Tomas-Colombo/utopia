@@ -12,6 +12,7 @@ import type {
 import type { CuentaDestinoRow } from '@/lib/types/ventas'
 import { formatearMoneda } from '@/lib/utils/moneda'
 import { PagoLiquidacionModal } from './PagoLiquidacionModal'
+import { Card } from '@/components/ui/Card'
 
 interface LiquidacionDetalleViewProps {
   data: LiquidacionConDetalle
@@ -97,7 +98,7 @@ export function LiquidacionDetalleView({
       </div>
 
       {/* Tarjeta de estado de pago */}
-      <div className="rounded-lg border border-border bg-card p-6 space-y-4">
+      <Card padding="none" className="p-6 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h2 className="font-display text-lg">Estado de liquidación</h2>
@@ -148,10 +149,10 @@ export function LiquidacionDetalleView({
             <p className="mt-1 text-foreground whitespace-pre-wrap">{liquidacion.observaciones}</p>
           </div>
         )}
-      </div>
+      </Card>
 
       {/* Líneas de venta selladas en la liquidación */}
-      <div className="rounded-lg border border-border bg-card p-6 space-y-4">
+      <Card padding="none" className="p-6 space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="font-display text-base font-semibold">Líneas de venta selladas</h3>
           <span className="text-sm text-muted">{lineas.length} línea(s)</span>
@@ -167,7 +168,7 @@ export function LiquidacionDetalleView({
             </p>
           }
         />
-      </div>
+      </Card>
 
       <PagoLiquidacionModal
         open={modalPagoOpen}

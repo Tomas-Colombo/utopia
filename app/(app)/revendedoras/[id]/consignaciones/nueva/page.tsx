@@ -4,6 +4,7 @@ import { requireModuleRole } from '@/lib/dal/guard'
 import { verifySession } from '@/lib/dal/session'
 import { obtenerRevendedora } from '@/lib/dal/revendedoras'
 import { NuevaConsignacionRevendedoraForm } from './NuevaConsignacionRevendedoraForm'
+import { Card } from '@/components/ui/Card'
 
 export default async function NuevaConsignacionRevendedoraPage(props: {
   params: Promise<{ id: string }>
@@ -23,12 +24,12 @@ export default async function NuevaConsignacionRevendedoraPage(props: {
         backHref={`/revendedoras/${id}/consignaciones`}
       />
       <main className="flex-1 p-6">
-        <div className="max-w-4xl rounded-lg border border-border bg-card p-6">
+        <Card padding="none" className="max-w-4xl p-6">
           <NuevaConsignacionRevendedoraForm
             idRevendedora={id}
             nombreRevendedora={`${revendedora.nombre} ${revendedora.apellido}`}
           />
-        </div>
+        </Card>
       </main>
     </>
   )

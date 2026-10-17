@@ -4,6 +4,7 @@ import { listRoles } from '@/lib/dal/administracion/administracion'
 import { listarRevendedoras } from '@/lib/dal/revendedoras'
 import type { RevendedoraRow } from '@/lib/types/revendedoras'
 import { InvitarUsuarioForm } from './InvitarUsuarioForm'
+import { Card } from '@/components/ui/Card'
 
 export default async function NuevoUsuarioPage() {
   const session = await verifySession()
@@ -18,12 +19,12 @@ export default async function NuevoUsuarioPage() {
     <>
       <Topbar title="Invitar usuario" session={session} backHref="/administracion/usuarios" />
       <main className="flex-1 p-6">
-        <div className="max-w-xl rounded-lg border border-border bg-card p-6">
+        <Card padding="none" className="max-w-xl p-6">
           <InvitarUsuarioForm
             roles={roles.map((r) => ({ id: r.id_rol, nombre: r.nombre }))}
             revendedorasLibres={revs}
           />
-        </div>
+        </Card>
       </main>
     </>
   )

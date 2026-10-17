@@ -11,6 +11,7 @@ import type { CategoriaRow } from '@/lib/types/inventario'
 import type { GananciaPorProductoRow } from '@/lib/types/reportes'
 import { Button } from '@/components/ui/Button'
 import { Select } from '@/components/ui/Select'
+import { TableFrame } from '@/components/ui/TableParts'
 
 export function GananciaProyectadaClient({
   rows,
@@ -173,7 +174,7 @@ export function GananciaProyectadaClient({
         }
       />
 
-      <div className="rounded-lg border border-border bg-card overflow-x-auto">
+      <TableFrame>
         <Table
           columns={columns}
           data={rows}
@@ -181,7 +182,7 @@ export function GananciaProyectadaClient({
           getRowId={(r) => r.id_producto}
           emptyState="Sin productos que coincidan con los filtros"
         />
-      </div>
+      </TableFrame>
 
       <Pagination
         page={page}

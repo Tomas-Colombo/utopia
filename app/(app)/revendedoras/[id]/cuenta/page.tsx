@@ -8,6 +8,7 @@ import { verifySession } from '@/lib/dal/session'
 import { obtenerRevendedora, obtenerCuentaCorrienteRevendedora } from '@/lib/dal/revendedoras'
 import { RevendedoraTabs } from '../RevendedoraTabs'
 import { formatearMoneda } from '@/lib/utils/moneda'
+import { Card } from '@/components/ui/Card'
 
 export default async function RevendedoraCuentaPage(props: {
   params: Promise<{ id: string }>
@@ -75,7 +76,7 @@ export default async function RevendedoraCuentaPage(props: {
           />
         </div>
 
-        <div className="rounded-lg border border-border bg-card p-6 space-y-4">
+        <Card padding="none" className="p-6 space-y-4">
           <h2 className="font-display text-lg">Resumen de cuenta corriente</h2>
           <div className="divide-y divide-border text-sm">
             <div className="flex justify-between py-2">
@@ -109,7 +110,7 @@ export default async function RevendedoraCuentaPage(props: {
               </span>
             </div>
           </div>
-        </div>
+        </Card>
       </main>
     </>
   )

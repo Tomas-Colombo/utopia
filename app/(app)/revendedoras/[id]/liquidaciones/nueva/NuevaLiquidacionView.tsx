@@ -22,6 +22,7 @@ import {
   generarLiquidacionAction,
   reincluirDetalleLiquidacionAction,
 } from '../actions'
+import { Card } from '@/components/ui/Card'
 
 interface NuevaLiquidacionViewProps {
   revendedora: RevendedoraRow
@@ -206,7 +207,7 @@ export function NuevaLiquidacionView({
   return (
     <div className="space-y-6">
       {/* Selector de período */}
-      <div className="rounded-lg border border-border bg-card p-6">
+      <Card padding="none" className="p-6">
         <h2 className="font-display text-lg mb-4">Período de liquidación</h2>
         <div className="flex flex-wrap items-end gap-4">
           <Field htmlFor="liq-desde" label="Fecha desde">
@@ -229,7 +230,7 @@ export function NuevaLiquidacionView({
             Consultar período
           </Button>
         </div>
-      </div>
+      </Card>
 
       {/* Tarjetas resumen devueltas por el SP preview_liquidacion */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -257,7 +258,7 @@ export function NuevaLiquidacionView({
       </div>
 
       {/* Líneas pendientes a liquidar */}
-      <div className="rounded-lg border border-border bg-card p-6 space-y-4">
+      <Card padding="none" className="p-6 space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="font-display text-base font-semibold">Líneas a liquidar</h3>
           <span className="text-sm text-muted">{visibles.length} línea(s)</span>
@@ -273,7 +274,7 @@ export function NuevaLiquidacionView({
             </p>
           }
         />
-      </div>
+      </Card>
 
       {/* Líneas excluidas */}
       {excluidas.length > 0 && (
@@ -292,7 +293,7 @@ export function NuevaLiquidacionView({
       )}
 
       {/* Observaciones y confirmación */}
-      <div className="rounded-lg border border-border bg-card p-6 space-y-4">
+      <Card padding="none" className="p-6 space-y-4">
         <Field htmlFor="liq-obs" label="Observaciones (opcional)">
           <Textarea
             id="liq-obs"
@@ -318,7 +319,7 @@ export function NuevaLiquidacionView({
             Generar liquidación
           </Button>
         </div>
-      </div>
+      </Card>
 
       <ConfirmDialog
         open={confirmOpen}

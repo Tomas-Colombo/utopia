@@ -1,6 +1,7 @@
 'use client'
 
 import { Button } from '@/components/ui/Button'
+import { Card } from '@/components/ui/Card'
 
 export default function ReportesError({
   unstable_retry,
@@ -10,7 +11,7 @@ export default function ReportesError({
 }) {
   return (
     <main className="flex-1 p-6 flex flex-col items-center justify-center min-h-[50vh]">
-      <div className="flex flex-col items-center max-w-md text-center p-8 bg-card border border-border rounded-lg shadow-sm">
+      <Card padding="none" className="flex flex-col items-center max-w-md text-center p-8 shadow-sm">
         <div className="w-12 h-12 bg-destructive/10 text-destructive rounded-full flex items-center justify-center mb-4">
           <span className="text-xl font-bold">!</span>
         </div>
@@ -21,7 +22,7 @@ export default function ReportesError({
         <Button onClick={() => unstable_retry()} variant="primary">
           Intentar de nuevo
         </Button>
-      </div>
+      </Card>
     </main>
   )
 }

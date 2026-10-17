@@ -16,6 +16,7 @@ import {
 import { vencerReservasAction } from '../actions'
 import { mensajeDeError } from '@/lib/errores/mensajes'
 import { TableFrame, DataTable, THead, TBody, Tr, Th, Td } from '@/components/ui/TableParts'
+import { Card } from '@/components/ui/Card'
 
 type Row = ReservaRow & {
   cliente: { id_cliente: string; nombre: string } | null
@@ -56,7 +57,7 @@ export function ReservasClient({ rows }: { rows: Row[] }) {
       </div>
 
       {rows.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-border bg-card p-10 text-center">
+        <Card padding="none" className="border-dashed p-10 text-center">
           <p className="font-display text-lg mb-2">Sin reservas</p>
           <p className="text-sm text-muted mb-4">
             Creá una reserva para bloquear ítems por un plazo determinado.
@@ -67,7 +68,7 @@ export function ReservasClient({ rows }: { rows: Row[] }) {
           >
             Nueva reserva
           </Link>
-        </div>
+        </Card>
       ) : (
         <TableFrame>
           <DataTable>

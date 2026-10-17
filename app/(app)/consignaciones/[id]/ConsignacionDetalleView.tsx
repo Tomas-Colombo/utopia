@@ -28,6 +28,7 @@ import {
 } from '../actions'
 import { mensajeDeError } from '@/lib/errores/mensajes'
 import { TableFrame, DataTable, THead, TBody, TFoot, Tr, Th, Td } from '@/components/ui/TableParts'
+import { Card } from '@/components/ui/Card'
 
 const DETALLE_VARIANT: Record<EstadoConsignacionDetalle, 'success' | 'warning' | 'neutral'> = {
   pendiente: 'warning',
@@ -222,7 +223,7 @@ export function ConsignacionDetalleView({
   return (
     <div className="space-y-6">
       {/* Metadata */}
-      <div className="rounded-lg border border-border bg-card p-4 grid grid-cols-2 gap-4 text-sm md:grid-cols-4">
+      <Card className="grid grid-cols-2 gap-4 text-sm md:grid-cols-4">
         <div>
           <div className="text-xs uppercase font-mono text-muted">Proveedor</div>
           <div className="mt-1">{cons.proveedor?.nombre ?? '—'}</div>
@@ -277,11 +278,11 @@ export function ConsignacionDetalleView({
             </Button>
           )}
         </div>
-      </div>
+      </Card>
 
       {/* Agregar item */}
       {!readonly && (
-        <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+        <Card className="space-y-3">
           <h3 className="font-display text-lg">Apartar ítem</h3>
           <BuscadorProductos
             id="qr-c"
@@ -313,7 +314,7 @@ export function ConsignacionDetalleView({
               placeholder="Ej: sin rotación, defecto de fábrica"
             />
           </Field>
-        </div>
+        </Card>
       )}
 
       {/* Tabla de items */}

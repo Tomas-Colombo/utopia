@@ -4,6 +4,7 @@ import { verifySession } from '@/lib/dal/session'
 import { listCategoriasActivas } from '@/lib/dal/inventario/categoria'
 import { getProducto } from '@/lib/dal/inventario/producto'
 import { EditarProductoForm } from './EditarProductoForm'
+import { Card } from '@/components/ui/Card'
 
 /** Whitelist para el ?from — evita open-redirect: solo rutas internas del app. */
 function safeBackHref(from: string | undefined, fallback: string): string {
@@ -33,9 +34,9 @@ export default async function EditarProductoPage(props: {
         backHref={safeBackHref(from, '/inventario')}
       />
       <main className="flex-1 p-6">
-        <div className="max-w-2xl rounded-lg border border-border bg-card p-6">
+        <Card padding="none" className="max-w-2xl p-6">
           <EditarProductoForm producto={producto} categorias={categorias} />
-        </div>
+        </Card>
       </main>
     </>
   )

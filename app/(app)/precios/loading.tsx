@@ -1,4 +1,5 @@
 import { SkeletonKpis, SkeletonTopbar } from '@/components/shell/PageSkeleton'
+import { Card } from '@/components/ui/Card'
 
 /**
  * Estado de carga instantáneo de la home de Precios.
@@ -15,21 +16,21 @@ export default function LoadingPrecios() {
         <SkeletonKpis />
 
         <section className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          <div className="rounded-lg border border-border bg-card p-5">
+          <Card padding="lg">
             <div className="text-sm text-muted">Configurar</div>
             <div className="mt-1 font-display text-xl">Reglas de precios</div>
             <p className="mt-2 text-sm text-muted">
               Margen, descuentos, recargos por forma de pago. Cascada: producto &gt; categoría &gt;
               proveedor &gt; global.
             </p>
-          </div>
-          <div className="rounded-lg border border-border bg-card p-5">
+          </Card>
+          <Card padding="lg">
             <div className="text-sm text-muted">Ejecutar</div>
             <div className="mt-1 font-display text-xl">Control de precios</div>
             <p className="mt-2 text-sm text-muted">
               Ver productos desactualizados y aplicar recálculo (individual o masivo).
             </p>
-          </div>
+          </Card>
         </section>
       </main>
     </>

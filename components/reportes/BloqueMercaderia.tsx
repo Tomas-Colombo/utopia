@@ -1,6 +1,7 @@
 import React from 'react'
 import Link from 'next/link'
 import type { FinanzasPosicion } from '@/lib/types/reportes'
+import { Card } from '@/components/ui/Card'
 
 function formatMoney(value: number | null | undefined) {
   if (value == null) return '—'
@@ -17,7 +18,7 @@ export function BloqueMercaderia({ posicion }: BloqueMercaderiaProps) {
   const consignacion = posicion.mercaderia_terceros ?? 0
 
   return (
-    <section aria-labelledby="h2-mercaderia" className="rounded-lg border border-border bg-card overflow-hidden h-full flex flex-col">
+    <Card as="section" padding="none" aria-labelledby="h2-mercaderia" className="overflow-hidden h-full flex flex-col">
       <div className="p-4 border-b border-border bg-panel flex justify-between items-center">
         <h2 id="h2-mercaderia" className="font-display text-lg">Tu stock hoy</h2>
       </div>
@@ -65,6 +66,6 @@ export function BloqueMercaderia({ posicion }: BloqueMercaderiaProps) {
           )}
         </div>
       </div>
-    </section>
+    </Card>
   )
 }
