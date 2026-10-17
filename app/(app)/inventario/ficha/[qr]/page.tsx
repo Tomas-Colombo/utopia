@@ -86,7 +86,7 @@ export default async function FichaItemPage(props: {
               <Link
                 href={`/inventario/imprimir-etiquetas?qrs=${encodeURIComponent(detalle.qr_code)}`}
                 target="_blank"
-                className="w-full text-center rounded-md bg-card-3 border border-border px-3 py-2 text-sm font-semibold hover:bg-card-hover"
+                className="w-full text-center rounded-md bg-card-3 border border-border px-3 py-2 text-sm font-semibold hover:bg-hover"
               >
                 Imprimir Etiqueta
               </Link>

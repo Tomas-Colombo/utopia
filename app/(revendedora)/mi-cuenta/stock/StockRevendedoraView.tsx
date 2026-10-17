@@ -10,6 +10,7 @@ import { useToast } from '@/components/ui/Toast'
 import { mensajeDeError } from '@/lib/errores/mensajes'
 import { declararVentaAction } from '../actions'
 import { Input } from '@/components/ui/Input'
+import { Badge } from '@/components/ui/Badge'
 
 interface Props {
   items: RvpMiStockRow[]
@@ -66,7 +67,7 @@ export function StockRevendedoraView({ items }: Props) {
       </div>
 
       {items.length === 0 ? (
-        <div className="p-8 text-center rounded-xl border border-dashed border-border bg-card">
+        <div className="p-8 text-center rounded-lg border border-dashed border-border bg-card">
           <p className="text-muted text-sm">No tenés prendas en tu poder en este momento.</p>
         </div>
       ) : (
@@ -74,7 +75,7 @@ export function StockRevendedoraView({ items }: Props) {
           {items.map((item) => (
             <div
               key={item.id_item}
-              className="p-4 rounded-xl border border-border bg-card shadow-sm flex flex-col justify-between space-y-3"
+              className="p-4 rounded-lg border border-border bg-card shadow-[0_1px_2px_rgb(0_0_0/0.04)] flex flex-col justify-between space-y-3"
             >
               <div>
                 <div className="flex items-start justify-between gap-2">
@@ -93,10 +94,10 @@ export function StockRevendedoraView({ items }: Props) {
 
               <div className="pt-2 border-t border-border/50 flex items-center justify-between">
                 {item.declaracion_pendiente ? (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400">
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                  <Badge variant="warning">
+                    <span className="w-1.5 h-1.5 rounded-full bg-warn motion-safe:animate-pulse" />
                     Pendiente de confirmar
-                  </span>
+                  </Badge>
                 ) : (
                   <Button
                     variant="primary"
@@ -121,7 +122,7 @@ export function StockRevendedoraView({ items }: Props) {
           title="Declarar venta de prenda"
         >
           <div className="space-y-4">
-            <div className="p-3 rounded-lg bg-card-hover border border-border space-y-1">
+            <div className="p-3 rounded-lg bg-panel-2 border border-border space-y-1">
               <p className="text-sm font-semibold">{selectedItem.nombre_producto}</p>
               {selectedItem.talle && (
                 <div className="text-xs text-muted">

@@ -1,6 +1,7 @@
 import { verifySession } from '@/lib/dal/session'
 import { listarMisLiquidaciones } from '@/lib/dal/revendedoras'
 import { formatearMoneda } from '@/lib/utils/moneda'
+import { Badge } from '@/components/ui/Badge'
 
 export const metadata = {
   title: 'Mis liquidaciones | Revendedoras',
@@ -12,7 +13,7 @@ export default async function MisLiquidacionesPage() {
 
   if (!res.ok) {
     return (
-      <div className="p-6 rounded-xl border border-destructive/30 bg-destructive/5 text-destructive">
+      <div className="p-6 rounded-lg border border-destructive/30 bg-destructive/5 text-destructive">
         <p className="font-medium">No se pudieron cargar tus liquidaciones.</p>
       </div>
     )
@@ -35,7 +36,7 @@ export default async function MisLiquidacionesPage() {
       </div>
 
       {liquidaciones.length === 0 ? (
-        <div className="p-8 text-center rounded-xl border border-dashed border-border bg-card">
+        <div className="p-8 text-center rounded-lg border border-dashed border-border bg-card">
           <p className="text-muted text-sm">No tenés liquidaciones registradas todavía.</p>
         </div>
       ) : (
@@ -43,7 +44,7 @@ export default async function MisLiquidacionesPage() {
           {liquidaciones.map((l) => (
             <div
               key={l.id_liquidacion}
-              className="p-4 rounded-xl border border-border bg-card shadow-sm space-y-3"
+              className="p-4 rounded-lg border border-border bg-card shadow-[0_1px_2px_rgb(0_0_0/0.04)] space-y-3"
             >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/50 pb-2">
                 <div>
@@ -57,13 +58,13 @@ export default async function MisLiquidacionesPage() {
                 </div>
                 <div>
                   {l.estado === 'pagada' ? (
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                    <Badge variant="success">
                       Rendición pagada
-                    </span>
+                    </Badge>
                   ) : (
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                    <Badge variant="warning">
                       Saldo pendiente de rendir
-                    </span>
+                    </Badge>
                   )}
                 </div>
               </div>

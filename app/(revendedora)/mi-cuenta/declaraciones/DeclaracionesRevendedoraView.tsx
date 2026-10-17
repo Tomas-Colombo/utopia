@@ -8,6 +8,7 @@ import { Modal } from '@/components/ui/Modal'
 import { useToast } from '@/components/ui/Toast'
 import { mensajeDeError } from '@/lib/errores/mensajes'
 import { retirarDeclaracionAction } from '../actions'
+import { Badge } from '@/components/ui/Badge'
 
 interface Props {
   declaraciones: RvpMisDeclaracionesRow[]
@@ -49,7 +50,7 @@ export function DeclaracionesRevendedoraView({ declaraciones }: Props) {
       </div>
 
       {declaraciones.length === 0 ? (
-        <div className="p-8 text-center rounded-xl border border-dashed border-border bg-card">
+        <div className="p-8 text-center rounded-lg border border-dashed border-border bg-card">
           <p className="text-muted text-sm">No tenés declaraciones de venta registradas.</p>
         </div>
       ) : (
@@ -57,7 +58,7 @@ export function DeclaracionesRevendedoraView({ declaraciones }: Props) {
           {declaraciones.map((d) => (
             <div
               key={d.id_declaracion}
-              className="p-4 rounded-xl border border-border bg-card shadow-sm space-y-3"
+              className="p-4 rounded-lg border border-border bg-card shadow-[0_1px_2px_rgb(0_0_0/0.04)] space-y-3"
             >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/50 pb-2">
                 <div>
@@ -72,15 +73,15 @@ export function DeclaracionesRevendedoraView({ declaraciones }: Props) {
                     {formatearMoneda(d.precio_venta)}
                   </span>
                   {d.estado === 'pendiente' && (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400">
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                    <Badge variant="warning">
+                      <span className="w-1.5 h-1.5 rounded-full bg-warn motion-safe:animate-pulse" />
                       Pendiente
-                    </span>
+                    </Badge>
                   )}
                   {d.estado === 'confirmada' && (
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                    <Badge variant="success">
                       Confirmada
-                    </span>
+                    </Badge>
                   )}
                   {d.estado === 'rechazada' && (
                     <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-destructive/10 text-destructive">
@@ -112,7 +113,7 @@ export function DeclaracionesRevendedoraView({ declaraciones }: Props) {
                   <Button
                     variant="secondary"
                     size="sm"
-                    className="min-h-[44px] px-4 text-xs border-border hover:bg-card-hover"
+                    className="min-h-[44px] px-4 text-xs border-border hover:bg-hover"
                     onClick={() => setSelectedParaRetirar(d)}
                   >
                     Retirar declaración

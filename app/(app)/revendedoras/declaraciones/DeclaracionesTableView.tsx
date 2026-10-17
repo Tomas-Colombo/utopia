@@ -191,7 +191,7 @@ export function DeclaracionesTableView({ declaraciones, puedeGestionar }: Props)
               </strong>{' '}
               para el artículo <strong className="text-text">{declaracionConfirmar.nombre_producto}</strong>.
             </p>
-            <div className="p-3 rounded-lg bg-card-hover border border-border text-xs space-y-1">
+            <div className="p-3 rounded-lg bg-panel-2 border border-border text-xs space-y-1">
               <div>
                 <span className="text-muted">SKU:</span> <span className="font-mono font-semibold">{declaracionConfirmar.sku}</span>
               </div>

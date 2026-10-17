@@ -12,7 +12,7 @@ export default async function MiStockPage() {
 
   if (!res.ok) {
     return (
-      <div className="p-6 rounded-xl border border-destructive/30 bg-destructive/5 text-destructive">
+      <div className="p-6 rounded-lg border border-destructive/30 bg-destructive/5 text-destructive">
         <p className="font-medium">No se pudo cargar el stock en tu poder.</p>
       </div>
     )

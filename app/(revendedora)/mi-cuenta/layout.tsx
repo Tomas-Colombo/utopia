@@ -31,8 +31,8 @@ export default async function RevendedoraLayout({
   if (!moduloHabilitado) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center p-6 bg-bg text-text text-center">
-        <div className="max-w-md w-full p-8 rounded-xl border border-border bg-card shadow-sm space-y-4">
-          <div className="w-12 h-12 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center mx-auto text-2xl font-bold">
+        <div className="max-w-md w-full p-8 rounded-lg border border-border bg-card shadow-[0_1px_2px_rgb(0_0_0/0.04)] space-y-4">
+          <div className="w-12 h-12 rounded-full bg-warn-bg text-warn-ink flex items-center justify-center mx-auto text-2xl font-bold">
             !
           </div>
           <h1 className="text-xl font-bold font-display">Módulo deshabilitado</h1>
@@ -64,13 +64,13 @@ export default async function RevendedoraLayout({
     <ToastProvider>
       <div className="min-h-screen bg-bg text-text flex flex-col">
         {/* Header superior móvil / desktop */}
-        <header className="border-b border-border bg-card px-4 py-3 sticky top-0 z-30">
+        <header className="band-scope sticky top-0 z-30 bg-band px-4 py-3 text-band-ink">
           <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <span className="font-display font-semibold text-lg tracking-tight">
+              <span className="font-display text-lg text-band-ink">
                 Portal Revendedoras
               </span>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-accent/10 text-accent font-medium">
+              <span className="eyebrow rounded-full border border-band-line px-2 py-0.5 text-band-muted">
                 Revendedora
               </span>
             </div>

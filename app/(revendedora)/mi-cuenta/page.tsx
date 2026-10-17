@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { verifySession } from '@/lib/dal/session'
 import { obtenerMiCuenta } from '@/lib/dal/revendedoras'
 import { formatearMoneda } from '@/lib/utils/moneda'
+import { Badge } from '@/components/ui/Badge'
 
 export const metadata = {
   title: 'Mi cuenta | Revendedoras',
@@ -13,7 +14,7 @@ export default async function MiCuentaResumenPage() {
 
   if (!res.ok) {
     return (
-      <div className="p-6 rounded-xl border border-destructive/30 bg-destructive/5 text-destructive">
+      <div className="p-6 rounded-lg border border-destructive/30 bg-destructive/5 text-destructive">
         <p className="font-medium">No se pudo cargar tu resumen de cuenta.</p>
       </div>
     )
@@ -33,7 +34,7 @@ export default async function MiCuentaResumenPage() {
       {/* Grid de KPIs principales */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Piezas en poder */}
-        <div className="p-5 rounded-xl border border-border bg-card shadow-sm space-y-2">
+        <div className="p-5 rounded-lg border border-border bg-card shadow-[0_1px_2px_rgb(0_0_0/0.04)] space-y-2">
           <span className="text-xs font-semibold text-muted uppercase tracking-wider">
             Mercadería en tu poder
           </span>
@@ -55,7 +56,7 @@ export default async function MiCuentaResumenPage() {
         </div>
 
         {/* Total vendido */}
-        <div className="p-5 rounded-xl border border-border bg-card shadow-sm space-y-2">
+        <div className="p-5 rounded-lg border border-border bg-card shadow-[0_1px_2px_rgb(0_0_0/0.04)] space-y-2">
           <span className="text-xs font-semibold text-muted uppercase tracking-wider">
             Total vendido
           </span>
@@ -76,7 +77,7 @@ export default async function MiCuentaResumenPage() {
         </div>
 
         {/* Saldo adeudado */}
-        <div className="p-5 rounded-xl border border-border bg-card shadow-sm space-y-2">
+        <div className="p-5 rounded-lg border border-border bg-card shadow-[0_1px_2px_rgb(0_0_0/0.04)] space-y-2">
           <span className="text-xs font-semibold text-muted uppercase tracking-wider">
             Saldo a rendir al local
           </span>
@@ -97,14 +98,14 @@ export default async function MiCuentaResumenPage() {
         </div>
 
         {/* Comisión estimada (rotulada claramente) */}
-        <div className="p-5 rounded-xl border border-border bg-card shadow-sm space-y-2">
+        <div className="p-5 rounded-lg border border-border bg-card shadow-[0_1px_2px_rgb(0_0_0/0.04)] space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-muted uppercase tracking-wider">
               Comisión estimada
             </span>
-            <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400">
+            <Badge variant="warning">
               Estimada
-            </span>
+            </Badge>
           </div>
           <div className="text-3xl font-bold font-display">
             {formatearMoneda(cuenta.comision_estimada)}
@@ -115,7 +116,7 @@ export default async function MiCuentaResumenPage() {
         </div>
 
         {/* Tu escala o tramo de comisión */}
-        <div className="p-5 rounded-xl border border-border bg-card shadow-sm space-y-2">
+        <div className="p-5 rounded-lg border border-border bg-card shadow-[0_1px_2px_rgb(0_0_0/0.04)] space-y-2">
           <span className="text-xs font-semibold text-muted uppercase tracking-wider">
             Tu comisión vigente
           </span>
@@ -128,7 +129,7 @@ export default async function MiCuentaResumenPage() {
         </div>
 
         {/* Declaraciones pendientes */}
-        <div className="p-5 rounded-xl border border-border bg-card shadow-sm space-y-2">
+        <div className="p-5 rounded-lg border border-border bg-card shadow-[0_1px_2px_rgb(0_0_0/0.04)] space-y-2">
           <span className="text-xs font-semibold text-muted uppercase tracking-wider">
             Declaraciones de venta
           </span>

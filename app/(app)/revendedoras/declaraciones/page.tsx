@@ -80,8 +80,8 @@ export default async function DeclaracionesBandejaPage(props: PageProps) {
                 href={e.valor === 'todas' ? '/revendedoras/declaraciones' : `/revendedoras/declaraciones?estado=${e.valor}`}
                 className={`min-h-[44px] inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg whitespace-nowrap transition-colors ${
                   isActive
-                    ? 'bg-accent text-accent-contrast shadow-sm'
-                    : 'text-muted hover:text-text hover:bg-card-hover'
+                    ? 'bg-accent text-accent-ink shadow-sm'
+                    : 'text-muted hover:text-text hover:bg-hover'
                 }`}
               >
                 {e.label}
