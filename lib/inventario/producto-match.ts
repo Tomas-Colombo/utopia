@@ -42,3 +42,33 @@ export function buscarMatchNombre(
   if (!k) return null
   return index.get(k) ?? null
 }
+
+/**
+ * Sugerencias del buscador de productos (ventas, consignaciones): SKU exacto,
+ * después prefijo de SKU, prefijo de nombre, SKU que contiene y nombre que
+ * contiene; a igual puntaje, orden alfabético. Texto vacío → sin sugerencias.
+ */
+export function rankearProductos<T extends { nombre: string; sku: string | null }>(
+  productos: T[],
+  texto: string,
+  limite = 8,
+): T[] {
+  const q = normalizar(texto)
+  if (!q) return []
+  const puntaje = (p: T): number => {
+    const sku = normalizar(p.sku ?? '')
+    const nombre = normalizar(p.nombre)
+    if (sku && sku === q) return 0
+    if (sku && sku.startsWith(q)) return 1
+    if (nombre.startsWith(q)) return 2
+    if (sku && sku.includes(q)) return 3
+    if (nombre.includes(q)) return 4
+    return Number.POSITIVE_INFINITY
+  }
+  return productos
+    .map((p) => ({ p, s: puntaje(p) }))
+    .filter((x) => Number.isFinite(x.s))
+    .sort((a, b) => a.s - b.s || a.p.nombre.localeCompare(b.p.nombre))
+    .slice(0, limite)
+    .map((x) => x.p)
+}

@@ -1,16 +1,18 @@
 'use client'
 
-import { useEffect, useRef, useState, useTransition } from 'react'
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { BuscadorProductos } from '@/components/inventario/BuscadorProductos'
+import { BuscadorProductos, type SugerenciaProducto } from '@/components/inventario/BuscadorProductos'
 import { QrScanner } from '@/components/inventario/QrScanner'
 import { Button } from '@/components/ui/Button'
+import { CameraIcon } from '@/components/ui/CameraIcon'
 import { Field } from '@/components/ui/Field'
 import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
 import { useToast } from '@/components/ui/Toast'
 import { Table, type Column } from '@/components/ui/Table'
 import { mensajeDeError } from '@/lib/errores/mensajes'
+import { rankearProductos } from '@/lib/inventario/producto-match'
 import { crearConsignacionRevendedoraAction } from '../actions'
 
 interface ItemSeleccionado {
@@ -23,12 +25,22 @@ interface ItemSeleccionado {
   precio_actual: number
 }
 
+export interface ProductoEnStock {
+  id_producto: string
+  nombre: string
+  sku: string | null
+  stock_disponible: number
+}
+
 export function NuevaConsignacionRevendedoraForm({
   idRevendedora,
   nombreRevendedora,
+  catalogo,
 }: {
   idRevendedora: string
   nombreRevendedora: string
+  /** Productos con stock en el local; alimenta las sugerencias en vivo. */
+  catalogo: ProductoEnStock[]
 }) {
   const router = useRouter()
   const toast = useToast()
@@ -44,6 +56,22 @@ export function NuevaConsignacionRevendedoraForm({
   const [errorItem, setErrorItem] = useState<string | null>(null)
   const [items, setItems] = useState<ItemSeleccionado[]>([])
   const [camaraOpen, setCamaraOpen] = useState(false)
+
+  // Mismo ranking que el carrito de venta. El stock mostrado descuenta las
+  // unidades que ya están en este lote.
+  const sugerencias = useMemo<SugerenciaProducto[]>(
+    () =>
+      rankearProductos(catalogo, codigoInput).map((p) => {
+        const libres = p.stock_disponible - items.filter((i) => i.id_producto === p.id_producto).length
+        return {
+          id: p.id_producto,
+          nombre: p.nombre,
+          sku: p.sku,
+          detalle: `${libres} disponible${libres === 1 ? '' : 's'}`,
+        }
+      }),
+    [catalogo, codigoInput, items],
+  )
 
   async function handleBuscarItem(codigoLeido: string = codigoInput) {
     const codigo = codigoLeido.trim()
@@ -234,8 +262,8 @@ export function NuevaConsignacionRevendedoraForm({
             setCodigoInput(v)
             setErrorItem(null)
           }}
-          sugerencias={[]}
-          onElegir={() => {}}
+          sugerencias={sugerencias}
+          onElegir={(s) => void handleBuscarItem(s.sku || s.nombre)}
           onSubmit={(texto) => void handleBuscarItem(texto)}
           disabled={buscando}
           actions={
@@ -244,7 +272,7 @@ export function NuevaConsignacionRevendedoraForm({
                 {buscando ? 'Buscando...' : 'Agregar ítem'}
               </Button>
               <Button type="button" variant="secondary" onClick={() => setCamaraOpen((v) => !v)}>
-                {camaraOpen ? 'Cerrar' : 'Cámara'}
+                {camaraOpen ? 'Cerrar' : <><CameraIcon /> Cámara</>}
               </Button>
             </>
           }

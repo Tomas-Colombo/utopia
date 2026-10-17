@@ -11,6 +11,7 @@ import { Select } from '@/components/ui/Select'
 import { Textarea } from '@/components/ui/Textarea'
 import { useToast } from '@/components/ui/Toast'
 import { QrScanner } from '@/components/inventario/QrScanner'
+import { CameraIcon } from '@/components/ui/CameraIcon'
 import {
   SIN_TALLE_KEY,
   SelectorTalleMulti,
@@ -21,6 +22,7 @@ import {
   buscarMatchNombre,
   indexarPorNombre,
   normalizar,
+  rankearProductos,
 } from '@/lib/inventario/producto-match'
 import {
   formaPagoDeCuotas,
@@ -244,26 +246,7 @@ export function NuevaVentaView({
    * (`gen_random_bytes(12)`), más largo que cualquier SKU, y el test es
    * "el SKU/nombre contiene lo tipeado" — nunca al revés.
    */
-  const sugerencias = useMemo(() => {
-    const q = normalizar(qrInput)
-    if (!q) return []
-    const puntaje = (p: ProductoConDetalle): number => {
-      const sku = normalizar(p.sku ?? '')
-      const nombre = normalizar(p.nombre)
-      if (sku && sku === q) return 0
-      if (sku && sku.startsWith(q)) return 1
-      if (nombre.startsWith(q)) return 2
-      if (sku && sku.includes(q)) return 3
-      if (nombre.includes(q)) return 4
-      return Number.POSITIVE_INFINITY
-    }
-    return productos
-      .map((p) => ({ p, s: puntaje(p) }))
-      .filter((x) => Number.isFinite(x.s))
-      .sort((a, b) => a.s - b.s || a.p.nombre.localeCompare(b.p.nombre))
-      .slice(0, 8)
-      .map((x) => x.p)
-  }, [productos, qrInput])
+  const sugerencias = useMemo(() => rankearProductos(productos, qrInput), [productos, qrInput])
 
   // Combobox de cliente: mismo patrón que el buscador de productos. `cliInput`
   // guarda lo tipeado (o el nombre del cliente seleccionado en modo readonly).
@@ -1475,7 +1458,7 @@ export function NuevaVentaView({
                   variant="secondary"
                   onClick={() => setCamaraOpen((v) => !v)}
                 >
-                  {camaraOpen ? 'Cerrar' : '📷 Cámara'}
+                  {camaraOpen ? 'Cerrar' : <><CameraIcon /> Cámara</>}
                 </Button>
               </div>
             </Field>

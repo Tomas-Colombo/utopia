@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
 import { useToast } from '@/components/ui/Toast'
 import { QrScanner } from '@/components/inventario/QrScanner'
+import { CameraIcon } from '@/components/ui/CameraIcon'
 import {
   SIN_TALLE_KEY,
   SelectorTalleMulti,
@@ -390,7 +391,7 @@ export function NuevaReservaView({
                   variant="secondary"
                   onClick={() => setCamaraOpen((v) => !v)}
                 >
-                  {camaraOpen ? 'Cerrar' : '📷 Cámara'}
+                  {camaraOpen ? 'Cerrar' : <><CameraIcon /> Cámara</>}
                 </Button>
               </div>
             </Field>

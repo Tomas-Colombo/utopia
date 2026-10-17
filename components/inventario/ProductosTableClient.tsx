@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useMemo, useState, useTransition, type ReactNode } from 'react'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
+import { CameraIcon } from '@/components/ui/CameraIcon'
 import { BuscadorProductos, type SugerenciaProducto } from '@/components/inventario/BuscadorProductos'
 import { Pagination } from '@/components/ui/Pagination'
 import { Table, type Column } from '@/components/ui/Table'
@@ -306,15 +307,7 @@ export function ProductosTableClient({
                 title="Escanear con cámara"
                 className="inline-flex shrink-0 items-center gap-2 rounded-md border border-line-2 px-3 py-2 text-[13px] font-medium text-muted transition-colors hover:bg-hover hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
               >
-                <svg aria-hidden viewBox="0 0 16 16" fill="none" className="h-4 w-4">
-                  <path
-                    d="M2 5.5A1.5 1.5 0 0 1 3.5 4h1.3l1-1.5h4.4l1 1.5h1.3A1.5 1.5 0 0 1 14 5.5v6a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 11.5v-6Z"
-                    stroke="currentColor"
-                    strokeWidth="1.3"
-                    strokeLinejoin="round"
-                  />
-                  <circle cx="8" cy="8.5" r="2.25" stroke="currentColor" strokeWidth="1.3" />
-                </svg>
+                <CameraIcon className="h-4 w-4" />
                 <span className="hidden sm:inline">Escanear</span>
               </Link>
             )}

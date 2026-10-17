@@ -3,6 +3,7 @@ import { Topbar } from '@/components/shell/Topbar'
 import { requireModuleRole } from '@/lib/dal/guard'
 import { verifySession } from '@/lib/dal/session'
 import { obtenerRevendedora } from '@/lib/dal/revendedoras'
+import { listProductosConDetalle } from '@/lib/dal/inventario/producto'
 import { NuevaConsignacionRevendedoraForm } from './NuevaConsignacionRevendedoraForm'
 import { Card } from '@/components/ui/Card'
 
@@ -13,8 +14,21 @@ export default async function NuevaConsignacionRevendedoraPage(props: {
   await requireModuleRole(session, 'revendedoras', 'crear')
 
   const { id } = await props.params
-  const revendedora = await obtenerRevendedora(session, id)
+  const [revendedora, productos] = await Promise.all([
+    obtenerRevendedora(session, id),
+    listProductosConDetalle({ soloActivos: true }),
+  ])
   if (!revendedora) notFound()
+
+  // Solo lo que hay en el local: lo demás no se puede consignar.
+  const catalogo = productos
+    .filter((p) => p.stock_disponible > 0)
+    .map((p) => ({
+      id_producto: p.id_producto,
+      nombre: p.nombre,
+      sku: p.sku,
+      stock_disponible: p.stock_disponible,
+    }))
 
   return (
     <>
@@ -28,6 +42,7 @@ export default async function NuevaConsignacionRevendedoraPage(props: {
           <NuevaConsignacionRevendedoraForm
             idRevendedora={id}
             nombreRevendedora={`${revendedora.nombre} ${revendedora.apellido}`}
+            catalogo={catalogo}
           />
         </Card>
       </main>
