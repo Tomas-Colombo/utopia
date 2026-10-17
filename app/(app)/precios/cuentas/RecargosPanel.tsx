@@ -301,15 +301,16 @@ export function RecargosPanel({
                     {margen === null ? '—' : `${margen >= 0 ? '+' : ''}${pct(margen)}%`}
                   </Td>
                   <Td align="right" className="px-3 py-2">
-                    <button
+                    <Button
+                      variant="bare"
                       type="button"
                       onClick={() => cerrar(r.id_recargo_cuotas)}
                       disabled={pending}
-                      className="text-xs text-muted underline-offset-2 hover:text-alerta-ink hover:underline disabled:opacity-50"
+                      className="text-xs text-muted underline-offset-2 hover:text-alerta-ink hover:underline"
                       title="Cierra la vigencia. El recargo no se borra: deja de aplicar desde hoy."
                     >
                       Dar de baja
-                    </button>
+                    </Button>
                   </Td>
                 </Tr>
               ))}

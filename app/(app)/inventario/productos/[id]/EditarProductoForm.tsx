@@ -11,6 +11,8 @@ import { useToast } from '@/components/ui/Toast'
 import type { CategoriaRow, ProductoRow } from '@/lib/types/inventario'
 import { updateProductoAction } from '../../actions'
 import { mensajeDeError } from '@/lib/errores/mensajes'
+import { Checkbox } from '@/components/ui/Checkbox'
+import { Select } from '@/components/ui/Select'
 
 export function EditarProductoForm({
   producto,
@@ -67,19 +69,18 @@ export function EditarProductoForm({
       </Field>
 
       <Field htmlFor="prod-cat" label="Categoría" required error={errors.categoria}>
-        <select
+        <Select
           id="prod-cat"
           value={idCategoria}
           onChange={(e) => setIdCategoria(e.target.value)}
           aria-invalid={!!errors.categoria || undefined}
-          className="w-full"
         >
           {categorias.map((c) => (
             <option key={c.id_categoria} value={c.id_categoria}>
               {c.nombre}
             </option>
           ))}
-        </select>
+        </Select>
       </Field>
 
       <Field htmlFor="prod-stock" label="Stock mínimo">
@@ -101,11 +102,9 @@ export function EditarProductoForm({
       </Field>
 
       <label className="flex items-center gap-2 text-sm text-text">
-        <input
-          type="checkbox"
+        <Checkbox
           checked={activo}
           onChange={(e) => setActivo(e.target.checked)}
-          className="h-4 w-4 rounded border-border text-ink focus:ring-ink"
         />
         Producto activo
       </label>

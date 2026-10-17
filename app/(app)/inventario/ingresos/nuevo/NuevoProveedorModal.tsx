@@ -11,6 +11,7 @@ import { useToast } from '@/components/ui/Toast'
 import type { ProveedorRow, TipoProveedor } from '@/lib/types/inventario'
 import { createProveedorAction } from '../../actions'
 import { mensajeDeError } from '@/lib/errores/mensajes'
+import { Select } from '@/components/ui/Select'
 
 const TIPOS: { value: TipoProveedor; label: string }[] = [
   { value: 'mayorista', label: 'Mayorista' },
@@ -128,18 +129,17 @@ export function NuevoProveedorModal({
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field htmlFor="pm-tipo" label="Tipo" required>
-            <select
+            <Select
               id="pm-tipo"
               value={tipo}
               onChange={(e) => setTipo(e.target.value as TipoProveedor)}
-              className="w-full"
             >
               {TIPOS.map((t) => (
                 <option key={t.value} value={t.value}>
                   {t.label}
                 </option>
               ))}
-            </select>
+            </Select>
           </Field>
           <Field htmlFor="pm-dias" label="Días de rotación esperados" hint="Usado por Reportes (RF-12)">
             <NumberInput id="pm-dias" min={0} value={dias} onChange={(e) => setDias(e.target.value)} />

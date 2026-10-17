@@ -52,6 +52,7 @@ import type { ReglaComisionConEscalas } from '@/lib/types/comisiones'
 import { estimarComision, resolverComision } from '@/lib/comisiones/resolver-comision'
 import { hoyISO } from '@/lib/utils/hoy'
 import { TableFrame, DataTable, THead, TBody, TFoot, Tr, Th, Td } from '@/components/ui/TableParts'
+import { IconButton } from '@/components/ui/IconButton'
 
 interface ClienteOption { id: string; nombre: string; telefono: string | null }
 export interface RevendedoraOption { id: string; nombre: string }
@@ -1323,7 +1324,7 @@ export function NuevaVentaView({
                 >
                   Canal de venta
                 </label>
-                <select
+                <Select
                   id="canal-venta"
                   aria-label="Canal de venta"
                   value={canal}
@@ -1337,11 +1338,11 @@ export function NuevaVentaView({
                       setLineas([])
                     }
                   }}
-                  className="w-full rounded-md border border-border bg-card-2 px-3 py-1.5 text-sm"
+                  className="px-3 py-1.5 text-sm"
                 >
                   <option value="local">Local</option>
                   <option value="revendedora">Revendedora</option>
-                </select>
+                </Select>
               </div>
 
               {canal === 'revendedora' && (
@@ -1352,7 +1353,7 @@ export function NuevaVentaView({
                   >
                     Revendedora
                   </label>
-                  <select
+                  <Select
                     id="select-revendedora"
                     aria-label="Revendedora"
                     value={idRevendedora}
@@ -1362,7 +1363,7 @@ export function NuevaVentaView({
                         setLineas([])
                       }
                     }}
-                    className="w-full rounded-md border border-border bg-card-2 px-3 py-1.5 text-sm"
+                    className="px-3 py-1.5 text-sm"
                   >
                     <option value="">-- Elegí una revendedora activa --</option>
                     {revendedoras.map((r) => (
@@ -1370,7 +1371,7 @@ export function NuevaVentaView({
                         {r.nombre}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </div>
               )}
             </div>
@@ -1524,14 +1525,15 @@ export function NuevaVentaView({
                         <span className="rounded-full border border-border bg-card-2 px-2 py-0.5 text-xs font-medium">
                           {g.talle ? `Talle ${g.talle}` : 'Sin talle'}
                         </span>
-                        <button
+                        <Button
+                          variant="bare"
                           type="button"
                           onClick={() => void abrirCambioTalle(g)}
                           disabled={buscando}
-                          className="text-xs text-ink underline decoration-line-2 underline-offset-2 hover:decoration-ink disabled:opacity-50"
+                          className="text-xs text-ink underline decoration-line-2 underline-offset-2 hover:decoration-ink"
                         >
                           Cambiar
-                        </button>
+                        </Button>
                       </div>
                       <div className="text-xs text-muted">
                         {g.sku ?? '—'} · {g.categoria_nombre ?? '—'}
@@ -1681,15 +1683,16 @@ export function NuevaVentaView({
                   </span>
                 )}
               </span>
-              <button
+              <Button
+                variant="bare"
                 type="button"
                 onClick={desvincularReserva}
                 disabled={pending}
                 title="Quita la reserva de esta venta y vacía el carrito"
-                className="shrink-0 text-xs text-muted underline-offset-2 hover:text-alerta-ink hover:underline disabled:opacity-50"
+                className="shrink-0 text-xs text-muted underline-offset-2 hover:text-alerta-ink hover:underline"
               >
                 Quitar
-              </button>
+              </Button>
             </div>
           )}
 
@@ -1721,13 +1724,14 @@ export function NuevaVentaView({
                 />
               </Field>
             ) : (
-              <button
+              <Button
+                variant="bare"
                 type="button"
                 onClick={() => setNotaAbierta(true)}
                 className="text-xs text-muted underline-offset-2 hover:text-text hover:underline"
               >
                 + Agregar nota
-              </button>
+              </Button>
             )}
           </div>
         </div>
@@ -1745,14 +1749,15 @@ export function NuevaVentaView({
         >
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h2 className="font-display text-lg text-text">Cobro</h2>
-            <button
+            <Button
+              variant="bare"
               type="button"
               onClick={() => setCobranzaOpen(false)}
               disabled={pending}
-              className="text-xs text-muted underline-offset-2 hover:text-text hover:underline disabled:opacity-50"
+              className="text-xs text-muted underline-offset-2 hover:text-text hover:underline"
             >
               Volver al carrito
-            </button>
+            </Button>
           </div>
 
           {/* ─── Paso 2 · Cliente ──────────────────────────────────────
@@ -2079,7 +2084,8 @@ export function NuevaVentaView({
               {!idCliente && (
                 <p className="rounded-md border border-alerta-ink bg-alerta-bg px-3 py-2 text-xs text-alerta-ink">
                   Falta el cliente: sin eso perdés el rastro de quién te debe.{' '}
-                  <button
+                  <Button
+                    variant="bare"
                     type="button"
                     onClick={() => {
                       setFaltante('cliente')
@@ -2088,7 +2094,7 @@ export function NuevaVentaView({
                     className="font-medium underline underline-offset-2"
                   >
                     Elegirlo arriba
-                  </button>
+                  </Button>
                 </p>
               )}
             </div>
@@ -2425,14 +2431,14 @@ function DescuentosPanelSelect({
                   className="inline-flex items-center gap-1 rounded-full border border-ink bg-line px-2 py-0.5 text-xs text-ink"
                 >
                   {d.nombre} · −{descValorLabel(d)}
-                  <button
+                  <IconButton
+                    size="sm"
                     type="button"
                     onClick={() => onToggle(d.id_regla)}
                     aria-label={`Quitar ${d.nombre}`}
-                    className="hover:text-alerta-ink"
                   >
                     ×
-                  </button>
+                  </IconButton>
                 </span>
               ))}
             </div>

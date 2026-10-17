@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { IconButton } from '@/components/ui/IconButton'
 
 /**
  * Editor dinámico de talles (chips). Se tipea un talle y se agrega con
@@ -77,14 +78,14 @@ export function TallesEditor({
             >
               {t}
               {!disabled && (
-                <button
+                <IconButton
+                  size="sm"
                   type="button"
                   onClick={() => quitar(t)}
                   aria-label={`Quitar talle ${t}`}
-                  className="text-muted hover:text-text"
                 >
                   ×
-                </button>
+                </IconButton>
               )}
             </span>
           ))}

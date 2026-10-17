@@ -24,12 +24,15 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
   ref,
 ) {
   const isInvalid = invalid || ariaInvalid === true || ariaInvalid === 'true'
+  // Full width unless the caller sets a width itself: appending `w-auto` after
+  // `w-full` would race on stylesheet order, not on class order.
+  const width = /(^|\s)w-/.test(className) ? '' : 'w-full '
   return (
     <select
       ref={ref}
       aria-invalid={isInvalid || undefined}
       data-invalid={isInvalid || undefined}
-      className={`w-full ${className}`}
+      className={`${width}${className}`}
       {...rest}
     >
       {children}

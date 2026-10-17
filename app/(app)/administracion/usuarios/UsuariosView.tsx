@@ -13,6 +13,7 @@ import {
 import { asignarRolAction, toggleUsuarioEstadoAction } from '../actions'
 import { mensajeDeError } from '@/lib/errores/mensajes'
 import { TableFrame, DataTable, THead, TBody, Tr, Th, Td } from '@/components/ui/TableParts'
+import { Select } from '@/components/ui/Select'
 
 const ESTADO_VARIANT: Record<UsuarioEstado, 'success' | 'neutral' | 'warning'> = {
   activo: 'success',
@@ -114,18 +115,18 @@ export function UsuariosView({
                     )}
                   </Td>
                   <Td>
-                    <select
+                    <Select
                       value={u.id_rol ?? ''}
                       onChange={(e) => cambiarRol(u, e.target.value)}
                       disabled={pending}
                       aria-label={`Rol de ${u.email}`}
-                      className=""
+                      className="w-auto"
                     >
                       <option value="">— Sin rol —</option>
                       {roles.map((r) => (
                         <option key={r.id} value={r.id}>{r.nombre}</option>
                       ))}
-                    </select>
+                    </Select>
                   </Td>
                   <Td>
                     <Badge variant={ESTADO_VARIANT[u.estado_usuario]}>

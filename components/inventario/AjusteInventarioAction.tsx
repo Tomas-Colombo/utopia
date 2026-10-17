@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/Textarea'
 import { useToast } from '@/components/ui/Toast'
 import { registrarAjusteInventarioAction } from '@/app/(app)/consignaciones/actions'
 import { mensajeDeError } from '@/lib/errores/mensajes'
+import { Checkbox } from '@/components/ui/Checkbox'
 
 /**
  * Ajuste de inventario (Planificacion.txt Etapa 6 §108, Ejecucion §L86).
@@ -131,8 +132,7 @@ export function AjusteInventarioAction({
 
           {puedeDarBaja && (
             <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
+              <Checkbox
                 checked={darDeBaja}
                 onChange={(e) => setDarDeBaja(e.target.checked)}
               />

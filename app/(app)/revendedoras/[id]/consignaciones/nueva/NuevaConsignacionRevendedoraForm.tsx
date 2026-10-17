@@ -147,13 +147,14 @@ export function NuevaConsignacionRevendedoraForm({
       label: '',
       align: 'right',
       render: (r) => (
-        <button
+        <Button
+          variant="bare"
           type="button"
           onClick={() => handleQuitarItem(r.id_item)}
           className="text-warn-ink hover:underline text-sm font-medium"
         >
           Quitar
-        </button>
+        </Button>
       ),
     },
   ]

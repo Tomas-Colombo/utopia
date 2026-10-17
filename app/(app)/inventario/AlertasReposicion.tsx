@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { Badge } from '@/components/ui/Badge'
 import { Modal } from '@/components/ui/Modal'
 import type { AlertaReposicion } from '@/lib/types/reportes'
+import { Button } from '@/components/ui/Button'
 
 /**
  * Bloque "Reposición urgente" de la home de inventario.
@@ -40,13 +41,14 @@ export function AlertasReposicion({ alertas }: { alertas: AlertaReposicion[] }) 
         </span>
         <span className="ml-auto flex items-center gap-2">
           {hayMas && (
-            <button
+            <Button
+              variant="bare"
               type="button"
               onClick={() => setModalOpen(true)}
-              className="rounded-[4px] px-2 py-1 text-xs font-medium text-alerta-ink transition-colors hover:bg-card/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-alerta-ink"
+              className="rounded-[4px] px-2 py-1 text-xs font-medium text-alerta-ink transition-colors hover:bg-card/50 focus-visible:ring-alerta-ink"
             >
               +{alertas.length - 1} más
-            </button>
+            </Button>
           )}
           <Link
             href={`/inventario?q=${encodeURIComponent(primera.nombre)}`}

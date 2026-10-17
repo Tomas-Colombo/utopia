@@ -2,6 +2,8 @@
 
 import { useActionState, useState, type FormEvent } from 'react'
 import { changePasswordAction, type ChangePasswordActionState } from './password-actions'
+import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
 
 const initialState: ChangePasswordActionState = { ok: false }
 const MIN_PASSWORD_LENGTH = 8
@@ -47,41 +49,38 @@ export function PasswordChangeForm() {
         <label htmlFor="current_password" className="text-sm font-medium text-text">
           Current password
         </label>
-        <input
+        <Input
           id="current_password"
           name="current_password"
           type="password"
           autoComplete="current-password"
           required
-          className="rounded-md border border-border bg-bg px-3 py-2 text-sm text-text"
         />
       </div>
       <div className="flex flex-col gap-1">
         <label htmlFor="new_password" className="text-sm font-medium text-text">
           New password
         </label>
-        <input
+        <Input
           id="new_password"
           name="new_password"
           type="password"
           autoComplete="new-password"
           minLength={MIN_PASSWORD_LENGTH}
           required
-          className="rounded-md border border-border bg-bg px-3 py-2 text-sm text-text"
         />
       </div>
       <div className="flex flex-col gap-1">
         <label htmlFor="confirm_new_password" className="text-sm font-medium text-text">
           Confirm new password
         </label>
-        <input
+        <Input
           id="confirm_new_password"
           name="confirm_new_password"
           type="password"
           autoComplete="new-password"
           minLength={MIN_PASSWORD_LENGTH}
           required
-          className="rounded-md border border-border bg-bg px-3 py-2 text-sm text-text"
         />
       </div>
       {error && (
@@ -94,13 +93,13 @@ export function PasswordChangeForm() {
           Password updated successfully.
         </p>
       )}
-      <button
+      <Button
         type="submit"
         disabled={pending}
-        className="self-start rounded-md bg-block px-4 py-2 text-sm font-semibold text-block-ink disabled:opacity-60"
+        className="self-start"
       >
         {pending ? 'Updating…' : 'Update password'}
-      </button>
+      </Button>
     </form>
   )
 }

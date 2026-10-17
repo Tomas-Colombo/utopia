@@ -6,6 +6,7 @@ import { ToastProvider } from '@/components/ui/Toast'
 import { ThemeToggle } from '@/components/theming/ThemeToggle'
 import { logoutAction } from '@/app/(app)/actions'
 import { PortalNav } from './PortalNav'
+import { Button } from '@/components/ui/Button'
 
 export default async function RevendedoraLayout({
   children,
@@ -39,12 +40,13 @@ export default async function RevendedoraLayout({
             El módulo de revendedoras no está habilitado para este negocio. Si pensás que es un error, comunicate con el local.
           </p>
           <form action={logoutAction} className="pt-2">
-            <button
+            <Button
+              variant="secondary"
               type="submit"
-              className="min-h-[44px] min-w-[44px] px-4 py-2 text-sm font-medium rounded-lg border border-border hover:bg-card-hover transition-colors"
+              className="min-h-[44px] min-w-[44px]"
             >
               Cerrar sesión
-            </button>
+            </Button>
           </form>
         </div>
       </div>
@@ -75,14 +77,16 @@ export default async function RevendedoraLayout({
             <div className="flex items-center gap-2">
               <ThemeToggle />
               <form action={logoutAction}>
-                <button
+                <Button
+                  variant="secondary"
+                  size="sm"
                   type="submit"
                   aria-label="Cerrar sesión"
                   title="Cerrar sesión"
-                  className="min-h-[44px] min-w-[44px] px-3 py-2 text-xs font-medium rounded-lg border border-border hover:bg-card-hover text-muted hover:text-text transition-colors"
+                  className="min-h-[44px] min-w-[44px]"
                 >
                   Salir
-                </button>
+                </Button>
               </form>
             </div>
           </div>

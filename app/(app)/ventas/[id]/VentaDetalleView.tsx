@@ -35,6 +35,7 @@ import {
 } from '../actions'
 import { mensajeDeError } from '@/lib/errores/mensajes'
 import { TableFrame, DataTable, THead, TBody, TFoot, Tr, Th, Td } from '@/components/ui/TableParts'
+import { Select } from '@/components/ui/Select'
 
 const CUOTA_VARIANT: Record<EstadoCuota, 'success' | 'info' | 'warning' | 'danger' | 'neutral'> = {
   pendiente: 'info',
@@ -118,7 +119,6 @@ export function VentaDetalleView({
       setMotivoAnulacion('')
       setReintegroMedio('')
       setReintegroCuenta('')
-      
       const reintegro = res.data?.total_reintegrado ?? 0
       if (reintegro > 0) {
         toast.success(`Venta anulada. Se generó un reintegro de $${reintegro.toLocaleString('es-AR')}.`)
@@ -143,7 +143,6 @@ export function VentaDetalleView({
       if (!res.ok) return toast.error('No se pudo devolver', mensajeDeError(res.reason))
       setReintegroMedio('')
       setReintegroCuenta('')
-      
       const reintegro = res.data?.reintegro ?? 0
       if (reintegro > 0) {
         toast.success(`Ítem devuelto. Se generó un reintegro de $${reintegro.toLocaleString('es-AR')}.`)
@@ -519,9 +518,8 @@ export function VentaDetalleView({
             <h4 className="font-medium text-sm">Opciones de reintegro (opcional)</h4>
             <p className="text-xs text-muted mb-2">Si corresponde devolver plata, seleccioná por dónde sale.</p>
             <Field htmlFor="reint-medio-dev" label="Medio de pago">
-              <select
+              <Select
                 id="reint-medio-dev"
-                className="w-full"
                 value={reintegroMedio}
                 onChange={(e) => setReintegroMedio(e.target.value as MedioPago | '')}
               >
@@ -531,13 +529,12 @@ export function VentaDetalleView({
                   .map((m) => (
                     <option key={m} value={m}>{MEDIO_PAGO_LABEL[m]}</option>
                   ))}
-              </select>
+              </Select>
             </Field>
             {reintegroMedio && (
               <Field htmlFor="reint-cuenta-dev" label="Cuenta origen">
-                <select
+                <Select
                   id="reint-cuenta-dev"
-                  className="w-full"
                   value={reintegroCuenta}
                   onChange={(e) => setReintegroCuenta(e.target.value)}
                 >
@@ -547,7 +544,7 @@ export function VentaDetalleView({
                       {c.nombre}
                     </option>
                   ))}
-                </select>
+                </Select>
               </Field>
             )}
           </div>
@@ -660,9 +657,9 @@ export function VentaDetalleView({
                       {venta.canal === 'local' && (
                         <div className="grid grid-cols-2 gap-2 pt-1">
                           <Field htmlFor="c-medio" label="Medio de cobro" required>
-                            <select
+                            <Select
                               id="c-medio"
-                              className="w-full text-sm"
+                              className="text-sm"
                               value={cambioMedio}
                               onChange={(e) => setCambioMedio(e.target.value as MedioPago | '')}
                             >
@@ -674,13 +671,13 @@ export function VentaDetalleView({
                                     {MEDIO_PAGO_LABEL[m]}
                                   </option>
                                 ))}
-                            </select>
+                            </Select>
                           </Field>
 
                           <Field htmlFor="c-cuenta" label="Cuenta destino" required>
-                            <select
+                            <Select
                               id="c-cuenta"
-                              className="w-full text-sm"
+                              className="text-sm"
                               value={cambioCuenta}
                               onChange={(e) => setCambioCuenta(e.target.value)}
                             >
@@ -690,7 +687,7 @@ export function VentaDetalleView({
                                   {c.nombre}
                                 </option>
                               ))}
-                            </select>
+                            </Select>
                           </Field>
                         </div>
                       )}
@@ -730,16 +727,15 @@ export function VentaDetalleView({
       >
         <form onSubmit={emitir} className="space-y-3">
           <Field htmlFor="c-tipo" label="Tipo" required>
-            <select
+            <Select
               id="c-tipo"
               value={tipoComp}
               onChange={(e) => setTipoComp(e.target.value as TipoComprobante)}
-              className="w-full"
             >
               {(Object.keys(TIPO_COMPROBANTE_LABEL) as TipoComprobante[]).map((t) => (
                 <option key={t} value={t}>{TIPO_COMPROBANTE_LABEL[t]}</option>
               ))}
-            </select>
+            </Select>
           </Field>
           <Field htmlFor="c-num" label="Número" required>
             <Input

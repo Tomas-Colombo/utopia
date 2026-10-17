@@ -17,6 +17,7 @@ interface BloqueGananciaProps {
 
 import { escapeCsvField, downloadCsv, csvNegative } from '@/lib/utils/csv'
 import { DataTable, THead, TBody, Tr, Th, Td } from '@/components/ui/TableParts'
+import { Button } from '@/components/ui/Button'
 
 export function BloqueGanancia({ resultados, tieneGastos }: BloqueGananciaProps) {
   const exportarCSV = () => {
@@ -26,7 +27,6 @@ export function BloqueGanancia({ resultados, tieneGastos }: BloqueGananciaProps)
       `${escapeCsvField('Menos costo de mercadería')},${csvNegative(resultados.costo_mercaderia)}`,
       `${escapeCsvField('Ganancia antes de gastos')},${resultados.ganancia_sobre_ventas}`
     ]
-    
     if (tieneGastos) {
       csvRows.push(
         `${escapeCsvField('Menos gastos')},${csvNegative(resultados.gastos)}`,
@@ -41,14 +41,14 @@ export function BloqueGanancia({ resultados, tieneGastos }: BloqueGananciaProps)
     <section aria-labelledby="h2-ganancia" className="rounded-lg border border-border bg-card overflow-hidden">
       <div className="p-4 border-b border-border bg-panel flex justify-between items-center">
         <h2 id="h2-ganancia" className="font-display text-lg">Cómo se arma tu ganancia</h2>
-        <button
+        <Button
+          variant="secondary"
+          size="sm"
           onClick={exportarCSV}
-          className="h-9 px-3 text-sm font-medium border border-border rounded-md hover:bg-panel transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink"
         >
           Exportar CSV
-        </button>
+        </Button>
       </div>
-      
       <div className="overflow-x-auto">
         <DataTable>
           <THead className="sr-only">

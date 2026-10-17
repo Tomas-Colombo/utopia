@@ -28,6 +28,8 @@ import { crearIngresoCompletoAction, parseRemitoPdfAction } from '../../actions'
 import { NuevoProveedorModal } from './NuevoProveedorModal'
 import { NuevaCategoriaModal } from './NuevaCategoriaModal'
 import { mensajeDeError } from '@/lib/errores/mensajes'
+import { IconButton } from '@/components/ui/IconButton'
+import { Select } from '@/components/ui/Select'
 
 const TIPOS: { value: TipoIngreso; label: string }[] = [
   { value: 'compra', label: 'Compra (paga al ingresar)' },
@@ -368,12 +370,12 @@ export function NuevoIngresoView({
             }
           >
             <div className="flex gap-2">
-              <select
+              <Select
                 id="i-prov"
                 value={idProveedor}
                 onChange={(e) => setIdProveedor(e.target.value)}
                 disabled={proveedorBloqueado || pending}
-                className="w-full min-w-0 flex-1"
+                className="min-w-0 flex-1"
               >
                 <option value="">— Sin proveedor —</option>
                 {proveedores.map((p) => (
@@ -381,7 +383,7 @@ export function NuevoIngresoView({
                     {p.nombre} · {p.tipo}
                   </option>
                 ))}
-              </select>
+              </Select>
               {!proveedorBloqueado && (
                 <Button
                   variant="secondary"
@@ -404,11 +406,10 @@ export function NuevoIngresoView({
           </Field>
 
           <Field htmlFor="i-tipo" label="Tipo de ingreso" required>
-            <select
+            <Select
               id="i-tipo"
               value={tipoIngreso}
               onChange={(e) => setTipoIngreso(e.target.value as TipoIngreso)}
-              className="w-full"
             >
               <option value="" disabled>
                 — Elegí el tipo —
@@ -418,7 +419,7 @@ export function NuevoIngresoView({
                   {t.label}
                 </option>
               ))}
-            </select>
+            </Select>
           </Field>
 
           <Field htmlFor="i-obs" label="Observaciones">
@@ -516,7 +517,7 @@ export function NuevoIngresoView({
                     </div>
 
                     {f.esNuevo ? (
-                      <select
+                      <Select
                         value={f.idCategoria}
                         onChange={(e) => {
                           // Última opción: abre el alta rápida para esta fila y
@@ -528,7 +529,7 @@ export function NuevoIngresoView({
                           actualizar(i, { idCategoria: e.target.value, talles: [], tallesAbierto: false })
                         }}
                         aria-label="Categoría del producto nuevo"
-                        className="w-full min-w-[8rem] flex-1"
+                        className="min-w-[8rem] flex-1"
                       >
                         {categorias.map((c) => (
                           <option key={c.id_categoria} value={c.id_categoria}>
@@ -536,13 +537,13 @@ export function NuevoIngresoView({
                           </option>
                         ))}
                         <option value={NUEVA_CATEGORIA}>+ Nueva categoría…</option>
-                      </select>
+                      </Select>
                     ) : (
-                      <select
+                      <Select
                         value={f.idProducto}
                         onChange={(e) => vincularProducto(i, e.target.value)}
                         aria-label="Producto existente"
-                        className="w-full min-w-[12rem] flex-[3]"
+                        className="min-w-[12rem] flex-[3]"
                       >
                         <option value="">— Elegí el producto —</option>
                         {productos.map((p) => (
@@ -551,7 +552,7 @@ export function NuevoIngresoView({
                             {p.sku ? ` · ${p.sku}` : ''}
                           </option>
                         ))}
-                      </select>
+                      </Select>
                     )}
 
                     <div className="flex shrink-0 items-center gap-1.5">
@@ -578,15 +579,15 @@ export function NuevoIngresoView({
                       />
                     </div>
 
-                    <button
+                    <IconButton
                       type="button"
                       onClick={() => quitar(i)}
                       disabled={pending}
                       aria-label="Quitar línea"
-                      className="ml-auto shrink-0 rounded-md p-1.5 text-muted hover:bg-card hover:text-text disabled:opacity-50"
+                      className="ml-auto"
                     >
                       ✕
-                    </button>
+                    </IconButton>
                   </div>
 
                   {/* Segunda fila (solo si aplica): aviso + talles */}
@@ -612,13 +613,14 @@ export function NuevoIngresoView({
                               ))}
                             </div>
                           )}
-                          <button
+                          <Button
+                            variant="bare"
                             type="button"
                             onClick={() => actualizar(i, { tallesAbierto: !f.tallesAbierto })}
                             className="text-xs text-ink underline decoration-line-2 underline-offset-2 hover:decoration-ink"
                           >
                             {f.tallesAbierto ? 'Listo' : conTalles ? 'Editar' : 'Cargar talles'}
-                          </button>
+                          </Button>
                           {f.tallesAbierto && (
                             <div className="mt-1 w-full">
                               <StockTalleLoader

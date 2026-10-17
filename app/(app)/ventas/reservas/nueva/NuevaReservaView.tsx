@@ -24,6 +24,7 @@ import type { LineaCarrito } from '@/lib/types/ventas'
 import { crearReservaAction, crearClienteAction } from '../../actions'
 import { mensajeDeError } from '@/lib/errores/mensajes'
 import { TableFrame, DataTable, THead, TBody, Tr, Th, Td } from '@/components/ui/TableParts'
+import { Select } from '@/components/ui/Select'
 
 interface Cliente { id: string; nombre: string; telefono: string | null }
 
@@ -469,11 +470,10 @@ export function NuevaReservaView({
         <div className="rounded-lg border border-border bg-card p-4 space-y-4">
           <Field htmlFor="r-cli" label="Cliente (opcional)">
             <div className="flex gap-2">
-              <select
+              <Select
                 id="r-cli"
                 value={idCliente}
                 onChange={(e) => setIdCliente(e.target.value)}
-                className="w-full"
               >
                 <option value="">— Mostrador —</option>
                 {clientes.map((c) => (
@@ -482,7 +482,7 @@ export function NuevaReservaView({
                     {c.telefono ? ` · ${c.telefono}` : ''}
                   </option>
                 ))}
-              </select>
+              </Select>
               <Button
                 type="button"
                 variant="secondary"

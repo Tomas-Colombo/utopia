@@ -13,6 +13,7 @@ import type { GastosOrden } from '@/lib/dal/gastos/gasto'
 import { eliminarGastoAction } from '../rendiciones/actions'
 import { mensajeDeError } from '@/lib/errores/mensajes'
 import { TableFrame, DataTable, THead, TBody, Tr, Th, Td } from '@/components/ui/TableParts'
+import { Select } from '@/components/ui/Select'
 
 interface CatOpt { id: string; nombre: string }
 
@@ -145,7 +146,7 @@ export function GastosTableClient({
         </div>
         <div className="w-56">
           <Field htmlFor="g-cat-f" label="Categoría">
-            <select
+            <Select
               id="g-cat-f"
               value={cat}
               onChange={(e) => {
@@ -153,18 +154,17 @@ export function GastosTableClient({
                 navigate(buildParams(1, { cat: e.target.value }))
               }}
               disabled={pending}
-              className="w-full"
             >
               <option value="">Todas</option>
               {categorias.map((c) => (
                 <option key={c.id} value={c.id}>{c.nombre}</option>
               ))}
-            </select>
+            </Select>
           </Field>
         </div>
         <div className="w-48">
           <Field htmlFor="g-orden" label="Ordenar por">
-            <select
+            <Select
               id="g-orden"
               value={orden}
               onChange={(e) => {
@@ -173,13 +173,12 @@ export function GastosTableClient({
                 navigate(buildParams(1, { orden: o }))
               }}
               disabled={pending}
-              className="w-full"
             >
               <option value="fecha_desc">Fecha (más reciente)</option>
               <option value="fecha_asc">Fecha (más antiguo)</option>
               <option value="monto_desc">Monto (mayor a menor)</option>
               <option value="monto_asc">Monto (menor a mayor)</option>
-            </select>
+            </Select>
           </Field>
         </div>
         <div className="flex gap-2 ml-auto">

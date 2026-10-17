@@ -9,6 +9,7 @@ import { useToast } from '@/components/ui/Toast'
 import { mensajeDeError } from '@/lib/errores/mensajes'
 import { confirmarDeclaracionAction, rechazarDeclaracionAction } from './actions'
 import { TableFrame, DataTable, THead, TBody, Tr, Th, Td } from '@/components/ui/TableParts'
+import { Textarea } from '@/components/ui/Textarea'
 
 interface Props {
   declaraciones: DeclaracionVentaLocalRow[]
@@ -252,13 +253,13 @@ export function DeclaracionesTableView({ declaraciones, puedeGestionar }: Props)
               <label htmlFor="motivo-rechazo" className="block text-xs font-semibold text-muted uppercase tracking-wider">
                 Motivo del rechazo (obligatorio)
               </label>
-              <textarea
+              <Textarea
                 id="motivo-rechazo"
                 rows={3}
                 placeholder="Explicá el motivo para que la revendedora pueda verlo en su portal..."
                 value={motivoRechazo}
                 onChange={(e) => setMotivoRechazo(e.target.value)}
-                className="w-full min-h-[44px] px-3 py-2 text-sm rounded-lg border border-border bg-bg text-text focus:outline-none focus:ring-2 focus:ring-accent resize-none"
+                className="min-h-[44px] resize-none"
               />
             </div>
 

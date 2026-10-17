@@ -28,6 +28,7 @@ import { Modal } from '@/components/ui/Modal'
 import { ArancelesPanel } from './ArancelesPanel'
 import { RecargosPanel } from './RecargosPanel'
 import { mensajeDeError } from '@/lib/errores/mensajes'
+import { Checkbox } from '@/components/ui/Checkbox'
 
 const TIPOS: TipoCuentaDestino[] = ['efectivo', 'banco', 'billetera_virtual']
 
@@ -392,8 +393,7 @@ export function CuentasView({
                 <div className="flex flex-wrap gap-3">
                   {MEDIOS_CON_COSTO.map((m) => (
                     <label key={m} className="flex items-center gap-2 text-sm text-text">
-                      <input
-                        type="checkbox"
+                      <Checkbox
                         checked={mediosActivos.includes(m)}
                         onChange={(e) =>
                           setMediosActivos((xs) =>

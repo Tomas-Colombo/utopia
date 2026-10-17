@@ -16,6 +16,8 @@ import { buscarMatchNombre, indexarPorNombre } from '@/lib/inventario/producto-m
 import { MAX_PDF_BYTES } from '@/lib/inventario/limites'
 import { importarRemitoAction, parseRemitoPdfAction } from '../../actions'
 import { mensajeDeError } from '@/lib/errores/mensajes'
+import { IconButton } from '@/components/ui/IconButton'
+import { Select } from '@/components/ui/Select'
 
 export type DetalleImportado = {
   id_detalle: string
@@ -264,28 +266,28 @@ export function RemitoImportPanel({
                     </div>
 
                     {f.esNuevo ? (
-                      <select
+                      <Select
                         value={f.idCategoria}
                         onChange={(e) =>
                           actualizar(i, { idCategoria: e.target.value, talles: [], tallesAbierto: false })
                         }
                         aria-label="Categoría del producto nuevo"
-                        className="w-full min-w-[8rem] flex-1"
+                        className="min-w-[8rem] flex-1"
                       >
                         {categorias.map((c) => (
                           <option key={c.id_categoria} value={c.id_categoria}>
                             {c.nombre}
                           </option>
                         ))}
-                      </select>
+                      </Select>
                     ) : (
-                      <select
+                      <Select
                         value={f.idProducto}
                         onChange={(e) =>
                           actualizar(i, { idProducto: e.target.value, talles: [], tallesAbierto: false })
                         }
                         aria-label="Producto existente"
-                        className="w-full min-w-[8rem] flex-1"
+                        className="min-w-[8rem] flex-1"
                       >
                         <option value="">— Elegí el producto —</option>
                         {productos.map((p) => (
@@ -294,7 +296,7 @@ export function RemitoImportPanel({
                             {p.sku ? ` · ${p.sku}` : ''}
                           </option>
                         ))}
-                      </select>
+                      </Select>
                     )}
 
                     <div className="flex shrink-0 items-center gap-1.5">
@@ -321,15 +323,15 @@ export function RemitoImportPanel({
                       />
                     </div>
 
-                    <button
+                    <IconButton
                       type="button"
                       onClick={() => quitar(i)}
                       disabled={pending}
                       aria-label="Quitar línea"
-                      className="ml-auto shrink-0 rounded-md p-1.5 text-muted hover:bg-card hover:text-text disabled:opacity-50"
+                      className="ml-auto"
                     >
                       ✕
-                    </button>
+                    </IconButton>
                   </div>
 
                   {/* Segunda fila (solo si aplica): aviso + talles */}
@@ -355,13 +357,14 @@ export function RemitoImportPanel({
                               ))}
                             </div>
                           )}
-                          <button
+                          <Button
+                            variant="bare"
                             type="button"
                             onClick={() => actualizar(i, { tallesAbierto: !f.tallesAbierto })}
                             className="text-xs text-ink underline decoration-line-2 underline-offset-2 hover:decoration-ink"
                           >
                             {f.tallesAbierto ? 'Listo' : conTalles ? 'Editar' : 'Cargar talles'}
-                          </button>
+                          </Button>
                           {f.tallesAbierto && (
                             <div className="mt-1 w-full">
                               <StockTalleLoader

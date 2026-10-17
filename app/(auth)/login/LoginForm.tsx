@@ -2,6 +2,7 @@
 
 import { useActionState } from 'react'
 import { loginAction, type LoginActionState } from './actions'
+import { Button } from '@/components/ui/Button'
 
 const initialState: LoginActionState = { ok: false }
 
@@ -55,13 +56,12 @@ export function LoginForm() {
           {state.error}
         </p>
       )}
-      <button
+      <Button
         type="submit"
         disabled={pending}
-        className="rounded-md bg-block px-4 py-2 text-sm font-semibold text-block-ink disabled:opacity-60"
       >
         {pending ? 'Ingresando…' : 'Ingresar'}
-      </button>
+      </Button>
     </form>
   )
 }

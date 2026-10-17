@@ -2,6 +2,7 @@
 
 import { CATALOGO_PERMISOS, MODULO_NOMBRE } from '@/lib/types/administracion'
 import { TableFrame, DataTable, THead, TBody, Tr, Th, Td } from '@/components/ui/TableParts'
+import { Checkbox } from '@/components/ui/Checkbox'
 
 /**
  * Matriz módulo × acción. Controlado. Cada checkbox agrega/quita del
@@ -50,8 +51,7 @@ export function PermisosEditor({
                   return (
                     <Td align="center" key={accion}>
                       {disponible ? (
-                        <input
-                          type="checkbox"
+                        <Checkbox
                           aria-label={`${mod} ${accion}`}
                           checked={marcada}
                           onChange={(e) => toggle(mod, accion, e.target.checked)}

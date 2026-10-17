@@ -18,6 +18,7 @@ import type { CategoriaRow, ProductoConDetalle, ProveedorRow } from '@/lib/types
 import { buscarMatchNombre, indexarPorNombre } from '@/lib/inventario/producto-match'
 import { createProductoAction } from '../../actions'
 import { mensajeDeError } from '@/lib/errores/mensajes'
+import { Select } from '@/components/ui/Select'
 
 export function NuevoProductoForm({
   categorias,
@@ -117,7 +118,7 @@ export function NuevoProductoForm({
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field htmlFor="prod-cat" label="Categoría" required error={errors.categoria}>
-          <select
+          <Select
             id="prod-cat"
             value={idCategoria}
             onChange={(e) => {
@@ -125,14 +126,13 @@ export function NuevoProductoForm({
               setStock([]) // los talles son propios de cada categoría
             }}
             aria-invalid={!!errors.categoria || undefined}
-            className="w-full"
           >
             {categorias.map((c) => (
               <option key={c.id_categoria} value={c.id_categoria}>
                 {c.nombre}
               </option>
             ))}
-          </select>
+          </Select>
         </Field>
         <div className="flex items-end">
           <p className="rounded-md border border-border bg-card-2 p-3 text-xs text-muted">
@@ -160,15 +160,15 @@ export function NuevoProductoForm({
               onChange={(e) => setCostoInicial(e.target.value)}
               className="flex-1"
             />
-            <select
+            <Select
               value={moneda}
               onChange={(e) => setMoneda(e.target.value)}
               aria-label="Moneda"
-              className=""
+              className="w-auto"
             >
               <option value="ARS">ARS</option>
               <option value="USD">USD</option>
-            </select>
+            </Select>
           </div>
         </Field>
       </div>
@@ -179,11 +179,10 @@ export function NuevoProductoForm({
           label="Proveedor (opcional)"
           hint="Si elegís uno, el stock inicial se registra como un ingreso de compra a ese proveedor."
         >
-          <select
+          <Select
             id="prod-proveedor"
             value={idProveedor}
             onChange={(e) => setIdProveedor(e.target.value)}
-            className="w-full"
           >
             <option value="">Sin proveedor (alta directa)</option>
             {proveedores.map((p) => (
@@ -191,7 +190,7 @@ export function NuevoProductoForm({
                 {p.nombre} · {p.tipo}
               </option>
             ))}
-          </select>
+          </Select>
         </Field>
       )}
 

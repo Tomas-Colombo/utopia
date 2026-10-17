@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
 import { mensajeDeError } from '@/lib/errores/mensajes'
 import { crearRevendedoraUnificadaAction } from '../actions'
+import { Checkbox } from '@/components/ui/Checkbox'
 
 interface NuevaRevendedoraFormProps {
   canGrantAccess?: boolean
@@ -102,11 +103,9 @@ export function NuevaRevendedoraForm({
       {canGrantAccess && (
         <div className="rounded-md border border-border p-4 bg-card-2 space-y-3">
           <label className="flex items-center gap-2 cursor-pointer text-sm font-medium">
-            <input
-              type="checkbox"
+            <Checkbox
               checked={crearAcceso}
               onChange={(e) => setCrearAcceso(e.target.checked)}
-              className="rounded border-border text-ink focus:ring-ink"
             />
             <span>Crear acceso al sistema para la revendedora</span>
           </label>
@@ -135,11 +134,9 @@ export function NuevaRevendedoraForm({
       {canEditComision && (
         <div className="rounded-md border border-border p-4 bg-card-2 space-y-3">
           <label className="flex items-center gap-2 cursor-pointer text-sm font-medium">
-            <input
-              type="checkbox"
+            <Checkbox
               checked={comisionPropiaCheck}
               onChange={(e) => setComisionPropiaCheck(e.target.checked)}
-              className="rounded border-border text-ink focus:ring-ink"
             />
             <span>Asignar porcentaje de comisión particular</span>
           </label>

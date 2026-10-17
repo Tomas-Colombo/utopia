@@ -16,6 +16,8 @@ interface BloqueRankingProps {
 }
 
 import { escapeCsvField, downloadCsv } from '@/lib/utils/csv'
+import { Button } from '@/components/ui/Button'
+import { Select } from '@/components/ui/Select'
 
 export function BloqueRanking({ ranking, ordenActual }: BloqueRankingProps) {
   const router = useRouter()
@@ -39,7 +41,6 @@ export function BloqueRanking({ ranking, ordenActual }: BloqueRankingProps) {
         r.ganancia
       ].join(','))
     })
-    
     downloadCsv(`ranking-productos-${ordenActual}.csv`, csvRows.join('\n'))
   }
 
@@ -74,25 +75,25 @@ export function BloqueRanking({ ranking, ordenActual }: BloqueRankingProps) {
       <div className="p-4 border-b border-border bg-panel flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <h2 id="h2-ranking" className="font-display text-lg">Los que más rinden</h2>
         <div className="flex gap-2 w-full sm:w-auto">
-          <select 
+          <Select
             value={ordenActual}
             onChange={handleOrdenChange}
-            className="flex h-9 w-full sm:w-auto items-center justify-between rounded-md border border-border bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-bg-page focus:outline-none focus:ring-1 focus:ring-ink disabled:cursor-not-allowed disabled:opacity-50"
+            className="h-9 sm:w-auto px-3 py-2 text-sm"
             aria-label="Ordenar ranking por"
           >
             <option value="ganancia">Mayor ganancia</option>
             <option value="unidades">Más unidades vendidas</option>
             <option value="monto">Mayor monto facturado</option>
-          </select>
-          <button
+          </Select>
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={exportarCSV}
-            className="h-9 px-3 text-sm font-medium border border-border rounded-md hover:bg-panel transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink"
           >
             Exportar CSV
-          </button>
+          </Button>
         </div>
       </div>
-      
       <div className="overflow-x-auto">
         <Table 
           columns={columns} 

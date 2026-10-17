@@ -8,6 +8,7 @@ import type {
 } from '@/lib/types/reportes'
 import { escapeCsvField, downloadCsv, csvNegative } from '@/lib/utils/csv'
 import { TableFrame, DataTable, THead, TBody, Tr, Th, Td } from '@/components/ui/TableParts'
+import { Button } from '@/components/ui/Button'
 
 function formatMoney(value: number | null | undefined) {
   if (value == null) return '—'
@@ -87,13 +88,15 @@ export function BloqueRevendedoras({
             Desempeño, comisiones, stock en consignación y cumplimiento de metas del período.
           </p>
         </div>
-        <button
+        <Button
+          variant="secondary"
+          size="sm"
           onClick={exportarCSV}
           disabled={perfiles.length === 0}
-          className="self-start sm:self-auto h-9 px-3 text-sm font-medium border border-border rounded-md hover:bg-panel transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink disabled:opacity-50"
+          className="self-start sm:self-auto"
         >
           Exportar CSV
-        </button>
+        </Button>
       </div>
 
       {/* Tarjetas comparativas de canal y stock */}

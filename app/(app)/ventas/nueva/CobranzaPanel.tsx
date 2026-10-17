@@ -13,6 +13,7 @@ import {
 } from '@/lib/types/ventas'
 import type { PlanCuotasRow, RecargoCuotasRow } from '@/lib/types/precios'
 import { calcularCostoCobro, resolverArancel } from '@/lib/cobros/calcular-costo'
+import { Select } from '@/components/ui/Select'
 
 /** Un pago mientras se edita. `recibido` es texto porque puede quedar vacío. */
 export interface PagoBorrador {
@@ -387,7 +388,7 @@ export function CobranzaPanel({
           return (
             <div key={p.key} className="rounded-md border border-border bg-card-2 p-3 space-y-2">
               <div className="flex items-center gap-2">
-                <select
+                <Select
                   value={p.medio}
                   onChange={(e) => {
                     const medio = e.target.value as MedioPago
@@ -398,14 +399,14 @@ export function CobranzaPanel({
                   }}
                   disabled={disabled}
                   aria-label="Medio de pago"
-                  className="flex-1"
+                  className="w-auto flex-1"
                 >
                   {medios.map((m) => (
                     <option key={m} value={m}>
                       {MEDIO_PAGO_LABEL[m]}
                     </option>
                   ))}
-                </select>
+                </Select>
                 {!unico && (
                   <Button
                     type="button"
@@ -421,7 +422,7 @@ export function CobranzaPanel({
               </div>
 
               {opcionesCuenta.length > 1 && (
-                <select
+                <Select
                   value={p.idCuenta}
                   onChange={(e) =>
                     // El plan vuelve a 1 al cambiar de cuenta: los planes los
@@ -431,14 +432,13 @@ export function CobranzaPanel({
                   }
                   disabled={disabled}
                   aria-label="Cuenta destino"
-                  className="w-full"
                 >
                   {opcionesCuenta.map((c) => (
                     <option key={c.id_cuenta_destino} value={c.id_cuenta_destino}>
                       {c.nombre}
                     </option>
                   ))}
-                </select>
+                </Select>
               )}
 
               {/* El plan de cuotas se elige acá, sobre la cuenta que ya está
@@ -658,12 +658,12 @@ function SelectorCuotas({
   return (
     <div className="flex items-center gap-2">
       <label className="w-16 shrink-0 text-xs text-muted">Plan</label>
-      <select
+      <Select
         value={cuotas}
         onChange={(e) => onChange(Number(e.target.value))}
         disabled={disabled}
         aria-label="Cuotas"
-        className="flex-1"
+        className="w-auto flex-1"
       >
         <option value={1}>1 pago</option>
         {opciones.map((c) => (
@@ -671,7 +671,7 @@ function SelectorCuotas({
             {c} cuotas
           </option>
         ))}
-      </select>
+      </Select>
     </div>
   )
 }

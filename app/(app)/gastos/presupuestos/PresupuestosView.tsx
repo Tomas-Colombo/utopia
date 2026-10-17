@@ -17,6 +17,7 @@ import {
 } from '../../rendiciones/actions'
 import { mensajeDeError } from '@/lib/errores/mensajes'
 import { TableFrame, DataTable, THead, TBody, Tr, Th, Td } from '@/components/ui/TableParts'
+import { Checkbox } from '@/components/ui/Checkbox'
 
 interface Cat {
   id: string
@@ -156,14 +157,12 @@ export function PresupuestosView({ initial }: { initial: Cat[] }) {
 
       <div className="flex items-center justify-between">
         <label className="inline-flex items-center gap-2 text-sm text-muted">
-          <input
-            type="checkbox"
+          <Checkbox
             checked={showInactivas}
             onChange={(e) => {
               setShowInactivas(e.target.checked)
               setPage(1)
             }}
-            className="rounded border-border"
           />
           Mostrar dadas de baja
         </label>

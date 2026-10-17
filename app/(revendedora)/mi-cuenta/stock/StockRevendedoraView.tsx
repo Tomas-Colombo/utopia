@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button'
 import { useToast } from '@/components/ui/Toast'
 import { mensajeDeError } from '@/lib/errores/mensajes'
 import { declararVentaAction } from '../actions'
+import { Input } from '@/components/ui/Input'
 
 interface Props {
   items: RvpMiStockRow[]
@@ -136,14 +137,14 @@ export function StockRevendedoraView({ items }: Props) {
               <label htmlFor="nota-declaracion" className="block text-xs font-semibold text-muted uppercase tracking-wider">
                 Nota u observación (opcional)
               </label>
-              <input
+              <Input
                 id="nota-declaracion"
                 type="text"
                 maxLength={500}
                 placeholder="Ej: Vendido a clienta frecuente, pago acordado"
                 value={nota}
                 onChange={(e) => setNota(e.target.value)}
-                className="w-full min-h-[44px] px-3 py-2 text-sm rounded-lg border border-border bg-bg text-text focus:outline-none focus:ring-2 focus:ring-accent"
+                className="min-h-[44px]"
               />
             </div>
 

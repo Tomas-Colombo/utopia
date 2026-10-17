@@ -22,6 +22,7 @@ import {
   cerrarConsignacionRevendedoraAction,
   eliminarConsignacionRevendedoraAction,
 } from '../actions'
+import { Checkbox } from '@/components/ui/Checkbox'
 
 const DETALLE_VARIANT: Record<
   EstadoConsignacionRevendedoraDetalle,
@@ -174,12 +175,10 @@ export function ConsignacionRevendedoraDetalleView({
             label: 'Sel.',
             render: (r: ConsignacionRevendedoraItemDetalle) =>
               r.estado_detalle === 'en_poder' ? (
-                <input
-                  type="checkbox"
+                <Checkbox
                   aria-label={`Seleccionar ítem ${r.sku}`}
                   checked={selectedItems.includes(r.id_item)}
                   onChange={() => handleToggleItem(r.id_item)}
-                  className="rounded border-border"
                 />
               ) : null,
           },
@@ -339,7 +338,8 @@ export function ConsignacionRevendedoraDetalleView({
               <span className="text-xs text-muted">
                 Seleccioná ítems en poder para registrar su devolución al local.
               </span>
-              <button
+              <Button
+                variant="bare"
                 type="button"
                 onClick={handleSelectAllEnPoder}
                 className="text-xs text-ink underline decoration-line-2 underline-offset-2 hover:decoration-ink font-medium"
@@ -347,7 +347,7 @@ export function ConsignacionRevendedoraDetalleView({
                 {selectedItems.length === itemsEnPoder.length
                   ? 'Deseleccionar todos'
                   : 'Seleccionar todos'}
-              </button>
+              </Button>
             </div>
           )}
         </div>

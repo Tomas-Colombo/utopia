@@ -1,6 +1,13 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
 
-export type ButtonVariant = 'primary' | 'accent' | 'neutral' | 'secondary' | 'ghost' | 'danger'
+export type ButtonVariant =
+  | 'primary'
+  | 'accent'
+  | 'neutral'
+  | 'secondary'
+  | 'ghost'
+  | 'danger'
+  | 'bare'
 export type ButtonSize = 'sm' | 'md' | 'lg'
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -16,6 +23,10 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 //              it is always --accent-ink.
 //   neutral  — ink on bg, the quieter commit.
 //   secondary/ghost — outline and bare, for escape hatches.
+//   bare     — no box, no colour and no size padding: inline text actions
+//              (underlined links, «Quitar») whose look the caller supplies.
+//              Without a class-merge helper an appended colour or padding
+//              would race the variant's, so this variant sets neither.
 //   danger   — the alert channel. --alerta-ink is a DARK red in light mode and
 //              a LIGHT one in dark mode, so the readable text flips with it:
 //              that is what --alerta-on carries.
@@ -26,6 +37,7 @@ const VARIANT_CLASS: Record<ButtonVariant, string> = {
   secondary: 'border border-line-2 bg-transparent text-muted hover:bg-hover hover:text-ink focus-visible:ring-ink',
   ghost: 'text-ink hover:bg-hover focus-visible:ring-ink',
   danger: 'bg-alerta-ink text-alerta-on hover:opacity-90 focus-visible:ring-alerta-ink',
+  bare: 'focus-visible:ring-ink',
 }
 
 const SIZE_CLASS: Record<ButtonSize, string> = {
@@ -53,7 +65,7 @@ export function Button({
       type={type}
       data-variant={variant}
       data-size={size}
-      className={`inline-flex select-none items-center justify-center gap-2 rounded-md font-medium transition-[background-color,border-color,color,opacity,transform] duration-150 focus:outline-none focus-visible:ring-2 active:translate-y-px disabled:pointer-events-none disabled:opacity-50 ${VARIANT_CLASS[variant]} ${SIZE_CLASS[size]} ${className}`}
+      className={`inline-flex select-none items-center justify-center gap-2 rounded-md font-medium transition-[background-color,border-color,color,opacity,transform] duration-150 focus:outline-none focus-visible:ring-2 active:translate-y-px disabled:pointer-events-none disabled:opacity-50 ${VARIANT_CLASS[variant]} ${variant === 'bare' ? '' : SIZE_CLASS[size]} ${className}`}
       {...rest}
     >
       {children}

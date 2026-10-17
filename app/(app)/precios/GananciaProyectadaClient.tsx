@@ -9,6 +9,8 @@ import { normalizar } from '@/lib/inventario/producto-match'
 import type { ProductoBuscadorItem } from '@/lib/dal/inventario/producto'
 import type { CategoriaRow } from '@/lib/types/inventario'
 import type { GananciaPorProductoRow } from '@/lib/types/reportes'
+import { Button } from '@/components/ui/Button'
+import { Select } from '@/components/ui/Select'
 
 export function GananciaProyectadaClient({
   rows,
@@ -144,13 +146,13 @@ export function GananciaProyectadaClient({
         disabled={pending}
         actions={
           <>
-            <select
+            <Select
               value={cat}
               onChange={(e) => {
                 setCat(e.target.value)
                 applyFilters(q, e.target.value)
               }}
-              className=""
+              className="w-auto"
             >
               <option value="">Todas las categorías</option>
               {categorias.map((c) => (
@@ -158,14 +160,15 @@ export function GananciaProyectadaClient({
                   {c.nombre}
                 </option>
               ))}
-            </select>
-            <button
+            </Select>
+            <Button
+              variant="secondary"
               type="button"
               onClick={() => applyFilters()}
-              className="shrink-0 rounded-md border border-line-2 px-4 py-2 text-[13px] font-medium text-muted transition-colors hover:bg-hover hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ink active:translate-y-px"
+              className="shrink-0"
             >
               Aplicar
-            </button>
+            </Button>
           </>
         }
       />

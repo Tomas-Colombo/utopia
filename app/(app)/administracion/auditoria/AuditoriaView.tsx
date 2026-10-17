@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import type { AuditoriaConActor } from '@/lib/types/administracion'
 import { TableFrame, DataTable, THead, TBody, Tr, Th, Td } from '@/components/ui/TableParts'
+import { Select } from '@/components/ui/Select'
 
 /**
  * Visor de auditoría (Etapa 9 §L140). Read-only.
@@ -57,17 +58,16 @@ export function AuditoriaView({
       >
         <div className="w-56">
           <Field htmlFor="a-ent" label="Entidad">
-            <select
+            <Select
               id="a-ent"
               value={entidad}
               onChange={(e) => setEntidad(e.target.value)}
-              className="w-full"
             >
               <option value="">Todas</option>
               {entidades.map((e) => (
                 <option key={e} value={e}>{e}</option>
               ))}
-            </select>
+            </Select>
           </Field>
         </div>
         <div className="w-40">

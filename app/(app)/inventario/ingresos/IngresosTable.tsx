@@ -11,6 +11,7 @@ import type { IngresoConResumen } from '@/lib/types/inventario'
 import { cancelarIngresoAction } from '../actions'
 import { mensajeDeError } from '@/lib/errores/mensajes'
 import { TableFrame, DataTable, THead, TBody, Tr, Th, Td } from '@/components/ui/TableParts'
+import { Button } from '@/components/ui/Button'
 
 export function IngresosTable({
   initial,
@@ -129,14 +130,15 @@ export function IngresosTable({
                       Abrir
                     </Link>
                     {!cancelado && (
-                      <button
+                      <Button
+                        variant="bare"
                         type="button"
                         onClick={() => setTarget(r)}
                         disabled={pending}
-                        className="text-sm text-muted hover:text-text disabled:opacity-50"
+                        className="text-sm text-muted hover:text-text"
                       >
                         {r.confirmado ? 'Cancelar' : 'Eliminar'}
-                      </button>
+                      </Button>
                     )}
                   </div>
                 </Td>

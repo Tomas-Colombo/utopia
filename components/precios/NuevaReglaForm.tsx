@@ -16,6 +16,8 @@ import {
 } from '@/lib/types/precios'
 import { createReglaAction } from '@/app/(app)/precios/actions'
 import { mensajeDeError } from '@/lib/errores/mensajes'
+import { Checkbox } from '@/components/ui/Checkbox'
+import { Select } from '@/components/ui/Select'
 
 export interface Ref { id: string; nombre: string; sku?: string | null }
 
@@ -128,11 +130,10 @@ export function NuevaReglaForm({
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field htmlFor="r-tipo" label="Tipo de regla" required>
-          <select
+          <Select
             id="r-tipo"
             value={tipoRegla}
             onChange={(e) => handleTipoRegla(e.target.value as TipoRegla)}
-            className="w-full"
           >
             {/* 'recargo' ya no se ofrece: desde 00063 el recargo por cuotas vive en
         `recargo_cuotas`, en Precios y Cuentas, donde se lo puede enfrentar
@@ -143,32 +144,30 @@ export function NuevaReglaForm({
                 {TIPO_REGLA_LABEL[t]}
               </option>
             ))}
-          </select>
+          </Select>
         </Field>
 
         <Field htmlFor="r-alcance" label="Alcance" required>
-          <select
+          <Select
             id="r-alcance"
             value={alcance}
             onChange={(e) => handleAlcance(e.target.value as AlcanceRegla)}
-            className="w-full"
           >
             {(['producto', 'categoria', 'proveedor', 'global'] as AlcanceRegla[]).map((a) => (
               <option key={a} value={a}>
                 {ALCANCE_LABEL[a]}
               </option>
             ))}
-          </select>
+          </Select>
         </Field>
       </div>
 
       {alcance === 'producto' && (
         <Field htmlFor="r-prod" label="Producto" required>
-          <select
+          <Select
             id="r-prod"
             value={idProducto}
             onChange={(e) => setIdProducto(e.target.value)}
-            className="w-full"
           >
             <option value="">— Elegí un producto —</option>
             {productos.map((p) => (
@@ -176,17 +175,16 @@ export function NuevaReglaForm({
                 {p.nombre}{p.sku ? ` · ${p.sku}` : ''}
               </option>
             ))}
-          </select>
+          </Select>
         </Field>
       )}
 
       {alcance === 'categoria' && (
         <Field htmlFor="r-cat" label="Categoría" required>
-          <select
+          <Select
             id="r-cat"
             value={idCategoria}
             onChange={(e) => setIdCategoria(e.target.value)}
-            className="w-full"
           >
             <option value="">— Elegí una categoría —</option>
             {categorias.map((c) => (
@@ -194,17 +192,16 @@ export function NuevaReglaForm({
                 {c.nombre}
               </option>
             ))}
-          </select>
+          </Select>
         </Field>
       )}
 
       {alcance === 'proveedor' && (
         <Field htmlFor="r-prov" label="Proveedor" required>
-          <select
+          <Select
             id="r-prov"
             value={idProveedor}
             onChange={(e) => setIdProveedor(e.target.value)}
-            className="w-full"
           >
             <option value="">— Elegí un proveedor —</option>
             {proveedores.map((p) => (
@@ -212,18 +209,16 @@ export function NuevaReglaForm({
                 {p.nombre}
               </option>
             ))}
-          </select>
+          </Select>
         </Field>
       )}
 
       {tipoRegla === 'descuento' && (
         <div className="rounded-md border border-border bg-card-2 p-3">
           <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
+            <Checkbox
               checked={acumulable}
               onChange={(e) => setAcumulable(e.target.checked)}
-              className="h-4 w-4 rounded border-border text-ink focus:ring-ink"
             />
             Acumulable con otros descuentos
           </label>
@@ -237,15 +232,14 @@ export function NuevaReglaForm({
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field htmlFor="r-tv" label="Tipo de valor" required>
-          <select
+          <Select
             id="r-tv"
             value={tipoValor}
             onChange={(e) => setTipoValor(e.target.value as TipoValorRegla)}
-            className="w-full"
           >
             <option value="porcentaje">Porcentaje</option>
             <option value="monto_fijo">Monto fijo</option>
-          </select>
+          </Select>
         </Field>
 
         {tipoValor === 'porcentaje' ? (

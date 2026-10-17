@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/Input'
 import { useToast } from '@/components/ui/Toast'
 import { invitarUsuarioAction } from '../../actions'
 import { mensajeDeError } from '@/lib/errores/mensajes'
+import { Select } from '@/components/ui/Select'
 
 /** Crypto-random temp password, avoiding ambiguous chars (0/O, 1/l/I). */
 function generarPassword(): string {
@@ -59,7 +60,6 @@ export function InvitarUsuarioForm({
           password,
         })
       }
-      
       if (!res.ok) {
         const rawReason = (res as { reason?: unknown }).reason
         const msg = typeof rawReason === 'string' ? rawReason : ((rawReason as { reason?: string })?.reason || 'error-desconocido')
@@ -104,11 +104,10 @@ export function InvitarUsuarioForm({
       </Field>
 
       <Field htmlFor="ur" label="Rol" required hint="Define qué módulos podrá ver y usar">
-        <select
+        <Select
           id="ur"
           value={idRol}
           onChange={(e) => setIdRol(e.target.value)}
-          className="w-full"
         >
           <option value="">— Elegí un rol —</option>
           {roles.map((r) => (
@@ -116,17 +115,17 @@ export function InvitarUsuarioForm({
               {r.nombre}
             </option>
           ))}
-        </select>
+        </Select>
       </Field>
 
       {isRevendedoraRole && revendedorasLibres && (
         <Field htmlFor="idRev" label="Revendedora a enlazar" required hint="Solo se muestran revendedoras activas sin usuario">
           {revendedorasLibres.length > 0 ? (
-            <select
+            <Select
               id="idRev"
               value={idRevendedora}
               onChange={(e) => setIdRevendedora(e.target.value)}
-              className="w-full bg-bg border border-border rounded px-2 py-1"
+              className="px-2 py-1"
             >
               <option value="">— Elegí la revendedora —</option>
               {revendedorasLibres.map((r) => (
@@ -134,7 +133,7 @@ export function InvitarUsuarioForm({
                   {r.nombre} {r.apellido}
                 </option>
               ))}
-            </select>
+            </Select>
           ) : (
             <div className="text-sm text-muted-2">No hay revendedoras libres para invitar.</div>
           )}

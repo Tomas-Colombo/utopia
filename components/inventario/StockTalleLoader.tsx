@@ -4,6 +4,8 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { NumberInput } from '@/components/ui/NumberInput'
 import { MAX_UNIDADES_LINEA } from '@/lib/inventario/limites'
+import { IconButton } from '@/components/ui/IconButton'
+import { Select } from '@/components/ui/Select'
 
 export type LineaTalle = { talle: string | null; cantidad: number }
 
@@ -97,12 +99,12 @@ export function StockTalleLoader({
           className="w-20"
           aria-label="Cantidad"
         />
-        <select
+        <Select
           value={talle}
           onChange={(e) => setTalle(e.target.value)}
           disabled={disabled || sinCupo}
           aria-label="Talle"
-          className=""
+          className="w-auto"
         >
           {talles.map((t) => (
             <option key={t} value={t}>
@@ -110,7 +112,7 @@ export function StockTalleLoader({
             </option>
           ))}
           <option value={SIN_TALLE}>Sin talle</option>
-        </select>
+        </Select>
         <Button type="button" variant="secondary" size="sm" onClick={agregar} disabled={disabled || sinCupo}>
           Agregar
         </Button>
@@ -135,14 +137,14 @@ export function StockTalleLoader({
               <span className="text-muted">×</span>
               {l.talle ?? 'sin talle'}
               {!disabled && (
-                <button
+                <IconButton
+                  size="sm"
                   type="button"
                   onClick={() => quitar(l.talle)}
                   aria-label={`Quitar ${l.talle ?? 'sin talle'}`}
-                  className="text-muted hover:text-text"
                 >
                   ×
-                </button>
+                </IconButton>
               )}
             </span>
           ))}

@@ -28,6 +28,7 @@ import {
 import { buscarMatchNombre, indexarPorNombre } from '@/lib/inventario/producto-match'
 import { mensajeDeError } from '@/lib/errores/mensajes'
 import { TableFrame, DataTable, THead, TBody, TFoot, Tr, Th, Td } from '@/components/ui/TableParts'
+import { Select } from '@/components/ui/Select'
 
 type Ingreso = IngresoMercaderiaRow & {
   proveedor: Pick<ProveedorRow, 'id_proveedor' | 'nombre' | 'telefono'> | null
@@ -314,31 +315,29 @@ export function IngresoDetalleView({
 
             {linea.esNuevo && (
               <Field htmlFor="l-cat" label="Categoría (nuevo)">
-                <select
+                <Select
                   id="l-cat"
                   value={idCategoriaAdd}
                   onChange={(e) => {
                     setIdCategoriaAdd(e.target.value)
                     setTalleAdd('')
                   }}
-                  className="w-full"
                 >
                   {categorias.map((c) => (
                     <option key={c.id_categoria} value={c.id_categoria}>
                       {c.nombre}
                     </option>
                   ))}
-                </select>
+                </Select>
               </Field>
             )}
 
             <Field htmlFor="l-talle" label="Talle">
-              <select
+              <Select
                 id="l-talle"
                 value={talleAdd}
                 onChange={(e) => setTalleAdd(e.target.value)}
                 disabled={tallesAdd.length === 0}
-                className="w-full"
               >
                 <option value="">Sin talle</option>
                 {tallesAdd.map((t) => (
@@ -346,7 +345,7 @@ export function IngresoDetalleView({
                     {t}
                   </option>
                 ))}
-              </select>
+              </Select>
             </Field>
 
             <Field htmlFor="l-cant" label="Cantidad">

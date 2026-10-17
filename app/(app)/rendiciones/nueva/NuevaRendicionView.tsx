@@ -15,6 +15,7 @@ import {
 } from '../actions'
 import { mensajeDeError } from '@/lib/errores/mensajes'
 import { TableFrame, DataTable, THead, TBody, TFoot, Tr, Th, Td } from '@/components/ui/TableParts'
+import { Select } from '@/components/ui/Select'
 
 interface Prov { id: string; nombre: string; tipo: string }
 
@@ -100,11 +101,10 @@ export function NuevaRendicionView({
       {/* Paso 1: seleccionar proveedor */}
       <div className="rounded-lg border border-border bg-card p-4">
         <Field htmlFor="r-prov" label="Proveedor" required>
-          <select
+          <Select
             id="r-prov"
             value={idProvSeleccionado}
             onChange={(e) => elegirProveedor(e.target.value)}
-            className="w-full"
           >
             <option value="">— Elegí un proveedor —</option>
             {proveedores.map((p) => (
@@ -112,7 +112,7 @@ export function NuevaRendicionView({
                 {p.nombre} · {p.tipo}
               </option>
             ))}
-          </select>
+          </Select>
         </Field>
       </div>
 

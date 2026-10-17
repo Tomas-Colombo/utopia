@@ -13,6 +13,7 @@ import type { ProductoBuscadorItem } from '@/lib/dal/inventario/producto'
 import type { CategoriaRow, ProductoConDetalle } from '@/lib/types/inventario'
 import type { StockPorTenenciaRow } from '@/lib/types/revendedoras'
 import { EditarProductoModal } from './EditarProductoModal'
+import { Select } from '@/components/ui/Select'
 
 export function ProductosTableClient({
   rows,
@@ -194,13 +195,14 @@ export function ProductosTableClient({
           >
             Restock
           </Link>
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             type="button"
             onClick={() => setEditing(r)}
-            className="rounded-[4px] px-2 py-1 text-xs font-medium text-muted transition-colors hover:bg-hover hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
           >
             Editar
-          </button>
+          </Button>
         </div>
       ),
     },
@@ -265,13 +267,13 @@ export function ProductosTableClient({
         disabled={pending}
         actions={
           <>
-            <select
+            <Select
               value={cat}
               onChange={(e) => {
                 setCat(e.target.value)
                 applyFilters(q, e.target.value)
               }}
-              className=""
+              className="w-auto"
             >
               <option value="">Todas las categorías</option>
               {categorias.map((c) => (
@@ -279,20 +281,20 @@ export function ProductosTableClient({
                   {c.nombre}
                 </option>
               ))}
-            </select>
+            </Select>
             {tenenciaStock && (
-              <select
+              <Select
                 value={tenencia}
                 onChange={(e) => {
                   setTenencia(e.target.value)
                   applyFilters(q, cat, e.target.value)
                 }}
-                className=""
+                className="w-auto"
               >
                 <option value="">Todas las tenencias</option>
                 <option value="central">Stock central</option>
                 <option value="revendedoras">En revendedoras</option>
-              </select>
+              </Select>
             )}
             <Button variant="neutral" onClick={() => applyFilters()} className="shrink-0">
               Aplicar
@@ -326,14 +328,15 @@ export function ProductosTableClient({
           {initialSearch && <FiltroChip>“{initialSearch}”</FiltroChip>}
           {categoriaActiva && <FiltroChip>{categoriaActiva}</FiltroChip>}
           {tenenciaActiva && <FiltroChip>{tenenciaActiva}</FiltroChip>}
-          <button
+          <Button
+            variant="bare"
             type="button"
             onClick={limpiarFiltros}
             disabled={pending}
-            className="rounded-[4px] px-2 py-1 font-medium text-muted underline decoration-line-2 underline-offset-2 transition-colors hover:text-ink hover:decoration-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ink disabled:opacity-50"
+            className="rounded-[4px] px-2 py-1 font-medium text-muted underline decoration-line-2 underline-offset-2 transition-colors hover:text-ink hover:decoration-ink"
           >
             Limpiar filtros
-          </button>
+          </Button>
         </div>
       )}
 

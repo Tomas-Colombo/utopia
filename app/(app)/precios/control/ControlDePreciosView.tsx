@@ -10,6 +10,8 @@ import type { ProductoConPrecioStatus } from '@/lib/types/precios'
 import { recalcularBatchAction, recalcularPrecioAction } from '../actions'
 import { mensajeDeError } from '@/lib/errores/mensajes'
 import { TableFrame, DataTable, THead, TBody, Tr, Th, Td } from '@/components/ui/TableParts'
+import { Checkbox } from '@/components/ui/Checkbox'
+import { Select } from '@/components/ui/Select'
 
 type Filter = 'todos' | 'desactualizados' | 'sin-precio' | 'sin-regla'
 
@@ -119,17 +121,17 @@ export function ControlDePreciosView({
               placeholder="Buscar por nombre, SKU o categoría"
             />
           </div>
-          <select
+          <Select
             value={filter}
             onChange={(e) => setFilter(e.target.value as Filter)}
             aria-label="Estado de precio"
-            className=""
+            className="w-auto"
           >
             <option value="todos">Todos</option>
             <option value="desactualizados">Solo desactualizados</option>
             <option value="sin-precio">Sin precio de venta</option>
             <option value="sin-regla">Sin regla de margen</option>
-          </select>
+          </Select>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted">{selected.size} seleccionados</span>
@@ -186,8 +188,7 @@ export function ControlDePreciosView({
                     className={selected.has(r.id_producto) ? 'bg-line/60' : ''}
                   >
                     <Td className="px-3 py-3">
-                      <input
-                        type="checkbox"
+                      <Checkbox
                         aria-label={`Seleccionar ${r.nombre}`}
                         checked={selected.has(r.id_producto)}
                         onChange={() => toggleSelected(r.id_producto)}

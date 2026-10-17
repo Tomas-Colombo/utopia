@@ -12,6 +12,8 @@ import { useToast } from '@/components/ui/Toast'
 import type { CategoriaRow, ProductoRow } from '@/lib/types/inventario'
 import { updateProductoAction } from '@/app/(app)/inventario/actions'
 import { mensajeDeError } from '@/lib/errores/mensajes'
+import { Checkbox } from '@/components/ui/Checkbox'
+import { Select } from '@/components/ui/Select'
 
 /** Campos mínimos que la UI toca para editar un producto. Toma `ProductoRow`
  *  o cualquier subtipo (p. ej. `ProductoConDetalle` de la tabla). */
@@ -124,19 +126,18 @@ export function EditarProductoModal({
         </Field>
 
         <Field htmlFor="epm-cat" label="Categoría" required error={errors.categoria}>
-          <select
+          <Select
             id="epm-cat"
             value={idCategoria}
             onChange={(e) => setIdCategoria(e.target.value)}
             aria-invalid={!!errors.categoria || undefined}
-            className="w-full"
           >
             {categorias.map((c) => (
               <option key={c.id_categoria} value={c.id_categoria}>
                 {c.nombre}
               </option>
             ))}
-          </select>
+          </Select>
         </Field>
 
         <Field htmlFor="epm-stock" label="Stock mínimo">
@@ -158,11 +159,9 @@ export function EditarProductoModal({
         </Field>
 
         <label className="flex items-center gap-2 text-sm text-text">
-          <input
-            type="checkbox"
+          <Checkbox
             checked={activo}
             onChange={(e) => setActivo(e.target.checked)}
-            className="h-4 w-4 rounded border-border text-ink focus:ring-ink"
           />
           Producto activo
         </label>

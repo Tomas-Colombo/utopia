@@ -18,6 +18,7 @@ import { bajaReglaAction } from '../actions'
 import { PlanesCuotasModal } from '../PlanesCuotasModal'
 import { mensajeDeError } from '@/lib/errores/mensajes'
 import { TableFrame, DataTable, THead, TBody, Tr, Th, Td } from '@/components/ui/TableParts'
+import { Select } from '@/components/ui/Select'
 
 const TIPO_VARIANT: Record<TipoRegla, 'success' | 'info' | 'warning'> = {
   margen: 'info',
@@ -127,14 +128,14 @@ export function ReglasView({
           </p>
           <label className="flex items-center gap-2 text-sm">
             <span className="text-muted">Prioridad</span>
-            <select
+            <Select
               value={orden}
               onChange={(e) => setOrden(e.target.value as OrdenPrioridad)}
-              className=""
+              className="w-auto"
             >
               <option value="desc">Mayor a menor</option>
               <option value="asc">Menor a mayor</option>
-            </select>
+            </Select>
           </label>
         </div>
       )}

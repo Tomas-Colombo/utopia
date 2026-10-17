@@ -11,6 +11,7 @@ import { useToast } from '@/components/ui/Toast'
 import { registrarGastoAction } from '../../rendiciones/actions'
 import { NuevaCategoriaGastoModal } from './NuevaCategoriaGastoModal'
 import { mensajeDeError } from '@/lib/errores/mensajes'
+import { Select } from '@/components/ui/Select'
 
 interface Cat { id: string; nombre: string }
 
@@ -63,17 +64,16 @@ export function NuevoGastoForm({ categorias }: { categorias: Cat[] }) {
     <>
       <form onSubmit={submit} className="space-y-4">
         <Field htmlFor="g-cat" label="Categoría" required>
-          <select
+          <Select
             id="g-cat"
             value={idCat}
             onChange={(e) => onCategoriaChange(e.target.value)}
-            className="w-full"
           >
             {cats.map((c) => (
               <option key={c.id} value={c.id}>{c.nombre}</option>
             ))}
             <option value={NUEVA_CAT}>+ Nueva categoría…</option>
-          </select>
+          </Select>
         </Field>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

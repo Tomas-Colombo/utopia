@@ -11,6 +11,7 @@ import { mensajeDeError } from '@/lib/errores/mensajes'
 import type { CuentaDestinoRow } from '@/lib/types/ventas'
 import { formatearMoneda } from '@/lib/utils/moneda'
 import { marcarLiquidacionPagadaAction } from '../actions'
+import { Select } from '@/components/ui/Select'
 
 interface PagoLiquidacionModalProps {
   open: boolean
@@ -94,18 +95,18 @@ export function PagoLiquidacionModal({
               No hay cuentas activas registradas en el negocio para recibir el pago.
             </p>
           ) : (
-            <select
+            <Select
               id="pago-cuenta"
               value={idCuenta}
               onChange={(e) => setIdCuenta(e.target.value)}
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-foreground"
+              className="px-3 py-2 text-sm"
             >
               {cuentas.map((c) => (
                 <option key={c.id_cuenta_destino} value={c.id_cuenta_destino}>
                   {c.nombre} ({c.tipo})
                 </option>
               ))}
-            </select>
+            </Select>
           )}
         </Field>
 
