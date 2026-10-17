@@ -141,7 +141,7 @@ export async function inviteRevendedora(session: Session, input: {
   })
 
   if (authError) {
-    if (authError.status === 422) return { ok: false as const, reason: 'email-duplicado' }
+    if (authError.status === 422) return reactivarAccesoRevendedora(admin, session, input, rolData.id_rol, generatedPassword)
     return { ok: false as const, reason: 'error-invitacion' }
   }
   
@@ -165,6 +165,51 @@ export async function inviteRevendedora(session: Session, input: {
   }
 
   return { ok: true as const, data: { id: authId } }
+}
+
+/**
+ * El email ya existe en Auth. Si es el de una revendedora a la que se le quitó
+ * el acceso (usuario 'inactivo' de este tenant), se reutiliza ese usuario en
+ * vez de rechazarlo: revocar no borra el usuario de Auth, así que sin esto no
+ * se le podía volver a dar acceso nunca. Cualquier otro caso sigue siendo
+ * email duplicado; el SP lo vuelve a comprobar dentro de la transacción.
+ */
+async function reactivarAccesoRevendedora(
+  admin: ReturnType<typeof createServiceClient>,
+  session: Session,
+  input: { idRevendedora: string; email: string; nombreCompleto: string },
+  idRol: string,
+  password: string,
+) {
+  const { data: previo } = await admin
+    .from('usuario')
+    .select('id_usuario')
+    .eq('id_tenant', session.tenantId)
+    .in('email', [input.email, input.email.toLowerCase()])
+    .eq('estado_usuario', 'inactivo')
+    .maybeSingle()
+
+  if (!previo) return { ok: false as const, reason: 'email-duplicado' }
+
+  const { error: authError } = await admin.auth.admin.updateUserById(previo.id_usuario, {
+    password,
+    user_metadata: { nombre_completo: input.nombreCompleto },
+  })
+  if (authError) return { ok: false as const, reason: 'error-invitacion' }
+
+  const { error } = await admin.rpc('sp_reactivar_acceso_revendedora', {
+    p_id_revendedora: input.idRevendedora,
+    p_id_usuario: previo.id_usuario,
+    p_id_tenant: session.tenantId,
+    p_nombre: input.nombreCompleto,
+    p_id_rol: idRol,
+  })
+  if (error) {
+    const reason = error.message.includes('acceso-duplicado') ? 'acceso-duplicado' : 'email-duplicado'
+    return { ok: false as const, reason }
+  }
+
+  return { ok: true as const, data: { id: previo.id_usuario } }
 }
 
 export async function revocarAccesoRevendedora(session: Session, input: { idRevendedora: string }) {
