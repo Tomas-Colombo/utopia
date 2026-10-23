@@ -1,5 +1,6 @@
 import 'server-only'
 import { createServerClient, createServiceClient } from '@/lib/dal/supabase'
+import { QR_LADO_MM_DEFAULT, QR_LADO_MM_MAX, QR_LADO_MM_MIN } from '@/lib/inventario/limites'
 import type {
   AuditoriaConActor,
   ModuloRow,
@@ -188,6 +189,42 @@ export async function spToggleTenantModulo(input: {
     p_habilitado: input.habilitado,
   })
   if (error) throw new Error(`sp_toggle_tenant_modulo: ${error.message}`)
+}
+
+// ─── Configuración de etiquetas QR ───────────────────────────────────
+
+/**
+ * Medida en milímetros del lado del código QR para las hojas de etiquetas del
+ * tenant actual. Si todavía no fue configurada (o el valor guardado quedó
+ * fuera de rango), devuelve `QR_LADO_MM_DEFAULT` (35 mm).
+ */
+export async function getConfiguracionQrLadoMm(): Promise<number> {
+  const supabase = await createServerClient()
+  const { data, error } = await supabase
+    .from('configuracion')
+    .select('valor')
+    .eq('seccion', 'etiquetas')
+    .eq('clave', 'qr_lado_mm')
+    .maybeSingle()
+  if (error || !data) return QR_LADO_MM_DEFAULT
+  const n = Number((data as { valor: unknown }).valor)
+  if (!Number.isFinite(n) || n < QR_LADO_MM_MIN || n > QR_LADO_MM_MAX) {
+    return QR_LADO_MM_DEFAULT
+  }
+  return Math.round(n)
+}
+
+export async function spSetConfiguracionQrLadoMm(
+  ladoMm: number,
+  ip?: string | null,
+): Promise<number> {
+  const supabase = await createServerClient()
+  const { data, error } = await supabase.rpc('sp_set_configuracion_qr_lado_mm', {
+    p_lado_mm: ladoMm,
+    p_ip: ip ?? null,
+  })
+  if (error) throw new Error(`sp_set_configuracion_qr_lado_mm: ${error.message}`)
+  return Number(data ?? ladoMm)
 }
 
 // ─── Auditoría ───────────────────────────────────────────────────────

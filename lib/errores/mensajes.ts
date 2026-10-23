@@ -69,6 +69,7 @@ const MENSAJES: Record<string, string> = {
   'no-session': 'Se cerró tu sesión. Volvé a iniciar sesión.',
   'no-tenant': 'Tu sesión no está asociada a ningún negocio. Volvé a iniciar sesión.',
   'zona-horaria-invalida': 'La zona horaria elegida no es válida.',
+  'qr-lado-mm-invalido': 'El tamaño del QR debe estar entre 15 y 100 mm.',
 
   // ─── Datos mal formados ────────────────────────────────────────────
   // Nunca deberían verse: la UI arma estos pedidos. Si aparecen, la página
@@ -502,6 +503,3 @@ export const SLUGS_CON_MENSAJE: readonly string[] = [
   ...Object.keys(MENSAJES),
   ...PREFIJOS.map((p) => p.slug),
 ]
- 
-// Nuevos slugs revendedoras
-

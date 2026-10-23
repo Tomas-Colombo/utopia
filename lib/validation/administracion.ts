@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { QR_LADO_MM_MAX, QR_LADO_MM_MIN } from '@/lib/inventario/limites'
 import { CATALOGO_PERMISOS } from '@/lib/types/administracion'
 
 /**
@@ -76,6 +77,17 @@ export const updateRolSchema = z.strictObject(
 
 export const deleteRolSchema = z.strictObject(
   { idRol: z.uuid('id-rol-invalido') },
+  payloadParams,
+)
+
+export const updateConfiguracionQrSchema = z.strictObject(
+  {
+    ladoMm: z
+      .number('qr-lado-mm-invalido')
+      .int('qr-lado-mm-invalido')
+      .min(QR_LADO_MM_MIN, 'qr-lado-mm-invalido')
+      .max(QR_LADO_MM_MAX, 'qr-lado-mm-invalido'),
+  },
   payloadParams,
 )
 

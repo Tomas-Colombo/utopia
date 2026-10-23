@@ -9,6 +9,7 @@ import {
   spAsignarRol,
   spCreateRol,
   spDeleteRol,
+  spSetConfiguracionQrLadoMm,
   spToggleTenantModulo,
   spToggleUsuarioActivo,
   spUpdateRol,
@@ -18,6 +19,7 @@ import {
   createRolSchema,
   deleteRolSchema,
   primerReason,
+  updateConfiguracionQrSchema,
   updateRolSchema,
 } from '@/lib/validation/administracion'
 import type { UsuarioEstado } from '@/lib/types/administracion'
@@ -172,6 +174,25 @@ export async function toggleTenantModuloAction(input: {
     revalidatePath('/administracion/modulos')
     revalidatePath('/')
     return { ok: true }
+  } catch (e) {
+    return { ok: false, reason: (e as Error).message }
+  }
+}
+
+export async function updateConfiguracionQrAction(
+  raw: unknown,
+): Promise<ActionResult<{ ladoMm: number }>> {
+  const g = await guarded('editar')
+  if (!g.ok) return { ok: false, reason: g.error }
+
+  const parsed = updateConfiguracionQrSchema.safeParse(raw)
+  if (!parsed.success) return { ok: false, reason: primerReason(parsed.error) }
+
+  try {
+    const ladoMm = await spSetConfiguracionQrLadoMm(parsed.data.ladoMm)
+    revalidatePath('/administracion')
+    revalidatePath('/inventario/imprimir-etiquetas')
+    return { ok: true, data: { ladoMm } }
   } catch (e) {
     return { ok: false, reason: (e as Error).message }
   }

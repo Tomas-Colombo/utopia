@@ -1,3 +1,5 @@
+import type { EstadoItem } from '@/lib/types/inventario'
+
 /**
  * Topes de unidades, compartidos por el formulario y las Server Actions.
  *
@@ -11,6 +13,25 @@ export const MAX_UNIDADES_LINEA = 1000
 
 /** Unidades máximas que puede generar UNA operación (alta o ingreso completo). */
 export const MAX_UNIDADES_OPERACION = 5000
+
+/** Tope de etiquetas QR por tanda de impresión. */
+export const ETIQUETAS_MAX = 200
+
+/** Lado mínimo (en mm) permitido para el código QR impreso en etiquetas. */
+export const QR_LADO_MM_MIN = 15
+
+/** Lado máximo (en mm) permitido para el código QR impreso en etiquetas. */
+export const QR_LADO_MM_MAX = 100
+
+/** Lado por defecto (en mm) del código QR impreso en etiquetas (~132 px a 96 DPI). */
+export const QR_LADO_MM_DEFAULT = 35
+
+/**
+ * Estados de `item_producto` que admiten impresión o reimpresión de etiqueta QR.
+ * Los ítems vendidos, dados de baja, devueltos o en poder de revendedora nunca
+ * deben volver a etiquetarse en el local.
+ */
+export const ESTADOS_IMPRIMIBLES: readonly EstadoItem[] = ['disponible', 'reservado'] as const
 
 /**
  * Tope del PDF de remito, atado al `bodySizeLimit` de Server Actions de Next

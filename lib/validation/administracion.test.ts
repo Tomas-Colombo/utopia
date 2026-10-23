@@ -5,6 +5,7 @@ import {
   deleteRolSchema,
   permisosSchema,
   primerReason,
+  updateConfiguracionQrSchema,
   updateRolSchema,
 } from './administracion'
 
@@ -117,6 +118,28 @@ describe('updateRolSchema / deleteRolSchema', () => {
   })
 })
 
+describe('updateConfiguracionQrSchema', () => {
+  it('acepta enteros entre 15 y 100 mm', () => {
+    expect(updateConfiguracionQrSchema.safeParse({ ladoMm: 15 }).success).toBe(true)
+    expect(updateConfiguracionQrSchema.safeParse({ ladoMm: 35 }).success).toBe(true)
+    expect(updateConfiguracionQrSchema.safeParse({ ladoMm: 100 }).success).toBe(true)
+  })
+
+  it('rechaza medidas fuera de rango o no enteras con el slug qr-lado-mm-invalido', () => {
+    for (const ladoMm of [14, 101, 35.5, '35', null]) {
+      const r = updateConfiguracionQrSchema.safeParse({ ladoMm })
+      expect(r.success).toBe(false)
+      if (!r.success) expect(primerReason(r.error)).toBe('qr-lado-mm-invalido (ladoMm)')
+    }
+  })
+
+  it('rechaza claves adicionales', () => {
+    const r = updateConfiguracionQrSchema.safeParse({ ladoMm: 35, extra: true })
+    expect(r.success).toBe(false)
+    if (!r.success) expect(primerReason(r.error)).toBe('campo-desconocido')
+  })
+})
+
 describe('compactarPermisos', () => {
   it('descarta los módulos ausentes en vez de dejarlos como undefined', () => {
     const parsed = permisosSchema.parse({ inventario: ['ver'] })
@@ -177,7 +200,7 @@ describe('reasons estables', () => {
 
 describe('payloads que no son objetos', () => {
   it('caen en payload-invalido, no en campo-desconocido', () => {
-    for (const schema of [createRolSchema, updateRolSchema, deleteRolSchema]) {
+    for (const schema of [createRolSchema, updateRolSchema, deleteRolSchema, updateConfiguracionQrSchema]) {
       const r = schema.safeParse(null)
       expect(r.success).toBe(false)
       if (!r.success) expect(primerReason(r.error)).toBe('payload-invalido')

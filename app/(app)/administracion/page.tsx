@@ -1,12 +1,15 @@
 import Link from 'next/link'
 import { Topbar } from '@/components/shell/Topbar'
+import { hasModuleAccess } from '@/lib/dal/guard'
 import { verifySession } from '@/lib/dal/session'
 import {
+  getConfiguracionQrLadoMm,
   listAuditoria,
   listModulosTenant,
   listRoles,
   listUsuarios,
 } from '@/lib/dal/administracion/administracion'
+import { ConfiguracionQrCard } from './ConfiguracionQrCard'
 import { RolesModal } from './RolesModal'
 import { Card } from '@/components/ui/Card'
 
@@ -25,13 +28,15 @@ function cardLink(c: { href: string; label: string; value: string }) {
 
 export default async function AdministracionHome() {
   const session = await verifySession()
-  const [usuarios, roles, modulos, ultimasAcciones] = await Promise.all([
+  const [usuarios, roles, modulos, ultimasAcciones, ladoMm] = await Promise.all([
     listUsuarios(),
     listRoles(),
     listModulosTenant(),
     listAuditoria({ limit: 15 }),
+    getConfiguracionQrLadoMm(),
   ])
   const modulosHab = modulos.filter((m) => m.habilitado).length
+  const canEdit = hasModuleAccess(session, 'administracion', 'editar')
 
   // Roles no está acá: es un pop-up (`RolesModal`), no una ruta.
   const cards = [
@@ -49,6 +54,8 @@ export default async function AdministracionHome() {
           <RolesModal roles={roles} />
           {cards.slice(1).map(cardLink)}
         </section>
+
+        <ConfiguracionQrCard ladoMmInicial={ladoMm} canEdit={canEdit} />
 
         <Card as="section" padding="none" className="overflow-x-auto">
           <div className="border-b border-border px-4 py-3 flex items-center justify-between">
