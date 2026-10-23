@@ -45,6 +45,7 @@ interface PageBandProps {
  */
 export function PageBand({ breadcrumb, title, subtitle, filters, kpis, actions, backHref, backLabel }: PageBandProps) {
   const hasKpis = !!kpis && kpis.length > 0
+  const filasKpi = kpis?.some((k) => k.sub) ? 'row-span-3' : 'row-span-2'
   return (
     <header aria-label="Barra superior" className="band-scope bg-band text-band-ink">
       <div className="flex flex-col gap-3.5 px-6 pl-16 pb-4 pt-3 md:px-6 md:pb-5">
@@ -97,16 +98,21 @@ export function PageBand({ breadcrumb, title, subtitle, filters, kpis, actions, 
             {kpis && (
               <dl
                 style={{ ["--kpi-cols" as string]: `minmax(0,1.7fr) repeat(${kpis.length - 1},minmax(0,1fr))` }}
-                className="grid grid-cols-2 border-t border-band-line md:[grid-template-columns:var(--kpi-cols)]"
+                // Each KPI spans the same row tracks (subgrid): a label that wraps to two
+                // lines in a narrow column grows the shared label row instead of pushing
+                // only its own number down, so every value stays on one baseline.
+                className="@container grid grid-cols-2 border-t border-band-line md:[grid-template-columns:var(--kpi-cols)]"
               >
                 {kpis.map((k) => (
                   <div
                     key={k.label}
-                    className="flex min-w-0 flex-col gap-2 pb-1 pr-4 pt-3 md:[&:not(:first-child)]:border-l md:[&:not(:first-child)]:border-band-line md:[&:not(:first-child)]:pl-4"
+                    className={`grid min-w-0 grid-rows-subgrid content-start gap-y-2 pb-1 pr-4 pt-3 ${filasKpi} md:[&:not(:first-child)]:border-l md:[&:not(:first-child)]:border-band-line md:[&:not(:first-child)]:pl-4`}
                   >
                     <dt className="eyebrow text-band-label">{k.label}</dt>
                     <dd
-                      className={`font-figure text-[28px] leading-none [overflow-wrap:anywhere] md:text-[32px] ${
+                      // Sized from the whole strip (cqi of the <dl>), not per cell: every
+                      // value gets the same height whatever its column width.
+                      className={`self-end font-figure text-[clamp(1.5rem,3.6cqi,2rem)] leading-none [overflow-wrap:anywhere] ${
                         k.tone === 'warn' ? 'text-warn-on-dark' : 'text-band-ink'
                       }`}
                     >
