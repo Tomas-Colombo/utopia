@@ -2,7 +2,8 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { AuthorizationError } from '@/lib/dal/errors'
 import { requireModuleRole } from '@/lib/dal/guard'
 import { verifySession } from '@/lib/dal/session'
-import { contarDisponiblesPorTalle } from '@/lib/dal/inventario/item'
+import { contarDisponiblesMultiplesProductos } from '@/lib/dal/inventario/item'
+import { validarYFiltrarIdsProductos } from '@/lib/inventario/cantidades'
 
 /**
  * GET /api/ventas/stock-disponible?productos=<id,id,...>&id_reserva=<id?>
@@ -32,19 +33,11 @@ export async function GET(req: NextRequest) {
     throw e
   }
 
-  const ids = (req.nextUrl.searchParams.get('productos') ?? '')
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean)
+  const rawIds = (req.nextUrl.searchParams.get('productos') ?? '').split(',')
+  const ids = validarYFiltrarIdsProductos(rawIds)
   const idReservaCtx = req.nextUrl.searchParams.get('id_reserva')?.trim() || null
 
-  const stock: Array<{ id_producto: string; talle: string | null; disponibles: number }> = []
-  for (const id of new Set(ids)) {
-    const { porTalle } = await contarDisponiblesPorTalle(id, { idReservaCtx })
-    for (const s of porTalle) {
-      stock.push({ id_producto: id, talle: s.talle, disponibles: s.disponibles })
-    }
-  }
+  const stock = await contarDisponiblesMultiplesProductos(ids, { idReservaCtx })
 
   return NextResponse.json({ ok: true, stock })
 }

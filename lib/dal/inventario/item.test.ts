@@ -1,12 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { createServerClientMock } = vi.hoisted(() => ({
+const { createServerClientMock, getReservasActivasDeItemsMock } = vi.hoisted(() => ({
   createServerClientMock: vi.fn(),
+  getReservasActivasDeItemsMock: vi.fn(),
 }))
 
 vi.mock('server-only', () => ({}))
 vi.mock('@/lib/dal/supabase', () => ({
   createServerClient: createServerClientMock,
+}))
+vi.mock('@/lib/dal/reservas/reserva', () => ({
+  getReservasActivasDeItems: getReservasActivasDeItemsMock,
 }))
 
 describe('listItemsParaEtiquetas', () => {
@@ -185,5 +189,63 @@ describe('listItemsParaEtiquetasPorOrigen', () => {
     expect(res.total).toBe(250)
     expect(res.items).toHaveLength(1)
     expect(res.items[0].qr_code).toBe('UTP-PR-1')
+  })
+})
+
+describe('contarDisponiblesMultiplesProductos', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('devuelve array vacio si la lista de ids está vacia sin consultar al server', async () => {
+    const { contarDisponiblesMultiplesProductos } = await import('./item')
+    const res = await contarDisponiblesMultiplesProductos([])
+    expect(res).toEqual([])
+    expect(createServerClientMock).not.toHaveBeenCalled()
+  })
+
+  it('agrupa por producto y talle y descuenta reservas ajenas al contexto', async () => {
+    const items = [
+      { id_item: 'it-1', id_producto: 'p-1', talle: 'M' },
+      { id_item: 'it-2', id_producto: 'p-1', talle: 'M' },
+      { id_item: 'it-3', id_producto: 'p-1', talle: 'L' },
+      { id_item: 'it-4', id_producto: 'p-2', talle: null },
+      { id_item: 'it-5', id_producto: 'p-2', talle: null },
+    ]
+
+    const builder = {
+      select: () => builder,
+      in: () => builder,
+      eq: () => builder,
+      then: (resolve: (val: unknown) => unknown) =>
+        Promise.resolve({ data: items, error: null }).then(resolve),
+    }
+
+    createServerClientMock.mockResolvedValue({
+      from: () => builder,
+    })
+
+    // it-2 está en una reserva ajena ('res-ajena')
+    // it-5 está en la reserva del contexto ('res-ctx')
+    getReservasActivasDeItemsMock.mockResolvedValue(
+      new Map([
+        ['it-2', 'res-ajena'],
+        ['it-5', 'res-ctx'],
+      ]),
+    )
+
+    const { contarDisponiblesMultiplesProductos } = await import('./item')
+    const res = await contarDisponiblesMultiplesProductos(['p-1', 'p-2'], {
+      idReservaCtx: 'res-ctx',
+    })
+
+    // p-1 talle M: 2 items, 1 bloqueado por ajena -> 1 disponible
+    // p-1 talle L: 1 item, 0 bloqueado -> 1 disponible
+    // p-2 talle null: 2 items, 1 bloqueado por res-ctx (permitido) -> 2 disponibles
+    expect(res).toEqual([
+      { id_producto: 'p-1', talle: 'M', disponibles: 1 },
+      { id_producto: 'p-1', talle: 'L', disponibles: 1 },
+      { id_producto: 'p-2', talle: null, disponibles: 2 },
+    ])
   })
 })

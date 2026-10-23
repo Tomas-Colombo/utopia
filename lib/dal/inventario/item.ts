@@ -1,5 +1,6 @@
 import 'server-only'
 import { createServerClient } from '@/lib/dal/supabase'
+import { getReservasActivasDeItems } from '@/lib/dal/reservas/reserva'
 import { ESTADOS_IMPRIMIBLES, ETIQUETAS_MAX } from '@/lib/inventario/limites'
 import type {
   EstadoItem,
@@ -385,6 +386,61 @@ export async function contarDisponiblesPorTalle(
     totalDisponible: Number(r.totalDisponible ?? 0),
     reservasBloqueantes: r.reservasBloqueantes ?? [],
   }
+}
+
+/**
+ * Conteo de stock disponible por producto y talle para N productos en una
+ * cantidad fija de consultas (O(1) round-trips independientes de N).
+ *
+ * Descuenta reservas activas ajenas al contexto `idReservaCtx`, igual que
+ * `contarDisponiblesPorTalle`. Si `idsProductos` está vacío, devuelve `[]`
+ * sin consultar a la base.
+ */
+export async function contarDisponiblesMultiplesProductos(
+  idsProductos: string[],
+  opts?: { idReservaCtx?: string | null },
+): Promise<Array<{ id_producto: string; talle: string | null; disponibles: number }>> {
+  if (idsProductos.length === 0) return []
+
+  const supabase = await createServerClient()
+  const { data: items, error } = await supabase
+    .from('item_producto')
+    .select('id_item, id_producto, talle')
+    .in('id_producto', idsProductos)
+    .eq('estado_item', 'disponible')
+  if (error) throw new Error(`contarDisponiblesMultiplesProductos: ${error.message}`)
+
+  const lista = (items ?? []) as Array<{
+    id_item: string
+    id_producto: string
+    talle: string | null
+  }>
+  if (lista.length === 0) return []
+
+  const idsItem = lista.map((i) => i.id_item)
+  const reservasMap = await getReservasActivasDeItems(idsItem)
+
+  const conteo = new Map<
+    string,
+    { id_producto: string; talle: string | null; disponibles: number }
+  >()
+
+  for (const item of lista) {
+    const idReserva = reservasMap.get(item.id_item)
+    const bloqueado = idReserva != null && idReserva !== opts?.idReservaCtx
+
+    const clave = `${item.id_producto}:::${item.talle ?? '__sin__'}`
+    let entry = conteo.get(clave)
+    if (!entry) {
+      entry = { id_producto: item.id_producto, talle: item.talle, disponibles: 0 }
+      conteo.set(clave, entry)
+    }
+    if (!bloqueado) {
+      entry.disponibles += 1
+    }
+  }
+
+  return Array.from(conteo.values())
 }
 
 /**
