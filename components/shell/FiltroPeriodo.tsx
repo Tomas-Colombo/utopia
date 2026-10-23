@@ -94,10 +94,11 @@ export function FiltroPeriodo({
         e.preventDefault()
         if (!rangoInvertido) aplicar(d, h, vals)
       }}
-      className="flex flex-wrap items-end gap-3"
+      className="flex w-full flex-wrap items-end gap-3 lg:w-auto"
       aria-label={ariaLabel}
     >
-      <div className="w-40">
+      {/* Desde/Hasta side by side at 375px instead of one per row. */}
+      <div className="w-[calc(50%-0.375rem)] sm:w-40">
         <Field
           htmlFor={`${idPrefix}-desde`}
           label="Desde"
@@ -114,7 +115,7 @@ export function FiltroPeriodo({
           />
         </Field>
       </div>
-      <div className="w-40">
+      <div className="w-[calc(50%-0.375rem)] sm:w-40">
         <Field htmlFor={`${idPrefix}-hasta`} label="Hasta">
           <Input
             id={`${idPrefix}-hasta`}
@@ -128,7 +129,7 @@ export function FiltroPeriodo({
       </div>
 
       {extras.map((x) => (
-        <div key={x.param} className={x.ancho ?? 'w-40'}>
+        <div key={x.param} className={`max-w-full ${x.ancho ?? 'w-40'}`}>
           <Field htmlFor={`${idPrefix}-${x.param}`} label={x.label}>
             <Select
               id={`${idPrefix}-${x.param}`}
@@ -151,7 +152,7 @@ export function FiltroPeriodo({
       ))}
 
       <div className="ml-auto flex flex-wrap items-center gap-2">
-        <div className="flex rounded-[5px] bg-white/[0.06] p-[3px]">
+        <div className="flex flex-wrap rounded-[5px] bg-white/[0.06] p-[3px]">
         {PRESETS.map((p) => (
           <Button
             key={p.id}

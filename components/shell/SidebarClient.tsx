@@ -133,7 +133,7 @@ export function SidebarClient({
         aria-label="Abrir menú"
         aria-expanded={mobileOpen}
         aria-controls="mobile-nav-drawer"
-        className="fixed left-3 top-3 z-40 inline-flex h-9 w-9 items-center justify-center rounded-md border border-white/10 bg-sidebar text-sidebar-ink-hi-2 shadow-[0_4px_12px_rgb(0_0_0/0.25)] transition-colors hover:bg-band focus:outline-none focus-visible:ring-2 focus-visible:ring-ink active:translate-y-px md:hidden"
+        className="fixed left-3 top-3 z-40 inline-flex h-10 w-10 items-center justify-center rounded-md border border-white/10 bg-sidebar text-sidebar-ink-hi-2 shadow-[0_4px_12px_rgb(0_0_0/0.25)] transition-colors hover:bg-band focus:outline-none focus-visible:ring-2 focus-visible:ring-ink active:translate-y-px md:hidden"
       >
         <MenuIcon />
       </button>

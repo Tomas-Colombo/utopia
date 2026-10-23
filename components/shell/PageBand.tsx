@@ -48,10 +48,10 @@ export function PageBand({ breadcrumb, title, subtitle, filters, kpis, actions, 
   const filasKpi = kpis?.some((k) => k.sub) ? 'row-span-3' : 'row-span-2'
   return (
     <header aria-label="Barra superior" className="band-scope bg-band text-band-ink">
-      <div className="flex flex-col gap-3.5 px-6 pl-16 pb-4 pt-3 md:px-6 md:pb-5">
+      <div className="flex flex-col gap-3.5 pb-4 pl-16 pr-4 pt-3 sm:pr-6 md:px-6 md:pb-5">
         <div className="flex items-center justify-between gap-4">
-          <nav aria-label="Ubicación">
-            <ol className="eyebrow flex items-center gap-2 text-band-label">
+          <nav aria-label="Ubicación" className="min-w-0">
+            <ol className="eyebrow flex flex-wrap items-center gap-x-2 gap-y-1 text-band-label">
               {breadcrumb.map((item, i) => {
                 const last = i === breadcrumb.length - 1
                 return (
@@ -84,29 +84,35 @@ export function PageBand({ breadcrumb, title, subtitle, filters, kpis, actions, 
               </Link>
             )}
             <div className="flex min-w-0 flex-col gap-2">
-              <h1 className="font-display text-3xl leading-[1.05] text-band-ink md:text-[38px]">{title}</h1>
+              <h1 className="break-words font-display text-3xl leading-[1.05] text-band-ink md:text-[38px]">{title}</h1>
               {subtitle && <p className="text-[13px] text-band-muted">{subtitle}</p>}
             </div>
           </div>
           {filters}
           {/* Without KPIs there is no column to hang the actions on: they sit on the title row. */}
-          {!hasKpis && actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+          {/* Below sm the `size="sm"` buttons are the page's main tap target: 40px minimum. */}
+          {!hasKpis && actions && (
+            <div className="flex flex-wrap items-center gap-2 [&_button]:min-h-10 sm:[&_button]:min-h-0">{actions}</div>
+          )}
         </div>
 
         {hasKpis && (
-          <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_260px]">
+          // Single KPI row from lg and the actions column from xl: at md the sidebar
+          // leaves ~190px for 4-5 KPIs plus the 260px column, and the eyebrow labels
+          // overflowed into the next cell.
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_260px]">
             {kpis && (
               <dl
                 style={{ ["--kpi-cols" as string]: `minmax(0,1.7fr) repeat(${kpis.length - 1},minmax(0,1fr))` }}
                 // Each KPI spans the same row tracks (subgrid): a label that wraps to two
                 // lines in a narrow column grows the shared label row instead of pushing
                 // only its own number down, so every value stays on one baseline.
-                className="@container grid grid-cols-2 border-t border-band-line md:[grid-template-columns:var(--kpi-cols)]"
+                className="@container grid grid-cols-2 border-t border-band-line lg:[grid-template-columns:var(--kpi-cols)]"
               >
                 {kpis.map((k) => (
                   <div
                     key={k.label}
-                    className={`grid min-w-0 grid-rows-subgrid content-start gap-y-2 pb-1 pr-4 pt-3 ${filasKpi} md:[&:not(:first-child)]:border-l md:[&:not(:first-child)]:border-band-line md:[&:not(:first-child)]:pl-4`}
+                    className={`grid min-w-0 grid-rows-subgrid content-start gap-y-2 pb-1 pr-4 pt-3 ${filasKpi} lg:[&:not(:first-child)]:border-l lg:[&:not(:first-child)]:border-band-line lg:[&:not(:first-child)]:pl-4`}
                   >
                     <dt className="eyebrow text-band-label">{k.label}</dt>
                     <dd
@@ -124,7 +130,7 @@ export function PageBand({ breadcrumb, title, subtitle, filters, kpis, actions, 
               </dl>
             )}
             {actions && (
-              <div className="flex flex-col gap-2 [&_a]:block [&_button]:w-full [&_button]:justify-between">
+              <div className="flex flex-col gap-2 sm:grid sm:grid-cols-2 xl:flex xl:flex-col [&_a]:block [&_button]:min-h-10 [&_button]:w-full [&_button]:justify-between">
                 {actions}
               </div>
             )}

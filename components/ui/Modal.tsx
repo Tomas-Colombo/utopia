@@ -90,7 +90,7 @@ export function Modal({ open, title, onClose, children, footer, size = 'md' }: M
           // height, but a short viewport must never clip the dialog chrome.
           className={`flex max-h-[calc(100vh-2rem)] w-full flex-col overflow-y-auto ${SIZE_CLASS[size]} rounded-lg border border-line bg-card shadow-[0_24px_64px_-16px_rgb(0_0_0/0.35)] motion-safe:animate-[fadeUp_0.18s_ease-out]`}
         >
-          <div className="flex items-center justify-between border-b border-border px-6 py-4">
+          <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-4 sm:px-6">
             <h2 id={titleId} className="font-display text-lg text-text">
               {title}
             </h2>
@@ -98,14 +98,14 @@ export function Modal({ open, title, onClose, children, footer, size = 'md' }: M
               type="button"
               aria-label="Cerrar"
               onClick={onClose}
-              className="-mr-2 inline-flex h-8 w-8 items-center justify-center rounded-md text-lg leading-none text-muted transition-colors hover:bg-hover hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
+              className="-mr-2 inline-flex h-10 w-10 shrink-0 items-center sm:h-8 sm:w-8 justify-center rounded-md text-lg leading-none text-muted transition-colors hover:bg-hover hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
             >
               <span aria-hidden>×</span>
             </button>
           </div>
-          <div className="px-6 py-5">{children}</div>
+          <div className="px-4 py-5 sm:px-6">{children}</div>
           {footer && (
-            <div className="flex justify-end gap-3 border-t border-border px-6 py-4">{footer}</div>
+            <div className="flex flex-wrap justify-end gap-3 border-t border-border px-4 py-4 sm:px-6">{footer}</div>
           )}
         </div>
       </div>
