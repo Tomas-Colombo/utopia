@@ -61,7 +61,7 @@ supabase/      migrations + stored procedures  — business invariants live here
   by `tests/db/rvp-lecturas.test.ts`.
 - Allowed SQL outside `lib/dal`: auth (`app/(auth)/login/actions.ts`,
   `logoutAction`) and `proxy.ts`. **Known debt, do not add to it**:
-  `app/api/ventas/lookup-item/route.ts`, `components/theming/persistThemePreference.ts`.
+  `components/theming/persistThemePreference.ts`.
 
 ## Every mutation is a Server Action with three gates
 

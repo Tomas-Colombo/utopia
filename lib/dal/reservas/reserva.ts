@@ -150,3 +150,28 @@ export async function spVencerReservas(): Promise<number> {
   if (error) throw new Error(`sp_vencer_reservas: ${error.message}`)
   return Number(data ?? 0)
 }
+
+
+/**
+ * Reservas activas de un conjunto de ítems en UNA sola consulta.
+ * Devuelve un Map<id_item, id_reserva>.
+ * Con una lista vacía, no consulta a la base y devuelve un Map vacío.
+ */
+export async function getReservasActivasDeItems(
+  idsItem: string[],
+): Promise<Map<string, string>> {
+  if (idsItem.length === 0) return new Map()
+  const supabase = await createServerClient()
+  const { data, error } = await supabase
+    .from('detalle_reserva')
+    .select('id_item, id_reserva')
+    .in('id_item', idsItem)
+    .eq('estado', 'activa')
+  if (error) throw new Error(`getReservasActivasDeItems: ${error.message}`)
+
+  const mapa = new Map<string, string>()
+  for (const fila of (data ?? []) as Array<{ id_item: string; id_reserva: string }>) {
+    mapa.set(fila.id_item, fila.id_reserva)
+  }
+  return mapa
+}

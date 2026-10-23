@@ -9,7 +9,7 @@ import {
   type ProductoRowConCategoria,
 } from '@/lib/dal/inventario/producto'
 import { calcularSnapshotPrecio } from '@/lib/dal/precios/resolucion'
-import { createServerClient } from '@/lib/dal/supabase'
+import { getReservasActivasDeItems } from '@/lib/dal/reservas'
 import { armarRespuestaElegirTalle, decidirLookupPorTalle } from '@/lib/inventario/codigo'
 import type { FormaPago, MedioPagoRecargo } from '@/lib/types/precios'
 import type { ItemProductoRow } from '@/lib/types/inventario'
@@ -97,19 +97,6 @@ export async function GET(req: NextRequest) {
   if (!input && !idProductoParam)
     return NextResponse.json({ ok: false, reason: 'qr-vacio' }, { status: 400 })
 
-  const supabase = await createServerClient()
-
-  // Reserva activa de un ítem: devuelve el id_reserva que lo tiene, o null.
-  async function reservaActiva(idItem: string): Promise<string | null> {
-    const { data } = await supabase
-      .from('detalle_reserva')
-      .select('id_reserva')
-      .eq('id_item', idItem)
-      .eq('estado', 'activa')
-      .maybeSingle()
-    return (data as { id_reserva: string } | null)?.id_reserva ?? null
-  }
-
   let item: ItemProductoRow | null = null
   let advertencia: string | null = null
   let productoResuelto: ProductoRowConCategoria | null = null
@@ -130,7 +117,8 @@ export async function GET(req: NextRequest) {
           estado: porQr.estado_item,
         })
       }
-      const rid = await reservaActiva(porQr.id_item)
+      const reservasMap = await getReservasActivasDeItems([porQr.id_item])
+      const rid = reservasMap.get(porQr.id_item)
       if (rid) {
         if (idReservaCtx && rid === idReservaCtx) advertencia = 'Item de esta reserva'
         else return NextResponse.json({ ok: false, reason: 'item-en-reserva', id_reserva: rid })
@@ -179,9 +167,11 @@ export async function GET(req: NextRequest) {
       await listItemsDisponibles(productoResuelto.id_producto, decision.filtroTalle)
     ).filter((c) => !excluidos.has(c.id_item))
 
+    const reservasMap = await getReservasActivasDeItems(candidatos.map((c) => c.id_item))
+
     let bloqueante: string | null = null
     for (const c of candidatos) {
-      const rid = await reservaActiva(c.id_item)
+      const rid = reservasMap.get(c.id_item)
       if (!rid) {
         item = c
         break
