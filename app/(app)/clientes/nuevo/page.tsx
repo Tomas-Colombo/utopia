@@ -8,7 +8,7 @@ export default async function NuevoClientePage() {
   return (
     <>
       <Topbar title="Nuevo cliente" session={session} backHref="/clientes" />
-      <main className="flex-1 p-6">
+      <main className="flex-1 p-4 sm:p-6">
         <Card padding="none" className="max-w-xl p-6">
           <NuevoClienteForm />
         </Card>

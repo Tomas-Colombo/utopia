@@ -354,11 +354,13 @@ export function ConsignacionRevendedoraDetalleView({
           )}
         </div>
 
-        <Table
-          data={cons.detalles}
-          columns={columns}
-          getRowId={(r: ConsignacionRevendedoraItemDetalle) => r.id_consignacion_revendedora_detalle}
-        />
+        <div className="overflow-x-auto">
+          <Table
+            data={cons.detalles}
+            columns={columns}
+            getRowId={(r: ConsignacionRevendedoraItemDetalle) => r.id_consignacion_revendedora_detalle}
+          />
+        </div>
       </Card>
 
       {/* Confirmar entrega Dialog */}

@@ -89,7 +89,7 @@ export function PlanesCuotasModal({ open, onClose, planes, onChange }: PlanesCuo
           </ul>
         )}
 
-        <div className="flex items-end gap-2">
+        <div className="flex flex-wrap items-end gap-2">
           <div className="flex-1">
             <label htmlFor="pc-nuevo" className="mb-1 block text-sm text-muted">
               Agregar plan

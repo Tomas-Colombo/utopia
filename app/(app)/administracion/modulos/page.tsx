@@ -9,7 +9,7 @@ export default async function ModulosAdminPage() {
   return (
     <>
       <Topbar title="Módulos del tenant" session={session} backHref="/administracion" />
-      <main className="flex-1 p-6">
+      <main className="flex-1 p-4 sm:p-6">
         <ModulosView
           initial={modulos.map((m) => ({
             id: m.id_modulo,

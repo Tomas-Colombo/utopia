@@ -40,7 +40,7 @@ export function BloqueGanancia({ resultados, tieneGastos }: BloqueGananciaProps)
 
   return (
     <Card as="section" padding="none" aria-labelledby="h2-ganancia" className="overflow-hidden">
-      <div className="p-4 border-b border-border bg-panel flex justify-between items-center">
+      <div className="p-4 border-b border-border bg-panel flex flex-wrap justify-between items-center gap-2">
         <h2 id="h2-ganancia" className="font-display text-lg">Cómo se arma tu ganancia</h2>
         <Button
           variant="secondary"

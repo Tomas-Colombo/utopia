@@ -412,7 +412,7 @@ export function NuevaConsignacionRevendedoraForm({
               No hay ítems agregados aún. Escaneá o ingresá códigos arriba.
             </div>
           ) : (
-            <div className="rounded border border-border bg-card">
+            <div className="overflow-x-auto rounded border border-border bg-card">
               <Table data={items} columns={columns} getRowId={(r) => r.id_item} />
             </div>
           )}

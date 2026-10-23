@@ -47,7 +47,7 @@ export default async function RendicionDetallePage(props: {
           </Badge>
         }
       />
-      <main className="flex-1 p-6 space-y-6">
+      <main className="flex-1 p-4 sm:p-6 space-y-6">
         <Card className="grid grid-cols-2 gap-4 text-sm md:grid-cols-4">
           <div>
             <div className="text-xs uppercase font-mono text-muted">Proveedor</div>

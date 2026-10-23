@@ -25,7 +25,7 @@ export default async function RevendedoraPage({ params }: { params: Promise<{ id
         session={session}
         backHref="/revendedoras"
       />
-      <main className="flex-1 p-6 space-y-6 max-w-4xl">
+      <main className="flex-1 p-4 sm:p-6 space-y-6 max-w-4xl">
         <RevendedoraTabs idRevendedora={revendedora.id_revendedora} activeTab="resumen" />
         <Card padding="none" className="p-6">
           <EditarRevendedoraForm revendedora={revendedora} />

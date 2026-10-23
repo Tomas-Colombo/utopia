@@ -37,7 +37,7 @@ export function ItemsEnPoderTable({ items }: { items: ItemEnPoderRevendedoraRow[
   ]
 
   return (
-    <Card padding="none" className="overflow-hidden">
+    <Card padding="none" className="overflow-x-auto">
       <Table columns={columns} data={items} getRowId={(r) => r.id_item} />
     </Card>
   )

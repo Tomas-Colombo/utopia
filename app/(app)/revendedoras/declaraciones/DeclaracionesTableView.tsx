@@ -209,7 +209,7 @@ export function DeclaracionesTableView({ declaraciones, puedeGestionar }: Props)
             <p className="text-xs text-muted">
               Esta operación registrará la venta en el canal &ldquo;revendedora&rdquo;, marcará la prenda como vendida y aplicará la comisión correspondiente a su cuenta corriente.
             </p>
-            <div className="flex items-center justify-end gap-3 pt-3 border-t border-border">
+            <div className="flex flex-wrap items-center justify-end gap-3 pt-3 border-t border-border">
               <Button
                 variant="secondary"
                 className="min-h-[44px] px-4"
@@ -263,7 +263,7 @@ export function DeclaracionesTableView({ declaraciones, puedeGestionar }: Props)
               />
             </div>
 
-            <div className="flex items-center justify-end gap-3 pt-3 border-t border-border">
+            <div className="flex flex-wrap items-center justify-end gap-3 pt-3 border-t border-border">
               <Button
                 variant="secondary"
                 className="min-h-[44px] px-4"

@@ -197,7 +197,7 @@ export function RemitoImportPanel({
 
   return (
     <Card className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h3 className="text-sm font-semibold">Importar desde PDF</h3>
           <p className="text-xs text-muted">

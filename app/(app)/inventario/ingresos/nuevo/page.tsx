@@ -61,7 +61,7 @@ export default async function NuevoIngresoPage(props: {
         session={session}
         backHref={safeBackHref(from, '/inventario')}
       />
-      <main className="flex-1 p-6">
+      <main className="flex-1 p-4 sm:p-6">
         <NuevoIngresoView
           proveedores={proveedores}
           productos={productos}

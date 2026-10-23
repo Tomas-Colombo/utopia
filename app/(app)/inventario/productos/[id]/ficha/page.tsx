@@ -44,7 +44,7 @@ export default async function FichaProductoPage(props: {
         session={session}
         backHref="/inventario"
       />
-      <main className="flex-1 p-6">
+      <main className="flex-1 p-4 sm:p-6">
         <div className="mx-auto max-w-4xl">
           <FichaProductoView
             producto={producto}

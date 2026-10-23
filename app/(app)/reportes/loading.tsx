@@ -11,7 +11,7 @@ export default function LoadingReportes() {
   return (
     <>
       <SkeletonTopbar title="Reportes" />
-      <main className="flex-1 p-6 space-y-6" aria-busy="true">
+      <main className="flex-1 p-4 sm:p-6 space-y-6" aria-busy="true">
         <Skeleton width="100%" height="3.5rem" />
 
         <Card as="section" className="space-y-4">

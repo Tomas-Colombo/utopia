@@ -37,7 +37,7 @@ export default async function NuevaConsignacionRevendedoraPage(props: {
         session={session}
         backHref={`/revendedoras/${id}/consignaciones`}
       />
-      <main className="flex-1 p-6">
+      <main className="flex-1 p-4 sm:p-6">
         <Card padding="none" className="max-w-4xl p-6">
           <NuevaConsignacionRevendedoraForm
             idRevendedora={id}

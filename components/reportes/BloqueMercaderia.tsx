@@ -19,7 +19,7 @@ export function BloqueMercaderia({ posicion }: BloqueMercaderiaProps) {
 
   return (
     <Card as="section" padding="none" aria-labelledby="h2-mercaderia" className="overflow-hidden h-full flex flex-col">
-      <div className="p-4 border-b border-border bg-panel flex justify-between items-center">
+      <div className="p-4 border-b border-border bg-panel flex flex-wrap justify-between items-center gap-2">
         <h2 id="h2-mercaderia" className="font-display text-lg">Tu stock hoy</h2>
       </div>
       

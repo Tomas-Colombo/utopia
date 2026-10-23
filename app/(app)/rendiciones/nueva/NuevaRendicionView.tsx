@@ -134,7 +134,7 @@ export function NuevaRendicionView({
       ) : (
         <>
           <TableFrame>
-            <div className="border-b border-border px-4 py-3 flex items-center justify-between">
+            <div className="border-b border-border px-4 py-3 flex flex-wrap items-center justify-between gap-2">
               <h3 className="font-display text-lg">Ventas pendientes de rendir</h3>
               <span className="text-sm text-muted">
                 {visibles.length} de {lineas.length} líneas seleccionadas

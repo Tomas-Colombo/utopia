@@ -37,7 +37,7 @@ export default async function RevendedoraLiquidacionesPage(props: {
           )
         }
       />
-      <main className="flex-1 p-6 space-y-6">
+      <main className="flex-1 p-4 sm:p-6 space-y-6">
         <RevendedoraTabs idRevendedora={id} activeTab="liquidaciones" />
 
         <Card padding="none" className="p-6 space-y-4">

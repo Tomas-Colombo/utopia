@@ -115,7 +115,7 @@ export function SelectorTalleMulti({
         </p>
       )}
 
-      <div className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-x-3 gap-y-2">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto_auto_auto] items-center gap-x-3 gap-y-2">
         {filas.map((f) => {
           const cant = selector.cantidades[f.key] ?? 0
           const agotado = f.max === 0

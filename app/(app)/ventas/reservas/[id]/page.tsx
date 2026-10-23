@@ -41,7 +41,7 @@ export default async function ReservaDetallePage(props: {
           </Badge>
         }
       />
-      <main className="flex-1 p-6 space-y-6">
+      <main className="flex-1 p-4 sm:p-6 space-y-6">
         <Card className="grid grid-cols-2 gap-4 text-sm md:grid-cols-4">
           <div>
             <div className="text-xs uppercase font-mono text-muted">Cliente</div>
@@ -55,7 +55,7 @@ export default async function ReservaDetallePage(props: {
             <div className="text-xs uppercase font-mono text-muted">Vence</div>
             <div className="mt-1">{new Date(reserva.fecha_vencimiento).toLocaleString('es-AR')}</div>
           </div>
-          <div className="flex items-end justify-end gap-2">
+          <div className="flex flex-wrap items-end justify-end gap-2">
             {reserva.estado_reserva === 'activa' && (
               <>
                 <Link href={`/ventas/nueva?reserva=${reserva.id_reserva}`}>

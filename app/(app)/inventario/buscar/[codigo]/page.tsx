@@ -55,7 +55,7 @@ export default async function BuscarCodigoPage(props: {
     return (
       <>
         <Topbar title="Código no encontrado" session={session} backHref="/inventario/ficha" />
-        <main className="flex-1 p-6">
+        <main className="flex-1 p-4 sm:p-6">
           <Card padding="none" className="mx-auto max-w-md p-6 text-center">
             <p className="font-display text-lg mb-2">Nada coincide</p>
             <p className="text-sm text-muted mb-4">
@@ -84,7 +84,7 @@ export default async function BuscarCodigoPage(props: {
   return (
     <>
       <Topbar title="Resultado de búsqueda" session={session} backHref="/inventario/ficha" />
-      <main className="flex-1 p-6">
+      <main className="flex-1 p-4 sm:p-6">
         <div className="mx-auto max-w-3xl space-y-4">
           {/* Cabecera del producto */}
           <Card>

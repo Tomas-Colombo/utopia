@@ -12,7 +12,7 @@ export default function LoadingPrecios() {
   return (
     <>
       <SkeletonTopbar title="Precios" />
-      <main className="flex-1 p-6 space-y-6" aria-busy="true">
+      <main className="flex-1 p-4 sm:p-6 space-y-6" aria-busy="true">
         <SkeletonKpis />
 
         <section className="grid grid-cols-1 gap-3 md:grid-cols-2">

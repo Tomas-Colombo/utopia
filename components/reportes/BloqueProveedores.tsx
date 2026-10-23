@@ -17,7 +17,7 @@ export function BloqueProveedores({ posicion }: BloqueProveedoresProps) {
 
   return (
     <Card as="section" padding="none" aria-labelledby="h2-proveedores" className="overflow-hidden h-full flex flex-col">
-      <div className="p-4 border-b border-border bg-panel flex justify-between items-center">
+      <div className="p-4 border-b border-border bg-panel flex flex-wrap justify-between items-center gap-2">
         <h2 id="h2-proveedores" className="font-display text-lg">Lo que debés</h2>
       </div>
       

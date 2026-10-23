@@ -20,7 +20,7 @@ export default async function ReservasPage() {
           </Link>
         }
       />
-      <main className="flex-1 p-6 space-y-4">
+      <main className="flex-1 p-4 sm:p-6 space-y-4">
         <ReservasClient rows={rows} />
       </main>
     </>

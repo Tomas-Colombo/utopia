@@ -269,7 +269,7 @@ export function ArancelesPanel({
 
       {/* ─── Tarifario ─────────────────────────────────────────────── */}
       <div className="space-y-2">
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <span className="text-xs uppercase font-mono text-muted">Aranceles vigentes</span>
           <Button
             type="button"
@@ -545,7 +545,7 @@ export function ArancelesPanel({
           memoria para saber si un plan daba pérdida. La tabla global sigue
           existiendo como panorama de todas las cuentas juntas. */}
       <div className="space-y-2 border-t border-border pt-3">
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <span className="text-xs uppercase font-mono text-muted">
             Recargo por cuotas
           </span>
@@ -746,7 +746,7 @@ export function ArancelesPanel({
 
       {/* ─── Retenciones ───────────────────────────────────────────── */}
       <div className="space-y-2 border-t border-border pt-3">
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <span className="text-xs uppercase font-mono text-muted">Retenciones</span>
             {!editandoRet && (

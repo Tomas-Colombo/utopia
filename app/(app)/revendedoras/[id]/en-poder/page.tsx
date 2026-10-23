@@ -37,7 +37,7 @@ export default async function ItemsEnPoderPage(props: PageProps) {
         session={session}
         backHref="/revendedoras"
       />
-      <main className="flex-1 p-6 space-y-6 max-w-5xl">
+      <main className="flex-1 p-4 sm:p-6 space-y-6 max-w-5xl">
         <RevendedoraTabs idRevendedora={revendedora.id_revendedora} activeTab="en_poder" />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

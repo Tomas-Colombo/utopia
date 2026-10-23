@@ -9,7 +9,7 @@ export default async function PresupuestosPage() {
   return (
     <>
       <Topbar title="Presupuestos por categoría" session={session} backHref="/gastos" />
-      <main className="flex-1 p-6">
+      <main className="flex-1 p-4 sm:p-6">
         <PresupuestosView
           initial={cats.map((c) => ({
             id: c.id_categoria_gasto,

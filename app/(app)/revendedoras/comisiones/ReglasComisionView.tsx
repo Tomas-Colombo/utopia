@@ -212,7 +212,7 @@ export function ReglasComisionView({ reglas, canEdit }: ReglasComisionViewProps)
         )}
       </div>
 
-      <Card padding="none" className="overflow-hidden">
+      <Card padding="none" className="overflow-x-auto">
         <Table columns={columns} data={reglas} />
       </Card>
 
@@ -223,7 +223,7 @@ export function ReglasComisionView({ reglas, canEdit }: ReglasComisionViewProps)
           onClose={() => setModalAbierto(false)}
         >
           <form onSubmit={handleCrearRegla} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <label className="text-sm font-medium">Ámbito</label>
                 <Select
@@ -245,7 +245,7 @@ export function ReglasComisionView({ reglas, canEdit }: ReglasComisionViewProps)
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <label className="text-sm font-medium">Vigente desde</label>
                 <Input

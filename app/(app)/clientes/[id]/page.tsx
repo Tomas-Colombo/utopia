@@ -66,7 +66,7 @@ export default async function ClienteDetallePage(props: {
           </Badge>
         }
       />
-      <main className="flex-1 space-y-6 p-6">
+      <main className="flex-1 space-y-6 p-4 sm:p-6">
         <section className="grid grid-cols-2 gap-4 md:grid-cols-4">
           <Kpi label="Compras" value={String(registradas.length)} variant="nested" />
           <Kpi label="Total comprado" value={money(totalComprado)} variant="nested" />

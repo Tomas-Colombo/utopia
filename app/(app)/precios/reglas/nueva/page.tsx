@@ -17,7 +17,7 @@ export default async function NuevaReglaPage() {
   return (
     <>
       <Topbar title="Nueva regla de precio" session={session} backHref="/precios/reglas" />
-      <main className="flex-1 space-y-4 p-6">
+      <main className="flex-1 space-y-4 p-4 sm:p-6">
         <details className="max-w-2xl rounded-lg border border-dashed border-border bg-card">
           <summary className="cursor-pointer list-none px-6 py-4 font-medium text-text marker:content-none hover:bg-card-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink">
             <span className="text-ink">¿Cómo funcionan las reglas de precios?</span>

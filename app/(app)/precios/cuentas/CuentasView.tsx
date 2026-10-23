@@ -287,7 +287,7 @@ export function CuentasView({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-muted">
           Los lugares donde entra la plata de las ventas. La caja del local es
           la predeterminada: la red para una venta que no detalle su cobranza.

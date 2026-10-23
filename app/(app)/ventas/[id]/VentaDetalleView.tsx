@@ -311,7 +311,7 @@ export function VentaDetalleView({
             $ {total.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
           </div>
         </div>
-        <div className="flex items-end justify-end gap-2">
+        <div className="flex flex-wrap items-end justify-end gap-2">
           {!readonly && !tieneComprobante && (
             <Button size="sm" variant="secondary" onClick={() => setComprobanteOpen(true)}>
               Emitir comprobante

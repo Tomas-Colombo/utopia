@@ -267,7 +267,7 @@ export function IngresoDetalleView({
       {/* Add line form */}
       {!readonly && (
         <form onSubmit={addLinea} className="rounded-lg border border-border bg-card p-4 space-y-3">
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <h3 className="text-sm font-semibold">Agregar producto a mano</h3>
             {/* Toggle Nuevo/Vincular: doble verificación del nombre. */}
             <div className="inline-flex shrink-0 overflow-hidden rounded-md border border-border text-xs">
@@ -392,7 +392,7 @@ export function IngresoDetalleView({
 
       {/* Confirmar */}
       {!readonly && (
-        <Card className="flex items-center justify-between">
+        <Card className="flex flex-wrap items-center justify-between gap-2">
           <div className="text-sm text-muted">
             Al confirmar se generan {totalCantidad} ítem(s) con QR único y estado <b>disponible</b>.
           </div>

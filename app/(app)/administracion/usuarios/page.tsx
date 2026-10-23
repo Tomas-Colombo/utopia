@@ -20,7 +20,7 @@ export default async function UsuariosAdminPage() {
           </Link>
         }
       />
-      <main className="flex-1 p-6">
+      <main className="flex-1 p-4 sm:p-6">
         <UsuariosView
           initial={usuarios}
           roles={roles.map((r) => ({ id: r.id_rol, nombre: r.nombre }))}

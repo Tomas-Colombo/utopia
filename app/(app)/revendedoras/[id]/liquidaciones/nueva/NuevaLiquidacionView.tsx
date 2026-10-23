@@ -258,22 +258,24 @@ export function NuevaLiquidacionView({
       </div>
 
       {/* Líneas pendientes a liquidar */}
-      <Card padding="none" className="p-6 space-y-4">
+      <Card padding="none" className="p-4 sm:p-6 space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="font-display text-base font-semibold">Líneas a liquidar</h3>
           <span className="text-sm text-muted">{visibles.length} línea(s)</span>
         </div>
 
-        <Table
-          data={visibles}
-          columns={columnasVisibles}
-          getRowId={(l) => l.id_detalle_venta}
-          emptyState={
-            <p className="p-4 text-center text-sm text-muted">
-              No hay ventas pendientes de liquidación para el período seleccionado.
-            </p>
-          }
-        />
+        <div className="overflow-x-auto">
+          <Table
+            data={visibles}
+            columns={columnasVisibles}
+            getRowId={(l) => l.id_detalle_venta}
+            emptyState={
+              <p className="p-4 text-center text-sm text-muted">
+                No hay ventas pendientes de liquidación para el período seleccionado.
+              </p>
+            }
+          />
+        </div>
       </Card>
 
       {/* Líneas excluidas */}
@@ -284,16 +286,18 @@ export function NuevaLiquidacionView({
             <span className="text-xs text-muted">{excluidas.length} línea(s)</span>
           </div>
 
-          <Table
-            data={excluidas}
-            columns={columnasExcluidas}
-            getRowId={(l) => l.id_detalle_venta}
-          />
+          <div className="overflow-x-auto">
+            <Table
+              data={excluidas}
+              columns={columnasExcluidas}
+              getRowId={(l) => l.id_detalle_venta}
+            />
+          </div>
         </div>
       )}
 
       {/* Observaciones y confirmación */}
-      <Card padding="none" className="p-6 space-y-4">
+      <Card padding="none" className="p-4 sm:p-6 space-y-4">
         <Field htmlFor="liq-obs" label="Observaciones (opcional)">
           <Textarea
             id="liq-obs"

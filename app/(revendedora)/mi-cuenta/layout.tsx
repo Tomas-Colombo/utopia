@@ -66,7 +66,7 @@ export default async function RevendedoraLayout({
         {/* Header superior móvil / desktop */}
         <header className="band-scope sticky top-0 z-30 bg-band px-4 py-3 text-band-ink">
           <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
+            <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
               <span className="font-display text-lg text-band-ink">
                 Portal Revendedoras
               </span>
@@ -74,7 +74,7 @@ export default async function RevendedoraLayout({
                 Revendedora
               </span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex shrink-0 items-center gap-2">
               <ThemeToggle />
               <form action={logoutAction}>
                 <Button

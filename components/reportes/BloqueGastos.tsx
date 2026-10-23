@@ -41,7 +41,7 @@ export function BloqueGastos({ presupuestos, mesHasta }: BloqueGastosProps) {
 
   return (
     <Card as="section" padding="none" aria-labelledby="h2-gastos" className="overflow-hidden">
-      <div className="p-4 border-b border-border bg-panel flex justify-between items-end">
+      <div className="p-4 border-b border-border bg-panel flex flex-wrap justify-between items-end gap-2">
         <div>
           <h2 id="h2-gastos" className="font-display text-lg">Gastos vs. Presupuesto</h2>
           <p className="text-sm text-muted">Mes calendario completo: <span className="font-medium capitalize text-ink">{nombreMes}</span></p>

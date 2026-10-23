@@ -155,7 +155,7 @@ export function PresupuestosView({ initial }: { initial: Cat[] }) {
         </Button>
       </form>
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <label className="inline-flex items-center gap-2 text-sm text-muted">
           <Checkbox
             checked={showInactivas}

@@ -76,7 +76,7 @@ export default async function CuotasPage(props: {
           },
         ]}
       />
-      <main className="flex-1 space-y-6 p-6">
+      <main className="flex-1 space-y-6 p-4 sm:p-6">
         {/* Los KPIs de la franja son del conjunto FILTRADO, no del total global. */}
 
         <CuotasView

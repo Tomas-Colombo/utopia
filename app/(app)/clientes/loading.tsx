@@ -5,7 +5,7 @@ export default function LoadingClientes() {
   return (
     <>
       <SkeletonTopbar title="Clientes" />
-      <main className="flex-1 p-6" aria-busy="true">
+      <main className="flex-1 p-4 sm:p-6" aria-busy="true">
         <SkeletonTable rows={10} />
       </main>
     </>

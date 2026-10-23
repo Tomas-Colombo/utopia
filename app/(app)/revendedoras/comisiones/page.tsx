@@ -22,7 +22,7 @@ export default async function ComisionesPage() {
         session={session}
         backHref="/revendedoras"
       />
-      <main className="flex-1 p-6">
+      <main className="flex-1 p-4 sm:p-6">
         <ReglasComisionView reglas={reglas} canEdit={canEdit} />
       </main>
     </>

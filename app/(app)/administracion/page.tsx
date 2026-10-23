@@ -48,7 +48,7 @@ export default async function AdministracionHome() {
   return (
     <>
       <Topbar title="Administración" session={session} />
-      <main className="flex-1 p-6 space-y-6">
+      <main className="flex-1 p-4 sm:p-6 space-y-6">
         <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
           {cards.slice(0, 1).map(cardLink)}
           <RolesModal roles={roles} />
@@ -58,7 +58,7 @@ export default async function AdministracionHome() {
         <ConfiguracionQrCard ladoMmInicial={ladoMm} canEdit={canEdit} />
 
         <Card as="section" padding="none" className="overflow-x-auto">
-          <div className="border-b border-border px-4 py-3 flex items-center justify-between">
+          <div className="border-b border-border px-4 py-3 flex flex-wrap items-center justify-between gap-2">
             <h3 className="font-display text-lg">Últimas acciones auditadas</h3>
             <Link href="/administracion/auditoria" className="-mx-2 rounded-[4px] px-2 py-1 text-xs font-medium text-muted transition-colors hover:bg-hover hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ink">
               Ver historial completo

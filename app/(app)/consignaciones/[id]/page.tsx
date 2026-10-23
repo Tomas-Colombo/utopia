@@ -52,7 +52,7 @@ export default async function ConsignacionDetallePage(props: {
           <Badge variant={VARIANT[cons.estado]}>{ESTADO_CONSIGNACION_LABEL[cons.estado]}</Badge>
         }
       />
-      <main className="flex-1 p-6">
+      <main className="flex-1 p-4 sm:p-6">
         <ConsignacionDetalleView
           cons={cons}
           itemsElegibles={itemsElegibles}

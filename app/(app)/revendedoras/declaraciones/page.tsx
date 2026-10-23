@@ -41,7 +41,7 @@ export default async function DeclaracionesBandejaPage(props: PageProps) {
           session={session}
           backHref="/revendedoras"
         />
-        <main className="flex-1 p-6 space-y-6 max-w-7xl">
+        <main className="flex-1 p-4 sm:p-6 space-y-6 max-w-7xl">
           <div className="p-6 rounded-xl border border-destructive/30 bg-destructive/5 text-destructive">
             <p className="font-medium">No se pudieron cargar las declaraciones.</p>
           </div>
@@ -60,7 +60,7 @@ export default async function DeclaracionesBandejaPage(props: PageProps) {
         session={session}
         backHref="/revendedoras"
       />
-      <main className="flex-1 p-6 space-y-6 max-w-7xl">
+      <main className="flex-1 p-4 sm:p-6 space-y-6 max-w-7xl">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold font-display tracking-tight">Declaraciones de venta</h1>

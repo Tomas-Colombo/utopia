@@ -39,7 +39,7 @@ export function EditarRevendedoraForm({ revendedora }: { revendedora: Revendedor
 
   return (
     <form action={action} className="flex flex-col gap-4">
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field htmlFor="er_nombre" label="Nombre" required>
           <Input id="er_nombre" name="nombre" defaultValue={revendedora.nombre} required autoComplete="off" />
         </Field>
@@ -48,7 +48,7 @@ export function EditarRevendedoraForm({ revendedora }: { revendedora: Revendedor
         </Field>
       </div>
       
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field htmlFor="er_telefono" label="Teléfono">
           <Input id="er_telefono" name="telefono" type="tel" defaultValue={revendedora.telefono || ''} autoComplete="off" />
         </Field>

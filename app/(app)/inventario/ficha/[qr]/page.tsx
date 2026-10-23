@@ -45,7 +45,7 @@ export default async function FichaItemPage(props: {
     return (
       <>
         <Topbar title="Ítem no encontrado" session={session} backHref="/inventario/ficha" />
-        <main className="flex-1 p-6">
+        <main className="flex-1 p-4 sm:p-6">
           <Card padding="none" className="mx-auto max-w-md p-6 text-center">
             <p className="font-display text-lg mb-2">QR no reconocido</p>
             <p className="text-sm text-muted mb-4">
@@ -76,8 +76,8 @@ export default async function FichaItemPage(props: {
   return (
     <>
       <Topbar title="Ficha de ítem" session={session} backHref="/inventario/ficha" />
-      <main className="flex-1 p-6">
-        <div className="mx-auto grid max-w-4xl gap-6 md:grid-cols-[280px_1fr]">
+      <main className="flex-1 p-4 sm:p-6">
+        <div className="mx-auto grid max-w-4xl gap-6 md:grid-cols-[280px_minmax(0,1fr)]">
           {/* QR + estado */}
           <aside className="rounded-lg border border-border bg-card p-4">
             <QrDisplay value={detalle.qr_code} size={220} />
@@ -183,7 +183,7 @@ export default async function FichaItemPage(props: {
               </Card>
             )}
 
-            <Card className="flex items-center justify-between">
+            <Card className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <h3 className="font-display text-lg">Ajuste de inventario</h3>
                 <p className="text-sm text-muted">

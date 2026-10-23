@@ -35,7 +35,7 @@ export default async function CuentasPage(props: {
   return (
     <>
       <Topbar title="Cuentas y recargos" session={session} backHref="/precios" />
-      <main className="flex-1 p-6">
+      <main className="flex-1 p-4 sm:p-6">
         <CuentasView
           cuentas={rows}
           aranceles={aranceles}

@@ -36,7 +36,7 @@ export default async function ConsignacionesRevendedoraPage(props: {
           )
         }
       />
-      <main className="flex-1 p-6 space-y-6">
+      <main className="flex-1 p-4 sm:p-6 space-y-6">
         <RevendedoraTabs idRevendedora={id} activeTab="consignaciones" />
         <Card padding="none" className="p-6 space-y-4">
           <div className="flex items-center justify-between">

@@ -365,7 +365,7 @@ export function CobranzaPanel({
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="text-sm font-medium">Pagos</span>
         <Button type="button" size="sm" variant="secondary" onClick={agregar} disabled={disabled}>
           + Pago

@@ -22,7 +22,7 @@ export function BloqueCobrar({ porCobrar, puedeVerVentas }: BloqueCobrarProps) {
 
   return (
     <Card as="section" padding="none" aria-labelledby="h2-cobrar" className="overflow-hidden h-full flex flex-col">
-      <div className="p-4 border-b border-border bg-panel flex justify-between items-center">
+      <div className="p-4 border-b border-border bg-panel flex flex-wrap justify-between items-center gap-2">
         <h2 id="h2-cobrar" className="font-display text-lg">Lo que te deben</h2>
       </div>
       

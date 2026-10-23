@@ -41,7 +41,7 @@ export default async function ImprimirEtiquetasPage(props: {
     return (
       <>
         <Topbar title="Imprimir etiquetas" session={session} backHref="/inventario" />
-        <main className="flex-1 p-6">
+        <main className="flex-1 p-4 sm:p-6">
           <div className="mx-auto max-w-md rounded-lg border border-border bg-card p-6 text-center">
             <p className="font-display text-lg mb-2">No hay códigos para imprimir</p>
             <p className="text-sm text-muted">
@@ -57,7 +57,7 @@ export default async function ImprimirEtiquetasPage(props: {
     return (
       <>
         <Topbar title="Imprimir etiquetas" session={session} backHref="/inventario" />
-        <main className="flex-1 p-6">
+        <main className="flex-1 p-4 sm:p-6">
           <div className="mx-auto max-w-md rounded-lg border border-border bg-card p-6 text-center">
             <p className="font-display text-lg mb-2 text-danger">Parámetros inválidos</p>
             <p className="text-sm text-muted">

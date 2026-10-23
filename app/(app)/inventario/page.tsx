@@ -147,7 +147,7 @@ export default async function InventarioHome(props: {
 
         {/* Productos — buscador único (escáner + SKU) + tabla */}
         <section className="space-y-3">
-          <div className="flex items-baseline gap-3">
+          <div className="flex flex-wrap items-baseline gap-3">
             <h3 className="font-display text-lg">Productos</h3>
             <span className="font-mono text-xs tabular-nums text-muted">
               {total.toLocaleString('es-AR')} {total === 1 ? 'resultado' : 'resultados'}

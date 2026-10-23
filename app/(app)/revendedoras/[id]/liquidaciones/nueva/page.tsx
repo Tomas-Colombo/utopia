@@ -53,7 +53,7 @@ export default async function NuevaLiquidacionPage(props: {
         session={session}
         backHref={`/revendedoras/${id}/liquidaciones`}
       />
-      <main className="flex-1 p-6 max-w-5xl">
+      <main className="flex-1 p-4 sm:p-6 max-w-5xl">
         <NuevaLiquidacionView
           revendedora={revendedora}
           desde={desde}

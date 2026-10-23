@@ -37,7 +37,7 @@ export function DeclaracionesRevendedoraView({ declaraciones }: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight">Declaraciones de venta</h1>
           <p className="text-sm text-muted">
@@ -139,7 +139,7 @@ export function DeclaracionesRevendedoraView({ declaraciones }: Props) {
               Vas a retirar la declaración de venta de{' '}
               <strong className="text-text">{selectedParaRetirar.nombre_producto}</strong>. La prenda volverá a figurar disponible en tu stock para declarar más adelante.
             </p>
-            <div className="flex items-center justify-end gap-3 pt-3 border-t border-border">
+            <div className="flex flex-wrap items-center justify-end gap-3 pt-3 border-t border-border">
               <Button
                 variant="secondary"
                 className="min-h-[44px] px-4"

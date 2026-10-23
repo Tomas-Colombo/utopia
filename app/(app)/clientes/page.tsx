@@ -34,7 +34,7 @@ export default async function ClientesPage(props: {
         session={session}
         actions={<NuevoClienteModalButton />}
       />
-      <main className="flex-1 p-6">
+      <main className="flex-1 p-4 sm:p-6">
         <ClientesTable
           rows={rows}
           initialSearch={searchParams.q ?? ''}

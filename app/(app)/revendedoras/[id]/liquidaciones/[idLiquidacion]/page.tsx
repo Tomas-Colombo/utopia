@@ -33,7 +33,7 @@ export default async function LiquidacionDetallePage(props: {
         session={session}
         backHref={`/revendedoras/${id}/liquidaciones`}
       />
-      <main className="flex-1 p-6 max-w-5xl">
+      <main className="flex-1 p-4 sm:p-6 max-w-5xl">
         <LiquidacionDetalleView
           data={liqRes.data}
           puedeLiquidar={puedeLiquidar}

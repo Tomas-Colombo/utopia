@@ -39,7 +39,7 @@ export default async function DeclaracionesRevendedoraPage(props: PageProps) {
         session={session}
         backHref="/revendedoras"
       />
-      <main className="flex-1 p-6 space-y-6 max-w-5xl">
+      <main className="flex-1 p-4 sm:p-6 space-y-6 max-w-5xl">
         <RevendedoraTabs idRevendedora={revendedora.id_revendedora} activeTab="declaraciones" />
 
         <div className="space-y-4">

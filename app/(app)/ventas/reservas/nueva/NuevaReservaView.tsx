@@ -357,7 +357,7 @@ export function NuevaReservaView({
   }
 
   return (
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px]">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
       <section className="space-y-4">
         <Card className="space-y-3">
           <form onSubmit={agregar}>

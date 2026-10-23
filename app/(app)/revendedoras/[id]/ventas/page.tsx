@@ -36,7 +36,7 @@ export default async function RevendedoraVentasPage(props: {
         session={session}
         backHref={`/revendedoras/${id}`}
       />
-      <main className="flex-1 p-6 space-y-6">
+      <main className="flex-1 p-4 sm:p-6 space-y-6">
         <RevendedoraTabs idRevendedora={id} activeTab="ventas" />
 
         <Card padding="none" className="p-6 space-y-4">

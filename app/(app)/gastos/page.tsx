@@ -67,11 +67,11 @@ export default async function GastosPage({
           </>
         }
       />
-      <main className="flex-1 p-6 space-y-6">
+      <main className="flex-1 p-4 sm:p-6 space-y-6">
 
         {/* Presupuestos por categoría */}
         <Card as="section" padding="none" className="overflow-x-auto">
-          <div className="border-b border-border px-4 py-3 flex items-center justify-between">
+          <div className="border-b border-border px-4 py-3 flex flex-wrap items-center justify-between gap-2">
             <h3 className="font-display text-lg">Presupuestos del mes</h3>
             <Link href="/gastos/presupuestos" className="-mx-2 rounded-[4px] px-2 py-1 text-xs font-medium text-muted transition-colors hover:bg-hover hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ink">
               Ajustar presupuestos
@@ -82,7 +82,7 @@ export default async function GastosPage({
 
         {/* Últimos gastos */}
         <section className="space-y-3">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <h3 className="font-display text-lg">Últimos gastos registrados</h3>
           </div>
           <GastosTableClient

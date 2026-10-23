@@ -9,7 +9,7 @@ export default async function ControlDePreciosPage() {
   return (
     <>
       <Topbar title="Control de precios" session={session} backHref="/precios" />
-      <main className="flex-1 p-6">
+      <main className="flex-1 p-4 sm:p-6">
         <ControlDePreciosView initial={rows} />
       </main>
     </>

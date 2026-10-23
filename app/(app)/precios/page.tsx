@@ -64,7 +64,7 @@ export default async function PreciosHome(props: {
           { label: 'Con margen aplicado', value: conRegla.toString() },
         ]}
       />
-      <main className="flex-1 p-6 space-y-6">
+      <main className="flex-1 p-4 sm:p-6 space-y-6">
 
         <section className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <Link

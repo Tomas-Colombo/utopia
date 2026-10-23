@@ -66,7 +66,7 @@ export function NuevaRevendedoraForm({
 
   return (
     <form action={action} className="flex flex-col gap-5">
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field htmlFor="nr_nombre" label="Nombre" required>
           <Input id="nr_nombre" name="nombre" required autoFocus autoComplete="off" />
         </Field>
@@ -75,7 +75,7 @@ export function NuevaRevendedoraForm({
         </Field>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field htmlFor="nr_telefono" label="Teléfono">
           <Input id="nr_telefono" name="telefono" type="tel" autoComplete="off" />
         </Field>

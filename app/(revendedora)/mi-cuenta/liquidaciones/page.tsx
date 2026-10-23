@@ -23,7 +23,7 @@ export default async function MisLiquidacionesPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight">Liquidaciones de cuenta</h1>
           <p className="text-sm text-muted">

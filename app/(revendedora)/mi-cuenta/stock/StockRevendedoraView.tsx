@@ -54,7 +54,7 @@ export function StockRevendedoraView({ items }: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight">Mercadería en tu poder</h1>
           <p className="text-sm text-muted">
@@ -153,7 +153,7 @@ export function StockRevendedoraView({ items }: Props) {
               Al declarar la venta, el artículo permanecerá marcado como pendiente hasta que el local confirme la operación. Podrás retirarla en cualquier momento antes de la confirmación.
             </p>
 
-            <div className="flex items-center justify-end gap-3 pt-3 border-t border-border">
+            <div className="flex flex-wrap items-center justify-end gap-3 pt-3 border-t border-border">
               <Button
                 variant="secondary"
                 className="min-h-[44px] px-4"

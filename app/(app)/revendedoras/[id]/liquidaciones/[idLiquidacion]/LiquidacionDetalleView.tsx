@@ -98,7 +98,7 @@ export function LiquidacionDetalleView({
       </div>
 
       {/* Tarjeta de estado de pago */}
-      <Card padding="none" className="p-6 space-y-4">
+      <Card padding="none" className="p-4 sm:p-6 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h2 className="font-display text-lg">Estado de liquidación</h2>
@@ -152,22 +152,24 @@ export function LiquidacionDetalleView({
       </Card>
 
       {/* Líneas de venta selladas en la liquidación */}
-      <Card padding="none" className="p-6 space-y-4">
+      <Card padding="none" className="p-4 sm:p-6 space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="font-display text-base font-semibold">Líneas de venta selladas</h3>
           <span className="text-sm text-muted">{lineas.length} línea(s)</span>
         </div>
 
-        <Table
-          data={lineas}
-          columns={columnasLineas}
-          getRowId={(l) => l.id_detalle_venta}
-          emptyState={
-            <p className="p-4 text-center text-sm text-muted">
-              No se encontraron líneas selladas para esta liquidación.
-            </p>
-          }
-        />
+        <div className="overflow-x-auto">
+          <Table
+            data={lineas}
+            columns={columnasLineas}
+            getRowId={(l) => l.id_detalle_venta}
+            emptyState={
+              <p className="p-4 text-center text-sm text-muted">
+                No se encontraron líneas selladas para esta liquidación.
+              </p>
+            }
+          />
+        </div>
       </Card>
 
       <PagoLiquidacionModal

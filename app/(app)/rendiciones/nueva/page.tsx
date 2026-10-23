@@ -16,7 +16,7 @@ export default async function NuevaRendicionPage(props: {
   return (
     <>
       <Topbar title="Generar rendición" session={session} backHref="/rendiciones" />
-      <main className="flex-1 p-6">
+      <main className="flex-1 p-4 sm:p-6">
         <NuevaRendicionView
           proveedores={proveedores.map((p) => ({
             id: p.id_proveedor,

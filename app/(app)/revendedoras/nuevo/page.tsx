@@ -20,7 +20,7 @@ export default async function NuevaRevendedoraPage() {
   return (
     <>
       <Topbar title="Nueva revendedora" session={session} backHref="/revendedoras" />
-      <main className="flex-1 p-6">
+      <main className="flex-1 p-4 sm:p-6">
         <Card padding="none" className="max-w-xl p-6">
           <NuevaRevendedoraForm
             canGrantAccess={canGrantAccess}

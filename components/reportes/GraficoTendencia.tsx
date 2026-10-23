@@ -53,7 +53,7 @@ export function GraficoTendencia({ serie, tieneGastos }: GraficoTendenciaProps) 
 
   return (
     <Card as="section" padding="none" className="overflow-hidden">
-      <div className="flex items-center justify-between p-4 border-b border-border bg-panel">
+      <div className="flex flex-wrap items-center justify-between p-4 border-b border-border bg-panel gap-2">
         <h2 id="h2-tendencia" className="font-display text-lg">Tendencia (12 meses)</h2>
         <Button onClick={() => setVerTabla(!verTabla)} variant="secondary" size="sm">
           {verTabla ? 'Ver gráfico' : 'Ver como tabla'}

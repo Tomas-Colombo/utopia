@@ -23,7 +23,7 @@ export default async function MisVentasPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight">Prendas vendidas</h1>
           <p className="text-sm text-muted">
@@ -47,7 +47,7 @@ export default async function MisVentasPage() {
               className="p-4 rounded-lg border border-border bg-card shadow-[0_1px_2px_rgb(0_0_0/0.04)] flex flex-col sm:flex-row sm:items-center justify-between gap-4"
             >
               <div className="space-y-1">
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <span className="font-semibold text-base">
                     {v.descripcion}
                   </span>
@@ -57,7 +57,7 @@ export default async function MisVentasPage() {
                     </span>
                   )}
                 </div>
-                <div className="flex items-center gap-3 text-xs text-muted">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
                   <span>Precio: <strong className="text-foreground">{formatearMoneda(v.precio_venta)}</strong></span>
                   <span>·</span>
                   <span>Fecha: {new Date(v.fecha_venta).toLocaleDateString('es-AR')}</span>

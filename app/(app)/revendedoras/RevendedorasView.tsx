@@ -60,7 +60,7 @@ export function RevendedorasView({ data, canCreate }: { data: RevendedoraRow[], 
           </Button>
         )}
       </div>
-      <Card padding="none" className="overflow-hidden">
+      <Card padding="none" className="overflow-x-auto">
         <Table columns={columns} data={data} />
       </Card>
     </div>

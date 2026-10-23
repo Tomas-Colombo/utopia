@@ -24,7 +24,7 @@ export default async function ProveedoresPage() {
           </Link>
         }
       />
-      <main className="flex-1 p-6">
+      <main className="flex-1 p-4 sm:p-6">
         {rows.length === 0 ? (
           <EmptyStateWrapper />
         ) : (

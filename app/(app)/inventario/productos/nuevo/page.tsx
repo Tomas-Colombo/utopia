@@ -21,7 +21,7 @@ export default async function NuevoProductoPage() {
   return (
     <>
       <Topbar title="Nuevo producto" session={session} backHref="/inventario" />
-      <main className="flex-1 p-6">
+      <main className="flex-1 p-4 sm:p-6">
         <Card padding="none" className="max-w-2xl p-6">
           <NuevoProductoForm
             categorias={categorias}
