@@ -30,7 +30,7 @@ export default async function MisLiquidacionesPage() {
             Cierres periódicos de ventas y rendiciones con el local.
           </p>
         </div>
-        <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-accent/10 text-accent">
+        <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-accent-fg/10 text-accent-fg">
           {liquidaciones.length} {liquidaciones.length === 1 ? 'cierre' : 'cierres'}
         </span>
       </div>
@@ -76,7 +76,7 @@ export default async function MisLiquidacionesPage() {
                 </div>
                 <div>
                   <span className="text-muted block">Tu comisión</span>
-                  <span className="font-semibold text-sm text-accent">{formatearMoneda(l.monto_comision)}</span>
+                  <span className="font-semibold text-sm text-accent-fg">{formatearMoneda(l.monto_comision)}</span>
                 </div>
                 <div>
                   <span className="text-muted block">A rendir al local</span>

@@ -30,7 +30,7 @@ export default async function MisVentasPage() {
             Detalle por prenda de las ventas registradas y confirmadas a tu nombre.
           </p>
         </div>
-        <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-accent/10 text-accent">
+        <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-accent-fg/10 text-accent-fg">
           {ventas.length} {ventas.length === 1 ? 'prenda' : 'prendas'}
         </span>
       </div>
@@ -67,7 +67,7 @@ export default async function MisVentasPage() {
               <div className="flex items-center justify-between sm:justify-end gap-4 border-t sm:border-t-0 pt-2 sm:pt-0 border-border/50">
                 <div className="text-left sm:text-right">
                   <div className="text-xs text-muted">Tu comisión</div>
-                  <div className="text-sm font-bold text-accent">
+                  <div className="text-sm font-bold text-accent-fg">
                     {formatearMoneda(v.comision_total)}
                   </div>
                 </div>

@@ -44,7 +44,7 @@ export function DeclaracionesRevendedoraView({ declaraciones }: Props) {
             Prendas que declaraste como vendidas pendientes de confirmar por el local.
           </p>
         </div>
-        <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-accent/10 text-accent">
+        <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-accent-fg/10 text-accent-fg">
           {declaraciones.length} {declaraciones.length === 1 ? 'declaración' : 'declaraciones'}
         </span>
       </div>
@@ -69,7 +69,7 @@ export function DeclaracionesRevendedoraView({ declaraciones }: Props) {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-base font-bold text-accent whitespace-nowrap">
+                  <span className="text-base font-bold text-accent-fg whitespace-nowrap">
                     {formatearMoneda(d.precio_venta)}
                   </span>
                   {d.estado === 'pendiente' && (

@@ -61,7 +61,7 @@ export function StockRevendedoraView({ items }: Props) {
             Prendas consignadas que tenés disponibles para vender.
           </p>
         </div>
-        <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-accent/10 text-accent">
+        <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-accent-fg/10 text-accent-fg">
           {items.length} {items.length === 1 ? 'prenda' : 'prendas'}
         </span>
       </div>
@@ -80,7 +80,7 @@ export function StockRevendedoraView({ items }: Props) {
               <div>
                 <div className="flex items-start justify-between gap-2">
                   <h2 className="font-semibold text-base leading-snug">{item.nombre_producto}</h2>
-                  <span className="text-base font-bold text-accent whitespace-nowrap">
+                  <span className="text-base font-bold text-accent-fg whitespace-nowrap">
                     {formatearMoneda(item.precio_venta)}
                   </span>
                 </div>
@@ -129,7 +129,7 @@ export function StockRevendedoraView({ items }: Props) {
                   <span>Talle: {selectedItem.talle}</span>
                 </div>
               )}
-              <p className="text-sm font-bold text-accent pt-1">
+              <p className="text-sm font-bold text-accent-fg pt-1">
                 Precio de venta: {formatearMoneda(selectedItem.precio_venta)}
               </p>
             </div>

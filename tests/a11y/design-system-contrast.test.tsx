@@ -27,6 +27,7 @@ const TOKEN_CLASS_SUFFIX: Record<ThemeTokenKey, string> = {
   sidebarBg: 'sidebar',
   accent: 'accent',
   accentInk: 'accent-ink',
+  accentFg: 'accent-fg',
   block: 'block',
   blockInk: 'block-ink',
   warn: 'warn',
@@ -200,5 +201,33 @@ describe('design system accessibility — color contrast (REQ-DS-04/17)', () => 
     await axe.run(container, { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa'] } })
 
     expect(findContrastFailures(container)).toEqual([])
+  })
+
+  it('maintains WCAG 2.1 AA (>=4.5:1) contrast in PageBand over --band blended with --band-pattern', () => {
+    const blend = (base: [number, number, number], alpha: number): [number, number, number] => [
+      Math.round(base[0] * (1 - alpha) + 255 * alpha),
+      Math.round(base[1] * (1 - alpha) + 255 * alpha),
+      Math.round(base[2] * (1 - alpha) + 255 * alpha),
+    ]
+
+    // Light: --band #1C1C20 (28,28,32) + --band-pattern rgb(255 255 255 / 0.055)
+    // Dark:  --band #141416 (20,20,22) + --band-pattern rgb(255 255 255 / 0.05)
+    const lightBandPatternBg = blend([28, 28, 32], 0.055)
+    const darkBandPatternBg = blend([20, 20, 22], 0.05)
+
+    // Foreground tokens inside .band-scope:
+    // --band-ink #F1F0EE (241,240,238), --band-muted #B9AEBD (185,174,189),
+    // --band-label #9B8CA0 (155,140,160), --warn-on-dark #EDBE7A (237,190,122)
+    const bandForegrounds: [number, number, number][] = [
+      [241, 240, 238],
+      [185, 174, 189],
+      [155, 140, 160],
+      [237, 190, 122],
+    ]
+
+    for (const fg of bandForegrounds) {
+      expect(contrastRatio(fg, lightBandPatternBg)).toBeGreaterThanOrEqual(4.5)
+      expect(contrastRatio(fg, darkBandPatternBg)).toBeGreaterThanOrEqual(4.5)
+    }
   })
 })

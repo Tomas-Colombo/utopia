@@ -100,7 +100,7 @@ export function DeclaracionesTableView({ declaraciones, puedeGestionar }: Props)
                       {d.talle && ` · Talle ${d.talle}`}
                     </div>
                   </Td>
-                  <Td className="whitespace-nowrap font-semibold text-accent">
+                  <Td className="whitespace-nowrap font-semibold text-accent-fg">
                     {formatearMoneda(d.precio_venta)}
                   </Td>
                   <Td className="max-w-xs truncate text-xs text-muted">
@@ -197,7 +197,7 @@ export function DeclaracionesTableView({ declaraciones, puedeGestionar }: Props)
               </div>
               <div>
                 <span className="text-muted">Precio de lista:</span>{' '}
-                <span className="font-semibold text-accent">{formatearMoneda(declaracionConfirmar.precio_venta)}</span>
+                <span className="font-semibold text-accent-fg">{formatearMoneda(declaracionConfirmar.precio_venta)}</span>
               </div>
               {declaracionConfirmar.nota && (
                 <div>

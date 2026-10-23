@@ -47,8 +47,15 @@ export function PageBand({ breadcrumb, title, subtitle, filters, kpis, actions, 
   const hasKpis = !!kpis && kpis.length > 0
   const filasKpi = kpis?.some((k) => k.sub) ? 'row-span-3' : 'row-span-2'
   return (
-    <header aria-label="Barra superior" className="band-scope bg-band text-band-ink">
-      <div className="flex flex-col gap-3.5 pb-4 pl-16 pr-4 pt-3 sm:pr-6 md:px-6 md:pb-5">
+    <header
+      aria-label="Barra superior"
+      className="band-scope relative isolate overflow-hidden w-full min-w-full bg-band text-band-ink"
+    >
+      <div
+        aria-hidden="true"
+        className="band-tatau pointer-events-none absolute inset-0 hidden sm:block print:hidden"
+      />
+      <div className="relative z-10 flex flex-col gap-3.5 pb-4 pl-16 pr-4 pt-3 sm:pr-6 md:px-6 md:pb-5">
         <div className="flex items-center justify-between gap-4">
           <nav aria-label="Ubicación" className="min-w-0">
             <ol className="eyebrow flex flex-wrap items-center gap-x-2 gap-y-1 text-band-label">

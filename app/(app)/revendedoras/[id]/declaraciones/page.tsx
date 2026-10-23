@@ -47,7 +47,7 @@ export default async function DeclaracionesRevendedoraPage(props: PageProps) {
             <h2 className="text-lg font-bold font-display tracking-tight">
               Declaraciones de venta de {revendedora.nombre}
             </h2>
-            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-accent/10 text-accent">
+            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-accent-fg/10 text-accent-fg">
               {declaraciones.length} {declaraciones.length === 1 ? 'declaración' : 'declaraciones'}
             </span>
           </div>

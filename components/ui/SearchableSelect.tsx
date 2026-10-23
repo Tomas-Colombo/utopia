@@ -151,7 +151,7 @@ export function SearchableSelect({
                   // The label is the li's ONLY child on purpose: wrapping it in
                   // a <span> would make getByText return the span instead of
                   // the option element that carries the ARIA state.
-                  className={`cursor-pointer truncate rounded-[4px] px-2.5 py-2 text-[13.5px] transition-colors aria-selected:bg-accent aria-selected:font-semibold aria-selected:text-accent-ink ${
+                  className={`cursor-pointer truncate rounded-[4px] px-2.5 py-2 text-[13.5px] transition-colors aria-selected:bg-card-3 aria-selected:font-semibold aria-selected:text-text ${
                     option.disabled ? 'cursor-not-allowed text-muted' : 'text-ink'
                   } ${index === highlightIndex ? 'bg-control-active' : ''}`}
                 >

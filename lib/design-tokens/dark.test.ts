@@ -38,7 +38,7 @@ describe('darkTokens', () => {
     expect(darkTokens.bg).toBe('#0F0F11')
     expect(darkTokens.text).toBe('#F1F0EE')
     expect(darkTokens.sidebarBg).toBe('#0B0B0D')
-    expect(darkTokens.accent).toBe('#EDE4D3')
+    expect(darkTokens.accent).toBe('#F3F0EE')
     expect(darkTokens.accentInk).toBe('#141416')
     expect(darkTokens.warnInk).toBe('#EDBE7A')
     expect(darkTokens.alerta).toBe('#E58C78')
@@ -86,6 +86,7 @@ describe('darkTokens', () => {
     it('alerta-on vs alerta-ink, accent-ink vs accent and block-ink vs block meet AA', () => {
       expect(contrastRatio(darkTokens.alertaOn, darkTokens.alertaInk)).toBeGreaterThanOrEqual(4.5)
       expect(contrastRatio(darkTokens.accentInk, darkTokens.accent)).toBeGreaterThanOrEqual(4.5)
+      expect(contrastRatio(darkTokens.accentFg, darkTokens.bg)).toBeGreaterThanOrEqual(4.5)
       expect(contrastRatio(darkTokens.blockInk, darkTokens.block)).toBeGreaterThanOrEqual(4.5)
     })
   })

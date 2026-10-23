@@ -28,7 +28,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Evoraltech",
+  title: "EvoralStock",
   description: "Multi-tenant SaaS management system for clothing store operations",
 };
 

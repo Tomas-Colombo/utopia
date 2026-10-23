@@ -19,7 +19,7 @@ describe('lightTokens', () => {
     expect(lightTokens.bg).toBe('#F3F0EE')
     expect(lightTokens.text).toBe('#141416')
     expect(lightTokens.sidebarBg).toBe('#141416')
-    expect(lightTokens.accent).toBe('#EDE4D3')
+    expect(lightTokens.accent).toBe('#F3F0EE')
     expect(lightTokens.accentInk).toBe('#141416')
     expect(lightTokens.warn).toBe('#B37A12')
     expect(lightTokens.warnInk).toBe('#8A5C0C')
@@ -39,6 +39,7 @@ describe('lightTokens', () => {
       'sidebarBg',
       'accent',
       'accentInk',
+      'accentFg',
       'block',
       'blockInk',
       'warn',
@@ -91,6 +92,8 @@ describe('lightTokens', () => {
 
     it('accent-ink vs accent and block-ink vs block meet AA', () => {
       expect(contrastRatio(lightTokens.accentInk, lightTokens.accent)).toBeGreaterThanOrEqual(4.5)
+      expect(contrastRatio(lightTokens.accentFg, lightTokens.bg)).toBeGreaterThanOrEqual(4.5)
+      expect(contrastRatio(lightTokens.accentFg, lightTokens.card)).toBeGreaterThanOrEqual(4.5)
       expect(contrastRatio(lightTokens.blockInk, lightTokens.block)).toBeGreaterThanOrEqual(4.5)
     })
   })

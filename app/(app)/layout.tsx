@@ -54,9 +54,9 @@ export default async function AppShellLayout({
 
   return (
     <ToastProvider>
-      <div className="flex min-h-screen bg-bg text-text">
+      <div className="flex min-h-screen w-full bg-bg text-text">
         <Sidebar session={session} />
-        <div className="flex min-w-0 flex-1 flex-col">{children}</div>
+        <div className="flex min-w-0 flex-1 flex-col w-full">{children}</div>
       </div>
     </ToastProvider>
   )

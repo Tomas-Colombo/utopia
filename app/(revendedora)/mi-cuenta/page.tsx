@@ -48,7 +48,7 @@ export default async function MiCuentaResumenPage() {
           <div className="pt-2">
             <Link
               href="/mi-cuenta/stock"
-              className="min-h-[44px] inline-flex items-center text-sm font-medium text-accent hover:underline"
+              className="min-h-[44px] inline-flex items-center text-sm font-medium text-accent-fg hover:underline"
             >
               Ver mi stock &rarr;
             </Link>
@@ -69,7 +69,7 @@ export default async function MiCuentaResumenPage() {
           <div className="pt-2">
             <Link
               href="/mi-cuenta/ventas"
-              className="min-h-[44px] inline-flex items-center text-sm font-medium text-accent hover:underline"
+              className="min-h-[44px] inline-flex items-center text-sm font-medium text-accent-fg hover:underline"
             >
               Ver mis ventas &rarr;
             </Link>
@@ -81,7 +81,7 @@ export default async function MiCuentaResumenPage() {
           <span className="text-xs font-semibold text-muted uppercase tracking-wider">
             Saldo a rendir al local
           </span>
-          <div className="text-3xl font-bold font-display text-accent">
+          <div className="text-3xl font-bold font-display text-accent-fg">
             {formatearMoneda(cuenta.total_adeudado)}
           </div>
           <p className="text-xs text-muted">
@@ -90,7 +90,7 @@ export default async function MiCuentaResumenPage() {
           <div className="pt-2">
             <Link
               href="/mi-cuenta/liquidaciones"
-              className="min-h-[44px] inline-flex items-center text-sm font-medium text-accent hover:underline"
+              className="min-h-[44px] inline-flex items-center text-sm font-medium text-accent-fg hover:underline"
             >
               Ver liquidaciones &rarr;
             </Link>
@@ -144,7 +144,7 @@ export default async function MiCuentaResumenPage() {
           <div className="pt-2">
             <Link
               href="/mi-cuenta/declaraciones"
-              className="min-h-[44px] inline-flex items-center text-sm font-medium text-accent hover:underline"
+              className="min-h-[44px] inline-flex items-center text-sm font-medium text-accent-fg hover:underline"
             >
               Ver declaraciones &rarr;
             </Link>

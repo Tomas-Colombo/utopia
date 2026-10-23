@@ -39,8 +39,9 @@
   --band: #1C1C20;
   --band-ink: #F1F0EE;
   --band-muted: #B9AEBD;
-  --band-label: #8E7F93;
+  --band-label: #9B8CA0;
   --band-line: rgb(255 255 255 / 0.12);
+  --band-pattern: rgb(255 255 255 / 0.055);
 
   /* Contrast block — primary button on a light page; inverts in dark */
   --block: #141416;
@@ -49,8 +50,11 @@
 
   /* Accent (lino): ONLY the main action, the active nav marker, the current
      day in a chart, the logo. Text on it is always --accent-ink. */
-  --accent: #EDE4D3;
+  --accent: #F3F0EE;
   --accent-ink: #141416;
+  /* Accent as TEXT on a light surface. --accent itself is as light as the page
+     (#F3F0EE on #F3F0EE), so `text-accent` read as blank. */
+  --accent-fg: #6B5A3E;
 
   /* State channels. "Pagada" is an ink dot (no green); warn is the booking /
      about-to-expire channel; alerta is errors and negatives. */
@@ -147,15 +151,17 @@
   --band: #141416;
   --band-ink: #F1F0EE;
   --band-muted: #B9AEBD;
-  --band-label: #8E7F93;
+  --band-label: #9B8CA0;
   --band-line: rgb(255 255 255 / 0.10);
+  --band-pattern: rgb(255 255 255 / 0.05);
 
   --block: #F1F0EE;
   --block-ink: #141416;
   --block-dim: #5D5D64;
 
-  --accent: #EDE4D3;
+  --accent: #F3F0EE;
   --accent-ink: #141416;
+  --accent-fg: var(--accent);
 
   --ok: #F1F0EE;
   --warn: #EDBE7A;
@@ -209,11 +215,13 @@
   --color-band-muted: var(--band-muted);
   --color-band-label: var(--band-label);
   --color-band-line: var(--band-line);
+  --color-band-pattern: var(--band-pattern);
   --color-block: var(--block);
   --color-block-ink: var(--block-ink);
   --color-block-dim: var(--block-dim);
   --color-accent: var(--accent);
   --color-accent-ink: var(--accent-ink);
+  --color-accent-fg: var(--accent-fg);
   --color-ok: var(--ok);
   --color-ok-bg: var(--ok-bg);
   --color-warn: var(--warn);
@@ -419,6 +427,61 @@
     --alerta-ink: #F2B3A5;
     --alerta-bg: #2A1A17;
     --ok: var(--band-ink);
+  }
+
+  /* Subtle Samoan tatau (pe'a / malu) geometric texture for PageBand:
+     horizontal aso lines, fa'aila spearhead triangles, diamond lattice and
+     herringbone chevrons in a seamless 120x120 SVG mask.
+     - Outer .band-tatau applies a horizontal edge-fade mask so the centre
+       (title + KPIs) stays clean.
+     - Inner ::before fills `--band-pattern` through the tiled SVG mask, so
+       setting `--band-pattern: transparent` or removing `.band-tatau` switches
+       the texture off in one place. */
+  .band-tatau {
+    --band-tatau-svg: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'><g fill='none' stroke='%23ffffff' stroke-width='1' stroke-linecap='square' stroke-linejoin='miter'><path d='M0 6H120M0 18H120M0 26H120M0 38H120M0 50H120M0 58H120M0 66H120M0 74H120M0 98H120M0 106H120M0 114H120'/><path d='M0 6L7.5 14L15 6L22.5 14L30 6L37.5 14L45 6L52.5 14L60 6L67.5 14L75 6L82.5 14L90 6L97.5 14L105 6L112.5 14L120 6'/><path d='M0 38L12 26L24 38L36 26L48 38L60 26L72 38L84 26L96 38L108 26L120 38'/><path d='M0 38L12 50L24 38L36 50L48 38L60 50L72 38L84 50L96 38L108 50L120 38'/><path d='M6 38L12 32L18 38L12 44ZM30 38L36 32L42 38L36 44ZM54 38L60 32L66 38L60 44ZM78 38L84 32L90 38L84 44ZM102 38L108 32L114 38L108 44Z'/><path d='M0 66L8 58M10 66L18 58M20 66L28 58M30 66L38 58M40 66L48 58M50 66L58 58M60 66L68 58M70 66L78 58M80 66L88 58M90 66L98 58M100 66L108 58M110 66L118 58'/><path d='M0 84L10 76L20 84L30 76L40 84L50 76L60 84L70 76L80 84L90 76L100 84L110 76L120 84M0 90L10 82L20 90L30 82L40 90L50 82L60 90L70 82L80 90L90 82L100 90L110 82L120 90M0 96L10 88L20 96L30 88L40 96L50 88L60 96L70 88L80 96L90 88L100 96L110 88L120 96'/><path d='M10 74V98M30 74V98M50 74V98M70 74V98M90 74V98M110 74V98'/><path d='M0 114L7.5 106L15 114L22.5 106L30 114L37.5 106L45 114L52.5 106L60 114L67.5 106L75 114L82.5 106L90 114L97.5 106L105 114L112.5 106L120 114'/></g></svg>");
+    -webkit-mask-image: linear-gradient(
+      90deg,
+      #000 0%,
+      rgb(0 0 0 / 0.85) 14%,
+      rgb(0 0 0 / 0.22) 32%,
+      transparent 46%,
+      transparent 54%,
+      rgb(0 0 0 / 0.22) 68%,
+      rgb(0 0 0 / 0.85) 86%,
+      #000 100%
+    );
+    mask-image: linear-gradient(
+      90deg,
+      #000 0%,
+      rgb(0 0 0 / 0.85) 14%,
+      rgb(0 0 0 / 0.22) 32%,
+      transparent 46%,
+      transparent 54%,
+      rgb(0 0 0 / 0.22) 68%,
+      rgb(0 0 0 / 0.85) 86%,
+      #000 100%
+    );
+  }
+
+  .band-tatau::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-color: var(--band-pattern);
+    -webkit-mask-image: var(--band-tatau-svg);
+    mask-image: var(--band-tatau-svg);
+    -webkit-mask-size: 120px 120px;
+    mask-size: 120px 120px;
+    -webkit-mask-repeat: repeat;
+    mask-repeat: repeat;
+    -webkit-mask-position: 0 0;
+    mask-position: 0 0;
+  }
+}
+
+@media print {
+  .band-tatau {
+    display: none !important;
   }
 }
 

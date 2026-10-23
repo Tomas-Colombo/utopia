@@ -22,8 +22,10 @@ export const lightTokens = {
   sidebarBg: '#141416',
   // Lino: the main action, the active nav marker, the current day. Text on it
   // is always `accentInk`.
-  accent: '#EDE4D3',
+  accent: '#F3F0EE',
   accentInk: '#141416',
+  // Accent as text on a light surface: `accent` is as light as `bg`.
+  accentFg: '#6B5A3E',
   // Primary button on a light page; inverts in dark.
   block: '#141416',
   blockInk: '#F1F0EE',
