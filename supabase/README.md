@@ -1,17 +1,16 @@
 # Supabase — Migrations
 
 Migrations are plain SQL files in `supabase/migrations/`. They are applied by
-the Supabase CLI, not by hand:
+the Supabase CLI:
 
-- **Local / CI**: `supabase start` (needs Docker) applies them to a throwaway
-  stack. `.github/workflows/ci.yml` does exactly this before the DB tests.
-- **Test project** (`utopia-test`): `staging.yml` runs `supabase link` +
-  `supabase db push`.
-- **Production**: `release.yml` runs `supabase db push` after a dry run.
+- **Local**: `supabase start` / `supabase db reset` (needs Docker) applies them
+  to the local stack for development and `tests/db/*`.
+- **Production** (`utopia-dev`): link the project (`supabase link`) and apply
+  via `supabase db push` (or `supabase db reset --linked` when re-initializing
+  from scratch).
 
-Do not paste migrations into a dashboard SQL Editor: it bypasses the migration
-history that `db push` relies on. The "Manual apply order" section below is the
-legacy workflow, kept only until it is removed; the CLI path above wins.
+Do not paste migrations into a dashboard SQL Editor when using the CLI flow: it
+bypasses the migration history that `db push` relies on.
 
 ## Migration naming convention
 
@@ -26,19 +25,19 @@ supabase/migrations/NNNNN_verb_scope.sql
 Each migration file MUST include a reversible **down-step** documented as a SQL
 comment header at the top of the file (see "Rollback" below).
 
-## Manual apply order
+## Legacy manual apply order
 
-1. Open the Supabase dashboard for **`utopia-test`** → SQL Editor.
-2. Paste the **up-step** SQL of the next pending migration file (in ascending
-   `NNNNN` order) and run it.
-3. Run `npm test` locally. The corresponding `tests/db/*` suite for that
-   migration must go green before moving on.
-4. Once green, apply the exact same SQL to **`utopia-dev`** via its own SQL
-   Editor.
-5. Repeat for the next migration file in sequence.
+1. Run `pnpm gate:db` locally against the local Supabase stack (`supabase start`).
+2. Once green, apply the pending migration file (in ascending `NNNNN` order) to
+   **`utopia-dev`** via `supabase db push` (preferred) or the SQL Editor.
 
-`supabase/seed.sql` is applied the same way, after all migrations for a given
-slice have landed, to both `utopia-test` and `utopia-dev`.
+`supabase/seed.sql` is applied automatically on local resets only. `db push`
+does not run it: apply it to `utopia-dev` with `supabase db push --include-seed`
+after all migrations have landed.
+
+Vercel deploys `main` on every push (there is no CI and no `vercel.json` gate).
+Apply pending migrations to `utopia-dev` BEFORE pushing code that depends on
+them, or production runs new code against the old schema.
 
 `supabase/seeds/seed_dev.sql` is a different thing: it is the **reseed**
 script, run after emptying a development database so nobody has to retype
@@ -70,7 +69,7 @@ dashboard SQL Editor of the project being rolled back, and run it.
 
 The Auth Hook function itself (`public.custom_access_token_hook`) is created by
 a migration (see `design.md` §5/§14). Registering it as the active hook is a
-**MANDATORY manual dashboard step per project** in Supabase (`utopia-dev`, `utopia-test`, staging, and production):
+**MANDATORY manual dashboard step** in Supabase (`utopia-dev` / production):
 
 1. Open the Supabase dashboard for the project.
 2. Go to **Auth → Hooks**.

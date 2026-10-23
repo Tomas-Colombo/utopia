@@ -55,7 +55,7 @@ export function createServiceRoleTestClient() {
 }
 
 /**
- * anon-key client for the `utopia-test` Supabase project, optionally
+ * anon-key client for the local test database (`supabase start`), optionally
  * pre-authenticated with a JWT (e.g. from a fixture `signInWithPassword`)
  * so `tests/db/*` can assert `authenticated`-role RLS behavior.
  */

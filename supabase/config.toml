@@ -1,16 +1,14 @@
 # For detailed configuration reference documentation, visit:
 # https://supabase.com/docs/guides/local-development/cli/config
 #
-# This file is the single source of truth for the LOCAL stack, which is also
-# what CI boots for every pull request. Two rules keep it trustworthy:
+# This file is the single source of truth for the LOCAL stack. Two rules keep
+# it trustworthy:
 #
-#   1. `db.major_version` MUST track the cloud projects (utopia-dev /
-#      utopia-test are on PostgreSQL 17.x). A local/remote version split is the
-#      one drift this whole setup exists to prevent.
+#   1. `db.major_version` MUST track the production cloud project (`utopia-dev`
+#      is on PostgreSQL 17.x). A local/remote version split is the one drift
+#      this whole setup exists to prevent.
 #   2. Every service the app does NOT use is disabled below. The app talks to
 #      Postgres and Auth only -- no Storage, no Realtime, no Edge Functions.
-#      Booting them would cost container startup time on every CI run and
-#      would let a dependency creep in unnoticed.
 #
 # A string used to distinguish different Supabase projects on the same host. Defaults to the
 # working directory name when running `supabase init`.

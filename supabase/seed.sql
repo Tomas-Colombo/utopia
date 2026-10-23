@@ -1,5 +1,5 @@
 -- Utopia seed data.
--- Applied via Supabase dashboard SQL Editor to both utopia-dev and utopia-test after all migrations are applied.
+-- Applied automatically on local resets (`supabase start` / `db reset`); to utopia-dev with `supabase db push --include-seed` after all migrations are applied.
 -- Idempotent by design; safe to re-run.
 
 -- Slice 4 seed part 1: fixed modulo catalog (design §14, REQ-MTD-11/12).

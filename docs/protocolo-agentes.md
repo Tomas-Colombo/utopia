@@ -110,6 +110,6 @@ quita el prefijo `-- ` y se ejecuta como SQL.
 
 ## Pendiente: CI
 
-Hoy existe `.github/workflows/ci.yml`. El CI basado en `pnpm gate:full` lo
-agrega el usuario. Cuando exista, el CI pasa a ser el árbitro: se podrán subir
-ramas de feature y su resultado reemplaza al reporte local.
+Hoy la verificación corre de forma local mediante `pnpm gate`, `pnpm gate:db` y
+`pnpm gate:full`. Cuando se agregue un flujo de CI en el futuro, pasará a ser el
+árbitro remoto y reemplazará al reporte local.
