@@ -4,9 +4,11 @@ import Link from 'next/link'
 import { useMemo, useState } from 'react'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
+import { Checkbox } from '@/components/ui/Checkbox'
 import { Field } from '@/components/ui/Field'
 import { Input } from '@/components/ui/Input'
 import { Kpi } from '@/components/ui/Kpi'
+import { buildEtiquetasProductoHref } from '@/lib/inventario/etiquetas'
 import type {
   CategoriaRow,
   EstadoItem,
@@ -19,6 +21,12 @@ import { DataTable, THead, TBody, Tr, Th, Td } from '@/components/ui/TableParts'
 import { Card } from '@/components/ui/Card'
 
 type Proveedor = { id_proveedor: string; nombre: string } | null
+
+const QRS_LISTADO_INICIAL = 50
+
+function esImprimible(estado: EstadoItem, incluirReservados: boolean): boolean {
+  return estado === 'disponible' || (incluirReservados && estado === 'reservado')
+}
 
 /** Fecha "relevante" del ítem para filtrar por período: la del último
  *  movimiento significativo según su estado actual. */
@@ -85,6 +93,8 @@ export function FichaProductoView({
   const bajoMinimo = producto.stock_minimo > 0 && stockDisponible < producto.stock_minimo
   const [editing, setEditing] = useState(false)
   const [asignarOpen, setAsignarOpen] = useState(false)
+  const [incluirReservados, setIncluirReservados] = useState(false)
+  const [verTodosQrs, setVerTodosQrs] = useState(false)
 
   // Disponibles sin talle: candidatos para asignación retroactiva. Vendidos,
   // reservados, etc. no cuentan — el RPC del server los ignora igual.
@@ -110,6 +120,16 @@ export function FichaProductoView({
       return true
     })
   }, [items, desde, hasta])
+
+  const itemsImprimiblesProducto = useMemo(
+    () => items.filter((it) => esImprimible(it.estado_item, incluirReservados)),
+    [items, incluirReservados],
+  )
+
+  const itemsImprimiblesFiltrados = useMemo(
+    () => itemsFiltrados.filter((it) => esImprimible(it.estado_item, incluirReservados)),
+    [itemsFiltrados, incluirReservados],
+  )
 
   // Solo talles que el producto usa realmente (no todos los de la categoría).
   // Si tiene items sin talle, se muestra como fila "Sin talle".
@@ -155,6 +175,10 @@ export function FichaProductoView({
     setHasta(h)
   }
 
+  const qrsVisibles = verTodosQrs
+    ? itemsImprimiblesFiltrados
+    : itemsImprimiblesFiltrados.slice(0, QRS_LISTADO_INICIAL)
+
   return (
     <div className="space-y-6">
       {/* Cabecera con acciones */}
@@ -173,7 +197,19 @@ export function FichaProductoView({
             {categoria && <span> · {categoria.nombre}</span>}
           </div>
         </div>
-        <div className="flex flex-shrink-0 items-center gap-2">
+        <div className="flex flex-shrink-0 flex-wrap items-center gap-2">
+          {itemsImprimiblesProducto.length > 0 && (
+            <Link
+              href={buildEtiquetasProductoHref({
+                idProducto: producto.id_producto,
+                incluirReservados,
+              })}
+            >
+              <Button size="sm" variant="secondary">
+                Imprimir etiquetas ({itemsImprimiblesProducto.length})
+              </Button>
+            </Link>
+          )}
           <Link
             href={`/inventario/ingresos/nuevo?producto=${producto.id_producto}&from=${encodeURIComponent(fichaHref)}`}
           >
@@ -241,13 +277,22 @@ export function FichaProductoView({
 
       {/* Stock por talle — solo talles usados por el producto */}
       <Card as="section" padding="none" className="p-6 space-y-4">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h3 className="text-sm font-semibold">Stock por talle</h3>
-          {filtroActivo && (
-            <span className="text-xs text-muted">
-              Período: {desde || '…'} → {hasta || '…'}
-            </span>
-          )}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-baseline gap-2">
+            <h3 className="text-sm font-semibold">Stock por talle</h3>
+            {filtroActivo && (
+              <span className="text-xs text-muted">
+                Período: {desde || '…'} → {hasta || '…'}
+              </span>
+            )}
+          </div>
+          <label className="inline-flex items-center gap-2 text-xs text-muted">
+            <Checkbox
+              checked={incluirReservados}
+              onChange={(e) => setIncluirReservados(e.target.checked)}
+            />
+            Incluir reservados al imprimir etiquetas
+          </label>
         </div>
 
         {/* Filtro por fecha (mismo patrón que /reportes) */}
@@ -301,6 +346,7 @@ export function FichaProductoView({
                 <Th align="right" className="py-2 pr-3">Vendido</Th>
                 <Th align="right" className="py-2 pr-3">Otros</Th>
                 <Th align="right" className="py-2 pr-3">Total</Th>
+                <Th align="right" className="py-2 pl-3">Etiquetas</Th>
               </THead>
               <TBody>
                 {filasBreakdown.map((f) => {
@@ -308,6 +354,17 @@ export function FichaProductoView({
                     f.counts.devuelto + f.counts.devuelto_cliente + f.counts.baja + f.counts.en_revendedora
                   const total =
                     f.counts.disponible + f.counts.reservado + f.counts.vendido + otros
+                  // La reimpresión por talle opera sobre el total de unidades imprimibles
+                  // en stock (disponible / reservado), sin recortarse por el filtro de fechas
+                  // que solo aplica a la tabla histórica de movimientos.
+                  const cantImprimibleTalle = itemsImprimiblesProducto.filter(
+                    (it) => (it.talle ?? '__sin__') === f.talle,
+                  ).length
+                  const hrefTalle = buildEtiquetasProductoHref({
+                    idProducto: producto.id_producto,
+                    talle: f.talle === '__sin__' ? '__sin__' : f.talle,
+                    incluirReservados,
+                  })
                   return (
                     <Tr key={f.talle}>
                       <Td className="py-2 pr-3 font-medium">{f.label}</Td>
@@ -322,6 +379,18 @@ export function FichaProductoView({
                         {otros > 0 ? otros : '—'}
                       </Td>
                       <Td align="right" className="py-2 pr-3 font-mono">{total}</Td>
+                      <Td align="right" className="py-2 pl-3">
+                        {cantImprimibleTalle > 0 ? (
+                          <Link
+                            href={hrefTalle}
+                            className="text-xs font-semibold text-ink underline decoration-line-2 underline-offset-2 hover:decoration-ink"
+                          >
+                            Imprimir ({cantImprimibleTalle})
+                          </Link>
+                        ) : (
+                          <span className="text-muted">—</span>
+                        )}
+                      </Td>
                     </Tr>
                   )
                 })}
@@ -336,11 +405,86 @@ export function FichaProductoView({
         )}
       </Card>
 
-      {/* Placeholder — QRs por ítem */}
-      <section className="rounded-lg border border-dashed border-border bg-card-2 p-6">
-        <h3 className="text-sm font-semibold text-muted">Listado de QRs por ítem</h3>
-        <p className="mt-1 text-sm text-muted">Próximamente.</p>
-      </section>
+      {/* Listado de QRs por ítem para reimprimir etiquetas individuales */}
+      <Card as="section" padding="none" className="p-6 space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h3 className="text-sm font-semibold">Listado de QRs por ítem</h3>
+            <p className="mt-0.5 text-xs text-muted">
+              Reimprimí una etiqueta puntual si se perdió o se dañó en el local.
+            </p>
+          </div>
+          {itemsImprimiblesFiltrados.length > 0 && (
+            <span className="text-xs font-mono text-muted">
+              {itemsImprimiblesFiltrados.length}{' '}
+              {itemsImprimiblesFiltrados.length === 1 ? 'unidad imprimible' : 'unidades imprimibles'}
+            </span>
+          )}
+        </div>
+
+        {itemsImprimiblesFiltrados.length === 0 ? (
+          <p className="text-sm text-muted">
+            No hay unidades {incluirReservados ? 'disponibles ni reservadas' : 'disponibles'} para
+            imprimir con los filtros actuales.
+          </p>
+        ) : (
+          <div className="space-y-3">
+            <div className="overflow-x-auto">
+              <DataTable>
+                <THead>
+                  <Th className="py-2 pr-3">Código QR</Th>
+                  <Th className="py-2 pr-3">Talle</Th>
+                  <Th className="py-2 pr-3">Estado</Th>
+                  <Th align="right" className="py-2 pl-3">Etiqueta</Th>
+                </THead>
+                <TBody>
+                  {qrsVisibles.map((it) => (
+                    <Tr key={it.id_item}>
+                      <Td className="py-2 pr-3 font-mono text-xs">
+                        <Link
+                          href={`/inventario/ficha/${encodeURIComponent(it.qr_code)}`}
+                          className="underline decoration-line-2 underline-offset-2 hover:decoration-ink"
+                        >
+                          {it.qr_code}
+                        </Link>
+                      </Td>
+                      <Td className="py-2 pr-3 text-sm">{it.talle ?? 'Sin talle'}</Td>
+                      <Td className="py-2 pr-3">
+                        <Badge variant={it.estado_item === 'disponible' ? 'success' : 'info'}>
+                          {it.estado_item === 'disponible' ? 'Disponible' : 'Reservado'}
+                        </Badge>
+                      </Td>
+                      <Td align="right" className="py-2 pl-3">
+                        <Link
+                          href={`/inventario/imprimir-etiquetas?qrs=${encodeURIComponent(it.qr_code)}`}
+                          className="text-xs font-semibold text-ink underline decoration-line-2 underline-offset-2 hover:decoration-ink"
+                        >
+                          Imprimir etiqueta
+                        </Link>
+                      </Td>
+                    </Tr>
+                  ))}
+                </TBody>
+              </DataTable>
+            </div>
+
+            {itemsImprimiblesFiltrados.length > QRS_LISTADO_INICIAL && (
+              <div className="flex justify-center pt-1">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setVerTodosQrs((prev) => !prev)}
+                >
+                  {verTodosQrs
+                    ? 'Mostrar menos'
+                    : `Ver todos (${itemsImprimiblesFiltrados.length})`}
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+      </Card>
 
       <EditarProductoModal
         open={editing}

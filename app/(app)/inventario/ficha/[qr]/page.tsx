@@ -70,6 +70,8 @@ export default async function FichaItemPage(props: {
   const puedeVerRevendedoras = hasModuleAccess(session, 'revendedoras', 'ver')
   const quienTieneRes = puedeVerRevendedoras ? await quienTieneItem(decoded) : null
   const enPoderDe = quienTieneRes?.ok ? quienTieneRes.data : null
+  const puedeImprimirEtiqueta =
+    detalle.estado_item === 'disponible' || detalle.estado_item === 'reservado'
 
   return (
     <>
@@ -83,13 +85,15 @@ export default async function FichaItemPage(props: {
               <Badge variant={ESTADO_VARIANT[detalle.estado_item]}>
                 {ESTADO_LABEL[detalle.estado_item]}
               </Badge>
-              <Link
-                href={`/inventario/imprimir-etiquetas?qrs=${encodeURIComponent(detalle.qr_code)}`}
-                target="_blank"
-                className="w-full text-center rounded-md bg-card-3 border border-border px-3 py-2 text-sm font-semibold hover:bg-hover"
-              >
-                Imprimir Etiqueta
-              </Link>
+              {puedeImprimirEtiqueta && (
+                <Link
+                  href={`/inventario/imprimir-etiquetas?qrs=${encodeURIComponent(detalle.qr_code)}`}
+                  target="_blank"
+                  className="w-full text-center rounded-md bg-card-3 border border-border px-3 py-2 text-sm font-semibold hover:bg-hover"
+                >
+                  Imprimir Etiqueta
+                </Link>
+              )}
               <EscanearOtro />
             </div>
           </aside>

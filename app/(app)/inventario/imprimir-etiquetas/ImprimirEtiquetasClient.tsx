@@ -1,11 +1,19 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { Button } from '@/components/ui/Button'
 import { generarQrDataUrl } from '@/components/inventario/QrDisplay'
+import { QR_LADO_MM_DEFAULT } from '@/lib/inventario/limites'
 import type { ItemParaEtiqueta } from '@/lib/dal/inventario/item'
 
-const LADO_QR = 140
+export interface PaginacionTandaClient {
+  tandaActual: number
+  totalTandas: number
+  totalItems: number
+  anteriorHref?: string | null
+  siguienteHref?: string | null
+}
 
 /**
  * CSS de impresión.
@@ -35,13 +43,24 @@ export function ImprimirEtiquetasClient({
   items,
   noEncontrados,
   recortadoEn,
+  ladoMm = QR_LADO_MM_DEFAULT,
+  paginacion = null,
 }: {
   items: ItemParaEtiqueta[]
   /** QR pedidos que no resolvieron a ningún ítem. */
   noEncontrados: string[]
   /** Tope aplicado, si se pidieron más etiquetas de las permitidas. */
   recortadoEn: number | null
+  /** Lado del código QR en milímetros configurado para el tenant. */
+  ladoMm?: number
+  /** Paginación por tandas cuando la impresión proviene de un origen paginado. */
+  paginacion?: PaginacionTandaClient | null
 }) {
+  // Generamos el PNG con al menos ~4 px por milímetro (~100 DPI mínimo, o 140 px
+  // de piso) para que la imagen conserve bordes nítidos al escalarse a `ladoMm` mm.
+  const ladoPx = Math.max(140, Math.round(ladoMm * 4))
+  const anchoTextoMm = Math.max(ladoMm, 25)
+
   // Los QR se generan todos acá, en un solo efecto, en vez de dejar que cada
   // etiqueta resuelva el suyo. El motivo no es la performance: es poder saber
   // CUÁNDO está lista la hoja. Con una generación por etiqueta nadie puede
@@ -55,7 +74,7 @@ export function ImprimirEtiquetasClient({
     Promise.all(
       items.map(async (item) => {
         try {
-          return { qr: item.qr_code, url: await generarQrDataUrl(item.qr_code, LADO_QR) }
+          return { qr: item.qr_code, url: await generarQrDataUrl(item.qr_code, ladoPx) }
         } catch {
           return { qr: item.qr_code, url: null }
         }
@@ -68,7 +87,7 @@ export function ImprimirEtiquetasClient({
     return () => {
       cancelado = true
     }
-  }, [items])
+  }, [items, ladoPx])
 
   const resueltas = Object.keys(urls).length + fallaron.length
   const listo = resueltas === items.length
@@ -77,12 +96,58 @@ export function ImprimirEtiquetasClient({
   return (
     <main className="flex-1 bg-white p-6 text-black">
       <div className="mx-auto max-w-5xl">
-        <div className="mb-6 flex items-center justify-between gap-4 print:hidden">
-          <h1 className="font-display text-xl text-text">Impresión de etiquetas</h1>
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-4 print:hidden">
+          <div>
+            <h1 className="font-display text-xl text-text">Impresión de etiquetas</h1>
+            <p className="mt-0.5 font-mono text-xs text-muted">
+              Tamaño QR: {ladoMm} × {ladoMm} mm
+            </p>
+          </div>
           <Button onClick={() => window.print()} disabled={!listo || imprimibles === 0}>
             {listo ? `Imprimir (${imprimibles})` : 'Generando códigos…'}
           </Button>
         </div>
+
+        {/* Regla operativa de pegado visible para el operador antes de imprimir */}
+        <p className="mb-4 text-xs text-muted print:hidden">
+          Pegá cada etiqueta en una prenda del mismo producto y talle; no importa en cuál.
+        </p>
+
+        {/* Navegación entre tandas cuando supera el tope */}
+        {paginacion && paginacion.totalTandas > 1 && (
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-card p-3 print:hidden">
+            <span className="text-sm font-medium text-text">
+              Tanda {paginacion.tandaActual} de {paginacion.totalTandas}
+              <span className="ml-1 text-xs text-muted">({paginacion.totalItems} etiquetas en total)</span>
+            </span>
+            <div className="flex items-center gap-2">
+              {paginacion.anteriorHref ? (
+                <Link
+                  href={paginacion.anteriorHref}
+                  className="rounded border border-border px-3 py-1.5 text-xs font-semibold hover:bg-hover"
+                >
+                  ← Anterior
+                </Link>
+              ) : (
+                <span className="cursor-not-allowed rounded border border-border px-3 py-1.5 text-xs text-muted opacity-50">
+                  ← Anterior
+                </span>
+              )}
+              {paginacion.siguienteHref ? (
+                <Link
+                  href={paginacion.siguienteHref}
+                  className="rounded border border-border px-3 py-1.5 text-xs font-semibold hover:bg-hover"
+                >
+                  Siguiente →
+                </Link>
+              ) : (
+                <span className="cursor-not-allowed rounded border border-border px-3 py-1.5 text-xs text-muted opacity-50">
+                  Siguiente →
+                </span>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Avisos. Van arriba y fuera de la hoja: el operador tiene que
             enterarse ANTES de mandar a imprimir, no descubrirlo en el papel. */}
@@ -120,7 +185,7 @@ export function ImprimirEtiquetasClient({
 
         <div
           data-hoja-etiquetas
-          className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 print:grid-cols-4 print:gap-2 print:p-0"
+          className="flex flex-wrap items-start gap-4 print:gap-2 print:p-0"
         >
           {items
             // Una etiqueta sin QR no sirve para nada: no se imprime en blanco,
@@ -135,13 +200,25 @@ export function ImprimirEtiquetasClient({
                 <img
                   src={urls[item.qr_code]}
                   alt={`QR ${item.qr_code}`}
-                  width={LADO_QR}
-                  height={LADO_QR}
+                  width={ladoPx}
+                  height={ladoPx}
+                  style={{ width: `${ladoMm}mm`, height: `${ladoMm}mm` }}
                   className="block"
                 />
-                <div className="mt-2 line-clamp-2 max-w-[140px] text-xs font-semibold leading-tight">
+                <div
+                  style={{ maxWidth: `${anchoTextoMm}mm` }}
+                  className="mt-2 line-clamp-2 text-xs font-semibold leading-tight"
+                >
                   {item.nombre}
                 </div>
+                {item.descripcion?.trim() && (
+                  <div
+                    style={{ maxWidth: `${anchoTextoMm}mm` }}
+                    className="mt-0.5 line-clamp-2 text-[10px] leading-tight text-gray-600"
+                  >
+                    {item.descripcion.trim()}
+                  </div>
+                )}
                 {item.sku && <div className="font-mono text-[10px] text-gray-500">{item.sku}</div>}
                 {item.talle && (
                   <div className="mt-1 font-mono text-[10px] font-bold">Talle: {item.talle}</div>

@@ -1,11 +1,14 @@
 import 'server-only'
 import { createServerClient } from '@/lib/dal/supabase'
+import { ESTADOS_IMPRIMIBLES, ETIQUETAS_MAX } from '@/lib/inventario/limites'
 import type {
   EstadoItem,
   ItemConProducto,
   ItemProductoRow,
   MovimientoItemRow,
 } from '@/lib/types/inventario'
+
+export { ESTADOS_IMPRIMIBLES, ETIQUETAS_MAX }
 
 /**
  * Buscar item por QR (flujo de escaneo — anexo §5, punto 5). RLS scope-ea
@@ -144,10 +147,8 @@ export interface ItemParaEtiqueta {
   talle: string | null
   nombre: string
   sku: string | null
+  descripcion?: string | null
 }
-
-/** Tope de etiquetas por hoja. Ver `ETIQUETAS_MAX` en la ruta de impresión. */
-export const ETIQUETAS_MAX = 200
 
 /**
  * Ítems para imprimir etiquetas, por sus QR, en UN round-trip.
@@ -163,23 +164,25 @@ export const ETIQUETAS_MAX = 200
  * historial, el proveedor y la categoría, porque la ficha los muestra. Una
  * etiqueta no.
  *
- * Los QR que no existen (o son de otro tenant, que RLS oculta) simplemente no
- * vienen en el resultado. El llamador compara contra lo que pidió: una hoja de
- * etiquetas a la que le faltan tres tiene que avisarlo, no imprimirse corta.
+ * Los QR que no existen, los que pertenecen a otro tenant (RLS) o los cuyos
+ * ítems ya fueron vendidos / dados de baja / devueltos simplemente no vienen
+ * en el resultado. El llamador compara contra lo que pidió: una hoja de
+ * etiquetas a la que le faltan códigos tiene que avisarlo, no imprimirse corta.
  */
 export async function listItemsParaEtiquetas(qrs: string[]): Promise<ItemParaEtiqueta[]> {
   if (qrs.length === 0) return []
   const supabase = await createServerClient()
   const { data, error } = await supabase
     .from('item_producto')
-    .select('qr_code, talle, producto:producto(nombre, sku)')
+    .select('qr_code, talle, producto:producto(nombre, sku, descripcion)')
     .in('qr_code', qrs.slice(0, ETIQUETAS_MAX))
+    .in('estado_item', [...ESTADOS_IMPRIMIBLES])
   if (error) throw new Error(`listItemsParaEtiquetas: ${error.message}`)
 
   const filas = (data ?? []) as unknown as Array<{
     qr_code: string
     talle: string | null
-    producto: { nombre: string; sku: string | null } | null
+    producto: { nombre: string; sku: string | null; descripcion?: string | null } | null
   }>
 
   // Se devuelven en el orden en que los pidieron, no en el que los dio la DB:
@@ -193,7 +196,93 @@ export async function listItemsParaEtiquetas(qrs: string[]): Promise<ItemParaEti
       talle: f.talle,
       nombre: f.producto!.nombre,
       sku: f.producto!.sku,
+      descripcion: f.producto!.descripcion ?? null,
     }))
+}
+
+/**
+ * Códigos QR vigentes (`disponible` o `reservado`) generados por un ingreso
+ * confirmado, en una sola query y en orden determinista de creación, para
+ * imprimir o reimprimir la plancha de etiquetas sin incluir ítems ya vendidos,
+ * devueltos o dados de baja.
+ */
+export async function listQrsByIngreso(idIngreso: string): Promise<string[]> {
+  const supabase = await createServerClient()
+  const { data, error } = await supabase
+    .from('item_producto')
+    .select('qr_code')
+    .eq('id_ingreso', idIngreso)
+    .in('estado_item', [...ESTADOS_IMPRIMIBLES])
+    .order('created_at', { ascending: true })
+    .order('id_item', { ascending: true })
+  if (error) throw new Error(`listQrsByIngreso: ${error.message}`)
+  return ((data ?? []) as Array<{ qr_code: string }>).map((r) => r.qr_code)
+}
+
+/**
+ * Carga una tanda paginada de etiquetas desde su origen (ingreso o producto con
+ * talle opcional) con conteo total exacto en una sola consulta.
+ */
+export async function listItemsParaEtiquetasPorOrigen(
+  origen:
+    | { tipo: 'ingreso'; idIngreso: string; tanda: number }
+    | {
+        tipo: 'producto'
+        idProducto: string
+        talle: string | null
+        incluirReservados: boolean
+        tanda: number
+      },
+): Promise<{ items: ItemParaEtiqueta[]; total: number }> {
+  const supabase = await createServerClient()
+  const desde = (Math.max(1, origen.tanda) - 1) * ETIQUETAS_MAX
+  const hasta = desde + ETIQUETAS_MAX - 1
+
+  let query = supabase
+    .from('item_producto')
+    .select('qr_code, talle, producto:producto(nombre, sku, descripcion)', { count: 'exact' })
+
+  if (origen.tipo === 'ingreso') {
+    query = query
+      .eq('id_ingreso', origen.idIngreso)
+      .in('estado_item', [...ESTADOS_IMPRIMIBLES])
+  } else {
+    query = query.eq('id_producto', origen.idProducto)
+    const estados = origen.incluirReservados ? ['disponible', 'reservado'] : ['disponible']
+    query = query.in('estado_item', estados)
+    if (origen.talle === '__sin__') {
+      query = query.is('talle', null)
+    } else if (origen.talle !== null) {
+      query = query.eq('talle', origen.talle)
+    }
+  }
+
+  query = query
+    .order('created_at', { ascending: true })
+    .order('id_item', { ascending: true })
+    .range(desde, hasta)
+
+  const { data, error, count } = await query
+  if (error) throw new Error(`listItemsParaEtiquetasPorOrigen: ${error.message}`)
+
+  const total = count ?? 0
+  const filas = (data ?? []) as unknown as Array<{
+    qr_code: string
+    talle: string | null
+    producto: { nombre: string; sku: string | null; descripcion?: string | null } | null
+  }>
+
+  const items = filas
+    .filter((f) => f.producto !== null)
+    .map((f) => ({
+      qr_code: f.qr_code,
+      talle: f.talle,
+      nombre: f.producto!.nombre,
+      sku: f.producto!.sku,
+      descripcion: f.producto!.descripcion ?? null,
+    }))
+
+  return { items, total }
 }
 
 export async function listItemsByProducto(idProducto: string): Promise<ItemProductoRow[]> {

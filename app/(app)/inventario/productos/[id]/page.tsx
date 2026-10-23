@@ -1,5 +1,7 @@
+import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Topbar } from '@/components/shell/Topbar'
+import { Button } from '@/components/ui/Button'
 import { verifySession } from '@/lib/dal/session'
 import { listCategoriasActivas } from '@/lib/dal/inventario/categoria'
 import { getProducto } from '@/lib/dal/inventario/producto'
@@ -32,6 +34,13 @@ export default async function EditarProductoPage(props: {
         title={`Editar producto: ${producto.nombre}`}
         session={session}
         backHref={safeBackHref(from, '/inventario')}
+        actions={
+          <Link href={`/inventario/productos/${id}/ficha`}>
+            <Button size="sm" variant="secondary">
+              Ver ficha y etiquetas
+            </Button>
+          </Link>
+        }
       />
       <main className="flex-1 p-6">
         <Card padding="none" className="max-w-2xl p-6">

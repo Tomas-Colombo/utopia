@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
@@ -8,6 +9,7 @@ import { Field } from '@/components/ui/Field'
 import { NumberInput } from '@/components/ui/NumberInput'
 import { useToast } from '@/components/ui/Toast'
 import { clampUnidades, MAX_UNIDADES_LINEA } from '@/components/inventario/StockTalleLoader'
+import { buildEtiquetasIngresoHref } from '@/lib/inventario/etiquetas'
 import type {
   CategoriaRow,
   IngresoMercaderiaDetalleRow,
@@ -40,10 +42,12 @@ export function IngresoDetalleView({
   ingreso,
   productos,
   categorias,
+  qrs = [],
 }: {
   ingreso: Ingreso
   productos: ProductoConDetalle[]
   categorias: CategoriaRow[]
+  qrs?: string[]
 }) {
   const router = useRouter()
   const toast = useToast()
@@ -398,6 +402,21 @@ export function IngresoDetalleView({
           >
             Confirmar ingreso
           </Button>
+        </Card>
+      )}
+
+      {/* Etiquetas QR generadas cuando el ingreso ya está confirmado */}
+      {readonly && qrs.length > 0 && (
+        <Card className="flex flex-wrap items-center justify-between gap-3">
+          <div className="text-sm text-muted">
+            Este ingreso generó <b className="text-text tabular-nums">{qrs.length}</b>{' '}
+            {qrs.length === 1 ? 'ítem físico con QR único.' : 'ítems físicos con QR único.'}
+          </div>
+          <Link href={buildEtiquetasIngresoHref(ingreso.id_ingreso)}>
+            <Button size="sm" variant="secondary">
+              Imprimir etiquetas ({qrs.length})
+            </Button>
+          </Link>
         </Card>
       )}
 
