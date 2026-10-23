@@ -732,6 +732,29 @@ export function NuevaVentaView({
     return lineas.filter((l) => l.qr_code !== exceptoQr).map((l) => l.id_item)
   }
 
+  function abrirSelectorDesdeRespuesta(
+    data: Record<string, unknown>,
+    puedeAdoptar: boolean,
+    fallbackIdProducto?: string,
+  ) {
+    const idProd = (data.id_producto as string | undefined) ?? fallbackIdProducto ?? ''
+    // Las unidades reservadas se ofrecen sólo si hay UNA reserva en
+    // juego y la venta todavía puede adoptarla.
+    const adoptable = puedeAdoptar ? ((data.id_reserva as string | null) ?? null) : null
+    setSelectorTalle({
+      idProducto: idProd,
+      productoNombre:
+        (data.producto_nombre as string | undefined) ?? nombreDeProducto(idProd),
+      grupoKey: null,
+      opciones: data.talles as TalleOpcion[],
+      sinTalle: Number(data.sin_talle ?? 0),
+      sinTalleReservados: Number(data.sin_talle_reservados ?? 0),
+      idReservaAdoptable: adoptable,
+      reservaLabel: adoptable ? labelReserva(adoptable) : null,
+      cantidades: {},
+    })
+  }
+
   // Carga una línea a partir de un código (QR exacto o SKU con talle). Lo usan
   // tanto el input manual como el escaneo por cámara.
   async function agregarPorCodigo(rawCode: string) {
@@ -756,6 +779,10 @@ export function NuevaVentaView({
       }
 
       if (!data.ok) {
+        if (data.reason === 'elegir-talle') {
+          abrirSelectorDesdeRespuesta(data, !idReserva)
+          return
+        }
         setErrorBusqueda(mensajeDeError(data.reason, { extra: data }))
         return
       }
@@ -829,20 +856,7 @@ export function NuevaVentaView({
 
       if (!data.ok) {
         if (data.reason === 'elegir-talle') {
-          // Las unidades reservadas se ofrecen sólo si hay UNA reserva en
-          // juego y la venta todavía puede adoptarla.
-          const adoptable = puedeAdoptar ? (data.id_reserva as string | null) : null
-          setSelectorTalle({
-            idProducto,
-            productoNombre: nombreDeProducto(idProducto),
-            grupoKey: null,
-            opciones: data.talles as TalleOpcion[],
-            sinTalle: Number(data.sin_talle ?? 0),
-            sinTalleReservados: Number(data.sin_talle_reservados ?? 0),
-            idReservaAdoptable: adoptable,
-            reservaLabel: adoptable ? labelReserva(adoptable) : null,
-            cantidades: {},
-          })
+          abrirSelectorDesdeRespuesta(data, puedeAdoptar, idProducto)
           return null
         }
         setErrorBusqueda(mensajeDeError(data.reason, { extra: data }))

@@ -11,6 +11,12 @@ import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
 import { useToast } from '@/components/ui/Toast'
 import { Table, type Column } from '@/components/ui/Table'
+import {
+  SelectorTalleMulti,
+  SIN_TALLE_KEY,
+  type SelectorTalle,
+  type TalleOpcion,
+} from '@/components/ventas/SelectorTalleMulti'
 import { mensajeDeError } from '@/lib/errores/mensajes'
 import { rankearProductos } from '@/lib/inventario/producto-match'
 import { crearConsignacionRevendedoraAction } from '../actions'
@@ -56,6 +62,7 @@ export function NuevaConsignacionRevendedoraForm({
   const [errorItem, setErrorItem] = useState<string | null>(null)
   const [items, setItems] = useState<ItemSeleccionado[]>([])
   const [camaraOpen, setCamaraOpen] = useState(false)
+  const [selectorTalle, setSelectorTalle] = useState<SelectorTalle | null>(null)
 
   // Mismo ranking que el carrito de venta. El stock mostrado descuenta las
   // unidades que ya están en este lote.
@@ -80,7 +87,9 @@ export function NuevaConsignacionRevendedoraForm({
       return
     }
 
-    if (items.some((i) => i.codigo_barra === codigo || i.sku === codigo)) {
+    // Solo bloqueamos en cliente si es el QR físico exacto de una unidad ya cargada.
+    // Un SKU o nombre puede repetirse para agregar la segunda/tercera unidad FIFO.
+    if (items.some((i) => i.codigo_barra === codigo)) {
       setErrorItem('Ese ítem ya está agregado al lote.')
       return
     }
@@ -89,15 +98,40 @@ export function NuevaConsignacionRevendedoraForm({
     setErrorItem(null)
 
     try {
-      const res = await fetch(
-        `/api/revendedoras/lookup-item?qr=${encodeURIComponent(codigo)}&id_revendedora=${encodeURIComponent(
-          idRevendedora
-        )}`
-      )
+      const qs = new URLSearchParams({
+        qr: codigo,
+        id_revendedora: idRevendedora,
+      })
+      const excluir = items.map((i) => i.id_item)
+      if (excluir.length > 0) {
+        qs.set('excluir', excluir.join(','))
+      }
+
+      const res = await fetch(`/api/revendedoras/lookup-item?${qs.toString()}`)
       const data = await res.json()
 
       if (!res.ok || !data.ok) {
+        if (data.reason === 'elegir-talle') {
+          const idProd = (data.id_producto as string) ?? ''
+          setSelectorTalle({
+            idProducto: idProd,
+            productoNombre:
+              (data.producto_nombre as string) ??
+              catalogo.find((p) => p.id_producto === idProd)?.nombre ??
+              'Producto',
+            grupoKey: null,
+            opciones: data.talles as TalleOpcion[],
+            sinTalle: Number(data.sin_talle ?? 0),
+            cantidades: {},
+          })
+          return
+        }
         setErrorItem(mensajeDeError(data.reason || 'item-not-found'))
+        return
+      }
+
+      if (items.some((i) => i.id_item === data.item.id_item)) {
+        setErrorItem('Ese ítem ya está agregado al lote.')
         return
       }
 
@@ -105,6 +139,69 @@ export function NuevaConsignacionRevendedoraForm({
       setItems((prev) =>
         prev.some((i) => i.id_item === data.item.id_item) ? prev : [...prev, data.item],
       )
+      setSelectorTalle(null)
+      setCodigoInput('')
+    } catch {
+      setErrorItem('Error de conexión al buscar el ítem.')
+    } finally {
+      setBuscando(false)
+    }
+  }
+
+  function setCantidadTalle(key: string, nueva: number, max: number) {
+    setSelectorTalle((s) => {
+      if (!s) return s
+      const n = Math.max(0, Math.min(max, Math.floor(nueva || 0)))
+      return { ...s, cantidades: { ...s.cantidades, [key]: n } }
+    })
+  }
+
+  async function agregarPorProductoYTalle(
+    idProducto: string,
+    talle: string | null,
+    extraExcluidos: string[],
+  ): Promise<ItemSeleccionado | null> {
+    const qs = new URLSearchParams({
+      id_producto: idProducto,
+      id_revendedora: idRevendedora,
+    })
+    if (talle === null) qs.set('sin_talle', '1')
+    else qs.set('talle', talle)
+    const excluir = [...items.map((i) => i.id_item), ...extraExcluidos]
+    if (excluir.length > 0) qs.set('excluir', excluir.join(','))
+
+    const res = await fetch(`/api/revendedoras/lookup-item?${qs.toString()}`)
+    const data = await res.json()
+    if (!res.ok || !data.ok) {
+      setErrorItem(mensajeDeError(data.reason || 'item-not-found'))
+      return null
+    }
+    const nuevo = data.item as ItemSeleccionado
+    setItems((prev) => (prev.some((i) => i.id_item === nuevo.id_item) ? prev : [...prev, nuevo]))
+    return nuevo
+  }
+
+  async function confirmarSelectorTalle() {
+    if (!selectorTalle || buscando) return
+    const pedidos: Array<{ talle: string | null; cant: number }> = []
+    for (const [k, v] of Object.entries(selectorTalle.cantidades)) {
+      if (v > 0) pedidos.push({ talle: k === SIN_TALLE_KEY ? null : k, cant: v })
+    }
+    const idProducto = selectorTalle.idProducto
+    setSelectorTalle(null)
+    if (pedidos.length === 0) return
+
+    setBuscando(true)
+    setErrorItem(null)
+    try {
+      let running: string[] = []
+      for (const p of pedidos) {
+        for (let i = 0; i < p.cant; i++) {
+          const nuevo = await agregarPorProductoYTalle(idProducto, p.talle, running)
+          if (!nuevo) return
+          running = [...running, nuevo.id_item]
+        }
+      }
       setCodigoInput('')
     } catch {
       setErrorItem('Error de conexión al buscar el ítem.')
@@ -285,6 +382,16 @@ export function NuevaConsignacionRevendedoraForm({
               onClose={() => setCamaraOpen(false)}
             />
           </div>
+        )}
+
+        {selectorTalle && (
+          <SelectorTalleMulti
+            selector={selectorTalle}
+            disabled={buscando}
+            onChangeCantidad={setCantidadTalle}
+            onConfirm={() => void confirmarSelectorTalle()}
+            onCancel={() => setSelectorTalle(null)}
+          />
         )}
 
         <div className="space-y-2">

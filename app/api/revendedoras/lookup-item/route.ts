@@ -24,7 +24,15 @@ export async function GET(req: NextRequest) {
   const code = (req.nextUrl.searchParams.get('code') || req.nextUrl.searchParams.get('qr'))?.trim()
   const idProducto = req.nextUrl.searchParams.get('id_producto')?.trim()
   const idRevendedora = req.nextUrl.searchParams.get('id_revendedora')?.trim()
+  const talle = req.nextUrl.searchParams.get('talle')?.trim() || null
+  const sinTalle = req.nextUrl.searchParams.get('sin_talle') === '1'
   const modo = req.nextUrl.searchParams.get('modo')?.trim() || 'consignacion'
+  // Unidades que ya están en el carrito/lote: se excluyen para que un segundo
+  // ingreso por SKU o nombre elija la siguiente unidad FIFO disponible.
+  const excluir = (req.nextUrl.searchParams.get('excluir') ?? '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
 
   if (!code && !idProducto) {
     return NextResponse.json({ ok: false, reason: 'qr-vacio' }, { status: 400 })
@@ -34,12 +42,10 @@ export async function GET(req: NextRequest) {
   }
 
   if (modo === 'venta') {
-    // Unidades que ya están en el carrito: no son candidatas.
-    const excluir = (req.nextUrl.searchParams.get('excluir') ?? '')
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean)
-    const result = await lookupItemParaVentaRevendedora(code, idRevendedora, idProducto, excluir)
+    const result = await lookupItemParaVentaRevendedora(code, idRevendedora, idProducto, excluir, {
+      talle,
+      sinTalle,
+    })
     if (!result.ok) {
       return NextResponse.json(result)
     }
@@ -50,11 +56,11 @@ export async function GET(req: NextRequest) {
     })
   }
 
-  if (!code) {
-    return NextResponse.json({ ok: false, reason: 'qr-vacio' }, { status: 400 })
-  }
-
-  const result = await lookupItemParaConsignacionRevendedora(code, idRevendedora)
+  const result = await lookupItemParaConsignacionRevendedora(code, idRevendedora, excluir, {
+    idProducto,
+    talle,
+    sinTalle,
+  })
 
   if (!result.ok) {
     return NextResponse.json(result)

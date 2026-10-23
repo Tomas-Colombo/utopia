@@ -157,6 +157,24 @@ export function NuevaReservaView({
 
   // Carga un ítem a partir de un código (QR exacto o SKU con talle). Lo usan
   // tanto el input manual como el escaneo por cámara.
+  function abrirSelectorDesdeRespuesta(
+    data: Record<string, unknown>,
+    fallbackIdProducto?: string,
+  ) {
+    const idProd = (data.id_producto as string | undefined) ?? fallbackIdProducto ?? ''
+    setSelectorTalle({
+      idProducto: idProd,
+      productoNombre:
+        (data.producto_nombre as string | undefined) ??
+        productos.find((p) => p.id_producto === idProd)?.nombre ??
+        'Producto',
+      grupoKey: null,
+      opciones: data.talles as TalleOpcion[],
+      sinTalle: Number(data.sin_talle ?? 0),
+      cantidades: {},
+    })
+  }
+
   async function agregarPorCodigo(rawCode: string) {
     const codigo = rawCode.trim()
     if (!codigo || buscando) return
@@ -166,6 +184,10 @@ export function NuevaReservaView({
       const r = await fetch(lookupUrl({ code: codigo }))
       const data = await r.json()
       if (!data.ok) {
+        if (data.reason === 'elegir-talle') {
+          abrirSelectorDesdeRespuesta(data)
+          return
+        }
         setErrorBusqueda(mensajeDeError(data.reason, { extra: data }))
         return
       }
@@ -206,15 +228,7 @@ export function NuevaReservaView({
       const data = await r.json()
       if (!data.ok) {
         if (data.reason === 'elegir-talle') {
-          setSelectorTalle({
-            idProducto,
-            productoNombre:
-              productos.find((p) => p.id_producto === idProducto)?.nombre ?? 'Producto',
-            grupoKey: null,
-            opciones: data.talles as TalleOpcion[],
-            sinTalle: Number(data.sin_talle ?? 0),
-            cantidades: {},
-          })
+          abrirSelectorDesdeRespuesta(data, idProducto)
           return null
         }
         setErrorBusqueda(mensajeDeError(data.reason, { extra: data }))

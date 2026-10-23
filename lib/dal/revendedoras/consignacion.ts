@@ -12,6 +12,15 @@ import type {
 import { calcularSnapshotPrecio } from '../precios/resolucion'
 import { resolverCodigo } from '../inventario/codigo'
 import { listItemsDisponibles } from '../inventario/item'
+import {
+  getProductoConCategoria,
+  type ProductoRowConCategoria,
+} from '../inventario/producto'
+import {
+  armarRespuestaElegirTalle,
+  decidirLookupPorTalle,
+  type ResultadoArmarElegirTalle,
+} from '../../inventario/codigo'
 import type { ItemProductoRow } from '../../types/inventario'
 import type { LineaCarrito } from '../../types/ventas'
 import { extractErrorSlug, type ReglaSlug } from './slug-error'
@@ -235,6 +244,7 @@ export type LookupItemResult =
         precio_actual: number
       }
     }
+  | ResultadoArmarElegirTalle
   | {
       ok: false
       reason: string
@@ -242,10 +252,16 @@ export type LookupItemResult =
     }
 
 export async function lookupItemParaConsignacionRevendedora(
-  qr: string,
-  idRevendedora: string
+  qr: string | undefined,
+  idRevendedora: string,
+  excluir: string[] = [],
+  opts?: { idProducto?: string; talle?: string | null; sinTalle?: boolean },
 ): Promise<LookupItemResult> {
   const supabase = await createServerClient()
+
+  if (!qr && !opts?.idProducto) {
+    return { ok: false, reason: 'qr-vacio' }
+  }
 
   if (idRevendedora) {
     const { data: rev, error: revError } = await supabase
@@ -260,23 +276,79 @@ export async function lookupItemParaConsignacionRevendedora(
   }
 
   // QR exacto, SKU (con talle opcional) o nombre de producto.
-  const resuelto = await resolverCodigo(qr, { nombre: true })
-  if (!resuelto) return { ok: false, reason: 'item-not-found' }
+  const resuelto = qr ? await resolverCodigo(qr, { nombre: true }) : null
+  if (!resuelto && !opts?.idProducto) return { ok: false, reason: 'item-not-found' }
 
+  const excluidos = new Set(excluir)
   let candidatos: ItemProductoRow[]
-  if (resuelto.tipo === 'item') {
+  let productoResuelto: ProductoRowConCategoria | null = null
+
+  if (resuelto?.tipo === 'item') {
     if (resuelto.item.estado_item !== 'disponible') {
       return { ok: false, reason: 'item-no-disponible', estado: resuelto.item.estado_item }
     }
     candidatos = [resuelto.item]
   } else {
-    // Sin talle en el código vale cualquier unidad (`undefined`), no sólo las
-    // que no tienen talle (`null`).
-    candidatos = await listItemsDisponibles(
-      resuelto.producto.id_producto,
-      resuelto.talle ?? undefined,
-    )
-    if (candidatos.length === 0) return { ok: false, reason: 'item-not-found' }
+    productoResuelto =
+      resuelto?.tipo === 'producto'
+        ? resuelto.producto
+        : opts?.idProducto
+          ? await getProductoConCategoria(opts.idProducto)
+          : null
+
+    if (!productoResuelto) return { ok: false, reason: 'item-not-found' }
+
+    const talleExplicito =
+      (resuelto?.tipo === 'producto' ? resuelto.talle : null) ?? opts?.talle ?? null
+    const tallesCategoria = productoResuelto.categoria?.talles ?? []
+    const decision = decidirLookupPorTalle({
+      tallesCategoria,
+      talleExplicito,
+      sinTalleExplicito: opts?.sinTalle ?? false,
+    })
+
+    if (decision.modo === 'desambiguar') {
+      const { data: todasRows, error: dispErr } = await supabase
+        .from('item_producto')
+        .select('id_item, talle')
+        .eq('id_producto', productoResuelto.id_producto)
+        .eq('estado_item', 'disponible')
+      if (dispErr) throw dispErr
+
+      const todasDisponibles = (todasRows ?? []) as Array<{ id_item: string; talle: string | null }>
+      if (todasDisponibles.length === 0) {
+        return armarRespuestaElegirTalle({
+          idProducto: productoResuelto.id_producto,
+          productoNombre: productoResuelto.nombre,
+          tallesCategoria,
+          libres: [],
+          totalDisponible: 0,
+        })
+      }
+
+      const noExcluidas = todasDisponibles.filter((c) => !excluidos.has(c.id_item))
+      const bloqueos =
+        noExcluidas.length > 0
+          ? await motivosDeBloqueo(noExcluidas.map((c) => c.id_item))
+          : new Map<string, string>()
+      const libres = noExcluidas.filter((c) => !bloqueos.has(c.id_item))
+
+      return armarRespuestaElegirTalle({
+        idProducto: productoResuelto.id_producto,
+        productoNombre: productoResuelto.nombre,
+        tallesCategoria,
+        libres,
+        totalDisponible: todasDisponibles.length,
+      })
+    }
+
+    const todos = await listItemsDisponibles(productoResuelto.id_producto, decision.filtroTalle)
+    if (todos.length === 0) return { ok: false, reason: 'sku-sin-stock' }
+
+    candidatos = todos.filter((c) => !excluidos.has(c.id_item))
+    if (candidatos.length === 0) {
+      return { ok: false, reason: 'sku-sin-stock-libre' }
+    }
   }
 
   // Por SKU o nombre se toma la primera unidad libre. Antes se tomaba la
@@ -288,10 +360,7 @@ export async function lookupItemParaConsignacionRevendedora(
     return { ok: false, reason: bloqueos.get(candidatos[0].id_item) ?? 'item-not-found' }
   }
 
-  const producto =
-    resuelto.tipo === 'producto'
-      ? resuelto.producto
-      : await getProductoParaLookup(supabase, item.id_producto)
+  const producto = productoResuelto ?? (await getProductoParaLookup(supabase, item.id_producto))
 
   return {
     ok: true,
@@ -357,6 +426,7 @@ export async function lookupItemParaVentaRevendedora(
   idRevendedora: string,
   idProducto?: string,
   excluir: string[] = [],
+  opts?: { talle?: string | null; sinTalle?: boolean },
 ): Promise<
   | {
       ok: true
@@ -373,6 +443,7 @@ export async function lookupItemParaVentaRevendedora(
         linea: LineaCarrito
       }
     }
+  | ResultadoArmarElegirTalle
   | { ok: false; reason: string }
 > {
   const supabase = await createServerClient()
@@ -396,15 +467,33 @@ export async function lookupItemParaVentaRevendedora(
   if (!rev.activo) return { ok: false, reason: 'revendedora-inactiva' }
 
   let itemId: string | null = null
-  let prodId: string | null = idProducto ?? null
+  let productoResuelto: ProductoRowConCategoria | null = null
+  let talleDeCodigo: string | null = null
 
   if (code) {
     const resuelto = await resolverCodigo(code, { nombre: true })
-    if (resuelto?.tipo === 'item') itemId = resuelto.item.id_item
-    else if (resuelto && !prodId) prodId = resuelto.producto.id_producto
+    if (resuelto?.tipo === 'item') {
+      itemId = resuelto.item.id_item
+    } else if (resuelto?.tipo === 'producto') {
+      productoResuelto = resuelto.producto
+      talleDeCodigo = resuelto.talle
+    }
   }
 
-  if (!itemId && prodId) {
+  if (!itemId && (productoResuelto || idProducto)) {
+    const producto =
+      productoResuelto ?? (idProducto ? await getProductoConCategoria(idProducto) : null)
+    if (!producto) {
+      return { ok: false, reason: 'item-not-found' }
+    }
+
+    const tallesCategoria = producto.categoria?.talles ?? []
+    const decision = decidirLookupPorTalle({
+      tallesCategoria,
+      talleExplicito: talleDeCodigo ?? opts?.talle ?? null,
+      sinTalleExplicito: opts?.sinTalle ?? false,
+    })
+
     const { data: itemsCandidatos, error: candErr } = await supabase
       .from('consignacion_revendedora_detalle')
       .select(`
@@ -417,25 +506,56 @@ export async function lookupItemParaVentaRevendedora(
         item:item_producto!inner (
           id_item,
           id_producto,
-          estado_item
+          estado_item,
+          talle
         )
       `)
       .eq('consignacion_revendedora.id_revendedora', idRevendedora)
       .eq('consignacion_revendedora.confirmada', true)
       .eq('consignacion_revendedora.estado', 'abierta')
       .eq('estado_detalle', 'en_poder')
-      .eq('item.id_producto', prodId)
+      .eq('item.id_producto', producto.id_producto)
       .eq('item.estado_item', 'en_revendedora')
-      .limit(25)
     if (candErr) throw candErr
+
+    const todosEnPoder = (itemsCandidatos ?? []) as unknown as Array<{
+      id_item: string
+      item?: { talle?: string | null } | null
+    }>
+    const excluidos = new Set(excluir)
+
+    if (decision.modo === 'desambiguar') {
+      const libresEnPoder = todosEnPoder
+        .filter((c) => !excluidos.has(c.id_item))
+        .map((c) => ({ talle: c.item?.talle ?? null }))
+
+      return armarRespuestaElegirTalle({
+        idProducto: producto.id_producto,
+        productoNombre: producto.nombre,
+        tallesCategoria,
+        libres: libresEnPoder,
+        totalDisponible: todosEnPoder.length,
+      })
+    }
+
+    const delTalle = todosEnPoder.filter((c) => {
+      const t = c.item?.talle ?? null
+      if (decision.filtroTalle === undefined) return true
+      if (decision.filtroTalle === null) return t === null
+      return t !== null && t.toUpperCase() === decision.filtroTalle.toUpperCase()
+    })
+    if (delTalle.length === 0) {
+      return { ok: false, reason: 'sku-sin-stock' }
+    }
 
     // `excluir` son las unidades que ya están en el carrito. Sin saltearlas,
     // la segunda unidad del mismo producto devolvía otra vez la primera y el
     // carrito la rebotaba como duplicada.
-    const excluidos = new Set(excluir)
-    itemId =
-      ((itemsCandidatos ?? []) as { id_item: string }[]).find((c) => !excluidos.has(c.id_item))
-        ?.id_item ?? null
+    const libresDelTalle = delTalle.filter((c) => !excluidos.has(c.id_item))
+    if (libresDelTalle.length === 0) {
+      return { ok: false, reason: 'sku-sin-stock-libre' }
+    }
+    itemId = libresDelTalle[0]!.id_item
   }
 
   if (!itemId) {
@@ -540,68 +660,6 @@ export async function lookupItemParaVentaRevendedora(
       linea,
     },
   }
-}
-
-export async function listItemsElegiblesConsignacionRevendedora(
-  search?: string
-): Promise<
-  Array<{
-    id_item: string
-    id_producto: string
-    nombre_producto: string
-    codigo_barra: string | null
-    sku: string
-    talle: string | null
-    precio_actual: number
-  }>
-> {
-  const supabase = await createServerClient()
-  let query = supabase
-    .from('item_producto')
-    .select(`
-      id_item,
-      id_producto,
-      qr_code,
-      talle,
-      estado_item,
-      producto!inner (
-        nombre,
-        sku,
-        precio_venta
-      )
-    `)
-    .eq('estado_item', 'disponible')
-    .limit(50)
-
-  if (search && search.trim()) {
-    const s = search.trim()
-    query = query.or(`qr_code.ilike.%${s}%,producto.sku.ilike.%${s}%,producto.nombre.ilike.%${s}%`)
-  }
-
-  const { data, error } = await query
-  if (error) throw error
-
-  type RawItem = {
-    id_item: string
-    id_producto: string
-    qr_code: string
-    talle: string | null
-    producto: {
-      nombre: string
-      sku: string | null
-      precio_venta: number | null
-    }
-  }
-
-  return ((data || []) as unknown as RawItem[]).map((i) => ({
-    id_item: i.id_item,
-    id_producto: i.id_producto,
-    nombre_producto: i.producto.nombre,
-    codigo_barra: i.qr_code,
-    sku: i.producto.sku || '',
-    talle: i.talle,
-    precio_actual: Number(i.producto.precio_venta || 0),
-  }))
 }
 
 export async function obtenerStockPorTenencia(

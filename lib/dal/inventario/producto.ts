@@ -10,7 +10,7 @@ import type {
 export const PRODUCTOS_PAGE_SIZE = 50
 
 export type ProductoRowConCategoria = ProductoRow & {
-  categoria: { id_categoria: string; nombre: string } | null
+  categoria: { id_categoria: string; nombre: string; talles: string[] } | null
 }
 
 export interface ListProductosOpts {
@@ -161,6 +161,23 @@ export async function getProducto(id: string): Promise<ProductoRow | null> {
 }
 
 /**
+ * Producto con su categoría (incluyendo `talles`), usado al buscar por
+ * `id_producto` en los pickers de venta, reserva y consignación.
+ */
+export async function getProductoConCategoria(
+  id: string,
+): Promise<ProductoRowConCategoria | null> {
+  const supabase = await createServerClient()
+  const { data, error } = await supabase
+    .from('producto')
+    .select('*, categoria:categoria(id_categoria, nombre, talles)')
+    .eq('id_producto', id)
+    .maybeSingle()
+  if (error) throw new Error(`getProductoConCategoria: ${error.message}`)
+  return (data ?? null) as ProductoRowConCategoria | null
+}
+
+/**
  * Busca un producto por su SKU exacto (scope-eado al tenant por RLS). Se usa
  * en el fallback de búsqueda manual sin escáner: el vendedor tipea el SKU
  * corto (ej: REM-0007) impreso/anotado y llega al producto.
@@ -171,7 +188,7 @@ export async function findProductoBySku(
   const supabase = await createServerClient()
   const { data, error } = await supabase
     .from('producto')
-    .select('*, categoria:categoria(id_categoria, nombre)')
+    .select('*, categoria:categoria(id_categoria, nombre, talles)')
     .eq('sku', sku)
     .maybeSingle()
   if (error) throw new Error(`findProductoBySku: ${error.message}`)

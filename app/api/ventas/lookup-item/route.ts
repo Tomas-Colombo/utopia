@@ -4,8 +4,13 @@ import { requireModuleRole } from '@/lib/dal/guard'
 import { verifySession } from '@/lib/dal/session'
 import { resolverCodigo } from '@/lib/dal/inventario/codigo'
 import { contarDisponiblesPorTalle, listItemsDisponibles } from '@/lib/dal/inventario/item'
+import {
+  getProductoConCategoria,
+  type ProductoRowConCategoria,
+} from '@/lib/dal/inventario/producto'
 import { calcularSnapshotPrecio } from '@/lib/dal/precios/resolucion'
 import { createServerClient } from '@/lib/dal/supabase'
+import { armarRespuestaElegirTalle, decidirLookupPorTalle } from '@/lib/inventario/codigo'
 import type { FormaPago, MedioPagoRecargo } from '@/lib/types/precios'
 import type { ItemProductoRow } from '@/lib/types/inventario'
 import type { LineaCarrito } from '@/lib/types/ventas'
@@ -17,6 +22,8 @@ import type { LineaCarrito } from '@/lib/types/ventas'
  *   - `code`: QR exacto del ítem, o SKU del producto (`REM-0007` /
  *     `REM-0007-M`). El QR resuelve la unidad exacta; el SKU elige una
  *     unidad disponible (FIFO) del producto/talle, saltando las reservadas.
+ *     Si la categoría usa talles y el código no especifica talle, responde
+ *     `elegir-talle` con el stock libre de cada talle.
  *   - `qr` (legacy): sólo QR exacto (lo usa el refresco de precios).
  *   - `id_producto` (+ `talle` opcional): búsqueda por nombre desde la UI
  *     (venta sin lector QR). Elige una unidad disponible del producto. Si la
@@ -34,8 +41,9 @@ import type { LineaCarrito } from '@/lib/types/ventas'
  *          'item-en-reserva'|'sin-precio-lista'|'sku-sin-stock'|
  *          'sku-sin-stock-libre'|'stock-sin-talle' }
  *   200 { ok:false, reason:'elegir-talle',
- *          talles: Array<{ talle: string; disponibles: number }>,
- *          sin_talle: number }
+ *          id_producto: string, producto_nombre: string,
+ *          talles: Array<{ talle: string; disponibles: number; reservados: number }>,
+ *          sin_talle: number, sin_talle_reservados: number, id_reserva: string | null }
  *   401 unauthorized
  */
 export async function GET(req: NextRequest) {
@@ -104,6 +112,8 @@ export async function GET(req: NextRequest) {
 
   let item: ItemProductoRow | null = null
   let advertencia: string | null = null
+  let productoResuelto: ProductoRowConCategoria | null = null
+  let talleExplicito: string | null = talleParam
 
   if (input) {
     // QR exacto, o SKU con talle opcional. El path `qr` legacy es estricto:
@@ -127,136 +137,77 @@ export async function GET(req: NextRequest) {
       }
       item = porQr
     } else {
-      const { producto, talle } = resuelto
-      const baseSku = producto.sku
-
-      const candidatos = (await listItemsDisponibles(producto.id_producto, talle)).filter(
-        (c) => !excluidos.has(c.id_item),
-      )
-      // Si todas las unidades están tomadas por OTRA reserva, devolvemos cuál:
-      // el carrito puede engancharse a esa reserva y volver a pedir.
-      let bloqueante: string | null = null
-      for (const c of candidatos) {
-        const rid = await reservaActiva(c.id_item)
-        if (!rid) { item = c; break }
-        if (idReservaCtx && rid === idReservaCtx) {
-          item = c
-          advertencia = 'Item de esta reserva'
-          break
-        }
-        bloqueante ??= rid
-      }
-      if (!item) {
-        return NextResponse.json({
-          ok: false,
-          reason: candidatos.length > 0 ? 'sku-sin-stock-libre' : 'sku-sin-stock',
-          sku: baseSku,
-          talle,
-          id_reserva: bloqueante,
-        })
-      }
+      productoResuelto = resuelto.producto
+      talleExplicito = resuelto.talle ?? talleParam
     }
   } else if (idProductoParam) {
-    // Búsqueda por producto (venta sin lector QR).
-    const { data: prod } = await supabase
-      .from('producto')
-      .select('id_producto, categoria:categoria(talles)')
-      .eq('id_producto', idProductoParam)
-      .maybeSingle<{ id_producto: string; categoria: { talles: string[] } | null }>()
-    if (!prod) return NextResponse.json({ ok: false, reason: 'item-not-found' })
-    const tallesCategoria = prod.categoria?.talles ?? []
+    productoResuelto = await getProductoConCategoria(idProductoParam)
+    if (!productoResuelto) return NextResponse.json({ ok: false, reason: 'item-not-found' })
+  } else {
+    return NextResponse.json({ ok: false, reason: 'item-not-found' })
+  }
+
+  if (!item && productoResuelto) {
+    const tallesCategoria = productoResuelto.categoria?.talles ?? []
+    const decision = decidirLookupPorTalle({
+      tallesCategoria,
+      talleExplicito,
+      sinTalleExplicito: sinTalleParam,
+    })
 
     // Si la categoría usa talles y el usuario NO eligió aún (ni un talle
     // concreto ni "sin talle" explícito), el server nunca decide: devuelve el
     // stock libre por talle + cuántas quedaron sin talle asignado, y que el
     // vendedor elija. Las "sin talle" se venden si el usuario las eligió a
     // propósito — no las bloqueamos, porque a veces se cargó así queriendo.
-    if (tallesCategoria.length > 0 && !talleParam && !sinTalleParam) {
+    if (decision.modo === 'desambiguar') {
       const { porTalle, totalDisponible, reservasBloqueantes } =
-        await contarDisponiblesPorTalle(idProductoParam, { idReservaCtx, excluir })
-      // Los talles reservados por otra reserva se informan, NO se ocultan:
-      // el vendedor tiene que ver que existen y por qué no puede tomarlos
-      // (y si la venta adopta esa reserva, pasan a ser vendibles).
-      const conTalle = porTalle.filter(
-        (s) => s.talle !== null && (s.disponibles > 0 || s.reservados > 0),
+        await contarDisponiblesPorTalle(productoResuelto.id_producto, { idReservaCtx, excluir })
+      return NextResponse.json(
+        armarRespuestaElegirTalle({
+          idProducto: productoResuelto.id_producto,
+          productoNombre: productoResuelto.nombre,
+          tallesCategoria,
+          porTalle,
+          reservasBloqueantes,
+          totalDisponible,
+        }),
       )
-      const filaSinTalle = porTalle.find((s) => s.talle === null)
-      const sinTalle = filaSinTalle?.disponibles ?? 0
-      const sinTalleReservados = filaSinTalle?.reservados ?? 0
-
-      if (conTalle.length === 0 && sinTalle === 0 && sinTalleReservados === 0) {
-        return NextResponse.json({
-          ok: false,
-          reason: totalDisponible > 0 ? 'sku-sin-stock-libre' : 'sku-sin-stock',
-          id_producto: idProductoParam,
-          id_reserva: reservasBloqueantes[0] ?? null,
-        })
-      }
-
-      // Orden del talle según la categoría (S, M, L, XL…), no alfabético.
-      const rank = (t: string) => {
-        const i = tallesCategoria.findIndex((x) => x.toUpperCase() === t.toUpperCase())
-        return i === -1 ? Number.MAX_SAFE_INTEGER : i
-      }
-      return NextResponse.json({
-        ok: false,
-        reason: 'elegir-talle',
-        talles: conTalle
-          .map((s) => ({
-            talle: s.talle as string,
-            disponibles: s.disponibles,
-            reservados: s.reservados,
-          }))
-          .sort((a, b) => rank(a.talle) - rank(b.talle) || a.talle.localeCompare(b.talle)),
-        sin_talle: sinTalle,
-        sin_talle_reservados: sinTalleReservados,
-        // Sólo se ofrece adoptar cuando hay UNA sola reserva en juego: con
-        // varias no hay forma de adivinar cuál está viniendo a buscar el
-        // cliente, y una venta se ata a una sola reserva.
-        id_reserva: reservasBloqueantes.length === 1 ? reservasBloqueantes[0] : null,
-      })
     }
 
-    // Filtro para el pick FIFO: null = "sin talle" (talle IS NULL), string = ese talle.
-    const filtroTalle = sinTalleParam ? null : talleParam
-    const candidatos = (await listItemsDisponibles(idProductoParam, filtroTalle)).filter(
-      (c) => !excluidos.has(c.id_item),
-    )
-    const usables: { c: ItemProductoRow; adv: string | null }[] = []
+    const candidatos = (
+      await listItemsDisponibles(productoResuelto.id_producto, decision.filtroTalle)
+    ).filter((c) => !excluidos.has(c.id_item))
+
     let bloqueante: string | null = null
     for (const c of candidatos) {
       const rid = await reservaActiva(c.id_item)
-      if (!rid) usables.push({ c, adv: null })
-      else if (idReservaCtx && rid === idReservaCtx) usables.push({ c, adv: 'Item de esta reserva' })
-      else bloqueante ??= rid
+      if (!rid) {
+        item = c
+        break
+      }
+      if (idReservaCtx && rid === idReservaCtx) {
+        item = c
+        advertencia = 'Item de esta reserva'
+        break
+      }
+      bloqueante ??= rid
     }
-    if (usables.length === 0) {
+
+    if (!item) {
       return NextResponse.json({
         ok: false,
         reason: candidatos.length > 0 ? 'sku-sin-stock-libre' : 'sku-sin-stock',
-        talle: talleParam,
+        sku: productoResuelto.sku,
+        talle: decision.filtroTalle ?? null,
         id_reserva: bloqueante,
       })
     }
-    item = usables[0].c
-    advertencia = usables[0].adv
-  } else {
-    return NextResponse.json({ ok: false, reason: 'item-not-found' })
   }
 
   if (!item) return NextResponse.json({ ok: false, reason: 'item-not-found' })
 
-  // Producto + categoría
-  const { data: producto } = await supabase
-    .from('producto')
-    .select('id_producto, nombre, sku, categoria:categoria(id_categoria, nombre)')
-    .eq('id_producto', item.id_producto)
-    .maybeSingle<{
-      id_producto: string
-      nombre: string
-      sku: string | null
-      categoria: { id_categoria: string; nombre: string } | null
-    }>()
+  const producto = productoResuelto ?? (await getProductoConCategoria(item.id_producto))
 
   const snap = await calcularSnapshotPrecio({
     idProducto: item.id_producto,

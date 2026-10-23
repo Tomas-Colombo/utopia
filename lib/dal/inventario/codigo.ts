@@ -54,7 +54,7 @@ async function findProductoPorNombre(texto: string): Promise<ProductoRowConCateg
   const supabase = await createServerClient()
   const { data, error } = await supabase
     .from('producto')
-    .select('*, categoria:categoria(id_categoria, nombre)')
+    .select('*, categoria:categoria(id_categoria, nombre, talles)')
     .ilike('nombre', `%${escaparPatronLike(texto)}%`)
     .order('nombre', { ascending: true })
     .limit(1)

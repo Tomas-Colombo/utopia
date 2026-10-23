@@ -76,6 +76,12 @@ export function VentaDetalleView({
     precio: number
   } | null>(null)
   const [motivoCambio, setMotivoCambio] = useState('')
+  const [tallesCandidatos, setTallesCandidatos] = useState<{
+    idProducto: string
+    productoNombre: string
+    talles: Array<{ talle: string; disponibles: number }>
+    sinTalle: number
+  } | null>(null)
   const [cambioMedio, setCambioMedio] = useState<MedioPago | ''>('')
   const [cambioCuenta, setCambioCuenta] = useState<string>('')
   const [comprobanteOpen, setComprobanteOpen] = useState(false)
@@ -171,16 +177,68 @@ export function VentaDetalleView({
       const res = await fetch(url)
       const data = await res.json()
       if (!data.ok) {
+        if (data.reason === 'elegir-talle') {
+          setItemCandidato(null)
+          setTallesCandidatos({
+            idProducto: (data.id_producto as string) ?? '',
+            productoNombre: (data.producto_nombre as string) ?? 'Producto',
+            talles: (
+              (data.talles as Array<{ talle: string; disponibles: number }>) ?? []
+            ).filter((t) => t.disponibles > 0),
+            sinTalle: Number(data.sin_talle ?? 0),
+          })
+          return
+        }
+        setTallesCandidatos(null)
         toast.error('No se encontró el ítem', mensajeDeError(data.reason))
         setItemCandidato(null)
         return
       }
       const linea = data.linea || data.item
+      setTallesCandidatos(null)
       const precio = Number(linea.precio_final ?? linea.precio_lista ?? linea.precio_venta ?? 0)
       setItemCandidato({
         id_item: linea.id_item,
         producto_nombre: linea.producto_nombre || linea.nombre || '(producto)',
         qr_code: linea.qr_code || codigo,
+        talle: linea.talle,
+        precio,
+      })
+    } catch {
+      toast.error('Error al buscar el ítem', 'Verificá la conexión y probá de nuevo.')
+    } finally {
+      setBuscando(false)
+    }
+  }
+
+  async function elegirTalleCandidato(talle: string | null) {
+    if (!tallesCandidatos || buscando) return
+    setBuscando(true)
+    try {
+      const qs = new URLSearchParams({ id_producto: tallesCandidatos.idProducto })
+      if (talle === null) qs.set('sin_talle', '1')
+      else qs.set('talle', talle)
+      if (venta.canal === 'revendedora' && venta.id_revendedora) {
+        qs.set('id_revendedora', venta.id_revendedora)
+        qs.set('modo', 'venta')
+      }
+      const base =
+        venta.canal === 'revendedora' && venta.id_revendedora
+          ? '/api/revendedoras/lookup-item'
+          : '/api/ventas/lookup-item'
+      const res = await fetch(`${base}?${qs.toString()}`)
+      const data = await res.json()
+      if (!data.ok) {
+        toast.error('No se encontró el ítem', mensajeDeError(data.reason))
+        return
+      }
+      const linea = data.linea || data.item
+      const precio = Number(linea.precio_final ?? linea.precio_lista ?? linea.precio_venta ?? 0)
+      setTallesCandidatos(null)
+      setItemCandidato({
+        id_item: linea.id_item,
+        producto_nombre: linea.producto_nombre || linea.nombre || '(producto)',
+        qr_code: linea.qr_code || codigoBusqueda.trim(),
         talle: linea.talle,
         precio,
       })
@@ -209,6 +267,7 @@ export function VentaDetalleView({
       }
       toast.success('Cambio de producto registrado correctamente.')
       setCambiarLinea(null)
+      setTallesCandidatos(null)
       setItemCandidato(null)
       router.refresh()
     })
@@ -306,6 +365,7 @@ export function VentaDetalleView({
                         variant="ghost"
                         onClick={() => {
                           setCambiarLinea(l)
+                          setTallesCandidatos(null)
                           setCodigoBusqueda('')
                           setItemCandidato(null)
                           setMotivoCambio('')
@@ -558,6 +618,7 @@ export function VentaDetalleView({
         onClose={() => {
           if (pending) return
           setCambiarLinea(null)
+      setTallesCandidatos(null)
           setItemCandidato(null)
         }}
         footer={
@@ -566,6 +627,7 @@ export function VentaDetalleView({
               variant="secondary"
               onClick={() => {
                 setCambiarLinea(null)
+      setTallesCandidatos(null)
                 setItemCandidato(null)
               }}
               disabled={pending}
@@ -619,6 +681,39 @@ export function VentaDetalleView({
               </div>
             </Field>
           </form>
+
+          {tallesCandidatos && (
+            <div className="rounded border border-border p-3 bg-card-2 text-sm space-y-2">
+              <div className="text-xs text-muted">
+                Elegí un talle de <b>{tallesCandidatos.productoNombre}</b>:
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {tallesCandidatos.talles.map((t) => (
+                  <Button
+                    key={t.talle}
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    disabled={buscando}
+                    onClick={() => void elegirTalleCandidato(t.talle)}
+                  >
+                    {t.talle} ({t.disponibles})
+                  </Button>
+                ))}
+                {tallesCandidatos.sinTalle > 0 && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    disabled={buscando}
+                    onClick={() => void elegirTalleCandidato(null)}
+                  >
+                    Sin talle ({tallesCandidatos.sinTalle})
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
 
           {itemCandidato && (
             <div className="rounded border border-border p-3 bg-card-2 text-sm space-y-2">
