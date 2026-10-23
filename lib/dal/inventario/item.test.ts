@@ -204,44 +204,28 @@ describe('contarDisponiblesMultiplesProductos', () => {
     expect(createServerClientMock).not.toHaveBeenCalled()
   })
 
-  it('agrupa por producto y talle y descuenta reservas ajenas al contexto', async () => {
-    const items = [
-      { id_item: 'it-1', id_producto: 'p-1', talle: 'M' },
-      { id_item: 'it-2', id_producto: 'p-1', talle: 'M' },
-      { id_item: 'it-3', id_producto: 'p-1', talle: 'L' },
-      { id_item: 'it-4', id_producto: 'p-2', talle: null },
-      { id_item: 'it-5', id_producto: 'p-2', talle: null },
-    ]
-
-    const builder = {
-      select: () => builder,
-      in: () => builder,
-      eq: () => builder,
-      then: (resolve: (val: unknown) => unknown) =>
-        Promise.resolve({ data: items, error: null }).then(resolve),
-    }
-
-    createServerClientMock.mockResolvedValue({
-      from: () => builder,
-    })
-
-    // it-2 está en una reserva ajena ('res-ajena')
-    // it-5 está en la reserva del contexto ('res-ctx')
-    getReservasActivasDeItemsMock.mockResolvedValue(
-      new Map([
-        ['it-2', 'res-ajena'],
-        ['it-5', 'res-ctx'],
-      ]),
-    )
+  it('cuenta cada producto con sp_stock_por_talle en paralelo y conserva el contexto de reserva', async () => {
+    const rpc = vi.fn(async (_fn: string, args: { p_id_producto: string }) => ({
+      data:
+        args.p_id_producto === 'p-1'
+          ? { porTalle: [{ talle: 'M', disponibles: 1 }, { talle: 'L', disponibles: 1 }] }
+          : { porTalle: [{ talle: null, disponibles: 2 }] },
+      error: null,
+    }))
+    createServerClientMock.mockResolvedValue({ rpc })
 
     const { contarDisponiblesMultiplesProductos } = await import('./item')
     const res = await contarDisponiblesMultiplesProductos(['p-1', 'p-2'], {
       idReservaCtx: 'res-ctx',
     })
 
-    // p-1 talle M: 2 items, 1 bloqueado por ajena -> 1 disponible
-    // p-1 talle L: 1 item, 0 bloqueado -> 1 disponible
-    // p-2 talle null: 2 items, 1 bloqueado por res-ctx (permitido) -> 2 disponibles
+    // El conteo lo hace la base: nada de traer unidades sueltas (max_rows las cortaba).
+    expect(rpc).toHaveBeenCalledTimes(2)
+    expect(rpc).toHaveBeenCalledWith('sp_stock_por_talle', {
+      p_id_producto: 'p-1',
+      p_id_reserva_ctx: 'res-ctx',
+      p_excluir: [],
+    })
     expect(res).toEqual([
       { id_producto: 'p-1', talle: 'M', disponibles: 1 },
       { id_producto: 'p-1', talle: 'L', disponibles: 1 },

@@ -1,6 +1,5 @@
 import 'server-only'
 import { createServerClient } from '@/lib/dal/supabase'
-import { getReservasActivasDeItems } from '@/lib/dal/reservas/reserva'
 import { ESTADOS_IMPRIMIBLES, ETIQUETAS_MAX } from '@/lib/inventario/limites'
 import type {
   EstadoItem,
@@ -389,58 +388,25 @@ export async function contarDisponiblesPorTalle(
 }
 
 /**
- * Conteo de stock disponible por producto y talle para N productos en una
- * cantidad fija de consultas (O(1) round-trips independientes de N).
+ * Stock disponible por producto y talle para varios productos del carrito.
  *
- * Descuenta reservas activas ajenas al contexto `idReservaCtx`, igual que
- * `contarDisponiblesPorTalle`. Si `idsProductos` está vacío, devuelve `[]`
- * sin consultar a la base.
+ * Cada producto se cuenta con `sp_stock_por_talle`, que agrega en la base.
+ * Antes esto traía las unidades una por una y las contaba en memoria: PostgREST
+ * corta en `max_rows` (1000), así que con mucho stock el conteo quedaba corto
+ * sin avisar, y todos los id_item viajaban en la URL de una sola consulta. Las
+ * consultas van en paralelo; el llamador acota N (`validarYFiltrarIdsProductos`).
  */
 export async function contarDisponiblesMultiplesProductos(
   idsProductos: string[],
   opts?: { idReservaCtx?: string | null },
 ): Promise<Array<{ id_producto: string; talle: string | null; disponibles: number }>> {
-  if (idsProductos.length === 0) return []
-
-  const supabase = await createServerClient()
-  const { data: items, error } = await supabase
-    .from('item_producto')
-    .select('id_item, id_producto, talle')
-    .in('id_producto', idsProductos)
-    .eq('estado_item', 'disponible')
-  if (error) throw new Error(`contarDisponiblesMultiplesProductos: ${error.message}`)
-
-  const lista = (items ?? []) as Array<{
-    id_item: string
-    id_producto: string
-    talle: string | null
-  }>
-  if (lista.length === 0) return []
-
-  const idsItem = lista.map((i) => i.id_item)
-  const reservasMap = await getReservasActivasDeItems(idsItem)
-
-  const conteo = new Map<
-    string,
-    { id_producto: string; talle: string | null; disponibles: number }
-  >()
-
-  for (const item of lista) {
-    const idReserva = reservasMap.get(item.id_item)
-    const bloqueado = idReserva != null && idReserva !== opts?.idReservaCtx
-
-    const clave = `${item.id_producto}:::${item.talle ?? '__sin__'}`
-    let entry = conteo.get(clave)
-    if (!entry) {
-      entry = { id_producto: item.id_producto, talle: item.talle, disponibles: 0 }
-      conteo.set(clave, entry)
-    }
-    if (!bloqueado) {
-      entry.disponibles += 1
-    }
-  }
-
-  return Array.from(conteo.values())
+  const porProducto = await Promise.all(
+    idsProductos.map(async (id) => {
+      const { porTalle } = await contarDisponiblesPorTalle(id, { idReservaCtx: opts?.idReservaCtx })
+      return porTalle.map((s) => ({ id_producto: id, talle: s.talle, disponibles: s.disponibles }))
+    }),
+  )
+  return porProducto.flat()
 }
 
 /**
