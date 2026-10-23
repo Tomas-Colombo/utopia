@@ -227,6 +227,19 @@ export async function spSetConfiguracionQrLadoMm(
   return Number(data ?? ladoMm)
 }
 
+export async function spSetTenantLogo(
+  logoUrl: string | null,
+  ip?: string | null,
+): Promise<string | null> {
+  const supabase = await createServerClient()
+  const { data, error } = await supabase.rpc('sp_set_tenant_logo', {
+    p_logo_url: logoUrl,
+    p_ip: ip ?? null,
+  })
+  if (error) throw new Error(`sp_set_tenant_logo: ${error.message}`)
+  return (data as string | null) ?? null
+}
+
 // ─── Auditoría ───────────────────────────────────────────────────────
 
 export async function listAuditoria(opts?: {

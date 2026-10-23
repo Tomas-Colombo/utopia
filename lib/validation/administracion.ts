@@ -91,6 +91,16 @@ export const updateConfiguracionQrSchema = z.strictObject(
   payloadParams,
 )
 
+export const updateTenantLogoSchema = z.strictObject(
+  {
+    logoUrl: z
+      .string('logo-invalido')
+      .max(2_500_000, 'logo-muy-grande')
+      .nullable(),
+  },
+  payloadParams,
+)
+
 /**
  * Aplana el `ZodError` a un `reason` corto y estable, en el mismo formato
  * kebab que ya devuelven los demás actions. Incluye la ruta del campo para que

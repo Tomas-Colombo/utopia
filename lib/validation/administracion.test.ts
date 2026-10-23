@@ -7,6 +7,7 @@ import {
   primerReason,
   updateConfiguracionQrSchema,
   updateRolSchema,
+  updateTenantLogoSchema,
 } from './administracion'
 
 const UUID = '3f1b2c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d'
@@ -140,6 +141,22 @@ describe('updateConfiguracionQrSchema', () => {
   })
 })
 
+describe('updateTenantLogoSchema', () => {
+  it('acepta null o un string de logo', () => {
+    expect(updateTenantLogoSchema.safeParse({ logoUrl: null }).success).toBe(true)
+    expect(updateTenantLogoSchema.safeParse({ logoUrl: 'data:image/png;base64,abc' }).success).toBe(true)
+    expect(updateTenantLogoSchema.safeParse({ logoUrl: 'https://example.com/logo.png' }).success).toBe(true)
+  })
+
+  it('rechaza tipos no string o campos desconocidos', () => {
+    const r1 = updateTenantLogoSchema.safeParse({ logoUrl: 123 })
+    expect(r1.success).toBe(false)
+    const r2 = updateTenantLogoSchema.safeParse({ logoUrl: null, extra: true })
+    expect(r2.success).toBe(false)
+    if (!r2.success) expect(primerReason(r2.error)).toBe('campo-desconocido')
+  })
+})
+
 describe('compactarPermisos', () => {
   it('descarta los módulos ausentes en vez de dejarlos como undefined', () => {
     const parsed = permisosSchema.parse({ inventario: ['ver'] })
@@ -200,7 +217,7 @@ describe('reasons estables', () => {
 
 describe('payloads que no son objetos', () => {
   it('caen en payload-invalido, no en campo-desconocido', () => {
-    for (const schema of [createRolSchema, updateRolSchema, deleteRolSchema, updateConfiguracionQrSchema]) {
+    for (const schema of [createRolSchema, updateRolSchema, deleteRolSchema, updateConfiguracionQrSchema, updateTenantLogoSchema]) {
       const r = schema.safeParse(null)
       expect(r.success).toBe(false)
       if (!r.success) expect(primerReason(r.error)).toBe('payload-invalido')

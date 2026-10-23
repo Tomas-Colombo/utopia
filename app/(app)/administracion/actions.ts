@@ -10,6 +10,7 @@ import {
   spCreateRol,
   spDeleteRol,
   spSetConfiguracionQrLadoMm,
+  spSetTenantLogo,
   spToggleTenantModulo,
   spToggleUsuarioActivo,
   spUpdateRol,
@@ -21,6 +22,7 @@ import {
   primerReason,
   updateConfiguracionQrSchema,
   updateRolSchema,
+  updateTenantLogoSchema,
 } from '@/lib/validation/administracion'
 import type { UsuarioEstado } from '@/lib/types/administracion'
 
@@ -193,6 +195,24 @@ export async function updateConfiguracionQrAction(
     revalidatePath('/administracion')
     revalidatePath('/inventario/imprimir-etiquetas')
     return { ok: true, data: { ladoMm } }
+  } catch (e) {
+    return { ok: false, reason: (e as Error).message }
+  }
+}
+
+export async function updateTenantLogoAction(
+  raw: unknown,
+): Promise<ActionResult<{ logoUrl: string | null }>> {
+  const g = await guarded('editar')
+  if (!g.ok) return { ok: false, reason: g.error }
+
+  const parsed = updateTenantLogoSchema.safeParse(raw)
+  if (!parsed.success) return { ok: false, reason: primerReason(parsed.error) }
+
+  try {
+    const logoUrl = await spSetTenantLogo(parsed.data.logoUrl)
+    revalidatePath('/', 'layout')
+    return { ok: true, data: { logoUrl } }
   } catch (e) {
     return { ok: false, reason: (e as Error).message }
   }

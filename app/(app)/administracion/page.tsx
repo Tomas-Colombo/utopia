@@ -9,6 +9,7 @@ import {
   listRoles,
   listUsuarios,
 } from '@/lib/dal/administracion/administracion'
+import { ConfiguracionLogoCard } from './ConfiguracionLogoCard'
 import { ConfiguracionQrCard } from './ConfiguracionQrCard'
 import { RolesModal } from './RolesModal'
 import { Card } from '@/components/ui/Card'
@@ -55,6 +56,7 @@ export default async function AdministracionHome() {
           {cards.slice(1).map(cardLink)}
         </section>
 
+        <ConfiguracionLogoCard logoActual={session.marca.logoUrl} canEdit={canEdit} />
         <ConfiguracionQrCard ladoMmInicial={ladoMm} canEdit={canEdit} />
 
         <Card as="section" padding="none" className="overflow-x-auto">
