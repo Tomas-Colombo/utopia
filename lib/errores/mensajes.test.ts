@@ -60,7 +60,7 @@ const SLUGS_DE_LA_APP = [
   // Rutas de API
   'elegir-talle', 'item-no-disponible', 'item-no-es-consignacion', 'proveedor-vacio',
   'qr-vacio', 'sin-precio-lista', 'sku-sin-stock', 'sku-sin-stock-libre',
-  'stock-sin-talle',
+  'stock-parcial-disponible', 'stock-sin-talle',
 ] as const
 
 describe('cobertura del catálogo', () => {

@@ -10,13 +10,14 @@ import {
 } from '@/lib/dal/inventario/producto'
 import { calcularSnapshotPrecio } from '@/lib/dal/precios/resolucion'
 import { getReservasActivasDeItems } from '@/lib/dal/reservas'
+import { parsearCantidadLookup, evaluarCantidadDisponible } from '@/lib/inventario/cantidades'
 import { armarRespuestaElegirTalle, decidirLookupPorTalle } from '@/lib/inventario/codigo'
 import type { FormaPago, MedioPagoRecargo } from '@/lib/types/precios'
 import type { ItemProductoRow } from '@/lib/types/inventario'
 import type { LineaCarrito } from '@/lib/types/ventas'
 
 /**
- * GET /api/ventas/lookup-item?code=<qr-o-sku>&forma_pago=<fp>&fin_cuenta=&fin_medio=&fin_propia=
+ * GET /api/ventas/lookup-item?code=<qr-o-sku>&forma_pago=<fp>&fin_cuenta=&fin_medio=&fin_propia=&cantidad=<n>
  *
  * Endpoint interno del carrito de venta. Acepta:
  *   - `code`: QR exacto del ítem, o SKU del producto (`REM-0007` /
@@ -26,9 +27,11 @@ import type { LineaCarrito } from '@/lib/types/ventas'
  *     `elegir-talle` con el stock libre de cada talle.
  *   - `qr` (legacy): sólo QR exacto (lo usa el refresco de precios).
  *   - `id_producto` (+ `talle` opcional): búsqueda por nombre desde la UI
- *     (venta sin lector QR). Elige una unidad disponible del producto. Si la
+ *     (venta sin lector QR). Elige unidades disponibles del producto. Si la
  *     categoría usa talles y no vino `talle`, NUNCA elige solo: responde
  *     `elegir-talle` con el stock libre de cada talle.
+ *   - `cantidad`: número de unidades deseadas (hasta 50). Permite cargar N
+ *     unidades en una sola respuesta calculando el snapshot de precio 1 vez.
  *   - `excluir`: ids de ítem que ya están en el carrito. Se saltean al elegir
  *     la unidad, para poder cargar dos unidades del mismo producto/talle.
  *
@@ -36,7 +39,7 @@ import type { LineaCarrito } from '@/lib/types/ventas'
  * ocurre al confirmar la venta con sp_registrar_venta.
  *
  * Retorna:
- *   200 { ok:true, linea: LineaCarrito }
+ *   200 { ok:true, linea: LineaCarrito, lineas: LineaCarrito[], aviso?: 'stock-parcial-disponible' }
  *   200 { ok:false, reason: 'item-not-found'|'item-no-disponible'|
  *          'item-en-reserva'|'sin-precio-lista'|'sku-sin-stock'|
  *          'sku-sin-stock-libre'|'stock-sin-talle' }
@@ -66,6 +69,7 @@ export async function GET(req: NextRequest) {
   const input = code || qrLegacy
   const idProductoParam = params.get('id_producto')?.trim()
   const talleParam = params.get('talle')?.trim() || null
+  const cantidadPedida = parsearCantidadLookup(params.get('cantidad'))
   // El usuario explícitamente eligió una unidad SIN talle desde el picker.
   // No es lo mismo que "no vino talle" (eso sería el gate de desambiguación).
   const sinTalleParam = params.get('sin_talle') === '1'
@@ -97,8 +101,8 @@ export async function GET(req: NextRequest) {
   if (!input && !idProductoParam)
     return NextResponse.json({ ok: false, reason: 'qr-vacio' }, { status: 400 })
 
-  let item: ItemProductoRow | null = null
-  let advertencia: string | null = null
+  const itemsElegidos: Array<{ item: ItemProductoRow; advertencia: string | null }> = []
+  let aviso: 'stock-parcial-disponible' | undefined = undefined
   let productoResuelto: ProductoRowConCategoria | null = null
   let talleExplicito: string | null = talleParam
 
@@ -117,13 +121,14 @@ export async function GET(req: NextRequest) {
           estado: porQr.estado_item,
         })
       }
+      let adv: string | null = null
       const reservasMap = await getReservasActivasDeItems([porQr.id_item])
       const rid = reservasMap.get(porQr.id_item)
       if (rid) {
-        if (idReservaCtx && rid === idReservaCtx) advertencia = 'Item de esta reserva'
+        if (idReservaCtx && rid === idReservaCtx) adv = 'Item de esta reserva'
         else return NextResponse.json({ ok: false, reason: 'item-en-reserva', id_reserva: rid })
       }
-      item = porQr
+      itemsElegidos.push({ item: porQr, advertencia: adv })
     } else {
       productoResuelto = resuelto.producto
       talleExplicito = resuelto.talle ?? talleParam
@@ -135,7 +140,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: false, reason: 'item-not-found' })
   }
 
-  if (!item && productoResuelto) {
+  if (itemsElegidos.length === 0 && productoResuelto) {
     const tallesCategoria = productoResuelto.categoria?.talles ?? []
     const decision = decidirLookupPorTalle({
       tallesCategoria,
@@ -171,20 +176,18 @@ export async function GET(req: NextRequest) {
 
     let bloqueante: string | null = null
     for (const c of candidatos) {
+      if (itemsElegidos.length >= cantidadPedida) break
       const rid = reservasMap.get(c.id_item)
       if (!rid) {
-        item = c
-        break
+        itemsElegidos.push({ item: c, advertencia: null })
+      } else if (idReservaCtx && rid === idReservaCtx) {
+        itemsElegidos.push({ item: c, advertencia: 'Item de esta reserva' })
+      } else {
+        bloqueante ??= rid
       }
-      if (idReservaCtx && rid === idReservaCtx) {
-        item = c
-        advertencia = 'Item de esta reserva'
-        break
-      }
-      bloqueante ??= rid
     }
 
-    if (!item) {
+    if (itemsElegidos.length === 0) {
       return NextResponse.json({
         ok: false,
         reason: candidatos.length > 0 ? 'sku-sin-stock-libre' : 'sku-sin-stock',
@@ -193,14 +196,18 @@ export async function GET(req: NextRequest) {
         id_reserva: bloqueante,
       })
     }
+
+    const evaluacion = evaluarCantidadDisponible(cantidadPedida, itemsElegidos.length)
+    aviso = evaluacion.aviso
   }
 
-  if (!item) return NextResponse.json({ ok: false, reason: 'item-not-found' })
+  if (itemsElegidos.length === 0) return NextResponse.json({ ok: false, reason: 'item-not-found' })
 
-  const producto = productoResuelto ?? (await getProductoConCategoria(item.id_producto))
+  const primerItem = itemsElegidos[0].item
+  const producto = productoResuelto ?? (await getProductoConCategoria(primerItem.id_producto))
 
   const snap = await calcularSnapshotPrecio({
-    idProducto: item.id_producto,
+    idProducto: primerItem.id_producto,
     formaPago,
     idsDescuentos,
     idCuentaDestino: finCuenta,
@@ -216,11 +223,11 @@ export async function GET(req: NextRequest) {
     })
   }
 
-  const linea: LineaCarrito = {
-    id_item: item.id_item,
-    id_producto: item.id_producto,
-    qr_code: item.qr_code,
-    talle: item.talle,
+  const lineas: LineaCarrito[] = itemsElegidos.map(({ item: it, advertencia: adv }) => ({
+    id_item: it.id_item,
+    id_producto: it.id_producto,
+    qr_code: it.qr_code,
+    talle: it.talle,
     producto_nombre: producto?.nombre ?? '(producto sin nombre)',
     sku: producto?.sku ?? null,
     categoria_nombre: producto?.categoria?.nombre ?? null,
@@ -228,7 +235,13 @@ export async function GET(req: NextRequest) {
     precio_final: snap.precio_final,
     desactualizado: snap.desactualizado,
     desglose: snap.desglose,
-    advertencia,
-  }
-  return NextResponse.json({ ok: true, linea })
+    advertencia: adv,
+  }))
+
+  return NextResponse.json({
+    ok: true,
+    linea: lineas[0],
+    lineas,
+    aviso,
+  })
 }

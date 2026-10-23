@@ -105,17 +105,27 @@ export function NuevaReservaView({
     return `/api/ventas/lookup-item?${qs.toString()}`
   }
 
-  // Agrega evitando duplicados por QR. Devuelve la línea agregada, o null.
-  function pushItem(nueva: LineaCarrito): LineaCarrito | null {
-    let agregada: LineaCarrito | null = nueva
+  // Agrega evitando duplicados por QR. Devuelve las líneas agregadas.
+  function pushItems(nuevas: LineaCarrito[]): LineaCarrito[] {
+    const agregadas: LineaCarrito[] = []
     setItems((xs) => {
-      if (xs.some((x) => x.qr_code === nueva.qr_code)) {
-        agregada = null
-        return xs
+      const qrs = new Set(xs.map((x) => x.qr_code))
+      const resultado = [...xs]
+      for (const n of nuevas) {
+        if (!qrs.has(n.qr_code)) {
+          qrs.add(n.qr_code)
+          resultado.push(n)
+          agregadas.push(n)
+        }
       }
-      return [...xs, nueva]
+      return resultado
     })
-    return agregada
+    return agregadas
+  }
+
+  function pushItem(nueva: LineaCarrito): LineaCarrito | null {
+    const [primera] = pushItems([nueva])
+    return primera ?? null
   }
 
   // Submit del buscador. Con sugerencias de nombre abiertas, elegimos la
@@ -205,12 +215,13 @@ export function NuevaReservaView({
   // y abrimos el selector.
   // `talle`: valor del talle (ej. "M"), o `null` para pedir explícitamente una
   // unidad SIN talle. `extraExcluidos`: ids a saltear ADEMÁS de los ya
-  // cargados, para encadenar N llamadas sin depender del re-render de React.
+  // cargados. `cantidad`: cantidad pedida (hasta 50) en un solo pedido HTTP.
   async function agregarPorProducto(
     idProducto: string,
     talle?: string | null,
     extraExcluidos: string[] = [],
-  ): Promise<LineaCarrito | null> {
+    cantidad = 1,
+  ): Promise<LineaCarrito[] | null> {
     if (!idProducto || buscando) return null
     setBuscando(true)
     setErrorBusqueda(null)
@@ -221,6 +232,7 @@ export function NuevaReservaView({
             id_producto: idProducto,
             talle: talle ?? undefined,
             sin_talle: talle === null ? '1' : undefined,
+            cantidad: cantidad > 1 ? String(cantidad) : undefined,
           },
           extraExcluidos,
         ),
@@ -234,14 +246,28 @@ export function NuevaReservaView({
         setErrorBusqueda(mensajeDeError(data.reason, { extra: data }))
         return null
       }
-      const nueva = pushItem(data.linea as LineaCarrito)
-      if (!nueva) {
+      const recibidas: LineaCarrito[] =
+        Array.isArray(data.lineas) && data.lineas.length > 0
+          ? (data.lineas as LineaCarrito[])
+          : data.linea
+            ? [data.linea as LineaCarrito]
+            : []
+
+      if (recibidas.length === 0) {
         setErrorBusqueda('Ese ítem ya está en la lista')
         return null
       }
+      const agregadas = pushItems(recibidas)
+      if (agregadas.length === 0) {
+        setErrorBusqueda('Ese ítem ya está en la lista')
+        return null
+      }
+      if (data.aviso) {
+        setErrorBusqueda(mensajeDeError(data.aviso))
+      }
       setQrInput('')
       setSelectorTalle(null)
-      return nueva
+      return agregadas
     } catch (e) {
       setErrorBusqueda((e as Error).message)
       return null
@@ -260,7 +286,7 @@ export function NuevaReservaView({
   }
 
   // Confirma la distribución elegida: pide N unidades por cada talle > 0
-  // encadenando exclusiones para no recibir siempre la misma unidad.
+  // en un solo pedido por talle, encadenando exclusiones.
   async function confirmarSelectorTalle() {
     if (!selectorTalle) return
     const pedidos: Array<{ talle: string | null; cant: number }> = []
@@ -272,11 +298,9 @@ export function NuevaReservaView({
     if (pedidos.length === 0) return
     const running: string[] = []
     for (const p of pedidos) {
-      for (let i = 0; i < p.cant; i++) {
-        const linea = await agregarPorProducto(idProducto, p.talle, running)
-        if (!linea) return
-        running.push(linea.id_item)
-      }
+      const agregadas = await agregarPorProducto(idProducto, p.talle, running, p.cant)
+      if (!agregadas || agregadas.length === 0) return
+      running.push(...agregadas.map((l) => l.id_item))
     }
   }
 

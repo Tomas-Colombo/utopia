@@ -797,17 +797,27 @@ export function NuevaVentaView({
   }
 
   // Agrega una línea al carrito evitando duplicados por QR. Devuelve la línea
-  // agregada, o null si estaba duplicada.
-  function pushLinea(nueva: LineaCarrito): LineaCarrito | null {
-    let agregada: LineaCarrito | null = nueva
+  // Agrega evitando duplicados por QR. Devuelve las líneas efectivamente agregadas.
+  function pushLineas(nuevas: LineaCarrito[]): LineaCarrito[] {
+    const agregadas: LineaCarrito[] = []
     setLineas((ls) => {
-      if (ls.some((l) => l.qr_code === nueva.qr_code)) {
-        agregada = null
-        return ls
+      const qrs = new Set(ls.map((l) => l.qr_code))
+      const resultado = [...ls]
+      for (const n of nuevas) {
+        if (!qrs.has(n.qr_code)) {
+          qrs.add(n.qr_code)
+          resultado.push(n)
+          agregadas.push(n)
+        }
       }
-      return [...ls, nueva]
+      return resultado
     })
-    return agregada
+    return agregadas
+  }
+
+  function pushLinea(nueva: LineaCarrito): LineaCarrito | null {
+    const [primera] = pushLineas([nueva])
+    return primera ?? null
   }
 
   // Agrega por producto (búsqueda por nombre). Si el producto usa talles y no
@@ -815,16 +825,16 @@ export function NuevaVentaView({
   // y abrimos el selector — nunca elige una unidad por nosotros.
   // `talle`: valor del talle (ej. "M"), o `null` para pedir explícitamente
   // una unidad SIN talle (categorías con talles pero unidades sin cargar).
-  // `extraExcluidos`: ids a saltear ADEMÁS del carrito. Sirve para encadenar
-  // N llamadas seguidas (ej. "cargar 3") sin depender de que React haya
-  // re-renderizado entre await y await.
+  // `extraExcluidos`: ids a saltear ADEMÁS del carrito.
+  // `cantidad`: cantidad pedida (hasta 50); se resuelve en un solo pedido HTTP.
   async function agregarPorProducto(
     idProducto: string,
     talle?: string | null,
     extraExcluidos: string[] = [],
     excluirBase?: string[],
     reservaOverride?: string | null,
-  ): Promise<LineaCarrito | null> {
+    cantidad = 1,
+  ): Promise<LineaCarrito[] | null> {
     if (!idProducto || buscando) return null
     if (canal === 'revendedora' && !idRevendedora) {
       setErrorBusqueda('Elegí una revendedora para continuar.')
@@ -838,6 +848,7 @@ export function NuevaVentaView({
         id_producto: idProducto,
         talle: talle ?? undefined,
         sin_talle: talle === null ? '1' : undefined,
+        cantidad: cantidad > 1 ? String(cantidad) : undefined,
       }
       const excluir = [...base, ...extraExcluidos]
       let data = await (
@@ -862,15 +873,29 @@ export function NuevaVentaView({
         setErrorBusqueda(mensajeDeError(data.reason, { extra: data }))
         return null
       }
-      const nueva = data.linea as LineaCarrito
-      const ok = pushLinea(nueva)
-      if (!ok) {
+      const recibidas: LineaCarrito[] =
+        Array.isArray(data.lineas) && data.lineas.length > 0
+          ? (data.lineas as LineaCarrito[])
+          : data.linea
+            ? [data.linea as LineaCarrito]
+            : []
+
+      if (recibidas.length === 0) {
         setErrorBusqueda('Ese ítem ya está en el carrito')
         return null
       }
+
+      const agregadas = pushLineas(recibidas)
+      if (agregadas.length === 0) {
+        setErrorBusqueda('Ese ítem ya está en el carrito')
+        return null
+      }
+      if (data.aviso) {
+        setErrorBusqueda(mensajeDeError(data.aviso))
+      }
       setQrInput('')
       setSelectorTalle(null)
-      return nueva
+      return agregadas
     } catch (e) {
       setErrorBusqueda((e as Error).message)
       return null
@@ -978,17 +1003,16 @@ export function NuevaVentaView({
     // render, y lo rechaza. Reasignar no deja esa duda.
     let running: string[] = []
     for (const p of pedidos) {
-      for (let i = 0; i < p.cant; i++) {
-        const linea = await agregarPorProducto(
-          idProducto,
-          p.talle,
-          running,
-          excluirBase,
-          reservaAdoptada,
-        )
-        if (!linea) return
-        running = [...running, linea.id_item]
-      }
+      const agregadas = await agregarPorProducto(
+        idProducto,
+        p.talle,
+        running,
+        excluirBase,
+        reservaAdoptada,
+        p.cant,
+      )
+      if (!agregadas || agregadas.length === 0) return
+      running = [...running, ...agregadas.map((l) => l.id_item)]
     }
   }
 
@@ -1012,11 +1036,9 @@ export function NuevaVentaView({
       setLineas((ls) => ls.filter((l) => !aQuitar.has(l.qr_code)))
       return
     }
-    const running: string[] = []
-    for (let i = 0; i < n - g.cantidad; i++) {
-      const linea = await agregarPorProducto(g.id_producto, g.talle, running)
-      if (!linea) break
-      running.push(linea.id_item)
+    const aAgregar = n - g.cantidad
+    if (aAgregar > 0) {
+      await agregarPorProducto(g.id_producto, g.talle, [], undefined, undefined, aAgregar)
     }
   }
 

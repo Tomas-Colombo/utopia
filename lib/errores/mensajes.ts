@@ -206,6 +206,7 @@ const MENSAJES: Record<string, string> = {
   'sin-precio-lista':
     'El producto no tiene precio de venta. Fijalo en Precios, Control de precios.',
   'sku-sin-stock': 'Ese código no tiene unidades disponibles en stock.',
+  'stock-parcial-disponible': 'Solo pudimos cargar las unidades que quedaban disponibles.',
   'venta-liquidada': 'Esta venta ya fue liquidada y no se puede anular.',
   'venta-revendedora-sin-id': 'Elegí la revendedora correspondiente para esta venta.',
   'canal-no-disponible': 'Ese canal de venta todavía no está disponible.',
