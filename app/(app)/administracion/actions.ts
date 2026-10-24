@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { AuthorizationError } from '@/lib/dal/errors'
 import { requireModuleRole } from '@/lib/dal/guard'
 import { verifySession } from '@/lib/dal/session'
+import { createServerClient } from '@/lib/dal/supabase'
 import {
   inviteUsuario,
   spAsignarRol,
@@ -23,6 +24,7 @@ import {
   updateConfiguracionQrSchema,
   updateRolSchema,
   updateTenantLogoSchema,
+  cambiarPasswordSchema,
 } from '@/lib/validation/administracion'
 import type { UsuarioEstado } from '@/lib/types/administracion'
 
@@ -216,4 +218,43 @@ export async function updateTenantLogoAction(
   } catch (e) {
     return { ok: false, reason: (e as Error).message }
   }
+}
+
+export async function cambiarMiPasswordAction(
+  raw: unknown,
+): Promise<ActionResult> {
+  const g = await guarded('ver')
+  if (!g.ok) return { ok: false, reason: g.error }
+
+  const session = await verifySession()
+
+  const parsed = cambiarPasswordSchema.safeParse(raw)
+  if (!parsed.success) return { ok: false, reason: primerReason(parsed.error) }
+
+  const supabase = await createServerClient()
+
+  const { error: reverifyError } = await supabase.auth.signInWithPassword({
+    email: session.user.email,
+    password: parsed.data.passwordActual,
+  })
+
+  if (reverifyError) {
+    return { ok: false, reason: 'password-actual-incorrecta' }
+  }
+
+  const { error: updateError } = await supabase.auth.updateUser({
+    password: parsed.data.passwordNuevo,
+  })
+
+  if (updateError) {
+    return { ok: false, reason: 'error-actualizar-password' }
+  }
+
+  try {
+    await supabase.rpc('sp_change_password_user', { p_id_usuario: session.user.id })
+  } catch {
+    // Auditoría best-effort
+  }
+
+  return { ok: true }
 }

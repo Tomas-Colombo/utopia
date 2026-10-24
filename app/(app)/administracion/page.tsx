@@ -9,6 +9,7 @@ import {
   listRoles,
   listUsuarios,
 } from '@/lib/dal/administracion/administracion'
+import { CambiarPasswordCard } from './CambiarPasswordCard'
 import { ConfiguracionLogoCard } from './ConfiguracionLogoCard'
 import { ConfiguracionQrCard } from './ConfiguracionQrCard'
 import { RolesModal } from './RolesModal'
@@ -58,6 +59,7 @@ export default async function AdministracionHome() {
 
         <ConfiguracionLogoCard logoActual={session.marca.logoUrl} canEdit={canEdit} />
         <ConfiguracionQrCard ladoMmInicial={ladoMm} canEdit={canEdit} />
+        <CambiarPasswordCard />
 
         <Card as="section" padding="none" className="overflow-x-auto">
           <div className="border-b border-border px-4 py-3 flex flex-wrap items-center justify-between gap-2">

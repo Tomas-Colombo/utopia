@@ -101,6 +101,20 @@ export const updateTenantLogoSchema = z.strictObject(
   payloadParams,
 )
 
+export const cambiarPasswordSchema = z
+  .strictObject(
+    {
+      passwordActual: z.string().min(1, 'password-actual-requerida'),
+      passwordNuevo: z.string().min(8, 'password-corto'),
+      passwordConfirmacion: z.string().min(8, 'password-corto'),
+    },
+    payloadParams,
+  )
+  .refine((data) => data.passwordNuevo === data.passwordConfirmacion, {
+    message: 'passwords-no-coinciden',
+    path: ['passwordConfirmacion'],
+  })
+
 /**
  * Aplana el `ZodError` a un `reason` corto y estable, en el mismo formato
  * kebab que ya devuelven los demás actions. Incluye la ruta del campo para que

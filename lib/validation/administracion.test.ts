@@ -8,6 +8,7 @@ import {
   updateConfiguracionQrSchema,
   updateRolSchema,
   updateTenantLogoSchema,
+  cambiarPasswordSchema,
 } from './administracion'
 
 const UUID = '3f1b2c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d'
@@ -157,6 +158,37 @@ describe('updateTenantLogoSchema', () => {
   })
 })
 
+describe('cambiarPasswordSchema', () => {
+  it('acepta contraseñas válidas que coinciden', () => {
+    const r = cambiarPasswordSchema.safeParse({
+      passwordActual: 'OldPass123!',
+      passwordNuevo: 'NewPass123!',
+      passwordConfirmacion: 'NewPass123!',
+    })
+    expect(r.success).toBe(true)
+  })
+
+  it('rechaza cuando la nueva contraseña es corta', () => {
+    const r = cambiarPasswordSchema.safeParse({
+      passwordActual: 'OldPass123!',
+      passwordNuevo: 'short',
+      passwordConfirmacion: 'short',
+    })
+    expect(r.success).toBe(false)
+    if (!r.success) expect(primerReason(r.error)).toBe('password-corto (passwordNuevo)')
+  })
+
+  it('rechaza cuando las contraseñas no coinciden', () => {
+    const r = cambiarPasswordSchema.safeParse({
+      passwordActual: 'OldPass123!',
+      passwordNuevo: 'NewPass123!',
+      passwordConfirmacion: 'DifferentPass123!',
+    })
+    expect(r.success).toBe(false)
+    if (!r.success) expect(primerReason(r.error)).toBe('passwords-no-coinciden (passwordConfirmacion)')
+  })
+})
+
 describe('compactarPermisos', () => {
   it('descarta los módulos ausentes en vez de dejarlos como undefined', () => {
     const parsed = permisosSchema.parse({ inventario: ['ver'] })
@@ -217,7 +249,7 @@ describe('reasons estables', () => {
 
 describe('payloads que no son objetos', () => {
   it('caen en payload-invalido, no en campo-desconocido', () => {
-    for (const schema of [createRolSchema, updateRolSchema, deleteRolSchema, updateConfiguracionQrSchema, updateTenantLogoSchema]) {
+    for (const schema of [createRolSchema, updateRolSchema, deleteRolSchema, updateConfiguracionQrSchema, updateTenantLogoSchema, cambiarPasswordSchema]) {
       const r = schema.safeParse(null)
       expect(r.success).toBe(false)
       if (!r.success) expect(primerReason(r.error)).toBe('payload-invalido')
